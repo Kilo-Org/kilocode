@@ -1353,6 +1353,8 @@ export const dict = {
   "dialog.model.notSet": "Não definido",
   "profile.personalAccount": "Conta pessoal",
   "profile.switchingAccount": "Trocando de conta…",
+  "profile.unavailableAccount": "Conta indisponível",
+  "profile.switchFailed": "Não foi possível confirmar a troca de conta.",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/br.ts
 
@@ -1438,6 +1440,8 @@ export const dict = {
   "settings.saveBar.cancel": "Cancelar",
   "settings.saveBar.saving": "Salvando…",
   "settings.saveBar.saveFailed": "Não foi possível salvar as configurações",
+  "settings.saveBar.dismissError": "Descartar",
+  "settings.saveBar.unconfirmedWrite": "O host da extensão não confirmou “{{name}}”.",
   "notifications.action.next": "Próximo",
   "notifications.action.close": "Fechar",
   "notifications.action.tryModel": "Experimentar {{model}}",

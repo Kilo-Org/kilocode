@@ -32,6 +32,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -56,6 +57,8 @@ class KiloAppService internal constructor(
         private val LOG = KiloLog.create(KiloAppService::class.java)
         private val init = KiloAppStateDto(KiloAppStatusDto.DISCONNECTED)
         private const val DEFAULT_SPEECH_MODEL = "openai/whisper-1"
+        private const val RESTORE_ATTEMPTS = 3
+        private const val RESTORE_RETRY_MS = 200L
     }
 
     private val started = AtomicBoolean(false)
@@ -411,25 +414,72 @@ class KiloAppService internal constructor(
         done(runRetention(force))
     }
 
-    /** Run cleanup once without leaving automatic retention enabled when the saved policy is off. */
-    suspend fun runManualRetention(policy: RetentionPatchDto): RetentionStatusDto? {
-        if (policy.enabled == true) return runRetention(true)
-        val enabled = policy.copy(enabled = true)
-        if (updateConfig(ConfigPatchDto(retention = enabled)) == null) return null
-        return try {
-            runRetention(true)
-        } finally {
-            withContext(NonCancellable) {
-                updateConfig(ConfigPatchDto(retention = policy.copy(enabled = false)))
-            }
+    /**
+     * Run cleanup once, then restore the saved retention policy so a disabled policy stays disabled.
+     * Reports when the cleanup did not run or did not report a result, and when the saved policy
+     * could not be confirmed back in place.
+     */
+    internal suspend fun runManualRetention(policy: RetentionPatchDto): ManualRetentionResult {
+        if (policy.enabled == true) {
+            val status = runRetention(true) ?: return ManualRetentionResult.RunFailed
+            return ManualRetentionResult.Complete(status)
         }
+        if (updateConfig(ConfigPatchDto(retention = policy.copy(enabled = true))) == null) {
+            // The write may have landed even though the call reported nothing, so put the saved
+            // policy back before reporting that the cleanup never started.
+            val restored = withContext(NonCancellable) { restoreRetention(policy) }
+            return if (restored) ManualRetentionResult.NotStarted else ManualRetentionResult.NotStartedWithPolicyOn
+        }
+        var status: RetentionStatusDto? = null
+        var cancelled: CancellationException? = null
+        var restored = false
+        try {
+            status = runRetention(true)
+        } catch (e: CancellationException) {
+            cancelled = e
+        } catch (e: Exception) {
+            LOG.warn("manual cleanup: run failed", e)
+        } finally {
+            restored = withContext(NonCancellable) { restoreRetention(policy) }
+        }
+        val failure = cancelled
+        if (!restored) return ManualRetentionResult.PolicyNotRestored
+        if (failure != null) throw failure
+        if (status == null) return ManualRetentionResult.RunFailed
+        return ManualRetentionResult.Complete(status)
     }
 
-    fun runManualRetentionAsync(
+    /**
+     * Write a saved cleanup policy back with `enabled = false`, retrying a bounded number of times.
+     * Returns whether the write landed.
+     */
+    internal suspend fun restoreRetention(policy: RetentionPatchDto): Boolean {
+        val patch = ConfigPatchDto(retention = policy.copy(enabled = false))
+        repeat(RESTORE_ATTEMPTS) { attempt ->
+            if (attempt > 0) delay(RESTORE_RETRY_MS)
+            try {
+                if (updateConfig(patch) != null) return true
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                LOG.warn("manual cleanup: retention restore attempt failed", e)
+                return@repeat
+            }
+            LOG.warn("manual cleanup: retention restore attempt reported no result")
+        }
+        return false
+    }
+
+    internal fun runManualRetentionAsync(
         policy: RetentionPatchDto,
-        done: (RetentionStatusDto?) -> Unit,
+        done: (ManualRetentionResult) -> Unit,
     ): Job = cs.launch {
         done(runManualRetention(policy))
+    }
+
+    /** Run the saved-policy write-back on the app-lifetime scope, so it survives a closed page. */
+    internal fun restoreRetentionAsync(policy: RetentionPatchDto, done: (Boolean) -> Unit): Job = cs.launch {
+        done(restoreRetention(policy))
     }
 
     fun applyLogConfigAsync(config: LogConfigDto): Job = cs.launch {

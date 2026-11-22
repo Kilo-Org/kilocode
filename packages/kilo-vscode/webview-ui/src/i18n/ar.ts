@@ -1302,6 +1302,8 @@ export const dict = {
   "dialog.model.notSet": "غير محدد",
   "profile.personalAccount": "حساب شخصي",
   "profile.switchingAccount": "جارٍ تبديل الحساب…",
+  "profile.unavailableAccount": "حساب غير متاح",
+  "profile.switchFailed": "تعذّر تأكيد تبديل الحساب.",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/ar.ts
 
@@ -1387,6 +1389,8 @@ export const dict = {
   "settings.saveBar.cancel": "إلغاء",
   "settings.saveBar.saving": "جارٍ الحفظ…",
   "settings.saveBar.saveFailed": "تعذر حفظ الإعدادات",
+  "settings.saveBar.dismissError": "رفض",
+  "settings.saveBar.unconfirmedWrite": "لم يؤكد مضيف الإضافة «{{name}}».",
   "notifications.action.next": "التالي",
   "notifications.action.close": "إغلاق",
   "notifications.action.tryModel": "جرّب {{model}}",

@@ -1335,6 +1335,8 @@ export const dict = {
   "dialog.model.notSet": "Не задано",
   "profile.personalAccount": "Личный аккаунт",
   "profile.switchingAccount": "Переключение аккаунта…",
+  "profile.unavailableAccount": "Недоступный аккаунт",
+  "profile.switchFailed": "Не удалось подтвердить переключение аккаунта.",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/ru.ts
 
   "question.summary": "{{n}} из {{total}} вопросов",
@@ -1419,6 +1421,8 @@ export const dict = {
   "settings.saveBar.cancel": "Отмена",
   "settings.saveBar.saving": "Сохранение…",
   "settings.saveBar.saveFailed": "Не удалось сохранить настройки",
+  "settings.saveBar.dismissError": "Закрыть",
+  "settings.saveBar.unconfirmedWrite": "Хост расширения не подтвердил «{{name}}».",
   "notifications.action.next": "Далее",
   "notifications.action.close": "Закрыть",
   "notifications.action.tryModel": "Попробовать {{model}}",

@@ -1456,11 +1456,27 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "logout":
           await handleLogout(this.authCtx)
           break
-        case "setOrganization":
+        case "setOrganization": {
+          const requestID =
+            typeof message.requestID === "string" && message.requestID.length > 0
+              ? message.requestID
+              : crypto.randomUUID()
           if (typeof message.organizationId === "string" || message.organizationId === null) {
-            await handleSetOrganization(this.authCtx, message.organizationId)
+            await handleSetOrganization(this.authCtx, message.organizationId, requestID)
+            break
           }
+          // A malformed id cannot be dispatched, but the caller still waits for its
+          // correlated outcome, so answer it rather than leaving the attempt pending.
+          // No message is attached, so the webview shows its localized failure copy.
+          this.postMessage({
+            type: "organizationSwitchResult",
+            requestID,
+            organizationId: null,
+            ok: false,
+            data: null,
+          })
           break
+        }
         case "openSettingsPanel":
           vscode.commands.executeCommand("kilo-code.new.settingsButtonClicked", message.tab, message.projectId)
           break
@@ -1665,7 +1681,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           await this.handleRenameSession(message.sessionID, message.title)
           break
         case "updateSetting":
-          await this.handleUpdateSetting(message.key, message.value)
+          // The handler answers every write itself, so this only logs a failure it could not
+          // report; posting here too would answer a write twice.
+          this.handleUpdateSetting(message.key, message.value, message.writeId).catch((e) =>
+            console.error("[Kilo New] handleUpdateSetting failed:", e),
+          )
           break
         case "requestClaudeCompatSetting":
           this.sendClaudeCompatSetting()
@@ -5213,34 +5233,72 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /**
    * Handle a generic setting update from the webview.
    */
-  private async handleUpdateSetting(key: string, value: unknown): Promise<void> {
-    if (key === "maxCost") {
-      const normalized = this.setMaxCost(value)
-      await vscode.workspace
-        .getConfiguration("kilo-code.new")
-        .update("maxCost", normalized, vscode.ConfigurationTarget.Global)
-      for (const sid of this.trackedSessionIds) {
-        const oldLimit = this.activeAlerts.get(sid)
-        if (oldLimit !== undefined) {
-          this.activeAlerts.delete(sid)
-          this.postMessage({ type: "sessionCostAlertResolved", sessionID: sid, limit: oldLimit })
+  private async handleUpdateSetting(key: string, value: unknown, writeId?: string): Promise<void> {
+    // Every write answers with exactly one terminal message so the webview can
+    // reconcile optimistic state: `settingUpdated` for a stored write and
+    // `settingUpdateFailed` for an invalid value or a rejected write. A write id
+    // from the request comes back unchanged on that message, so a sender can
+    // tell which write it settles; a request without one yields no id.
+    const echo = writeId == null ? {} : { writeId }
+    try {
+      if (key === "maxCost") {
+        const config = vscode.workspace.getConfiguration("kilo-code.new")
+        // The runtime limit takes effect before the write so in-flight sessions
+        // see the new limit immediately. When the write does not commit, the limit is
+        // re-read from the stored setting, so a concurrent write that did commit is not
+        // overwritten by a value captured before it.
+        const normalized = this.setMaxCost(value)
+        try {
+          await config.update("maxCost", normalized, vscode.ConfigurationTarget.Global)
+        } catch (error) {
+          this.setMaxCost(config.get<number>("maxCost", 0))
+          throw error
         }
-        this.costs.rearm(sid)
-        this.requestCostAlert(sid, this.costs.sessionCost(sid))
+        // Re-apply the committed limit so an older write that rejects in between
+        // cannot leave the runtime limit on the value it restored.
+        this.setMaxCost(normalized)
+        for (const sid of this.trackedSessionIds) {
+          const oldLimit = this.activeAlerts.get(sid)
+          if (oldLimit !== undefined) {
+            this.activeAlerts.delete(sid)
+            this.postMessage({ type: "sessionCostAlertResolved", sessionID: sid, limit: oldLimit })
+          }
+          this.costs.rearm(sid)
+          this.requestCostAlert(sid, this.costs.sessionCost(sid))
+        }
+        this.postMessage({ type: "settingUpdated", key, value: normalized, ...echo })
+        return
       }
-      return
+      const { section, leaf } = buildSettingPath(key)
+      const invalid =
+        (section === "autocomplete" && !validAutocompleteSetting(leaf, value)) ||
+        (section === "indexing" && !validIndexingSetting(leaf, value)) ||
+        (section === "chat" && !validChatSetting(leaf, value))
+      if (invalid) {
+        this.postMessage({
+          type: "settingUpdateFailed",
+          key,
+          message: `Invalid value for the ${key} setting.`,
+          ...echo,
+        })
+        return
+      }
+      const config = vscode.workspace.getConfiguration(`kilo-code.new${section ? `.${section}` : ""}`)
+      // Normalize a webview-side clear to `undefined` so VS Code removes the
+      // key from settings.json rather than persisting a literal `null`. This
+      // lets the runtime fall back to the resolved default.
+      const next = value === null ? undefined : value
+      await config.update(leaf, next, vscode.ConfigurationTarget.Global)
+      if (isWorkStyleSetting(key)) this.sendWorkStyle()
+      this.postMessage({ type: "settingUpdated", key, value: next, ...echo })
+    } catch (error) {
+      this.postMessage({
+        type: "settingUpdateFailed",
+        key,
+        message: getErrorMessage(error) || `Failed to update the ${key} setting.`,
+        ...echo,
+      })
     }
-    const { section, leaf } = buildSettingPath(key)
-    if (section === "autocomplete" && !validAutocompleteSetting(leaf, value)) return
-    if (section === "indexing" && !validIndexingSetting(leaf, value)) return
-    if (section === "chat" && !validChatSetting(leaf, value)) return
-    const config = vscode.workspace.getConfiguration(`kilo-code.new${section ? `.${section}` : ""}`)
-    // Normalize a webview-side clear to `undefined` so VS Code removes the
-    // key from settings.json rather than persisting a literal `null`. This
-    // lets the runtime fall back to the resolved default.
-    const next = value === null ? undefined : value
-    await config.update(leaf, next, vscode.ConfigurationTarget.Global)
-    if (isWorkStyleSetting(key)) this.sendWorkStyle()
   }
 
   /**

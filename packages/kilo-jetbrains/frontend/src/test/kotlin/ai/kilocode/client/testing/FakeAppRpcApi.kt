@@ -68,6 +68,14 @@ class FakeAppRpcApi : KiloAppRpcApi {
         private set
     var configUpdateGate: CompletableDeferred<Unit>? = null
     var configUpdateError: Exception? = null
+
+    /** Fails the update whose patch matches, so a test can fail one write in a two-write sequence. */
+    var configUpdateErrorWhen: ((ConfigPatchDto) -> Boolean)? = null
+
+    /** Counts the writes rejected by [configUpdateErrorWhen], so a bounded retry is observable. */
+    var configUpdateFailedAttempts = 0
+        private set
+
     var configUpdateReturnStale = false
     var afterConfig: (suspend (ConfigPatchDto) -> Unit)? = null
     var speechModels = listOf(SpeechModelDto("openai/whisper-1", "Whisper"))
@@ -198,6 +206,10 @@ class FakeAppRpcApi : KiloAppRpcApi {
         configUpdateAttempts += 1
         configUpdateGate?.await()
         configUpdateError?.let { throw it }
+        if (configUpdateErrorWhen?.invoke(patch) == true) {
+            configUpdateFailedAttempts += 1
+            throw IllegalStateException("config update rejected")
+        }
         configPatches.add(patch)
         afterConfig?.invoke(patch)
         val current = state.value

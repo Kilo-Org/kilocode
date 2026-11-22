@@ -4,3 +4,7 @@ out/
 storybook-static/
 test-results/
 playwright-report/
+# Bundles the unit-test harnesses write into the package root. The tracked config
+# file shares the dot-dash shape, so it is re-included.
+.*-*.mjs
+!.vscode-test.mjs

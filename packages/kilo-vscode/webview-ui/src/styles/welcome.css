@@ -525,6 +525,42 @@
   cursor: default;
 }
 
+.account-switcher-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--vscode-errorForeground, #f14c4c);
+  color: var(--vscode-errorForeground, #f14c4c);
+  font-size: var(--kilo-font-size-11);
+}
+
+.account-switcher-error-text {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-switcher-retry {
+  flex-shrink: 0;
+  cursor: pointer;
+  border: none;
+  border-radius: 3px;
+  padding: 1px 6px;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  text-decoration: underline;
+}
+
+.account-switcher-retry:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
 .account-switcher-trigger:hover:not(:disabled) {
   opacity: 1;
   background: rgba(255, 255, 255, 0.03);

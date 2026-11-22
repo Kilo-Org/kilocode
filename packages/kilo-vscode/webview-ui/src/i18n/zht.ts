@@ -1221,6 +1221,8 @@ export const dict = {
   "dialog.model.notSet": "未設定",
   "profile.personalAccount": "個人帳戶",
   "profile.switchingAccount": "正在切換帳戶…",
+  "profile.unavailableAccount": "無法使用的帳戶",
+  "profile.switchFailed": "無法確認帳戶切換。",
 
   "prompt.action.indexing": "索引設定",
 
@@ -1345,6 +1347,8 @@ export const dict = {
   "settings.saveBar.cancel": "取消",
   "settings.saveBar.saving": "儲存中…",
   "settings.saveBar.saveFailed": "無法儲存設定",
+  "settings.saveBar.dismissError": "忽略",
+  "settings.saveBar.unconfirmedWrite": "擴充功能主機未確認「{{name}}」。",
   "notifications.action.next": "下一個",
   "notifications.action.close": "關閉",
   "notifications.action.tryModel": "嘗試 {{model}}",

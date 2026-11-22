@@ -7,6 +7,7 @@
 
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { getErrorMessage } from "../../kilo-provider-utils"
+import type { ProfileData } from "../../../webview-ui/src/types/messages/profile"
 
 export interface AuthContext {
   readonly client: KiloClient | null
@@ -103,39 +104,120 @@ export async function handleLogout(ctx: AuthContext): Promise<void> {
   }
 }
 
+/** The non-empty `message` a nested object carries, or nothing. */
+function nestedMessage(value: unknown): string | undefined {
+  if (!value || typeof value !== "object" || !("message" in value)) return undefined
+  const message = value.message
+  return typeof message === "string" && message.length > 0 ? message : undefined
+}
+
+/** Read a message out of one parsed response body, whatever shape the backend used. */
+function bodyText(body: unknown): string | undefined {
+  if (typeof body === "string") return body.length > 0 ? body : undefined
+  if (!body || typeof body !== "object") return undefined
+
+  if ("data" in body) {
+    const data = nestedMessage(body.data)
+    if (data) return data
+  }
+  if ("message" in body) {
+    const message = nestedMessage(body)
+    if (message) return message
+  }
+  if ("error" in body) {
+    const nested = body.error
+    if (typeof nested === "string") return nested.length > 0 ? nested : undefined
+    return nestedMessage(nested)
+  }
+  return undefined
+}
+
+/**
+ * Read the backend's own message out of the response body the SDK error
+ * interceptor attached to a thrown error. Anything else — no body, an empty
+ * body, or a shape that names no message — yields `undefined`, so the webview
+ * falls back to its localized copy instead of showing transport prose.
+ */
+function backendText(error: unknown): string | undefined {
+  if (!(error instanceof Error)) return undefined
+  const cause = error.cause
+  if (!cause || typeof cause !== "object" || !("body" in cause)) return undefined
+  return bodyText(cause.body)
+}
+
 /**
  * Handle organization switch.
- * Persists the selection and refreshes profile + providers since both change with org context.
+ * Persists the selection, refreshes profile + providers since both change with
+ * org context, and reports one correlated outcome for the request.
  */
-export async function handleSetOrganization(ctx: AuthContext, organizationId: string | null): Promise<void> {
-  if (!ctx.client) return
+export async function handleSetOrganization(
+  ctx: AuthContext,
+  organizationId: string | null,
+  requestID: string,
+): Promise<void> {
+  if (!ctx.client) {
+    // The client is gone, so there is no backend text to report. Leaving `error`
+    // out lets the webview show its own localized failure copy.
+    ctx.postMessage({
+      type: "organizationSwitchResult",
+      requestID,
+      organizationId,
+      ok: false,
+      data: null,
+    })
+    return
+  }
 
   console.log("[Kilo New] KiloProvider: Switching organization:", organizationId ?? "personal")
+
+  let failed = false
+  let failure: string | undefined
   try {
     await ctx.client.kilo.organization.set({ organizationId }, { throwOnError: true })
   } catch (error) {
     console.error("[Kilo New] KiloProvider: Failed to switch organization:", error)
-    // Re-fetch current profile to reset webview state — best-effort
-    try {
-      const result = await ctx.client.kilo.profile()
-      ctx.postMessage({ type: "profileData", data: result.data ?? null })
-    } catch (profileError) {
-      console.error("[Kilo New] KiloProvider: Failed to refresh profile after org switch error:", profileError)
-    }
-    return
+    failed = true
+    failure = backendText(error)
   }
 
-  ctx.invalidateProviderUsage()
-  ctx.invalidateProviders()
-  await ctx.disposeGlobal()
+  if (!failed) {
+    ctx.invalidateProviderUsage()
+    ctx.invalidateProviders()
+    await ctx.disposeGlobal().catch((error) => {
+      console.error("[Kilo New] KiloProvider: Failed to dispose global state after org switch:", error)
+    })
+  }
 
-  // Org switch succeeded — refresh profile and providers independently (best-effort)
+  // The profile read is the client's confirmation of the applied context, so a
+  // failed read leaves the switch unconfirmed even when the write succeeded.
+  let profile: ProfileData | null = null
+  let readFailed = false
+  let profileError: string | undefined
   try {
-    const result = await ctx.client.kilo.profile()
-    ctx.postMessage({ type: "profileData", data: result.data ?? null })
+    const result = await ctx.client.kilo.profile(undefined, { throwOnError: true })
+    profile = result.data ?? null
+    ctx.postMessage({ type: "profileData", data: profile })
   } catch (error) {
     console.error("[Kilo New] KiloProvider: Failed to refresh profile after org switch:", error)
+    readFailed = true
+    profileError = backendText(error)
   }
+
+  // Text travels in `error` only when the backend put it in the response body.
+  // A transport description is not backend text, so a failure without one stays
+  // message-free and the webview shows its localized copy.
+  const message = failure ?? profileError
+  ctx.postMessage({
+    type: "organizationSwitchResult",
+    requestID,
+    organizationId,
+    ok: !failed && !readFailed,
+    data: profile,
+    ...(message === undefined || message === "" ? {} : { error: message }),
+  })
+
+  if (failed) return
+
   try {
     await ctx.fetchAndSendProviders()
   } catch (error) {

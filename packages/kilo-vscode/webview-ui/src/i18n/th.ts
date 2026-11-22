@@ -1309,6 +1309,8 @@ export const dict = {
   "dialog.model.notSet": "ไม่ได้ตั้งค่า",
   "profile.personalAccount": "บัญชีส่วนตัว",
   "profile.switchingAccount": "กำลังสลับบัญชี…",
+  "profile.unavailableAccount": "บัญชีที่ใช้ไม่ได้",
+  "profile.switchFailed": "ยืนยันการสลับบัญชีไม่สำเร็จ",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/th.ts
 
   "question.summary": "{{n}} จาก {{total}} คำถาม",
@@ -1393,6 +1395,8 @@ export const dict = {
   "settings.saveBar.cancel": "ยกเลิก",
   "settings.saveBar.saving": "กำลังบันทึก…",
   "settings.saveBar.saveFailed": "ไม่สามารถบันทึกการตั้งค่าได้",
+  "settings.saveBar.dismissError": "ปิด",
+  "settings.saveBar.unconfirmedWrite": "โฮสต์ของส่วนขยายไม่ได้ยืนยัน “{{name}}”",
   "notifications.action.next": "ถัดไป",
   "notifications.action.close": "ปิด",
   "notifications.action.tryModel": "ลองใช้ {{model}}",

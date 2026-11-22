@@ -1,6 +1,6 @@
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { $ } from "bun"
-import { afterEach, describe, expect, test } from "bun:test"
+import { afterEach, describe, expect, spyOn, test } from "bun:test"
 import { Effect, Fiber, Layer, Logger, Option, Schema } from "effect"
 import { NodeFileSystem, NodePath } from "@effect/platform-node"
 import path from "path"
@@ -23,6 +23,8 @@ import { KilocodeConfig } from "../../../src/kilocode/config/config"
 import { provideTestInstance } from "../../fixture/fixture"
 import { Filesystem } from "../../../src/util/filesystem"
 import { disposeAllInstances, tmpdir } from "../../fixture/fixture"
+import { KilocodePaths } from "../../../src/kilocode/paths"
+import os from "os"
 import { LayerNodePlatform } from "@opencode-ai/core/effect/app-node-platform"
 
 const infra = AppNodeBuilder.build(CrossSpawnSpawner.node).pipe(
@@ -1831,5 +1833,155 @@ describe("bash permission migration", () => {
       await clear()
       await disposeAllInstances()
     }
+  })
+})
+
+describe("legacy MCP group reporting", () => {
+  // The production caller passes `mergeConfigConcatArrays`, a module-private helper of
+  // src/config/config.ts. Mirror it: KilocodeConfig.mergeConfig is its trusted deep merge.
+  const merge = (target: Config.Info, source: Config.Info): Config.Info => {
+    const merged = KilocodeConfig.mergeConfig(target, source)
+    if (target.instructions && source.instructions) {
+      merged.instructions = Array.from(new Set([...target.instructions, ...source.instructions]))
+    }
+    return merged
+  }
+
+  const modes = `customModes:
+  - slug: helper
+    name: Helper
+    roleDefinition: Helper mode
+    groups:
+      - read
+      - mcp
+`
+
+  async function withHome<T>(platform: string | undefined, fn: (home: string) => Promise<T>): Promise<T> {
+    await using home = await tmpdir()
+    const homedir = spyOn(os, "homedir").mockReturnValue(home.path)
+    // KilocodePaths resolves the VSCode global storage path from APPDATA first on Windows.
+    const env = {
+      APPDATA: process.env.APPDATA,
+      HOME: process.env.HOME,
+      KILO_TEST_HOME: process.env.KILO_TEST_HOME,
+      KILO_PLATFORM: process.env.KILO_PLATFORM,
+      KILOCODE_FEATURE: process.env.KILOCODE_FEATURE,
+    }
+    process.env.APPDATA = home.path
+    process.env.HOME = home.path
+    process.env.KILO_TEST_HOME = home.path
+    delete process.env.KILOCODE_FEATURE
+    if (platform === undefined) delete process.env.KILO_PLATFORM
+    else process.env.KILO_PLATFORM = platform
+    try {
+      const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings")
+      await Filesystem.write(path.join(settings, "custom_modes.yaml"), modes)
+      return await fn(home.path)
+    } finally {
+      homedir.mockRestore()
+      for (const [key, value] of Object.entries(env)) {
+        if (value === undefined) delete process.env[key]
+        else process.env[key] = value
+      }
+    }
+  }
+
+  const mcpWarnings = (warnings: Config.Warning[]) =>
+    warnings.filter((warning) => /MCP access (not migrated|incomplete)/.test(warning.message))
+
+  const serverKeys = (permission: Record<string, unknown> | undefined) =>
+    Object.keys(permission ?? {}).filter((key) => key.endsWith("_*"))
+
+  test("reports an mcp group from a skipped global store instead of dropping it", async () => {
+    await withHome("cli", async (home) => {
+      const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings")
+      await Filesystem.write(
+        path.join(settings, "mcp_settings.json"),
+        JSON.stringify({ mcpServers: { github: { command: "npx" } } }),
+      )
+
+      const result = await KilocodeConfig.loadLegacyConfigs({ projectDir: home, merge })
+
+      const mcp = mcpWarnings(result.warnings)
+      expect(mcp).toHaveLength(1)
+      expect(mcp[0].path).toBe(path.join(settings, "custom_modes.yaml"))
+      expect(mcp[0].message).toContain("MCP access incomplete: a global store this load skipped declared MCP servers")
+      expect(Object.keys(result.config.mcp ?? {})).toHaveLength(0)
+      // The mode itself still migrated from the global file, it just cannot honour the group.
+      expect(result.config.agent?.helper?.permission?.read).toBe("allow")
+      expect(serverKeys(result.config.agent?.helper?.permission)).toEqual([])
+    })
+  })
+
+  test("reports the skipped store even when a project server was granted", async () => {
+    await withHome("cli", async (home) => {
+      const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings")
+      await Filesystem.write(
+        path.join(settings, "mcp_settings.json"),
+        JSON.stringify({ mcpServers: { globalserver: { command: "npx" } } }),
+      )
+      // The project store is read on this platform, so its server is migrated and granted.
+      await Filesystem.write(
+        path.join(home, ".kilo", "mcp.json"),
+        JSON.stringify({ mcpServers: { projectserver: { command: "npx" } } }),
+      )
+
+      const result = await KilocodeConfig.loadLegacyConfigs({ projectDir: home, merge })
+
+      const mcp = mcpWarnings(result.warnings)
+      expect(mcp).toHaveLength(1)
+      expect(mcp[0].message).toContain("MCP access incomplete: a global store this load skipped declared MCP servers")
+      // The group grants what this load migrated; the skipped store's key is neither granted nor denied.
+      expect(serverKeys(result.config.agent?.helper?.permission)).toEqual(["projectserver_*"])
+      expect(result.config.agent?.helper?.permission?.["projectserver_*"]).toBe("allow")
+      expect(result.config.agent?.helper?.permission?.["globalserver_*"]).toBeUndefined()
+    })
+  })
+
+  // The project store wins the dedup for the same name, so the skipped store's server is the one
+  // this load converted: nothing was lost, and the group has nothing to report.
+  test("stays silent when the project store also names the skipped store's server", async () => {
+    await withHome("cli", async (home) => {
+      const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings")
+      await Filesystem.write(
+        path.join(settings, "mcp_settings.json"),
+        JSON.stringify({ mcpServers: { sharedserver: { command: "npx" } } }),
+      )
+      await Filesystem.write(
+        path.join(home, ".kilo", "mcp.json"),
+        JSON.stringify({ mcpServers: { sharedserver: { command: "bunx" } } }),
+      )
+
+      const result = await KilocodeConfig.loadLegacyConfigs({ projectDir: home, merge })
+
+      expect(mcpWarnings(result.warnings)).toHaveLength(0)
+      expect(result.config.mcp?.sharedserver).toMatchObject({ command: ["bunx"] })
+      expect(result.config.agent?.helper?.permission?.["sharedserver_*"]).toBe("allow")
+    })
+  })
+
+  test("stays silent when no global MCP store declared a server", async () => {
+    await withHome("cli", async (home) => {
+      const result = await KilocodeConfig.loadLegacyConfigs({ projectDir: home, merge })
+
+      expect(mcpWarnings(result.warnings)).toHaveLength(0)
+      expect(result.config.agent?.helper?.permission?.read).toBe("allow")
+      expect(serverKeys(result.config.agent?.helper?.permission)).toEqual([])
+    })
+  })
+
+  test("grants the global server without a warning when the loader reads global paths", async () => {
+    await withHome("vscode", async (home) => {
+      const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings")
+      await Filesystem.write(
+        path.join(settings, "mcp_settings.json"),
+        JSON.stringify({ mcpServers: { github: { command: "npx" } } }),
+      )
+
+      const result = await KilocodeConfig.loadLegacyConfigs({ projectDir: home, merge })
+
+      expect(mcpWarnings(result.warnings)).toHaveLength(0)
+      expect(serverKeys(result.config.agent?.helper?.permission)).toEqual(["github_*"])
+    })
   })
 })

@@ -171,7 +171,7 @@ function resolve(ctx: InstanceContext, metadataCalls: { toolCallID: string; valu
       metadata: (toolCallID, value) => Effect.sync(() => void metadataCalls.push({ toolCallID, value })),
       completeToolCall: () => Effect.void,
     },
-    bypassAgentCheck: false,
+    namedAgentTypes: [],
     messages: [],
     promptOps: {
       cancel: () => Effect.die(new Error("cancel is not used by this test")),
