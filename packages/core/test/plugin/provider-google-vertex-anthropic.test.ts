@@ -195,6 +195,28 @@ describe("GoogleVertexAnthropicPlugin", () => {
     }),
   )
 
+  // kilocode_change start - the location is validated when the model is used
+  it.effect("requires a Google Cloud region for the Anthropic location", () =>
+    Effect.gen(function* () {
+      const plugin = yield* PluginV2.Service
+      const aisdk = yield* AISDK.Service
+      yield* addPlugin(GoogleVertexAnthropicPlugin)
+      const exit = yield* aisdk
+        .runSDK({
+          model: ModelV2.Info.make({
+            ...ModelV2.Info.empty(ProviderV2.ID.make("google-vertex"), ModelV2.ID.make("claude-sonnet-4-5")),
+            api: { id: ModelV2.ID.make("claude-sonnet-4-5"), type: "aisdk", package: "test-provider" },
+          }),
+          package: "@ai-sdk/google-vertex/anthropic",
+          options: { name: "google-vertex", project: "project", location: "proxy.example/x" },
+        })
+        .pipe(Effect.exit)
+      expect(exit._tag).toBe("Failure")
+      expect(String(exit)).toContain("Invalid Google Vertex location")
+    }),
+  )
+  // kilocode_change end
+
   it.effect("selects google-vertex Anthropic language models through V2 plugins", () =>
     Effect.gen(function* () {
       const plugin = yield* PluginV2.Service

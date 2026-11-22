@@ -146,6 +146,9 @@ export const GoogleVertexAnthropicPlugin = define({
             process.env.GOOGLE_CLOUD_LOCATION ??
             process.env.VERTEX_LOCATION ??
             "global"
+          // kilocode_change start - an invalid location is reported when the provider model is used
+          if (!isVertexLocation(location)) continue
+          // kilocode_change end
           evt.provider.update(item.provider.id, (provider) => {
             if (project) provider.request.body.project = project
             provider.request.body.location = location
@@ -161,10 +164,13 @@ export const GoogleVertexAnthropicPlugin = define({
           typeof evt.options.project === "string"
             ? evt.options.project
             : (process.env.GOOGLE_CLOUD_PROJECT ?? process.env.GCP_PROJECT ?? process.env.GCLOUD_PROJECT)
-        const location =
+        // kilocode_change start - require a Google Cloud region and normalize its case
+        const location = parseVertexLocation(
           typeof evt.options.location === "string"
             ? evt.options.location
-            : (process.env.GOOGLE_CLOUD_LOCATION ?? process.env.VERTEX_LOCATION ?? "global")
+            : (process.env.GOOGLE_CLOUD_LOCATION ?? process.env.VERTEX_LOCATION ?? "global"),
+        )
+        // kilocode_change end
         evt.sdk = mod.createVertexAnthropic({
           ...evt.options,
           project,
