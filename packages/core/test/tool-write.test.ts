@@ -317,7 +317,11 @@ describe("WriteTool", () => {
             ),
             Effect.andThen((result) =>
               Effect.gen(function* () {
-                expect(result).toEqual({ type: "error", value: "Unable to write approved.txt" })
+                expect(result).toEqual({
+                  type: "error",
+                  value:
+                    "Unable to write approved.txt: file changed after permission approval. Read it again before writing.",
+                })
                 expect(yield* Effect.promise(() => fs.readFile(other, "utf8"))).toBe("other")
                 expect(writes).toEqual([])
               }),
@@ -349,7 +353,11 @@ describe("WriteTool", () => {
           ),
           Effect.andThen((result) =>
             Effect.gen(function* () {
-              expect(result).toEqual({ type: "error", value: "Unable to write replaced.txt" })
+              expect(result).toEqual({
+                type: "error",
+                value:
+                  "Unable to write replaced.txt: file changed after permission approval. Read it again before writing.",
+              })
               expect(yield* Effect.promise(() => fs.readFile(target, "utf8"))).toBe("later")
               expect(writes).toEqual([])
             }),
@@ -376,7 +384,11 @@ describe("WriteTool", () => {
           ),
           Effect.andThen((result) =>
             Effect.gen(function* () {
-              expect(result).toEqual({ type: "error", value: "Unable to write late.txt" })
+              expect(result).toEqual({
+                type: "error",
+                value:
+                  "Unable to write late.txt: file changed after permission approval. Read it again before writing.",
+              })
               expect(yield* Effect.promise(() => fs.readFile(target, "utf8"))).toBe("later")
               expect(writes).toEqual([])
             }),

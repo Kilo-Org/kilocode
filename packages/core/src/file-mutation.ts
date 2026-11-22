@@ -161,15 +161,20 @@ const layer = Layer.effect(
           }
           const approved = input.approved
           const changed = () => new TargetChangedError({ path: input.target.canonical })
-          const current = yield* fs
-            .readFile(input.target.canonical)
-            .pipe(Effect.catchReason("PlatformError", "NotFound", () => Effect.fail(changed())))
-          const info = yield* fs
-            .stat(input.target.canonical)
-            .pipe(Effect.catchReason("PlatformError", "NotFound", () => Effect.fail(changed())))
-          if (info.dev !== approved.dev || Option.getOrUndefined(info.ino) !== approved.ino)
-            return yield* Effect.fail(changed())
-          yield* fs.writeWithDirs(input.target.canonical, joinBom(next.text, hasUtf8Bom(current) || next.bom))
+          const bom = yield* Effect.scoped(
+            Effect.gen(function* () {
+              const file = yield* fs
+                .open(input.target.canonical, { flag: "r" })
+                .pipe(Effect.catchReason("PlatformError", "NotFound", () => Effect.fail(changed())))
+              const info = yield* file.stat
+              if (info.dev !== approved.dev || Option.getOrUndefined(info.ino) !== approved.ino)
+                return yield* Effect.fail(changed())
+              const head = yield* file.readAlloc(3)
+              return Option.match(head, { onNone: () => false, onSome: (bytes) => hasUtf8Bom(bytes) })
+            }),
+          )
+          // kilocode_change - the sandbox allows a read descriptor only, so the identity check and the write use separate opens
+          yield* fs.writeWithDirs(input.target.canonical, joinBom(next.text, bom || next.bom))
           return writeResult(input.target, true)
           // kilocode_change end
         }),
