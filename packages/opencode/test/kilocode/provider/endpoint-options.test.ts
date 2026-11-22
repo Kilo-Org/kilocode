@@ -196,6 +196,7 @@ describe("resolveEndpointOptions", () => {
     const options: Record<string, unknown> = { baseURL: "https://proxy.example/openai/v1", resourceName: "   " }
     resolveEndpointOptions("azure", undefined, options)
     expect(options.baseURL).toBe("https://proxy.example/openai/v1")
+    expect(options.resourceName).toBe("   ")
   })
 
   test("leaves other providers untouched", () => {
