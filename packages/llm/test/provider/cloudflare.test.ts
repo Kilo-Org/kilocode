@@ -1,10 +1,10 @@
 import { describe, expect } from "bun:test"
-import { ConfigProvider, Effect, Exit, Schema } from "effect"
+import { ConfigProvider, Effect, Exit, Schema } from "effect" // kilocode_change
 import { HttpClientRequest } from "effect/unstable/http"
 import { LLM } from "../../src"
 import { CloudflareAIGateway, CloudflareWorkersAI } from "../../src/providers/cloudflare"
-import { Auth, LLMClient } from "../../src/route"
-import type { Model } from "../../src/schema"
+import { Auth, LLMClient } from "../../src/route" // kilocode_change
+import type { Model } from "../../src/schema" // kilocode_change
 import { it } from "../lib/effect"
 import { dynamicResponse } from "../lib/http"
 import { sseEvents } from "../lib/sse"
@@ -13,6 +13,7 @@ const Json = Schema.fromJsonString(Schema.Unknown)
 const decodeJson = Schema.decodeUnknownSync(Json)
 const withEnv = (env: Record<string, string>) => Effect.provide(ConfigProvider.layer(ConfigProvider.fromEnv({ env })))
 
+// kilocode_change start
 const gateway = (options: Parameters<typeof CloudflareAIGateway.configure>[0]) =>
   CloudflareAIGateway.configure({ accountId: "test-account", ...options }).model("openai/gpt-4o-mini")
 
@@ -43,6 +44,7 @@ const gatewayRequest = (model: Model, env: Record<string, string>) =>
     )
     return { exit, headers: captured }
   })
+// kilocode_change end
 
 const deltaChunk = (delta: object, finishReason: string | null = null) => ({
   id: "chatcmpl_fixture",
@@ -157,6 +159,7 @@ describe("Cloudflare", () => {
     }),
   )
 
+  // kilocode_change start
   it.effect("attaches the gateway header and the provider bearer for every credential combination", () =>
     Effect.gen(function* () {
       const cases: ReadonlyArray<{
@@ -243,6 +246,7 @@ describe("Cloudflare", () => {
       expect(result.headers).toEqual({ "x-explicit": "explicit-token" })
     }),
   )
+  // kilocode_change end
 
   it.effect("allows a fully configured baseURL override", () =>
     Effect.gen(function* () {
