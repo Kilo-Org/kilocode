@@ -329,7 +329,10 @@ export function resolveEndpointOptions(
   }
   if (typeof options.baseURL === "string" && options.baseURL !== "") return
   if (providerID === "azure" && typeof options.resourceName === "string") {
-    options.resourceName = parseAzureResourceName(options.resourceName)
+    // A blank or whitespace-only name is unset, as in the catalog transform and the Azure plugin,
+    // so it reports a missing name instead of an invalid one.
+    if (options.resourceName.trim() === "") delete options.resourceName
+    else options.resourceName = parseAzureResourceName(options.resourceName)
   }
 }
 

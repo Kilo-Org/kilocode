@@ -184,6 +184,20 @@ describe("resolveEndpointOptions", () => {
     expect(() => resolveEndpointOptions("azure", undefined, options)).toThrow(/Invalid Azure resource name/)
   })
 
+  test("treats a blank Azure resource name as unset instead of an invalid one", () => {
+    for (const value of ["", "   ", "\t"]) {
+      const options: Record<string, unknown> = { resourceName: value }
+      expect(() => resolveEndpointOptions("azure", undefined, options)).not.toThrow()
+      expect("resourceName" in options).toBe(false)
+    }
+  })
+
+  test("keeps a blank Azure resource name untouched when a baseURL is configured", () => {
+    const options: Record<string, unknown> = { baseURL: "https://proxy.example/openai/v1", resourceName: "   " }
+    resolveEndpointOptions("azure", undefined, options)
+    expect(options.baseURL).toBe("https://proxy.example/openai/v1")
+  })
+
   test("leaves other providers untouched", () => {
     const options: Record<string, unknown> = { location: "proxy.example/x", resourceName: "proxy.example/" }
     resolveEndpointOptions("openai", "https://api.openai.com/v1", options)
