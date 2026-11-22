@@ -93,6 +93,7 @@ describe("tui sync", () => {
     await using tmp = await tmpdir()
     await Bun.write(`${tmp.path}/kv.json`, "{}")
     const configs: URL[] = []
+    const commands: URL[] = []
     const heldConfig = deferred<Response>()
     const heldPath = deferred<Response>()
     let hold = false
@@ -100,6 +101,8 @@ describe("tui sync", () => {
       if (url.pathname === "/experimental/workspace") return json([{ id: "ws_a" }, { id: "ws_b" }])
       const workspace = url.searchParams.get("workspace")
       const held = hold && workspace === "ws_a"
+      // the run reaches its follow-up stage only after it published its batch
+      if (url.pathname === "/command") commands.push(url)
       if (url.pathname === "/path") {
         // the earlier selection's responses stay in flight until after the switch resolves
         if (held) return heldPath.promise
@@ -123,7 +126,10 @@ describe("tui sync", () => {
 
       heldConfig.resolve(json({ model: "ws_a" }))
       heldPath.resolve(json({ home: "", state: "", config: "", worktree: "/tmp/opencode", directory: "/tmp/opencode/ws_a" }))
-      await Bun.sleep(30)
+      // the earlier run reached its own follow-up call, so its batch already ran; a round-trip
+      // through the stubbed client then settles after that point
+      await wait(() => commands.some((url) => url.searchParams.get("workspace") === "ws_a"))
+      await sync.session.refresh()
 
       expect(sync.data.config.model).toBe("ws_b")
       expect(project.instance.path().directory).toBe("/tmp/opencode/ws_b")
@@ -173,7 +179,8 @@ describe("tui sync", () => {
       await wait(() => sync.status === "complete")
 
       held.resolve(json({ model: "reply-from-an-older-run" }))
-      await Bun.sleep(60)
+      // a real client round-trip settles after that reply has been delivered
+      await sync.session.refresh()
 
       expect(sync.data.config.model).toBe("ws_a")
     } finally {
@@ -212,7 +219,8 @@ describe("tui sync", () => {
       await wait(() => configs.some((url) => url.searchParams.get("workspace") === "ws_b"))
 
       held.resolve(json([ask("perm_a", "ses_a")]))
-      await Bun.sleep(50)
+      // a real client round-trip settles after that recovery has finished
+      await sync.session.refresh()
 
       // the earlier recovery resolved after the switch and published nothing
       expect(sync.data.permission["ses_a"]).toBeUndefined()
@@ -276,23 +284,31 @@ describe("tui sync", () => {
     await using tmp = await tmpdir()
     await Bun.write(`${tmp.path}/kv.json`, "{}")
     const held = deferred<Response>()
+    const settled = deferred<undefined>()
     const exited: unknown[] = []
+    const seen: string[] = []
     const { app, project, sync } = await mount((url) => {
       if (url.pathname === "/experimental/workspace") return json([{ id: "ws_a" }, { id: "ws_b" }])
       if (url.pathname !== "/config") return undefined
       const workspace = url.searchParams.get("workspace")
-      if (workspace === "ws_a") return held.promise
-      return json({ model: workspace ?? "default" })
+      if (workspace !== "ws_a") return json({ model: workspace ?? "default" })
+      // the earlier selection's read stays in flight until after the switch resolved
+      seen.push(workspace)
+      return held.promise.finally(() => settled.resolve(undefined))
     }, tmp.path, undefined, (error) => exited.push(error))
 
     try {
       project.workspace.set("ws_a")
-      await Bun.sleep(20)
+      // the switch happens while that read is in flight
+      await wait(() => seen.length === 1)
       project.workspace.set("ws_b")
       await wait(() => sync.data.config.model === "ws_b")
 
       held.reject(new Error("Workspace not found"))
-      await Bun.sleep(80)
+      // the rejection reached the client, then a real round-trip through the stubbed client
+      // settled after it
+      await settled.promise
+      await sync.session.refresh()
 
       expect(exited).toEqual([])
       expect(sync.data.config.model).toBe("ws_b")
