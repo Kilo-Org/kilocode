@@ -50,6 +50,7 @@ import {
   wrapFirstByte,
 } from "@/kilocode/provider/provider"
 import * as ModelsRefresh from "@/kilocode/provider/models-refresh"
+import { gpt5FamilyReasoningTiers, isFirstPartyOpenAIEndpoint } from "@/kilocode/provider/transform" // kilocode_change - endpoint-aware reasoning-tier gating
 import { bedrockAuth, providerKey, vertexAuth, vertexCredentials, vertexOptions } from "@/kilocode/provider/cloud-auth"
 // kilocode_change end
 import { ProviderError } from "./error"
@@ -1635,10 +1636,13 @@ const layer = Layer.effect(
               ...patchKiloConfigModel(model, existingModel), // kilocode_change
             }
             // kilocode_change start
+            // Effective endpoint for reasoning-tier gating: provider options shadowed by
+            // model options, matching resolveSDK/getModel precedence.
+            const endpointOptions = { ...parsed.options, ...parsedModel.options }
             const baseGenerate = (m: typeof parsedModel) =>
               existingModel?.api.npm === m.api.npm
-                ? (existingModel.variants ?? ProviderTransform.variants(m))
-                : ProviderTransform.variants(m)
+                ? (existingModel.variants ?? ProviderTransform.variants(m, endpointOptions))
+                : ProviderTransform.variants(m, endpointOptions)
             const generated = customProviderVariants(
               parsedModel,
               model.provider?.npm ?? provider.npm,
@@ -1801,9 +1805,24 @@ const layer = Layer.effect(
             )
               delete provider.models[modelID]
 
-            if (model.variants === undefined) {
-              model.variants = mapValues(ProviderTransform.variants(model), (v) => v)
+            // kilocode_change start - effective endpoint for reasoning-tier gating
+            // (provider options shadowed by model options, matching resolveSDK/getModel
+            // precedence). Variants baked at catalog time predate endpoint overrides, so a
+            // rerouted provider keeps a stale first-party exemption: none/xhigh on a
+            // non-gpt-5 id could only come from that exemption, which the override
+            // invalidates (issue #13342). Regenerate under the effective endpoint;
+            // explicit config variants re-apply below.
+            const endpointOptions = { ...provider.options, ...model.options }
+            if (
+              model.variants === undefined ||
+              (model.api.npm === "@ai-sdk/openai" &&
+                (model.variants.none !== undefined || model.variants.xhigh !== undefined) &&
+                !gpt5FamilyReasoningTiers(model.api.id) &&
+                !isFirstPartyOpenAIEndpoint(model, endpointOptions))
+            ) {
+              model.variants = mapValues(ProviderTransform.variants(model, endpointOptions), (v) => v)
             }
+            // kilocode_change end
 
             const configVariants = configProvider?.models?.[modelID]?.variants
             if (configVariants && model.variants) {

@@ -142,8 +142,9 @@ describe("ProviderTransform.reasoningVariants - models.dev reasoning_options", (
 
 describe("custom provider fallback reasoning efforts", () => {
   const efforts = ["none", "low", "medium", "high", "xhigh", "max"]
+  const gated = ["low", "medium", "high"]
 
-  for (const npm of ["@ai-sdk/openai-compatible", "@ai-sdk/openai", "@ai-sdk/anthropic"]) {
+  for (const npm of ["@ai-sdk/openai-compatible", "@ai-sdk/anthropic"]) {
     test(`${npm} exposes broad efforts after heuristics fail`, () => {
       const model = mockModel({ id: "qwen-custom", api: { id: "qwen-custom", url: "https://api.test.com", npm } })
       const generated = ProviderTransform.variants({ ...model, variants: {} })
@@ -161,6 +162,26 @@ describe("custom provider fallback reasoning efforts", () => {
       expect(result.max?.reasoningEffort).toBe("max")
     })
   }
+
+  test("@ai-sdk/openai gates rollout tiers for non-gpt-5 ids (issue #13342)", () => {
+    const npm = "@ai-sdk/openai"
+    const model = mockModel({ id: "qwen-custom", api: { id: "qwen-custom", url: "https://api.test.com", npm } })
+    expect(ProviderTransform.variants({ ...model, variants: {} })).toEqual({})
+
+    const result = customProviderVariants(model, npm, ProviderTransform.variants)
+    expect(Object.keys(result)).toEqual(gated)
+    expect(result.low?.reasoningEffort).toBe("low")
+    expect(result.high?.reasoningEffort).toBe("high")
+  })
+
+  test("@ai-sdk/openai keeps rollout tiers for gpt-5 ids", () => {
+    const npm = "@ai-sdk/openai"
+    const model = mockModel({ id: "gpt-5.5", api: { id: "gpt-5.5", url: "https://api.test.com", npm } })
+    const result = customProviderVariants(model, npm, () => ({}))
+    expect(Object.keys(result)).toEqual(efforts)
+    expect(result.none?.reasoningEffort).toBe("none")
+    expect(result.xhigh?.reasoningEffort).toBe("xhigh")
+  })
 
   for (const id of ["glm-custom", "kimi-custom", "minimax-custom"]) {
     test(`openai-compatible custom provider uses broad efforts for ${id}`, () => {
