@@ -26,6 +26,7 @@ function mockConnection(getImpl?: (p: SessionGetParams) => Promise<unknown>, vcs
   const deleteCalls: Array<{ sessionID: string; messageID: string; directory?: string }> = []
   const sessionDeleteCalls: Array<{ sessionID: string; directory?: string }> = []
   const sessionUpdateCalls: Array<{ sessionID: string; directory?: string; title?: string }> = []
+  const summarizeCalls: Array<{ sessionID: string; directory?: string; providerID?: string; modelID?: string }> = []
   const abortCalls: Array<{ sessionID: string; directory?: string; scope?: string }> = []
   const client = {
     session: {
@@ -98,6 +99,10 @@ function mockConnection(getImpl?: (p: SessionGetParams) => Promise<unknown>, vcs
         abortCalls.push(p)
         return { data: true }
       },
+      summarize: async (p: { sessionID: string; directory?: string; providerID?: string; modelID?: string }) => {
+        summarizeCalls.push(p)
+        return { data: true }
+      },
       list: async () => ({ data: [] }),
       status: async () => ({ data: {} }),
     },
@@ -129,6 +134,7 @@ function mockConnection(getImpl?: (p: SessionGetParams) => Promise<unknown>, vcs
     deleteCalls,
     sessionDeleteCalls,
     sessionUpdateCalls,
+    summarizeCalls,
     abortCalls,
     connection: {
       connect: async () => {
@@ -199,6 +205,7 @@ type ProviderInternals = {
   handleDeleteMessage: (sessionID: string, messageID: string, requestID?: string) => Promise<void>
   handleDeleteSession: (sessionID: string) => Promise<void>
   handleRenameSession: (sessionID: string, title: string) => Promise<void>
+  handleCompact: (sessionID?: string, providerID?: string, modelID?: string) => Promise<void>
   handleAbort: (sessionID?: string, scope?: "session" | "tree") => Promise<void>
   handleSendCommand: (
     command: string,
@@ -1039,6 +1046,47 @@ describe("KiloProvider route integration", () => {
 
     expect(sessionUpdateCalls).toHaveLength(1)
     expect(sessionUpdateCalls[0]).toMatchObject({ sessionID: "ses-a", directory: "/repo/a", title: "New title" })
+  })
+
+  it("reports a compact when the session maps to more than one project", async () => {
+    const { connection, summarizeCalls } = mockConnection()
+    const provider = new KiloProvider({} as never, connection, undefined, {
+      routeService: ambiguousRoutes(),
+      rootDirectory: () => "/active/root",
+    })
+    const internal = provider as unknown as ProviderInternals
+    connect(internal)
+    const posted: unknown[] = []
+    internal.webview = { postMessage: async (message) => posted.push(message) }
+
+    await internal.handleCompact("same", "prov", "model")
+
+    expect(summarizeCalls).toEqual([])
+    expect(posted).toContainEqual(refusal("same"))
+  })
+
+  it("compacts a session on its one exact route", async () => {
+    const routes = new ProjectRouteService()
+    routes.registerProject("a", "/repo/a", 1)
+    routes.registerSession({ projectId: "a", sessionId: "ses-a" }, "/repo/a", 1)
+    const { connection, summarizeCalls } = mockConnection()
+    const provider = new KiloProvider({} as never, connection, undefined, {
+      routeService: routes,
+      rootDirectory: () => "/active/root",
+    })
+    const internal = provider as unknown as ProviderInternals
+    connect(internal)
+    internal.webview = { postMessage: async () => undefined }
+
+    await internal.handleCompact("ses-a", "prov", "model")
+
+    expect(summarizeCalls).toHaveLength(1)
+    expect(summarizeCalls[0]).toMatchObject({
+      sessionID: "ses-a",
+      directory: "/repo/a",
+      providerID: "prov",
+      modelID: "model",
+    })
   })
 
   it("reports an unrevert when the session maps to more than one project", async () => {

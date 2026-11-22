@@ -5130,6 +5130,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
+    if (this.isAmbiguousSession(target)) {
+      this.postAmbiguousSession(target)
+      return
+    }
+
     try {
       const workspaceDir = this.getWorkspaceDirectory(target)
       await this.client.session.summarize(
