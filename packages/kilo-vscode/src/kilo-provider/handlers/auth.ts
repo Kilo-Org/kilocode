@@ -115,13 +115,14 @@ export async function handleSetOrganization(
   requestID: string,
 ): Promise<void> {
   if (!ctx.client) {
+    // The client is gone, so there is no backend text to report. Leaving `error`
+    // out lets the webview show its own localized failure copy.
     ctx.postMessage({
       type: "organizationSwitchResult",
       requestID,
       organizationId,
       ok: false,
       data: null,
-      error: "Not connected to CLI backend",
     })
     return
   }
@@ -133,7 +134,7 @@ export async function handleSetOrganization(
     await ctx.client.kilo.organization.set({ organizationId }, { throwOnError: true })
   } catch (error) {
     console.error("[Kilo New] KiloProvider: Failed to switch organization:", error)
-    failure = getErrorMessage(error) || "Failed to switch organization"
+    failure = getErrorMessage(error)
   }
 
   if (failure === undefined) {
@@ -154,16 +155,19 @@ export async function handleSetOrganization(
     ctx.postMessage({ type: "profileData", data: profile })
   } catch (error) {
     console.error("[Kilo New] KiloProvider: Failed to refresh profile after org switch:", error)
-    profileError = getErrorMessage(error) || "Failed to refresh profile"
+    profileError = getErrorMessage(error)
   }
 
+  // Only backend-supplied text travels in `error`; a failure with no message of
+  // its own stays message-free so the webview shows the localized copy.
+  const message = failure ?? profileError
   ctx.postMessage({
     type: "organizationSwitchResult",
     requestID,
     organizationId,
     ok: failure === undefined && profileError === undefined,
     data: profile,
-    ...(failure !== undefined ? { error: failure } : profileError !== undefined ? { error: profileError } : {}),
+    ...(message === undefined || message === "" ? {} : { error: message }),
   })
 
   if (failure !== undefined) return

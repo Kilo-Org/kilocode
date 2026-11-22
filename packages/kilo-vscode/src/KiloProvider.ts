@@ -1466,13 +1466,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           }
           // A malformed id cannot be dispatched, but the caller still waits for its
           // correlated outcome, so answer it rather than leaving the attempt pending.
+          // No message is attached, so the webview shows its localized failure copy.
           this.postMessage({
             type: "organizationSwitchResult",
             requestID,
             organizationId: null,
             ok: false,
             data: null,
-            error: "Invalid organization id",
           })
           break
         }

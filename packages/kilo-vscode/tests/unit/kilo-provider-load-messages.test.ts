@@ -2027,7 +2027,8 @@ describe("KiloProvider setOrganization dispatch", () => {
     )
     expect(results).toHaveLength(1)
     expect(results[0]).toMatchObject({ requestID: "request-bad", ok: false, data: null })
-    expect((results[0] as { error?: string }).error).toBeTruthy()
+    // The reply carries no message of its own, so the webview stays localized.
+    expect("error" in (results[0] as object)).toBe(false)
     expect(client.switched).toEqual([])
   })
 })

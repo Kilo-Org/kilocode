@@ -166,6 +166,7 @@ describe("handleSetOrganization", () => {
 
     const result = only(messages)
     expect(result).toMatchObject({ requestID: "request-5", ok: false, data: null })
-    expect(result.error).toBeTruthy()
+    // No backend supplied a message, so the webview shows its own localized copy.
+    expect("error" in result).toBe(false)
   })
 })
