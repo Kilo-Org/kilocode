@@ -254,6 +254,32 @@ describe("ConfigState", () => {
       expect(s.config.username).toBe("bob") // server update applied
     })
 
+    it("keeps the save and its draft when another writer's update arrives mid-save", () => {
+      const s = new ConfigState()
+      s.handleConfigLoaded({ snapshot: true, username: "alice" })
+      s.updateConfig({ snapshot: false })
+      s.saveConfig()
+
+      // Another webview (e.g. PermissionDock), a provider action, or the SSE-driven refresh
+      // pushes while our save is still waiting: it is not the answer to our write.
+      s.handleConfigUpdated({ snapshot: true, username: "bob" })
+
+      expect(s.saving).toBe(true) // our save is still in flight
+      expect(s.dirty).toBe(true) // the draft is still the user's to save
+      expect(s.config.snapshot).toBe(false) // draft preserved
+      expect(s.config.username).toBe("bob") // server update applied
+
+      // Only the answer that echoes our request settles the save.
+      s.handleConfigUpdated({ snapshot: false, username: "bob" }, "someone-else")
+      expect(s.saving).toBe(true)
+      expect(s.dirty).toBe(true)
+
+      s.handleConfigUpdated({ snapshot: false, username: "bob" }, s.request)
+      expect(s.saving).toBe(false)
+      expect(s.dirty).toBe(false)
+      expect(Object.keys(s.draft).length).toBe(0)
+    })
+
     it("clears draft when update confirms our save", () => {
       const s = new ConfigState()
       s.handleConfigLoaded({ snapshot: true })
@@ -262,7 +288,7 @@ describe("ConfigState", () => {
       expect(s.saving).toBe(true)
 
       // Server confirms the write
-      s.handleConfigUpdated({ snapshot: false })
+      s.handleConfigUpdated({ snapshot: false }, s.request)
 
       expect(s.config.snapshot).toBe(false)
       expect(s.dirty).toBe(false)
@@ -277,7 +303,7 @@ describe("ConfigState", () => {
       s.saveConfig()
 
       // Server confirms the write by returning config without default_agent.
-      s.handleConfigUpdated({})
+      s.handleConfigUpdated({}, s.request)
 
       expect(s.config.default_agent).toBeUndefined()
       expect(s.dirty).toBe(false)
@@ -344,7 +370,7 @@ describe("ConfigState", () => {
 
     s.saveConfig()
     s.saveConfig()
-    s.handleConfigUpdated({ snapshot: false })
+    s.handleConfigUpdated({ snapshot: false }, s.request)
 
     expect(s.saving).toBe(false)
     expect(s.dirty).toBe(false)
@@ -416,7 +442,7 @@ describe("ConfigState", () => {
       s.saveConfig()
 
       // Backend removed the override and pushes the stripped config back.
-      s.handleConfigUpdated({ agent: { explore: {} } })
+      s.handleConfigUpdated({ agent: { explore: {} } }, s.request)
 
       expect(s.config.agent?.explore?.model).toBeUndefined()
       expect(s.dirty).toBe(false)

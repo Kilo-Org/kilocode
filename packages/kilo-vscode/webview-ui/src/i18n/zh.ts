@@ -1342,6 +1342,7 @@ export const dict = {
   "settings.saveBar.saveFailed": "无法保存设置",
   "settings.saveBar.dismissError": "忽略",
   "settings.saveBar.unconfirmedWrite": "扩展宿主未确认「{{name}}」。",
+  "settings.saveBar.unconfirmedSave": "扩展宿主未确认保存。请重试。",
   "settings.saveBar.cancel": "取消",
   "notifications.action.next": "下一个",
   "notifications.action.close": "关闭",

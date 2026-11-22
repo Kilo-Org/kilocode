@@ -652,6 +652,12 @@ export interface UpdateConfigMessage {
   projectUnset?: string[][]
   globalBindingId?: string
   projectBindingId?: string
+  /**
+   * Identifies this write so the host can echo it on the one message that answers it.
+   * A `configUpdated` or `configUpdateFailed` carrying this id is the answer to this write;
+   * one without it came from somewhere else.
+   */
+  requestId?: string
 }
 
 export interface RequestNotificationSettingsMessage {

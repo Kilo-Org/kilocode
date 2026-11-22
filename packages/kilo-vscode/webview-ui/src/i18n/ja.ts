@@ -1415,6 +1415,7 @@ export const dict = {
   "settings.saveBar.saveFailed": "設定を保存できませんでした",
   "settings.saveBar.dismissError": "閉じる",
   "settings.saveBar.unconfirmedWrite": "「{{name}}」 は拡張機能ホストによって確認されませんでした。",
+  "settings.saveBar.unconfirmedSave": "保存は拡張機能ホストによって確認されませんでした。もう一度お試しください。",
   "notifications.action.next": "次へ",
   "notifications.action.close": "閉じる",
   "notifications.action.tryModel": "{{model}}を試す",

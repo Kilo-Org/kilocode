@@ -106,6 +106,13 @@ export function retainUnconfirmedMcpRemovals(names: Iterable<string>, config: Co
   return new Set([...names].filter((name) => Boolean(config.mcp?.[name])))
 }
 
+let saveCount = 0
+/**
+ * A fresh id for one `saveConfig` write. The host echoes it on the one message that answers
+ * that write, so a `configUpdated` from any other writer cannot settle the save.
+ */
+const nextSaveId = () => `s${(saveCount += 1).toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+
 /**
  * Plain-object config state machine — mirrors the SolidJS ConfigProvider
  * logic without signals so the message-handling behavior is unit-testable.
@@ -117,6 +124,8 @@ export class ConfigState {
   dirty = false
   saving = false
   loading = true
+  /** The id of the write `saving` waits on; only the answer that echoes it confirms. */
+  request: string | undefined = undefined
 
   /** Accumulate a partial change (same as the toggle click path). */
   updateConfig(partial: Partial<Config>) {
@@ -140,9 +149,14 @@ export class ConfigState {
     this.dirty = Object.keys(this.draft).length > 0
   }
 
-  /** Handle an incoming configUpdated push from the extension. */
-  handleConfigUpdated(server: Config) {
-    if (this.saving) {
+  /**
+   * Handle an incoming configUpdated push from the extension. Only the message that echoes
+   * the in-flight write's request id confirms it; any other push — another webview's save, a
+   * provider action, an SSE-driven refresh — re-applies the draft and leaves `saving` alone.
+   */
+  handleConfigUpdated(server: Config, requestId?: string) {
+    if (this.saving && requestId != null && requestId === this.request) {
+      this.request = undefined
       this.saving = false
       this.draft = {}
       this.dirty = false
@@ -157,6 +171,7 @@ export class ConfigState {
   handleConfigSaved() {
     if (!this.saving) return
     this.saving = false
+    this.request = undefined
     this.draft = {}
     this.dirty = false
     this.saved = this.config
@@ -166,6 +181,7 @@ export class ConfigState {
   handleConfigSaveFailed(server: Config) {
     if (!this.saving) return
     this.saving = false
+    this.request = undefined
     this.saved = server
     this.config = resolveConfig(server, this.draft, this.dirty)
   }
@@ -174,6 +190,7 @@ export class ConfigState {
   saveConfig() {
     if (this.saving || Object.keys(this.draft).length === 0) return
     this.saving = true
+    this.request = nextSaveId()
   }
 
   /** Discard pending changes. */
@@ -181,5 +198,6 @@ export class ConfigState {
     this.config = this.saved
     this.draft = {}
     this.dirty = false
+    this.request = undefined
   }
 }

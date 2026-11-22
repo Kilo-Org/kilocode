@@ -56,6 +56,14 @@ const settingProperties: Record<string, string> = {
  */
 export const settleBound = { ms: 10_000 }
 
+/**
+ * How long a `saveConfig` write waits for the host's answering message. A save the host never
+ * answers settles at this bound instead of leaving the Save button disabled forever. It is a
+ * `const` binding with a mutable holder so a fixture can shorten it without waiting ten
+ * seconds; the app never changes it.
+ */
+export const saveBound = { ms: 10_000 }
+
 let writeCount = 0
 /**
  * A fresh id for one `updateSetting` write. The host echoes it on that write's terminal
@@ -63,6 +71,13 @@ let writeCount = 0
  * value, or both.
  */
 const nextWriteId = () => `w${(writeCount += 1).toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+
+let saveCount = 0
+/**
+ * A fresh id for one `saveConfig` write. The host echoes it on the one message that answers
+ * that write, so a `configUpdated` from another writer cannot be mistaken for its confirmation.
+ */
+const nextSaveId = () => `s${(saveCount += 1).toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 
 /** One `updateSetting` write a chain is waiting on, with the chain order and id it was sent with. */
 interface AwaitingWrite {
@@ -237,6 +252,17 @@ export const ConfigProvider: ParentComponent = (props) => {
   // confirmation that arrives after the chain expired adopts the value and resolves that
   // error instead of leaving the page reporting a write the control has already taken.
   let expiredWrite: { wire: string; error: SaveError } | undefined
+  // The id of the `saveConfig` write the Save button is waiting on, if any. Only the
+  // `configUpdated` or `configUpdateFailed` that echoes it settles that save; an answer
+  // without it came from another writer and must leave the save, and its draft, alone.
+  let saveRequest: string | undefined
+  // The bound that settles a save the host never answers.
+  let saveTimer: ReturnType<typeof setTimeout> | undefined
+  /** Stop the bound that would settle an unanswered save. */
+  const disarmSave = () => {
+    clearTimeout(saveTimer)
+    saveTimer = undefined
+  }
   /** The value the host holds for a chain: its newest confirmed write, else what it replaced. */
   const heldValue = (pending: PendingWrite) => (pending.hasStored ? pending.stored : pending.previous)
   const updateCollections = (next: ConfigCollections | undefined) => {
@@ -412,6 +438,53 @@ export const ConfigProvider: ParentComponent = (props) => {
     if (message.type !== "shortcutContext") return
     setShortcuts({ bindings: message.bindings, selection: message.selection })
   })
+  /**
+   * Apply a `configUpdated` push. Only the message that echoes the id of the save the Save
+   * button is waiting on confirms that save and drops the draft with it; every other push —
+   * another webview's save, a provider action, or the SSE-driven refresh — re-applies the
+   * draft on top and leaves the in-flight save alone.
+   */
+  const applyConfigUpdated = (message: Extract<ExtensionMessage, { type: "configUpdated" }>) => {
+    const confirming = saveRequest != null && message.requestId === saveRequest
+    if (confirming) {
+      saveRequest = undefined
+      disarmSave()
+      setSaving(false)
+      setDraft({})
+      setGlobalDraft({})
+      setProjectDraft({})
+      setSaveError(null)
+      setConfig(hideRemovedMcp(message.config, removedMcp()))
+    } else {
+      setConfig(
+        resolveConfig(
+          hideRemovedMcp(message.config, removedMcp()),
+          hideRemovedMcp(draft() as Config, removedMcp()),
+          has(draft() as Record<string, unknown>),
+        ),
+      )
+    }
+    if (message.globalConfig !== undefined) {
+      const global = hideRemovedMcp(message.globalConfig, removedMcp())
+      setGlobalConfig(
+        confirming ? global : mergeScopedConfig(global, hideRemovedMcp(globalDraft() as Config, removedMcp())),
+      )
+      setSavedGlobal(global)
+    }
+    if (message.projectConfig !== undefined) {
+      const project = hideRemovedMcp(message.projectConfig, removedMcp())
+      setProjectConfig(
+        confirming ? project : mergeScopedConfig(project, hideRemovedMcp(projectDraft() as Config, removedMcp())),
+      )
+      setSavedProject(project)
+    }
+    updateCollections(message.collections)
+    setFeatures(message.features)
+    setBindings(message.bindings ?? bindings())
+    if (message.settings) mergeSettings(message.settings)
+    setSaved(hideRemovedMcp(message.config, removedMcp()))
+  }
+
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type === "configLoaded") {
       // Skip if a save is in-flight — a stale configLoaded must not overwrite
@@ -450,57 +523,7 @@ export const ConfigProvider: ParentComponent = (props) => {
       setSavedGlobal(server)
       return
     }
-    if (message.type === "configUpdated") {
-      if (saving()) {
-        // This configUpdated is the confirmation of our saveConfig() write.
-        // Clear the draft now that the server has confirmed the write.
-        setSaving(false)
-        setDraft({})
-        setGlobalDraft({})
-        setProjectDraft({})
-        setSaveError(null)
-        setConfig(hideRemovedMcp(message.config, removedMcp()))
-        if (message.globalConfig !== undefined) {
-          const global = hideRemovedMcp(message.globalConfig, removedMcp())
-          setGlobalConfig(global)
-          setSavedGlobal(global)
-        }
-        if (message.projectConfig !== undefined) {
-          const project = hideRemovedMcp(message.projectConfig, removedMcp())
-          setProjectConfig(project)
-          setSavedProject(project)
-        }
-        updateCollections(message.collections)
-        setFeatures(message.features)
-        setBindings(message.bindings ?? bindings())
-      } else {
-        // configUpdated from a different source (e.g. PermissionDock save).
-        // Re-apply the draft on top so pending settings changes are preserved.
-        setConfig(
-          resolveConfig(
-            hideRemovedMcp(message.config, removedMcp()),
-            hideRemovedMcp(draft() as Config, removedMcp()),
-            has(draft() as Record<string, unknown>),
-          ),
-        )
-        if (message.globalConfig !== undefined) {
-          const global = hideRemovedMcp(message.globalConfig, removedMcp())
-          setGlobalConfig(mergeScopedConfig(global, hideRemovedMcp(globalDraft() as Config, removedMcp())))
-          setSavedGlobal(global)
-        }
-        if (message.projectConfig !== undefined) {
-          const project = hideRemovedMcp(message.projectConfig, removedMcp())
-          setProjectConfig(mergeScopedConfig(project, hideRemovedMcp(projectDraft() as Config, removedMcp())))
-          setSavedProject(project)
-        }
-        updateCollections(message.collections)
-        setFeatures(message.features)
-        setBindings(message.bindings ?? bindings())
-      }
-      if (message.settings) mergeSettings(message.settings)
-      setSaved(hideRemovedMcp(message.config, removedMcp()))
-      return
-    }
+    if (message.type === "configUpdated") applyConfigUpdated(message)
   })
   const unsubscribeExpired = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type !== "configBindingExpired") return
@@ -513,6 +536,11 @@ export const ConfigProvider: ParentComponent = (props) => {
   })
   const unsubscribeFailure = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type !== "configUpdateFailed") return
+    // A failure that names another writer's request cannot be the answer to our save: while a
+    // save is in flight it must not settle ours, nor report over it.
+    if (saving() && message.requestId !== undefined && message.requestId !== saveRequest) return
+    saveRequest = undefined
+    disarmSave()
     setSaving(false)
     if (message.completedScopes?.length) {
       const split = splitConfigByScope(draft())
@@ -629,6 +657,8 @@ export const ConfigProvider: ParentComponent = (props) => {
     // A chain timer must not fire into a torn-down provider.
     pendingWrites.forEach((pending) => clearTimeout(pending.timer))
     pendingWrites.clear()
+    saveRequest = undefined
+    disarmSave()
   })
 
   function mergeSettings(patch: Record<string, unknown>) {
@@ -750,6 +780,21 @@ export const ConfigProvider: ParentComponent = (props) => {
     const split = splitConfigByScope(changes)
     const next = deepMerge(split.global as Config, globals)
     const project = deepMerge(split.project as Config, projects)
+    // Name this write so only the host's answer to it clears the save and its draft; a
+    // configUpdated from another writer that lands in the meantime leaves both alone.
+    const requestId = nextSaveId()
+    saveRequest = requestId
+    disarmSave()
+    saveTimer = setTimeout(() => {
+      // Only the write this timer was armed for settles here: a newer save disarmed it, and a
+      // stale callback must not clear a save the user started afterwards.
+      if (saveRequest !== requestId) return
+      saveRequest = undefined
+      saveTimer = undefined
+      setSaving(false)
+      // Every draft stays, so the save bar keeps showing the unconfirmed edit for a retry.
+      setSaveError({ key: "settings.saveBar.unconfirmedSave" })
+    }, saveBound.ms)
     vscode.postMessage({
       type: "updateConfig",
       config: pruneConfigSet(next) as Config,
@@ -758,6 +803,7 @@ export const ConfigProvider: ParentComponent = (props) => {
       projectUnset: configUnsetPaths(project),
       globalBindingId: bindings().global?.id,
       projectBindingId: bindings().project?.id,
+      requestId,
     })
   }
 
@@ -771,6 +817,8 @@ export const ConfigProvider: ParentComponent = (props) => {
     setSettings(savedSettings())
     setSettingsDraft({})
     expiredWrite = undefined
+    saveRequest = undefined
+    disarmSave()
     setSaveError(null)
   }
 

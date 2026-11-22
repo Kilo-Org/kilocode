@@ -1611,6 +1611,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.projectUnset,
             message.globalBindingId,
             message.projectBindingId,
+            message.requestId,
           )
           break
         case "openSettingsTab":
@@ -4072,9 +4073,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     projectUnset: string[][] = [],
     globalBindingId?: string,
     projectBindingId?: string,
+    requestId?: string,
   ): Promise<void> {
     if (!this.client || this.connectionState !== "connected") {
-      this.postMessage({ type: "configUpdateFailed", message: "Not connected to CLI backend" })
+      this.postMessage({
+        type: "configUpdateFailed",
+        message: "Not connected to CLI backend",
+        ...(requestId !== undefined ? { requestId } : {}),
+      })
       return
     }
 
@@ -4103,7 +4109,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         )
       : undefined
     if ((hasGlobal && !globalBinding) || (hasProject && !projectBinding)) {
-      this.postMessage({ type: "configUpdateFailed", message: "Settings changed or expired. Reload before saving." })
+      this.postMessage({
+        type: "configUpdateFailed",
+        message: "Settings changed or expired. Reload before saving.",
+        ...(requestId !== undefined ? { requestId } : {}),
+      })
       return
     }
 
@@ -4153,7 +4163,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         if (globalBinding) this.configBindings.consume(globalBinding.id)
         if (projectBinding) this.configBindings.consume(projectBinding.id)
       }
-      this.postConfigFailure(error, completed, snapshot, dir)
+      this.postConfigFailure(error, completed, snapshot, dir, requestId)
       this.pending--
       return
     }
@@ -4189,6 +4199,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         bindings,
         settings: this.configSettings(),
         features,
+        ...(requestId !== undefined ? { requestId } : {}),
       })
       const currentSpeech = this.speechToTextSource()
       // Re-discover the catalog only when the saved source changed, so a draft
@@ -4201,7 +4212,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         refreshSpeech ? this.fetchAndSendSpeechToTextModels() : Promise.resolve(),
       ]).catch((error) => console.error("[Kilo New] KiloProvider: Post-config refresh failed:", error))
     } catch (error) {
-      this.postConfigFailure(error, completed, snapshot, dir)
+      this.postConfigFailure(error, completed, snapshot, dir, requestId)
     } finally {
       this.pending--
     }
@@ -4248,6 +4259,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     completed: Array<"global" | "project"> = [],
     snapshot?: ConfigSnapshot,
     directory?: string,
+    requestId?: string,
   ): void {
     console.error("[Kilo New] KiloProvider: Failed to update config:", error)
     const bindings = snapshot && directory ? this.bindingsFor(directory, snapshot.targets) : undefined
@@ -4260,6 +4272,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       globalConfig: snapshot?.targets.global.raw,
       projectConfig: bindings?.project ? snapshot?.targets.project.raw : undefined,
       bindings,
+      ...(requestId !== undefined ? { requestId } : {}),
     })
   }
   private async resolveSession(sessionID?: string, draftID?: string, context?: string, contextDirectory?: string) {

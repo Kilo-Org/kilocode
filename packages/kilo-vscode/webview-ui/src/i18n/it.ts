@@ -1273,6 +1273,7 @@ export const dict = {
   "settings.saveBar.saveFailed": "Impossibile salvare le impostazioni",
   "settings.saveBar.dismissError": "Ignora",
   "settings.saveBar.unconfirmedWrite": "L'host dell'estensione non ha confermato “{{name}}”.",
+  "settings.saveBar.unconfirmedSave": "L'host dell'estensione non ha confermato il salvataggio. Riprova.",
   "notifications.action.next": "Avanti",
   "notifications.action.close": "Chiudi",
   "notifications.action.tryModel": "Prova {{model}}",
