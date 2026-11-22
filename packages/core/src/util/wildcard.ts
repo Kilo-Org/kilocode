@@ -1,6 +1,9 @@
 export * as Wildcard from "./wildcard"
 
-export function match(input: string, pattern: string) {
+// kilocode_change start - optional ignoreCase, mirroring upstream opencode
+/** Windows always matches without case; `ignoreCase` extends that to other callers, such as file rules on macOS. */
+export function match(input: string, pattern: string, ignoreCase = false) {
+  // kilocode_change end
   const normalized = input.replaceAll("\\", "/")
   let escaped = pattern
     .replaceAll("\\", "/")
@@ -10,5 +13,5 @@ export function match(input: string, pattern: string) {
 
   if (escaped.endsWith(" .*")) escaped = escaped.slice(0, -3) + "( .*)?"
 
-  return new RegExp("^" + escaped + "$", process.platform === "win32" ? "si" : "s").test(normalized)
+  return new RegExp("^" + escaped + "$", process.platform === "win32" || ignoreCase ? "si" : "s").test(normalized) // kilocode_change - ignoreCase
 }
