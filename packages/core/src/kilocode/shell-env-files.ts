@@ -24,11 +24,11 @@ const GIT = ["git show", "git cat-file", "git diff", "git log", "git blame"] as 
  *
  * The shapes covered are: a file reader's environment file at any operand position,
  * including a wildcard, a quoted operand and a nested path; a searcher's
- * environment file when it follows the search term and is either the last operand
- * or behind a directory at any position; and, for the git commands that print a
- * file, the file named as a path anywhere in the command. A searcher's first
- * operand is its search pattern, so a bare pattern that reads like a file name is
- * not gated.
+ * environment file, once it follows the search term, in any position when it is
+ * `.env`, `.env.*` or matches `*.env.*`, and as the last operand when it matches
+ * `*.env`; and, for the git commands that print a file, the file named as a path
+ * anywhere in the command. A searcher's first operand is its search pattern, so a
+ * bare pattern that reads like a file name is not gated.
  *
  * `.env.example` documents the format and is allowed only as the exact lone
  * operand of a reader or a searcher: one literal path. A nested sample path and
