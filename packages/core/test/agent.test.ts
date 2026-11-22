@@ -4,6 +4,7 @@ import { AgentV2 } from "@opencode-ai/core/agent"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { Location } from "@opencode-ai/core/location"
 import { AgentPlugin } from "@opencode-ai/core/plugin/agent"
+import { PermissionV2 } from "@opencode-ai/core/permission" // kilocode_change
 import { AbsolutePath } from "@opencode-ai/core/schema"
 import { location } from "./fixture/location"
 import { testEffect } from "./lib/effect"
@@ -128,4 +129,39 @@ describe("AgentV2", () => {
       }
     }),
   )
+
+  // kilocode_change start - the explore agent must keep the shared secret-file read prompt
+  it.effect("keeps the secret file read prompt for every built-in agent", () =>
+    Effect.gen(function* () {
+      const agent = yield* AgentV2.Service
+      yield* AgentPlugin.Plugin.effect(
+        host({
+          agent: agentHost(agent),
+        }),
+      ).pipe(
+        Effect.provideService(
+          Location.Service,
+          Location.Service.of(location({ directory: AbsolutePath.make("/project") })),
+        ),
+      )
+
+      for (const id of ["build", "plan", "general", "explore"]) {
+        const info = yield* agent.get(AgentV2.ID.make(id))
+        expect(info).toBeDefined()
+        if (!info) throw new Error(`missing built-in agent ${id}`)
+        expect(PermissionV2.evaluate("read", "project/.env", info.permissions).effect).toBe("ask")
+        expect(PermissionV2.evaluate("read", "project/.env.local", info.permissions).effect).toBe("ask")
+        expect(PermissionV2.evaluate("read", "project/.env.example", info.permissions).effect).toBe("allow")
+        expect(PermissionV2.evaluate("read", "project/src/index.ts", info.permissions).effect).toBe("allow")
+      }
+
+      for (const id of ["compaction", "title", "summary"]) {
+        const info = yield* agent.get(AgentV2.ID.make(id))
+        expect(info).toBeDefined()
+        if (!info) throw new Error(`missing built-in agent ${id}`)
+        expect(PermissionV2.evaluate("read", "project/.env", info.permissions).effect).toBe("deny")
+      }
+    }),
+  )
+  // kilocode_change end
 })
