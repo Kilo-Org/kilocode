@@ -433,13 +433,25 @@ class KiloBackendAppService private constructor(
                         coroutineScope {
                         launch {
                             val result = fetchProfile()
+                            val held = profile
+                            // A reload keeps the account it already holds whenever its own read did not
+                            // produce one: a definitive signed-out answer alone may clear it.
+                            val keep = held != null && !result.signedOut
                             val status = when {
-                                result.error != null -> {
+                                result.error != null && !keep -> {
                                     errors.add(result.error)
                                     throw LoadFailure(result.error)
                                 }
+                                result.error != null -> {
+                                    prof = held
+                                    ProfileResult.LOADED
+                                }
                                 result.value != null -> {
                                     prof = result.value
+                                    ProfileResult.LOADED
+                                }
+                                keep -> {
+                                    prof = held
                                     ProfileResult.LOADED
                                 }
                                 else -> ProfileResult.NOT_LOGGED_IN
@@ -606,22 +618,40 @@ class KiloBackendAppService private constructor(
     }
 
     /**
-     * Fetch the user profile. Returns [FetchResult.ok] with the response
-     * on success, [FetchResult.ok] with `null` when not logged in or when
-     * the server cannot reach the profile endpoint. Never throws.
+     * Fetch the user profile. Returns [FetchResult.ok] with the response on success, and a
+     * [FetchResult] whose value and error follow [strict]. Never throws: a failed read is a value.
      *
-     * Profile is optional — 401 (not logged in), 400 (missing/corrupt local
-     * auth), and 5xx (gateway/network errors) are all non-fatal.
+     * Profile is optional on the startup load and a background refresh: 401 (not logged in),
+     * 400 (missing/corrupt local auth, or an upstream profile failure), and 5xx (gateway/network
+     * errors) are all non-fatal there.
+     *
+     * The startup load and a background refresh treat a 400 or a 5xx as signed out. A read that
+     * follows a completed account step passes [strict]: there a 401 is the only signed-out answer,
+     * and any other status, including a 400, is a failure, so the caller keeps the account it
+     * already published.
+     *
+     * A caller can tell a signed-out answer ([FetchResult.signedOut]) from a read that could not
+     * complete ([FetchResult.error]). [load] keeps an account it already holds when a reload's read
+     * does not answer signed out.
      */
-    private suspend fun fetchProfile(): FetchResult<KiloProfile200Response?> {
+    private suspend fun fetchProfile(strict: Boolean = false): FetchResult<KiloProfile200Response?> {
         val client = connection.appLoadApi
-            ?: return FetchResult.ok(null)
+            ?: return if (strict) FetchResult.fail("profile", detail = "Not connected") else FetchResult.ok(null)
         return try {
             val response = client.kiloProfile()
             log.info("Profile: ${response.profile.email}")
             FetchResult.ok(response)
         } catch (e: ClientException) {
-            if (e.statusCode == 400 || e.statusCode == 401) {
+            // The CLI answers 400 for an upstream profile failure and 401 only when it holds no
+            // credential, so 401 is the only definitive signed-out answer, in both modes. The
+            // startup load and the background refresh also tolerate a 400, which is a read that
+            // could not complete and publishes no value for that load.
+            if (e.statusCode == 401) {
+                log.info("Profile: unavailable (${e.statusCode})")
+                logResponseBody("profile", e)
+                return FetchResult.signedOut()
+            }
+            if (e.statusCode == 400 && !strict) {
                 log.info("Profile: unavailable (${e.statusCode})")
                 logResponseBody("profile", e)
                 return FetchResult.ok(null)
@@ -629,10 +659,15 @@ class KiloBackendAppService private constructor(
             logFailure("Profile fetch failed", e)
             FetchResult.fail("profile", e)
         } catch (e: ServerException) {
-            // 5xx from the CLI — profile endpoint is unreachable (no auth,
-            // gateway down, etc.). Treat the same as not-logged-in.
+            // The startup load and the background refresh treat a 5xx as signed out on purpose:
+            // the local CLI cannot tell a revoked token from a gateway failure at this point.
+            // It is still a read that could not complete, not a definitive sign-out, so a reload
+            // keeps an account it already holds.
             logFailure("Profile fetch: server error — treating as unavailable", e)
-            FetchResult.ok(null)
+            if (strict) FetchResult.fail("profile", e) else FetchResult.ok(null)
+        } catch (e: CancellationException) {
+            // A cancelled read is not a read that failed: rethrow so the caller's scope sees it.
+            throw e
         } catch (e: Exception) {
             logFailure("Profile fetch failed", e)
             FetchResult.fail("profile", e)
@@ -949,14 +984,7 @@ class KiloBackendAppService private constructor(
         sessions.stop()
     }
 
-    /**
-     * Refresh the user profile from the CLI backend.
-     * Returns the latest profile data, or null when not logged in.
-     * Updates the current [KiloAppState.Ready] profile in-place if the app is ready.
-     */
-    suspend fun refreshProfile(): KiloProfile200Response? {
-        val result = fetchProfile()
-        val fresh = result.value
+    private fun publishProfile(fresh: KiloProfile200Response?) {
         // Background telemetry and config refreshes also republish Ready. Serialize the
         // read-modify-write so a late publish cannot restore the snapshot taken before this update.
         synchronized(loadLock) {
@@ -966,6 +994,31 @@ class KiloBackendAppService private constructor(
             }
             profile = fresh
         }
+    }
+
+    /**
+     * Refresh the user profile from the CLI backend.
+     * Returns the latest profile data, or null when not logged in.
+     * Updates the current [KiloAppState.Ready] profile in-place if the app is ready.
+     */
+    suspend fun refreshProfile(): KiloProfile200Response? {
+        val fresh = fetchProfile().value
+        publishProfile(fresh)
+        return fresh
+    }
+
+    /**
+     * Re-read the account on demand. Used by the two account steps and by the account-details
+     * retry in the UI.
+     *
+     * A definitive signed-out answer publishes null and clears the account; a read that could not
+     * complete keeps the published account and reports the failure.
+     */
+    internal suspend fun refreshAccount(): KiloProfile200Response? {
+        val result = fetchProfile(strict = true)
+        result.error?.let { throw LoadFailure(it) }
+        val fresh = result.value
+        publishProfile(fresh)
         return fresh
     }
 
@@ -988,12 +1041,12 @@ class KiloBackendAppService private constructor(
     /**
      * Complete the Kilo device auth login flow.
      * Blocks until the user completes authentication on the browser side.
-     * Returns the user profile on success, or null if the login could not be completed.
+     * Returns the user profile on success; null only when the CLI reports nobody signed in.
      */
     suspend fun completeLogin(directory: String?): KiloProfile200Response? {
         val client = connection.api ?: throw IllegalStateException("Not connected")
         client.providerOauthCallback(providerID = "kilo", directory = directory, providerOauthCallbackRequest = ProviderOauthCallbackRequest(method = 0.0))
-        return refreshProfile()
+        return refreshAccount()
     }
 
     /**
@@ -1077,7 +1130,7 @@ class KiloBackendAppService private constructor(
      * Switch the active account context.
      * Pass null for personal account, an organization ID for org context.
      * A successful switch starts a fresh hosted context; a refused switch changes nothing.
-     * Returns the updated profile after the switch.
+     * Returns the updated profile after the switch; null only when the CLI reports nobody signed in.
      */
     suspend fun setOrganization(organizationId: String?): KiloProfile200Response? {
         val http = connection.apiClient ?: throw IllegalStateException("Not connected")
@@ -1097,7 +1150,7 @@ class KiloBackendAppService private constructor(
             }
         }
         hosted.resetContext()
-        return refreshProfile()
+        return refreshAccount()
     }
 
     override fun dispose() {
@@ -1122,11 +1175,21 @@ private fun summary(patch: ConfigPatchDto): String {
 }
 
 /**
- * Result of a data fetch — either a value or an error with details.
+ * Result of a data fetch — either a value, an error with details, or a definitive signed-out answer.
+ *
+ * [signedOut] separates a definitive "nobody is signed in" answer from a read that could not
+ * complete: both carry no value and no error, but only the former may clear an account a caller
+ * already holds. A tolerant 400 or 5xx is a read that could not complete, not a sign-out.
  */
-private data class FetchResult<T>(val value: T?, val error: LoadError?) {
+private data class FetchResult<T>(
+    val value: T?,
+    val error: LoadError?,
+    val signedOut: Boolean = false,
+) {
     companion object {
         fun <T> ok(value: T) = FetchResult<T>(value, null)
+
+        fun <T> signedOut() = FetchResult<T>(value = null, error = null, signedOut = true)
 
         fun <T> fail(resource: String, exception: Exception) = FetchResult<T>(
             value = null,
@@ -1182,7 +1245,7 @@ private fun failureLogDetail(e: Exception): String {
 }
 
 /** Thrown when a required data fetch exhausts all retries. */
-private class LoadFailure(val error: LoadError) : Exception("Failed to load ${error.resource}")
+internal class LoadFailure(val error: LoadError) : Exception("Failed to load ${error.resource}")
 
 /** Why a startup migration offer is or is not made. */
 internal enum class MigrationGate { Proceed, Suppressed, AlreadyOffered, StatusSet }

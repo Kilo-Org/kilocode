@@ -33,6 +33,7 @@ import ai.kilocode.client.session.model.TurnOutcome
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.telemetry.Telemetry
+import ai.kilocode.client.settings.profile.accountErrorToken
 import ai.kilocode.client.util.UiTimer
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
@@ -126,6 +127,9 @@ class SessionController(
   private val telemetry: (String, Map<String, String>) -> Unit = { event, props -> Telemetry.send(event, props) },
   private val notify: (String, String) -> Unit = { title, body -> KiloNotifications.error(title, body) },
   private val notifyInfo: (String, String) -> Unit = { title, body -> KiloNotifications.info(title, body) },
+  private val notifyAction: (String, String?, String, () -> Unit) -> Unit = { title, body, label, action ->
+    KiloNotifications.warning(title, body, label, action)
+  },
   private val timers: UiTimerSource = UiTimers,
   private val log: KiloLog = LOG,
 ) : Disposable {
@@ -3232,8 +3236,24 @@ class SessionController(
         refreshAccountOverlay()
         cs.launch {
             try {
-                app.setOrganization(org)
+                val result = app.setOrganization(org)
+                val error = result.error
+                if (error != null) {
+                    capture("Account Connect Failed", mapOf("stage" to "organization", "errorClass" to accountErrorToken(error)))
+                    LOG.warn("account switch failed org=$org resource=${error.resource} status=${error.status}")
+                    edt {
+                        if (disposed) return@edt
+                        target = null
+                        refreshAccountOverlay()
+                        // The switch finished, so reverting the picker is right; without this the
+                        // overlay would quietly show the previous account with no way to find out why.
+                        reportSwitchFailure()
+                    }
+                    return@launch
+                }
                 capture("Organization Switched", mapOf("target" to if (org == null) "personal" else "organization"))
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 capture("Account Connect Failed", mapOf("stage" to "organization", "errorClass" to e::class.java.name))
                 LOG.warn("account switch failed org=$org message=${e.message}", e)
@@ -3243,6 +3263,24 @@ class SessionController(
                     refreshAccountOverlay()
                 }
             }
+        }
+    }
+
+    /**
+     * Report an organization switch whose follow-up account read did not complete.
+     *
+     * The switch itself finished, so the previous account stays on screen. The balloon names that
+     * outcome and its action opens the page that can re-read the details.
+     */
+    private fun reportSwitchFailure() {
+        notifyAction(
+            KiloBundle.message("profile.notice.switchUnavailable"),
+            null,
+            KiloBundle.message("profile.action.accountSettings"),
+        ) {
+            // The balloon outlives the click by design; a controller disposed in between must not
+            // open the page for a session that is gone.
+            if (!disposed) openProfile()
         }
     }
 

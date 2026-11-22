@@ -16,6 +16,7 @@ import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
 import ai.kilocode.rpc.dto.ModelStateDto
 import ai.kilocode.rpc.dto.ModelVariantUpdateDto
 import ai.kilocode.rpc.dto.ProfileDto
+import ai.kilocode.rpc.dto.ProfileSyncDto
 import ai.kilocode.rpc.dto.RetentionStatusDto
 import ai.kilocode.rpc.dto.RetentionPatchDto
 import ai.kilocode.rpc.dto.SpeechModelDto
@@ -530,6 +531,16 @@ class KiloAppService internal constructor(
         null
     }
 
+    /**
+     * Re-read the account and report the outcome, for an action whose result must tell a failed
+     * read apart from a signed-out answer. A failed read leaves the published account alone.
+     */
+    suspend fun refreshAccount(): ProfileSyncDto {
+        val result = call { refreshAccount() }
+        publish(result)
+        return result
+    }
+
     /** Refresh profile in fire-and-forget fashion from non-suspend context. */
     fun refreshProfileAsync() {
         cs.launch { refreshProfile() }
@@ -544,13 +555,14 @@ class KiloAppService internal constructor(
 
     /**
      * Complete the login flow. Blocks until authentication finishes.
-     * Returns the user profile, or null if unavailable.
+     *
+     * The result carries the account, a definitive signed-out answer, or the reason the follow-up
+     * profile read did not complete. A thrown failure is the account step itself failing.
      */
-    suspend fun completeLogin(directory: String? = null): ProfileDto? = try {
-        call { completeLogin(directory) }.also { setProfile(it) }
-    } catch (e: Exception) {
-        LOG.warn("login completion failed", e)
-        null
+    suspend fun completeLogin(directory: String? = null): ProfileSyncDto {
+        val result = call { completeLogin(directory) }
+        publish(result)
+        return result
     }
 
     /** Log out and clear the user profile. */
@@ -566,13 +578,25 @@ class KiloAppService internal constructor(
     /**
      * Switch active account context.
      * Pass null for personal account, organization ID for org context.
-     * Returns the updated profile, or null if not logged in.
+     *
+     * The result carries the account, a definitive signed-out answer, or the reason the follow-up
+     * profile read did not complete. A thrown failure is the account step itself failing.
      */
-    suspend fun setOrganization(organizationId: String?): ProfileDto? = try {
-        call { setOrganization(organizationId) }.also { setProfile(it) }
-    } catch (e: Exception) {
-        LOG.warn("organization switch failed", e)
-        null
+    suspend fun setOrganization(organizationId: String?): ProfileSyncDto {
+        val result = call { setOrganization(organizationId) }
+        publish(result)
+        return result
+    }
+
+    /**
+     * Publish the account a completed account step reports.
+     *
+     * A result without an [ProfileSyncDto.error] is the account the backend now holds. A result
+     * with an error means only the follow-up profile read failed, so the published account stays
+     * as it was.
+     */
+    private fun publish(result: ProfileSyncDto) {
+        if (result.error == null) setProfile(result.profile)
     }
 
     /**

@@ -115,6 +115,9 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
     /** Info balloons a controller raised, instead of real IDE notifications. */
     protected val infoNotifications = mutableListOf<Pair<String, String>>()
 
+    /** Action balloons a controller raised: the label, the text, and the action it offers. */
+    protected val actionNotifications = mutableListOf<Pair<Triple<String, String?, String>, () -> Unit>>()
+
     override fun setUp() {
         super.setUp()
         rpc = FakeSessionRpcApi()
@@ -123,6 +126,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         timers = TestUiTimers()
         notifications.clear()
         infoNotifications.clear()
+        actionNotifications.clear()
         // Application-level and shared across tests in a fixture, and it now seeds a new session's
         // mode, so a leftover pick from another test would decide this one's starting agent.
         KiloPluginSettings.unsetAgent()
@@ -204,6 +208,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
             telemetry = { event, props -> appRpc.telemetry.add(TelemetryCaptureDto(event, props)) },
             notify = { title, body -> notifications.add(title to body) },
             notifyInfo = { title, body -> infoNotifications.add(title to body) },
+            notifyAction = { title, body, label, action -> actionNotifications.add(Triple(title, body, label) to action) },
             timers = timers,
             log = log ?: KiloLog.create(SessionController::class.java),
         )
