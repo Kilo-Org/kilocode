@@ -1978,6 +1978,36 @@ it.instance(
   },
 )
 
+// kilocode_change start - the configured region is normalized before the endpoint is built
+it.instance(
+  "Google Vertex Anthropic: an upper-case configured region selects the regional endpoint",
+  Effect.gen(function* () {
+    yield* set("GOOGLE_CLOUD_PROJECT", "test-project")
+    const provider = yield* Provider.Service
+    const model = yield* provider.getModel(
+      ProviderV2.ID.make("google-vertex-anthropic"),
+      ModelV2.ID.make("claude-sonnet-4-6@default"),
+    )
+    const language = yield* provider.getLanguage(model)
+    expect(languageBaseURL(language)).toBe(
+      "https://aiplatform.eu.rep.googleapis.com/v1/projects/test-project/locations/eu/publishers/anthropic/models",
+    )
+    // the loader resolves the regional endpoint itself, so the provider options carry it
+    const info = yield* provider.getProvider(ProviderV2.ID.make("google-vertex-anthropic"))
+    expect(info.options?.baseURL).toBe(
+      "https://aiplatform.eu.rep.googleapis.com/v1/projects/test-project/locations/eu/publishers/anthropic/models",
+    )
+  }),
+  {
+    config: {
+      provider: {
+        "google-vertex-anthropic": { options: { location: "EU" } },
+      },
+    },
+  },
+)
+// kilocode_change end
+
 it.instance(
   "Google Vertex Anthropic: the configured project reaches the endpoint",
   Effect.gen(function* () {

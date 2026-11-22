@@ -590,7 +590,8 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       const project =
         provider.options?.project ?? env["GOOGLE_CLOUD_PROJECT"] ?? env["GCP_PROJECT"] ?? env["GCLOUD_PROJECT"]
       // one region resolution, shared with the model-time validator
-      const location = resolveVertexLocation(provider.options?.location, env, "google-vertex-anthropic")
+      const raw = resolveVertexLocation(provider.options?.location, env, "google-vertex-anthropic")
+      const location = normalizeVertexLocation(raw) ?? raw
       // kilocode_change end
       const autoload = Boolean(project)
       if (!autoload) return { autoload: false }
