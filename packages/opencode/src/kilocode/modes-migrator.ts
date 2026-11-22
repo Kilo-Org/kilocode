@@ -331,8 +331,9 @@ export namespace ModesMigrator {
     /** Names of the MCP servers the same migration writes, so an `mcp` group can grant their tools. */
     mcpServers?: string[]
     /**
-     * Whether the legacy store declared any MCP server, converted or not: a store that declared
-     * a server the migration could not convert still warns instead of silently dropping the group.
+     * Whether the legacy store declared any MCP server, converted or not, including a global
+     * store the MCP load skipped: a store that declared a server the migration could not
+     * convert still warns instead of silently dropping the group.
      */
     mcpAvailable: boolean
   }): Promise<MigrationResult> {

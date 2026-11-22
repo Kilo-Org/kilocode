@@ -35,8 +35,14 @@ export namespace McpMigrator {
 
   export interface MigrationResult {
     mcp: Record<string, ConfigMCP.Info>
-    /** Whether the legacy store declared at least one MCP server, converted or not. */
+    /** Whether a store this run read declared at least one MCP server, converted or not. */
     available: boolean
+    /**
+     * Whether a global store this run did not read - because the caller skipped global paths -
+     * declared at least one MCP server. Such a store is read only to answer that question: its
+     * servers are never added to `mcp`, so a mode can report the `mcp` group it cannot honour.
+     */
+    skippedGlobal: boolean
     warnings: string[]
     skipped: Array<{ name: string; reason: string }>
   }
@@ -97,14 +103,18 @@ export namespace McpMigrator {
 
     const allServers: Array<{ name: string; server: KilocodeMcpServer }> = []
 
-    if (!options?.skipGlobalPaths) {
-      // 1. VSCode extension global storage (primary location for global MCP settings)
-      const vscodeSettingsPath = path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "mcp_settings.json")
-      const vscodeSettings = await readMcpSettings(vscodeSettingsPath)
-      if (vscodeSettings?.mcpServers) {
-        for (const [name, server] of Object.entries(vscodeSettings.mcpServers)) {
-          allServers.push({ name, server })
-        }
+    // 1. VSCode extension global storage (primary location for global MCP settings)
+    // Read even when the caller skipped global paths: a mode whose `mcp` group came from that
+    // store must report the group it cannot honour. Its servers never enter `allServers` then,
+    // so nothing from a skipped store is granted. A file that does not parse reads as absent.
+    const skipGlobal = options?.skipGlobalPaths === true
+    const vscodeSettingsPath = path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "mcp_settings.json")
+    const vscodeSettings = await readMcpSettings(vscodeSettingsPath)
+    const globalServers = Object.entries(vscodeSettings?.mcpServers ?? {})
+    const skippedGlobal = skipGlobal && globalServers.length > 0
+    if (!skipGlobal) {
+      for (const [name, server] of globalServers) {
+        allServers.push({ name, server })
       }
     }
 
@@ -145,18 +155,20 @@ export namespace McpMigrator {
       }
     }
 
-    return { mcp, available: serversByName.size > 0, warnings, skipped }
+    return { mcp, available: serversByName.size > 0, skippedGlobal, warnings, skipped }
   }
 
   /**
-   * Load Kilocode MCP servers and report whether the legacy store declared any.
-   * `available` is true when the legacy store had at least one MCP server, even if
-   * none of them could be converted. This function handles all logging internally.
+   * Load Kilocode MCP servers and report what the legacy stores declared.
+   * `available` is true when a store this run read had at least one MCP server, even if
+   * none of them could be converted. `skippedGlobal` is true when the caller skipped global
+   * paths and the VS Code global store declared a server: that store is read only to answer
+   * the question, and none of its servers is loaded. This function handles all logging internally.
    */
   export async function loadMcpConfig(
     projectDir: string,
     skipGlobalPaths?: boolean,
-  ): Promise<{ mcp: Record<string, ConfigMCP.Info>; available: boolean }> {
+  ): Promise<{ mcp: Record<string, ConfigMCP.Info>; available: boolean; skippedGlobal: boolean }> {
     try {
       const result = await migrate({ projectDir, skipGlobalPaths })
 
@@ -175,10 +187,10 @@ export namespace McpMigrator {
         log.warn("kilocode MCP migration warning", { warning })
       }
 
-      return { mcp: result.mcp, available: result.available }
+      return { mcp: result.mcp, available: result.available, skippedGlobal: result.skippedGlobal }
     } catch (err) {
       log.warn("failed to load kilocode MCP servers", { error: err })
-      return { mcp: {}, available: false }
+      return { mcp: {}, available: false, skippedGlobal: false }
     }
   }
 }

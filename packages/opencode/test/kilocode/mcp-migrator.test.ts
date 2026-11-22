@@ -512,6 +512,55 @@ describe("McpMigrator", () => {
 
       expect(Object.keys(result.mcp)).toHaveLength(0)
     })
+
+    // A global store the caller skipped is read only to report that a mode's `mcp` group was lost.
+    test("reports a skipped global store that declared a server without loading it", async () => {
+      await using home = await tmpdir()
+
+      const homedir = spyOn(os, "homedir").mockReturnValue(home.path)
+      // Windows resolves the global storage path from APPDATA first, so point both at the temp home.
+      const appdata = process.env.APPDATA
+      process.env.APPDATA = home.path
+      try {
+        const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "mcp_settings.json")
+        await fs.mkdir(path.dirname(settings), { recursive: true })
+        await Bun.write(settings, JSON.stringify({ mcpServers: { globalserver: { command: "npx" } } }))
+
+        const result = await McpMigrator.migrate({ projectDir: home.path, skipGlobalPaths: true })
+
+        expect(result.skippedGlobal).toBe(true)
+        expect(Object.keys(result.mcp)).toHaveLength(0)
+        expect(result.available).toBe(false)
+      } finally {
+        homedir.mockRestore()
+        if (appdata === undefined) delete process.env.APPDATA
+        else process.env.APPDATA = appdata
+      }
+    })
+
+    test("does not report a global store it read", async () => {
+      await using home = await tmpdir()
+
+      const homedir = spyOn(os, "homedir").mockReturnValue(home.path)
+      // Windows resolves the global storage path from APPDATA first, so point both at the temp home.
+      const appdata = process.env.APPDATA
+      process.env.APPDATA = home.path
+      try {
+        const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "mcp_settings.json")
+        await fs.mkdir(path.dirname(settings), { recursive: true })
+        await Bun.write(settings, JSON.stringify({ mcpServers: { globalserver: { command: "npx" } } }))
+
+        const result = await McpMigrator.migrate({ projectDir: home.path })
+
+        expect(result.skippedGlobal).toBe(false)
+        expect(Object.keys(result.mcp)).toEqual(["globalserver"])
+        expect(result.available).toBe(true)
+      } finally {
+        homedir.mockRestore()
+        if (appdata === undefined) delete process.env.APPDATA
+        else process.env.APPDATA = appdata
+      }
+    })
   })
 
   describe("remote server migration", () => {
