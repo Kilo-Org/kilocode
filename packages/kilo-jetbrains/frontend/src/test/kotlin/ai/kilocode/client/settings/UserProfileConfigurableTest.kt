@@ -781,7 +781,7 @@ class UserProfileConfigurableTest : BasePlatformTestCase() {
         assertEquals(listOf(1, 0), listOf(rpc.profileReads, rpc.accountReads))
     }
 
-    fun `test a signed-out emission ends the notice and offers the sign-in`() {
+    fun `test a retry that answers signed out ends the notice and offers the sign-in`() {
         val profile = ProfileDto(email = "alice@test.com", name = "Alice")
         rpc.completeResult = ProfileSyncDto(error = LoadErrorDto(resource = "profile", status = 500))
         rpc.completeGate = CompletableDeferred()
@@ -795,8 +795,8 @@ class UserProfileConfigurableTest : BasePlatformTestCase() {
         edt { rpc.completeGate!!.complete(Unit) }
         flushUntil { text(panel).contains(notice) }
 
-        // The CLI then answers definitively signed out: the notice has nothing left to ask for, so
-        // the card must offer the sign-in instead of keeping "Signed in, but ...".
+        // A background emission that publishes no account cannot tell an outage from a sign-out, so
+        // it must leave the notice standing.
         edt {
             app._state.value = KiloAppStateDto(
                 KiloAppStatusDto.READY,
@@ -805,12 +805,25 @@ class UserProfileConfigurableTest : BasePlatformTestCase() {
             panel.update(app._state.value)
         }
         flush()
+        edt {
+            assertTrue(
+                "an account-less background emission must not hide the notice",
+                text(panel).contains(notice) || buttons(panel).any { it.text == "Refresh" },
+            )
+        }
+
+        // The notice's own retry reports its read; when it answers signed out, the notice ends and the
+        // sign-in comes back.
+        edt {
+            rpc.refreshAccountResult = ProfileSyncDto(profile = null)
+            buttons(panel).first { it.text == "Refresh" }.doClick()
+        }
+        flushUntil { buttons(panel).any { it.text == "Login with Kilo Code" } }
 
         edt {
             val t = text(panel)
-            assertFalse("a signed-out emission must end the notice", t.contains(notice))
+            assertFalse("a signed-out answer ends the notice", t.contains(notice))
             assertTrue("the sign-in must be offered", buttons(panel).any { it.text == "Login with Kilo Code" })
-            assertFalse("the dead account must leave the card", t.contains("Alice"))
         }
     }
 

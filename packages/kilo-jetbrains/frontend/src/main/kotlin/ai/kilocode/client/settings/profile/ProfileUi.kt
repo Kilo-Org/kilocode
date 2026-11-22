@@ -127,27 +127,30 @@ internal class ProfileUi(
      * a read completed, so it ends the notice. A reload that republishes the held account changed
      * nothing: its own read did not produce a new account, so the notice stays.
      *
-     * A definitive signed-out emission ([ProfileStatusDto.NOT_LOGGED_IN]) also ends the notice: the
-     * card must offer the sign-in rather than keep asking the user to refresh an account that is
-     * gone. A pending load and an emission that carries no progress at all leave it alone.
+     * While the notice is up, an emission that carries no account keeps the account and the notice.
+     * The tolerant background refresh publishes no account for a read that could not complete and
+     * marks it [ProfileStatusDto.NOT_LOGGED_IN], the same state a definitive sign-out produces, so
+     * this emission cannot tell an outage from a sign-out. Dropping the account here would hide the
+     * failure the notice reports. The notice's own retry reports its read, and that answer decides.
      */
     @RequiresEdt
     fun update(state: KiloAppStateDto) {
         checkEdt()
         this.status = state.status
         val fresh = state.profile
-        val signedOut = fresh == null && state.progress?.profile == ProfileStatusDto.NOT_LOGGED_IN
-        if (unavailable && (signedOut || (fresh != null && fresh != held))) clearUnavailable()
+        if (fresh != null && unavailable && fresh != held) clearUnavailable()
         val transient = fresh == null && state.progress?.profile == ProfileStatusDto.PENDING
+        val keep = unavailable && fresh == null && !transient
         when {
             fresh != null -> {
                 prof = fresh
                 login = LoginState.Idle
             }
             transient -> { /* keep existing prof and account UI untouched */ }
+            keep -> { /* the notice owns the account until its own retry answers */ }
             else -> prof = null
         }
-        sync(skipAccount = transient)
+        sync(skipAccount = transient || keep)
     }
 
     /**
