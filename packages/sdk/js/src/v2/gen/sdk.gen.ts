@@ -9780,7 +9780,7 @@ export class SessionHost extends HeyApiClient {
   /**
    * Create a hosted workspace
    *
-   * Create a hosted workspace and, optionally, its initial turn, explicit profile, and additional repositories. For a nonempty selection, send the organization and integrationID from the repository catalog. Omit prompt and messageID to create an empty workspace. Reuse the same operation key and unchanged intent to retry safely.
+   * Create a hosted workspace and, optionally, its initial turn, explicit profile, and additional repositories. For a nonempty selection, send the organization and integrationID from the repository catalog. Omit prompt and messageID to create an empty workspace. For a retryable create conflict, reuse the same operation key and unchanged intent.
    */
   public createWorkspace<ThrowOnError extends boolean = false>(
     parameters?: {

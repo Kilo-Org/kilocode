@@ -5068,6 +5068,12 @@ export type SessionHostCreateWorkspaceResult = {
   replayed: boolean
 }
 
+export type SessionHostCreateConflictError = {
+  code: "creation_in_progress" | "operation_key_reuse_mismatch" | "session_create_intent_conflict"
+  message: string
+  retryable: boolean
+}
+
 export type ForbiddenError = {
   _tag: "ForbiddenError"
   message: string
@@ -19671,9 +19677,9 @@ export type SessionHostCreateWorkspaceErrors = {
    */
   404: NotFoundError
   /**
-   * ConflictError
+   * ConflictError | SessionHostCreateConflictError
    */
-  409: ConflictError
+  409: ConflictError | SessionHostCreateConflictError
   /**
    * UpstreamError
    */

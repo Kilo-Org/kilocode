@@ -20069,11 +20069,18 @@
             }
           },
           "409": {
-            "description": "ConflictError",
+            "description": "ConflictError | SessionHostCreateConflictError",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ConflictError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/SessionHostCreateConflictError"
+                    }
+                  ]
                 }
               }
             }
@@ -20099,7 +20106,7 @@
             }
           }
         },
-        "description": "Create a hosted workspace and, optionally, its initial turn, explicit profile, and additional repositories. For a nonempty selection, send the organization and integrationID from the repository catalog. Omit prompt and messageID to create an empty workspace. Reuse the same operation key and unchanged intent to retry safely.",
+        "description": "Create a hosted workspace and, optionally, its initial turn, explicit profile, and additional repositories. For a nonempty selection, send the organization and integrationID from the repository catalog. Omit prompt and messageID to create an empty workspace. For a retryable create conflict, reuse the same operation key and unchanged intent.",
         "summary": "Create a hosted workspace",
         "requestBody": {
           "content": {
@@ -46813,6 +46820,23 @@
           }
         },
         "required": ["workspace", "session", "replayed"],
+        "additionalProperties": false
+      },
+      "SessionHostCreateConflictError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": ["creation_in_progress", "operation_key_reuse_mismatch", "session_create_intent_conflict"]
+          },
+          "message": {
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean"
+          }
+        },
+        "required": ["code", "message", "retryable"],
         "additionalProperties": false
       },
       "ForbiddenError": {

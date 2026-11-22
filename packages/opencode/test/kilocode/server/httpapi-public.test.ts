@@ -194,6 +194,15 @@ describe("Kilo PublicApi OpenAPI contract", () => {
 
     const create = spec.paths[SessionHostPaths.workspace]?.post
     for (const status of [400, 403, 404, 409, 503]) expect(create?.responses?.[status]).toBeDefined()
+    expect(create?.responses?.["409"]?.content?.["application/json"]?.schema).toMatchObject({
+      anyOf: expect.arrayContaining([
+        { $ref: "#/components/schemas/ConflictError" },
+        { $ref: "#/components/schemas/SessionHostCreateConflictError" },
+      ]),
+    })
+    const conflict = schemas.SessionHostCreateConflictError
+    expect(conflict?.required?.toSorted()).toEqual(["code", "message", "retryable"])
+    expect(conflict?.properties?.retryable).toEqual({ type: "boolean" })
     const input = schemas.SessionHostCreateWorkspaceInput
     expect(input?.required?.toSorted()).toEqual(["agent", "operationKey", "repository"])
     expect(input?.properties?.integrationID).toMatchObject({ type: "string" })

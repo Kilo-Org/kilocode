@@ -86,6 +86,17 @@ export class SessionHostGoneError extends Schema.ErrorClass<SessionHostGoneError
   { httpApiStatus: 410 },
 ) {}
 
+export class SessionHostCreateConflictError extends Schema.ErrorClass<SessionHostCreateConflictError>(
+  "SessionHostCreateConflictError",
+)(
+  {
+    code: Schema.Literals(["creation_in_progress", "operation_key_reuse_mismatch", "session_create_intent_conflict"]),
+    message: Schema.String,
+    retryable: Schema.Boolean,
+  },
+  { httpApiStatus: 409 },
+) {}
+
 /**
  * A typed Continue-in-Cloud failure. It carries `code`, `message`, and
  * `retryable` so the client can decide whether to keep the operation key:
@@ -310,13 +321,13 @@ export const SessionHostApi = HttpApi.make("session-host")
         HttpApiEndpoint.post("createWorkspace", SessionHostPaths.workspace, {
           payload: CreateWorkspaceInput,
           success: described(CreateWorkspaceResult, "Hosted workspace created"),
-          error: [...SessionErrors, ForbiddenError],
+          error: [...SessionErrors, ForbiddenError, SessionHostCreateConflictError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "sessionHost.createWorkspace",
             summary: "Create a hosted workspace",
             description:
-              "Create a hosted workspace and, optionally, its initial turn, explicit profile, and additional repositories. For a nonempty selection, send the organization and integrationID from the repository catalog. Omit prompt and messageID to create an empty workspace. Reuse the same operation key and unchanged intent to retry safely.",
+              "Create a hosted workspace and, optionally, its initial turn, explicit profile, and additional repositories. For a nonempty selection, send the organization and integrationID from the repository catalog. Omit prompt and messageID to create an empty workspace. For a retryable create conflict, reuse the same operation key and unchanged intent.",
           }),
         ),
         HttpApiEndpoint.post("continueWorkspace", SessionHostPaths.workspaceContinue, {

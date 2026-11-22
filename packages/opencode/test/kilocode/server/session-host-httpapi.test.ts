@@ -1972,7 +1972,6 @@ describe("session host HttpApi", () => {
         { status: 400, code: "BAD_REQUEST", reason: "hosted_workspace_repository_duplicate" },
         { status: 403, code: "FORBIDDEN", reason: "hosted_workspace_repository_access_denied" },
         { status: 404, code: "NOT_FOUND", reason: "hosted_workspace_repository_unavailable" },
-        { status: 409, code: "CONFLICT", reason: "session_create_intent_conflict" },
       ]) {
         app.state.create = failure
         const before = app.calls.length
@@ -1983,6 +1982,29 @@ describe("session host HttpApi", () => {
         expect(text).not.toContain(PRIVATE)
         expect(app.calls.slice(before).map((call) => call.path)).toEqual([REPOSITORIES, CREATE])
       }
+    }),
+  )
+
+  itRepositories.live("exposes retryable and terminal selected-create conflicts through the SDK", () =>
+    Effect.gen(function* () {
+      const client = yield* sdk
+      for (const [reason, retryable] of [
+        ["creation_in_progress", true],
+        ["operation_key_reuse_mismatch", false],
+        ["session_create_intent_conflict", false],
+      ] as const) {
+        app.state.create = { status: 409, code: "CONFLICT", reason }
+        const before = app.calls.length
+        const result = yield* Effect.promise(() =>
+          client.sessionHost.createWorkspace({ sessionHostCreateWorkspaceInput: selected }),
+        )
+        expect(result.response?.status).toBe(409)
+        expect(result.error).toEqual({ code: reason, message: reason, retryable })
+        expect(app.calls.slice(before).map((call) => call.path)).toEqual([REPOSITORIES, CREATE])
+      }
+      const legacy = yield* createWorkspace(create)
+      expect(legacy.status).toBe(409)
+      expect(yield* legacy.json).toEqual({ _tag: "ConflictError", message: "Kilo Cloud rejected this operation" })
     }),
   )
 

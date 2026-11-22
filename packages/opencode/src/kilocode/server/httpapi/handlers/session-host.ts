@@ -46,6 +46,7 @@ import * as Log from "@opencode-ai/core/util/log"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import {
   SessionHostContinuationError,
+  SessionHostCreateConflictError,
   SessionHostGoneError,
   SessionHostInsufficientBalanceError,
   SessionHostPaymentRequiredError,
@@ -97,10 +98,19 @@ function repositoryFailure(error: HostedFailure) {
         return new ServiceUnavailableError({ message: reason, service: SERVICE })
     }
   }
-  if (error.code === "creation_in_progress" || error.code === "operation_key_reuse_mismatch") {
-    return new ConflictError({ message: error.code })
-  }
   return mapFailure(error)
+}
+
+function selectedCreateFailure(error: HostedFailure) {
+  const code = error.reason ?? error.code
+  switch (code) {
+    case "creation_in_progress":
+    case "operation_key_reuse_mismatch":
+    case "session_create_intent_conflict":
+      return new SessionHostCreateConflictError({ code, message: code, retryable: error.retryable })
+    default:
+      return repositoryFailure(error)
+  }
 }
 
 export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "session-host", (handlers) =>
@@ -342,7 +352,7 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
       }
       return yield* provider
         .createWorkspace(ctx.payload)
-        .pipe(Effect.mapError(selection ? repositoryFailure : mapFailure))
+        .pipe(Effect.mapError(selection ? selectedCreateFailure : mapFailure))
     })
 
     /**
