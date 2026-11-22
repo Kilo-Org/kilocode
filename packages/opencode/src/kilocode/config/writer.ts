@@ -123,10 +123,13 @@ export namespace KilocodeConfigWriter {
       const node = tree && findNodeAtLocation(tree, parts)
       if (node && node.type !== "object") {
         const promotion = parts[0] === "permission" && parts.length === 2
-        const replacement = promotion ? { "*": node.value, ...patch } : patch
-        // A promotion whose every value is a delete sentinel leaves nothing to keep,
-        // so remove the key instead of writing an object of nulls.
-        const cleared = promotion && Object.values(replacement).every((value) => value === null || value === undefined)
+        // The promoted object holds the wildcard default plus the valued entries of the patch.
+        const kept = promotion
+          ? Object.entries({ "*": node.value, ...patch }).filter(([, value]) => value !== null && value !== undefined)
+          : []
+        const replacement = promotion ? Object.fromEntries(kept) : patch
+        // A promotion with nothing to carry removes the key instead of an empty object.
+        const cleared = promotion && kept.length === 0
         const edits = modify(input, parts, cleared ? undefined : replacement, {
           formattingOptions: { insertSpaces: true, tabSize: 2 },
         })
