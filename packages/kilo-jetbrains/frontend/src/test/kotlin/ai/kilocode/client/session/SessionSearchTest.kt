@@ -78,15 +78,19 @@ class SessionSearchTest : SessionUiTestBase() {
         emit(ChatEventDto.PartUpdated("ses_test", part("asst_stream_text", "asst_stream", "text", content)), flush = false)
         forceFlushWithoutDispatch()
 
-        // Production debounces a content refresh for DEBOUNCE_CONTENT_MS on the EDT and only then
-        // publishes the result set, so a fixed per-iteration sleep races the debounce instead of
-        // waiting for it. Emit from the wait's own predicate, cap how many times the stream is fed,
-        // and keep pumping to the wait deadline so the refresh is decided by the condition rather
-        // than by how fast the runner is.
+        // Production debounces a content refresh for DEBOUNCE_CONTENT_MS (120 ms) on the EDT and only
+        // then publishes the result set, so a fixed per-iteration sleep races the debounce instead of
+        // waiting for it. Feed the stream from the wait's own predicate across several debounce
+        // periods and accept the result only when the counter changed while the stream was still
+        // being fed, so a trailing refresh after the stream stopped cannot satisfy the wait. The emit
+        // count stays capped because the fake event flow suspends on a full buffer.
+        val feedEnd = System.nanoTime() + 3L * 120L * 1_000_000L
+        var seen = false
         var emitted = 0
         val refreshed = pumpUntil {
-            if (bar.statusText.matches(Regex("1 of [2-9]\\d*"))) return@pumpUntil true
-            if (emitted < 20) {
+            val feeding = System.nanoTime() < feedEnd
+            if (feeding && bar.statusText.matches(Regex("1 of [2-9]\\d*"))) seen = true
+            if (feeding && emitted < 120) {
                 content += " hello"
                 emit(
                     ChatEventDto.PartUpdated("ses_test", part("asst_stream_text", "asst_stream", "text", content)),
@@ -95,7 +99,7 @@ class SessionSearchTest : SessionUiTestBase() {
                 forceFlushWithoutDispatch()
                 emitted++
             }
-            false
+            seen
         }
 
         assertTrue("the throttled refresh must run during a continuous stream", refreshed)
