@@ -344,7 +344,7 @@ describe("registerToggleAutoApprove", () => {
   })
 
   it("cancels a pending automatic reply when auto-approve is turned off", async () => {
-    const env = config(true)
+    const env = config({ globalValue: true })
     const first = defer<void>()
     const later: unknown[] = []
     let calls = 0
@@ -369,7 +369,7 @@ describe("registerToggleAutoApprove", () => {
 
     const pending = ctrl.approve(asked("perm_retry"))
     await first.promise
-    env.active = false
+    env.layers.globalValue = false
     env.emit()
 
     expect(await pending).toBe(false)
