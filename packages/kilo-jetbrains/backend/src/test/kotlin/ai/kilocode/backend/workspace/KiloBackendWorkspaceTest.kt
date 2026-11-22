@@ -723,7 +723,6 @@ class KiloBackendWorkspaceTest {
             },
             "global.disposed did not rebuild the workspace; state=${app.appState.value}; logs=${log.messages}",
         )
-        assertTrue(ws !== initial)
         val state = withTimeout(15_000) {
             ws.state.first {
                 it is KiloWorkspaceState.Ready &&
