@@ -149,26 +149,50 @@ export const ConfigProvider: ParentComponent = (props) => {
   // Error from the most recent saveConfig() attempt, or null if no error.
   // Cleared when the user edits the draft again or starts a new save.
   const [saveError, setSaveError] = createSignal<SaveError | null>(null)
-  // In-flight `updateSetting` writes, keyed by the write key the host echoes back. Every
-  // new write overwrites the entry, so `previous` is the value just before the newest
-  // write and `value` is the newest intent. `remaining` counts the writes to that key
-  // still awaiting a terminal message and `confirmed` records that the host stored the
-  // newest intent, so an older write's late message never replaces what the control shows.
+  // In-flight `updateSetting` writes, keyed by the write key the host echoes back. A chain
+  // of writes to one key keeps the value before its first write as `previous` and holds the
+  // newest intent as `value`; `remaining` counts the writes still awaiting a terminal
+  // message. `stored` is the most recent value the host confirmed and `hasStored` tells that
+  // apart from a confirmed `undefined`, so the final settle adopts what the host holds.
   const pendingWrites = new Map<
     string,
-    { property: string; previous: unknown; value: unknown; remaining: number; confirmed: boolean }
+    {
+      property: string
+      previous: unknown
+      value: unknown
+      remaining: number
+      stored: unknown
+      hasStored: boolean
+    }
   >()
   const updateCollections = (next: ConfigCollections | undefined) => {
     if (next !== undefined) setCollections(next)
   }
-  /** Record a write before its optimistic update, so a rejection can restore what it replaced. */
+  /**
+   * Record a write before its optimistic update, so a rejected chain can restore what it
+   * replaced. A chain keeps the value it found before its first write and how many writes
+   * are still awaiting a terminal message.
+   */
   const trackWrite = (writeKey: string, property: string, value: unknown) => {
+    const entry = pendingWrites.get(writeKey)
+    if (!entry) {
+      pendingWrites.set(writeKey, {
+        property,
+        previous: savedSettings()[property],
+        value,
+        remaining: 1,
+        stored: undefined,
+        hasStored: false,
+      })
+      return
+    }
     pendingWrites.set(writeKey, {
       property,
-      previous: savedSettings()[property],
+      previous: entry.previous,
       value,
-      remaining: (pendingWrites.get(writeKey)?.remaining ?? 0) + 1,
-      confirmed: false,
+      remaining: entry.remaining + 1,
+      stored: entry.stored,
+      hasStored: entry.hasStored,
     })
   }
   /** Adopt a host-stored value as both the rendered and the discard value. */
@@ -357,28 +381,30 @@ export const ConfigProvider: ParentComponent = (props) => {
         return
       }
       pending.remaining -= 1
+      pending.stored = message.value
+      pending.hasStored = true
       // A value equal to the newest intent is that write (or one that agrees with it),
       // so it can be adopted while older writes are still in flight.
       if (pending.value === message.value) {
         storeSetting(pending.property, message.value)
-        if (pending.remaining > 0) pending.confirmed = true
-        else pendingWrites.delete(message.key)
+        if (pending.remaining > 0) return
+        pendingWrites.delete(message.key)
         return
       }
-      // A differing value belongs to an older write unless nothing newer is left; if the
-      // host already stored the newest intent, a later differing value is stale.
+      // A differing value may belong to an older write, so it waits; the last message to
+      // settle the chain is what the host holds, because the host applies writes in order.
       if (pending.remaining > 0) return
       pendingWrites.delete(message.key)
-      if (!pending.confirmed) storeSetting(pending.property, message.value)
+      storeSetting(pending.property, pending.stored)
       return
     }
     if (pending) {
       pending.remaining -= 1
-      // Only the write nothing newer followed is rolled back to the value it found; a
-      // newer write owns the display, and a confirmed one is already stored.
+      // The settle adopts what the host confirmed during the chain; with no confirmation it
+      // restores the value the chain found before its first write.
       if (pending.remaining === 0) {
         pendingWrites.delete(message.key)
-        if (!pending.confirmed) storeSetting(pending.property, pending.previous)
+        storeSetting(pending.property, pending.hasStored ? pending.stored : pending.previous)
       }
     }
     setSaveError({ message: message.message, details: message.details })
