@@ -36,7 +36,9 @@ describe("workflow tool gate", () => {
     const result = gate([{ permission: "edit", pattern: "secrets/**", action: "deny" }])
 
     expect(result.refuse("edit")).toBeUndefined()
-    expect(result.preapproved).not.toContain("edit")
+    // The tool stays preapproved, so calls this rule allows need no prompt; the
+    // call that matches the path is still decided by the tool's own check.
+    expect(result.preapproved).toContain("edit")
     expect(result.preapproved).toContain("bash")
   })
 

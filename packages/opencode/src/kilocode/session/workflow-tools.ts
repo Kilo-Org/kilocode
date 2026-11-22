@@ -30,7 +30,10 @@ export namespace KiloWorkflowTools {
         if (denied.has(name)) return false
         const permission = ALIASES[name] ?? name
         const rule = input.ruleset.findLast((rule) => Wildcard.match(permission, rule.permission))
-        return !rule || rule.action === "allow"
+        // Only a catch-all rule speaks for the whole tool. A path-scoped rule leaves
+        // the concrete call to the tool's own per-argument check, so it must not turn
+        // off preapproval for the calls that rule allows.
+        return !rule || rule.pattern !== "*" || rule.action === "allow"
       }),
       refuse(name: string): string | undefined {
         if (Permission.disabled([name], input.ruleset).has(name)) return `Permission denied for tool: ${name}`
