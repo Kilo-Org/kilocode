@@ -465,7 +465,7 @@ describe("registerToggleAutoApprove", () => {
     expect(await quiet(() => ctrl.toggle())).toBe(false)
     expect(ctrl.active()).toBe(false)
     expect(env.errors).toEqual([
-      "Kilo Code could not save the auto-approve setting, so auto-approve is off until that setting is saved.",
+      "Kilo Code could not save the auto-approve setting. Auto-approve is off now and turns on again after a restart until that setting is saved.",
     ])
 
     expect(await ctrl.approve(asked("perm_1"), "/workspace")).toBe(false)

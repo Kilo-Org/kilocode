@@ -5,10 +5,12 @@ import { retry } from "../services/cli-backend/retry"
 import type { KiloConnectionService } from "../services/cli-backend/connection-service"
 
 /**
- * Callback that resolves the correct working directory for a session.
- * For worktree sessions this returns the worktree path; for a session in the workspace
- * root, the workspace path. It returns `undefined` when no directory is known, so the
- * caller refuses instead of guessing.
+ * Callback that resolves the working directory of a session the extension tracks.
+ * Only tracked sessions resolve: the session map holds worktree and sub-agent overrides,
+ * so a session that runs in the workspace root is absent from it. Such a session is
+ * answered through its recorded permission route or the event's own directory instead.
+ * The callback returns `undefined` when no directory is known, so the caller refuses
+ * instead of guessing.
  */
 export type DirectoryResolver = (sessionId?: string) => string | undefined
 
@@ -85,7 +87,7 @@ export function registerToggleAutoApprove(
       vscode.window.showErrorMessage(
         next
           ? "Kilo Code could not save the auto-approve setting, so auto-approve stays off."
-          : "Kilo Code could not save the auto-approve setting, so auto-approve is off until that setting is saved.",
+          : "Kilo Code could not save the auto-approve setting. Auto-approve is off now and turns on again after a restart until that setting is saved.",
       )
       return false
     }
