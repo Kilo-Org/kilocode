@@ -10,12 +10,16 @@ on:
       - "packages/ui/**"
       - "packages/kilo-ui/**"
       - ".github/workflows/test-vscode.yml"
+      - "packages/opencode/src/kilocode/skills/display.ts"
+      - "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/views/permission/PermissionView.kt"
   pull_request:
     paths:
       - "packages/kilo-vscode/**"
       - "packages/ui/**"
       - "packages/kilo-ui/**"
       - ".github/workflows/test-vscode.yml"
+      - "packages/opencode/src/kilocode/skills/display.ts"
+      - "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/views/permission/PermissionView.kt"
   workflow_dispatch:
 
 jobs:
