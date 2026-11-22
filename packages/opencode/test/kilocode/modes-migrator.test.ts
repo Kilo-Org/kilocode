@@ -796,6 +796,68 @@ describe("ModesMigrator", () => {
       expect(result.agents.helper.permission?.["globalserver_*"]).toBe("allow")
     })
 
+    // Coverage is by permission key, not raw name: `a.b` and `a_b` name one `<server>_*` key, so
+    // the migrated `a_b` covers the skipped `a.b` and the group lost nothing.
+    test("stays silent for a skipped server whose permission key a migrated server supplies", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Bun.write(
+            path.join(dir, ".kilocodemodes"),
+            `customModes:
+  - slug: helper
+    name: Helper
+    roleDefinition: Helper
+    groups:
+      - read
+      - mcp`,
+          )
+        },
+      })
+
+      const result = await ModesMigrator.migrate({
+        projectDir: tmp.path,
+        skipGlobalPaths: true,
+        mcpServers: ["a_b"],
+        mcpAvailable: true,
+        mcpSkippedGlobalServers: ["a.b"],
+      })
+
+      expect(result.warnings).toEqual([])
+      expect(result.agents.helper.permission?.["a_b_*"]).toBe("allow")
+    })
+
+    // The key comparison covers only names that share a key: a skipped server no migrated server
+    // covers is still reported, so the change is not a blanket silence.
+    test("reports a skipped server no migrated server's permission key covers", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Bun.write(
+            path.join(dir, ".kilocodemodes"),
+            `customModes:
+  - slug: helper
+    name: Helper
+    roleDefinition: Helper
+    groups:
+      - read
+      - mcp`,
+          )
+        },
+      })
+
+      const result = await ModesMigrator.migrate({
+        projectDir: tmp.path,
+        skipGlobalPaths: true,
+        mcpServers: ["a_b"],
+        mcpAvailable: true,
+        mcpSkippedGlobalServers: ["other"],
+      })
+
+      expect(result.warnings.map((warning) => warning.message)).toEqual([
+        "Mode 'helper': MCP access incomplete: a global store this load skipped declared MCP servers",
+      ])
+      expect(result.agents.helper.permission?.["a_b_*"]).toBe("allow")
+    })
+
     test("keeps the existing message when no store was skipped", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {

@@ -685,6 +685,99 @@ describe("McpMigrator", () => {
         else process.env.APPDATA = appdata
       }
     })
+
+    // Coverage is by permission key, not raw name: `a.b` and `a_b` name one `<server>_*` key, so
+    // the project server `a_b` covers the skipped `a.b` and the `mcp` group lost nothing.
+    test("reports nothing for a skipped server whose permission key the project store supplies", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await fs.mkdir(path.join(dir, ".kilo"), { recursive: true })
+          await Bun.write(
+            path.join(dir, ".kilo", "mcp.json"),
+            JSON.stringify({ mcpServers: { "a_b": { command: "bunx" } } }),
+          )
+        },
+      })
+
+      const homedir = spyOn(os, "homedir").mockReturnValue(tmp.path)
+      const appdata = process.env.APPDATA
+      process.env.APPDATA = tmp.path
+      try {
+        const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "mcp_settings.json")
+        await fs.mkdir(path.dirname(settings), { recursive: true })
+        await Bun.write(settings, JSON.stringify({ mcpServers: { "a.b": { command: "npx" } } }))
+
+        const result = await McpMigrator.migrate({
+          projectDir: tmp.path,
+          skipGlobalPaths: true,
+          reportSkippedGlobal: true,
+        })
+
+        expect(result.skippedGlobalServers).toEqual([])
+        expect(result.mcp.a_b).toMatchObject({ command: ["bunx"] })
+      } finally {
+        homedir.mockRestore()
+        if (appdata === undefined) delete process.env.APPDATA
+        else process.env.APPDATA = appdata
+      }
+    })
+
+    // A store is parsed straight from JSON, so an entry can be null: the report is asked for over
+    // a hand-edited file, and reading such an entry must not throw away the project servers.
+    test("tolerates a skipped store whose entry is null and keeps the project servers", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await fs.mkdir(path.join(dir, ".kilo"), { recursive: true })
+          await Bun.write(
+            path.join(dir, ".kilo", "mcp.json"),
+            JSON.stringify({ mcpServers: { projectserver: { command: "bunx" } } }),
+          )
+        },
+      })
+
+      const homedir = spyOn(os, "homedir").mockReturnValue(tmp.path)
+      const appdata = process.env.APPDATA
+      process.env.APPDATA = tmp.path
+      try {
+        const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "mcp_settings.json")
+        await fs.mkdir(path.dirname(settings), { recursive: true })
+        await Bun.write(settings, JSON.stringify({ mcpServers: { broken: null } }))
+
+        const result = await McpMigrator.migrate({
+          projectDir: tmp.path,
+          skipGlobalPaths: true,
+          reportSkippedGlobal: true,
+        })
+
+        expect(result.skippedGlobalServers).toEqual([])
+        expect(result.mcp.projectserver).toMatchObject({ command: ["bunx"] })
+        expect(result.available).toBe(true)
+      } finally {
+        homedir.mockRestore()
+        if (appdata === undefined) delete process.env.APPDATA
+        else process.env.APPDATA = appdata
+      }
+    })
+
+    // The same hand-edited entry can sit in a project store; it is skipped there too, so the
+    // servers beside it still migrate instead of the whole load throwing.
+    test("skips a project store entry that is not an object and keeps the rest", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await fs.mkdir(path.join(dir, ".kilo"), { recursive: true })
+          await Bun.write(
+            path.join(dir, ".kilo", "mcp.json"),
+            JSON.stringify({ mcpServers: { broken: null, projectserver: { command: "bunx" } } }),
+          )
+        },
+      })
+
+      const result = await McpMigrator.migrate({ projectDir: tmp.path, skipGlobalPaths: true })
+
+      expect(result.skippedGlobalServers).toEqual([])
+      expect(Object.keys(result.mcp)).toEqual(["projectserver"])
+      expect(result.available).toBe(true)
+    })
   })
 
   describe("remote server migration", () => {

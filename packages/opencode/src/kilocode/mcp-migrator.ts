@@ -5,6 +5,7 @@ import { ConfigMCPV1 as ConfigMCP } from "@opencode-ai/core/v1/config/mcp"
 import * as Log from "@opencode-ai/core/util/log"
 import { Filesystem } from "../util/filesystem"
 import { KilocodePaths } from "./paths"
+import { pattern } from "./mcp/tool-id"
 
 export namespace McpMigrator {
   const log = Log.create({ service: "kilocode.mcp-migrator" })
@@ -66,6 +67,29 @@ export namespace McpMigrator {
       log.warn("failed to parse MCP settings file, skipping", { filepath, error: err })
       return null
     }
+  }
+
+  /**
+   * Whether a parsed store entry is an object at all. Every store is parsed straight from JSON, so
+   * an entry can be anything a hand-edited file holds (`null` above all), and the type says
+   * otherwise only because the parser cannot check it.
+   */
+  function isEntry(server: unknown): server is KilocodeMcpServer {
+    return typeof server === "object" && server !== null
+  }
+
+  /**
+   * Whether an entry of a legacy store is one this migration grants, and so one a load can lose.
+   *
+   * A store is parsed straight from JSON, so an entry is only checked, never assumed: an entry
+   * that is not an object cannot be granted. A remote entry is granted only with a `url` and a
+   * local one only with a `command`, and a disabled entry grants nothing even though the
+   * conversion keeps it as `enabled: false`.
+   */
+  function canConvert(server: unknown): server is KilocodeMcpServer {
+    if (!isEntry(server)) return false
+    if (server.disabled) return false
+    return isRemote(server) ? !!server.url : !!server.command
   }
 
   export function convertServer(name: string, server: KilocodeMcpServer): ConfigMCP.Info | null {
@@ -137,8 +161,9 @@ export namespace McpMigrator {
         }
         // A disabled server grants nothing when it is read, and neither does an entry the
         // conversion refuses, so withholding either loses nothing: only a server this load could
-        // have granted is a loss.
-        if (!server.disabled && (isRemote(server) ? !!server.url : !!server.command)) held.add(name)
+        // have granted is a loss. `canConvert` is the one predicate for that, so the report and
+        // the conversion below cannot disagree about which entry counts.
+        if (canConvert(server)) held.add(name)
       }
     }
 
@@ -166,6 +191,15 @@ export namespace McpMigrator {
 
     // Convert each server
     for (const [name, server] of serversByName) {
+      // A store is parsed straight from JSON, so an entry can be a value the conversion cannot
+      // read at all (`mcpServers: { foo: null }`). Refusing it here keeps one such entry in one
+      // project file from throwing away every server of the load.
+      if (!isEntry(server)) {
+        log.warn("MCP server entry is not an object, skipping", { name })
+        skipped.push({ name, reason: "entry is not an object" })
+        continue
+      }
+
       // Warn about alwaysAllow permissions that cannot be migrated
       if (server.alwaysAllow && server.alwaysAllow.length > 0) {
         warnings.push(
@@ -180,9 +214,12 @@ export namespace McpMigrator {
     }
 
     // A same-named entry a store this load read wins the dedup, so it is the one that converts: a
-    // skipped name the final `mcp` holds is covered. An entry that did not convert is no loss
-    // either, and `held` never includes one.
-    const lost = [...held].filter((name) => !Object.hasOwn(mcp, name))
+    // skipped name whose permission key the final `mcp` holds is covered. The comparison is by
+    // permission key, not raw name, because two names differing only in a character the tool-id
+    // cannot carry (`.`) share one key (`a.b` and `a_b` both yield `a_b_*`); an entry that did not
+    // convert is no loss either, and `held` never includes one.
+    const covered = new Set(Object.keys(mcp).map(pattern))
+    const lost = [...held].filter((name) => !covered.has(pattern(name)))
 
     return { mcp, available: serversByName.size > 0, skippedGlobalServers: lost, warnings, skipped }
   }

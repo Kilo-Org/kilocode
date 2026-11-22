@@ -368,7 +368,8 @@ export namespace KilocodeConfig {
     // cover. That store is opened only to answer the question, so a mode whose `mcp` group lost
     // one of them reports it instead of dropping the group silently, even when the project store
     // did supply servers to grant. A skipped store's server that a store this load read also names
-    // is covered, so nothing was lost and nothing is reported.
+    // and converts is covered, so nothing was lost and nothing is reported; only an entry the
+    // conversion would accept can be a loss.
     try {
       const migration = await ModesMigrator.migrate({
         projectDir: input.projectDir,

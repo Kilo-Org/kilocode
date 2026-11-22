@@ -177,8 +177,11 @@ export namespace ModesMigrator {
         // this load did not cover makes the group incomplete, and a store this load read that
         // declared a server none converted leaves it granting nothing. Nothing migrated grants
         // nothing here: the group adds no key, so the mode only denies what the servers name.
-        // A server the migrated set already names is covered, so only the rest was lost.
-        const lost = mcpSkippedGlobalServers.some((server) => !mcpServers.includes(server))
+        // A server the migrated set already covers is not lost, and coverage is by permission key:
+        // two names differing only in a character the tool-id cannot carry (`a.b`, `a_b`) share
+        // one key, so the one the set holds covers the other.
+        const covered = new Set(mcpServers.map(pattern))
+        const lost = mcpSkippedGlobalServers.some((server) => !covered.has(pattern(server)))
         if (lost) warnings.push(MCP_SKIPPED_GLOBAL)
         if (mcpServers.length === 0) {
           if (mcpAvailable) warnings.push(MCP_NO_SERVER)
