@@ -93,7 +93,13 @@ function permissions(info?: ConfigPermissionV1.Info, tools?: Readonly<Record<str
     resource: "*",
     effect: enabled ? ("allow" as const) : ("deny" as const),
   }))
-  for (const [action, rule] of Object.entries(info ?? {})) {
+  // kilocode_change start - v1 write and patch keys assert as edit, so a document authoring both spellings
+  // would let the authored order decide; emit the legacy spellings first so the current spelling wins the last match.
+  const entries = Object.entries(info ?? {})
+  const legacy = entries.filter(([action]) => normalizeAction(action) !== action)
+  const current = entries.filter(([action]) => normalizeAction(action) === action)
+  for (const [action, rule] of [...legacy, ...current]) {
+    // kilocode_change end
     if (!rule) continue
     const key = normalizeAction(action) // kilocode_change - v1 write and patch keys assert as edit
     if (typeof rule === "string") {

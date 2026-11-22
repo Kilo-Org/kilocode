@@ -326,6 +326,53 @@ describe("Config", () => {
       expect(PermissionV2.evaluate("edit", "src/index.ts", ask).effect).toBe("ask")
     }),
   )
+
+  // kilocode_change - a document authoring both spellings keeps the current spelling's effect
+  it.effect("keeps the authored edit permission ahead of a legacy write permission", () =>
+    Effect.sync(() => {
+      const rules = ConfigMigrateV1.migrate({ permission: { edit: "deny", write: "allow" } }).permissions ?? []
+      expect(rules).toEqual([
+        { action: "edit", resource: "*", effect: "allow" },
+        { action: "edit", resource: "*", effect: "deny" },
+      ])
+      expect(PermissionV2.evaluate("edit", "src/index.ts", rules).effect).toBe("deny")
+    }),
+  )
+
+  it.effect("keeps an authored edit allow ahead of a legacy write deny", () =>
+    Effect.sync(() => {
+      const rules = ConfigMigrateV1.migrate({ permission: { edit: "allow", write: "deny" } }).permissions ?? []
+      expect(rules).toEqual([
+        { action: "edit", resource: "*", effect: "deny" },
+        { action: "edit", resource: "*", effect: "allow" },
+      ])
+      expect(PermissionV2.evaluate("edit", "src/index.ts", rules).effect).toBe("allow")
+    }),
+  )
+
+  it.effect("keeps the authored edit permission ahead of a legacy patch permission", () =>
+    Effect.sync(() => {
+      const rules = ConfigMigrateV1.migrate({ permission: { edit: "deny", patch: "allow" } }).permissions ?? []
+      expect(rules).toEqual([
+        { action: "edit", resource: "*", effect: "allow" },
+        { action: "edit", resource: "*", effect: "deny" },
+      ])
+      expect(PermissionV2.evaluate("edit", "src/index.ts", rules).effect).toBe("deny")
+    }),
+  )
+
+  it.effect("keeps the authored agent edit permission ahead of a legacy write permission", () =>
+    Effect.sync(() => {
+      const agent = ConfigMigrateV1.migrate({
+        agent: { mixed: { permission: { edit: "deny", write: "allow" } } },
+      }).agents?.mixed
+      expect(agent?.permissions).toEqual([
+        { action: "edit", resource: "*", effect: "allow" },
+        { action: "edit", resource: "*", effect: "deny" },
+      ])
+      expect(PermissionV2.evaluate("edit", "src/index.ts", agent?.permissions ?? []).effect).toBe("deny")
+    }),
+  )
   // kilocode_change end
 
   it.live("returns an empty configuration when directory files do not exist", () =>
