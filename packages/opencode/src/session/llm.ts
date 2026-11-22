@@ -21,6 +21,9 @@ import { Plugin } from "@/plugin"
 import { Permission } from "@/permission"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { EventV2 } from "@opencode-ai/core/event"
+// kilocode_change start - workflow tool calls resolve their permission through the shared map
+// import { Wildcard } from "@/util/wildcard"
+// kilocode_change end
 import { SessionID } from "@/session/schema"
 import { Auth } from "@/auth"
 // kilocode_change start

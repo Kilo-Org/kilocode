@@ -511,17 +511,19 @@ export function merge(...rulesets: PermissionV1.Ruleset[]): PermissionV1.Rule[] 
 }
 
 // kilocode_change start - the one map from a tool name to the permission that governs it
-const ALIASES: Record<string, string> = {
-  edit: "edit",
-  write: "edit",
-  apply_patch: "edit",
-  list_mcp_resources: "read",
-  list_mcp_resource_templates: "read",
-  read_mcp_resource: "read",
-}
+// A Map keeps the lookup to entries this file defines, so a name inherited from
+// Object.prototype resolves to itself instead of to a built-in member.
+const ALIASES = new Map<string, string>([
+  ["edit", "edit"],
+  ["write", "edit"],
+  ["apply_patch", "edit"],
+  ["list_mcp_resources", "read"],
+  ["list_mcp_resource_templates", "read"],
+  ["read_mcp_resource", "read"],
+])
 
 export function permissionFor(tool: string): string {
-  return ALIASES[tool] ?? tool
+  return ALIASES.get(tool) ?? tool
 }
 // kilocode_change end
 

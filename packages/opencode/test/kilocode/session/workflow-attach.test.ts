@@ -173,6 +173,22 @@ describe("workflow tool wiring", () => {
     expect(calls).toEqual([])
   })
 
+  test("answers a name that is not in the map when a ruleset is in force", async () => {
+    const calls: Call[] = []
+    const { call } = await wired({
+      permission: [{ permission: "edit", pattern: "*", action: "deny" }],
+      tools: { bash: fakeTool(calls, "bash", () => "ok") },
+    })
+
+    for (const [index, name] of ["constructor", "toString", "__proto__"].entries()) {
+      expect(await call(name, "{}", `call-${index}`)).toEqual({
+        result: "",
+        error: `Tool not available: ${name}`,
+      })
+    }
+    expect(calls).toEqual([])
+  })
+
   test("leaves a path-scoped deny to the tool and still runs it", async () => {
     const calls: Call[] = []
     const { call, preapproved } = await wired({

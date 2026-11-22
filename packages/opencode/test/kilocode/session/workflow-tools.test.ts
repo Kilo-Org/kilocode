@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
+import { Permission } from "@/permission"
 import { KiloWorkflowTools } from "@/kilocode/session/workflow-tools"
 
 const execute = async () => ({ output: "", title: "", metadata: {} })
@@ -80,5 +81,34 @@ describe("workflow tool gate", () => {
 
     expect(result.preapproved).toContain("bash")
     expect(result.refuse("bash")).toBeUndefined()
+  })
+
+  test("keeps a scoped deny out of the whole-tool answer in either order", () => {
+    const catchAll: PermissionV1.Rule = { permission: "edit", pattern: "*", action: "allow" }
+    const scoped: PermissionV1.Rule = { permission: "edit", pattern: "private/**", action: "deny" }
+    const last = gate([catchAll, scoped])
+    const first = gate([scoped, catchAll])
+
+    // Neither order changes the whole-tool answer: the scoped rule cannot speak
+    // for the tool, so the tool stays preapproved and runs its own path check.
+    for (const result of [last, first]) {
+      expect(result.preapproved).toContain("edit")
+      expect(result.refuse("edit")).toBeUndefined()
+      expect(result.preapproved).toContain("bash")
+    }
+    expect(Permission.disabled(["edit"], [catchAll, scoped])).toEqual(new Set())
+    expect(Permission.disabled(["edit"], [scoped, catchAll])).toEqual(new Set())
+
+    // The per-path answer still follows the order: the last matching rule wins.
+    expect(Permission.evaluate("edit", "private/key.txt", [catchAll, scoped]).action).toBe("deny")
+    expect(Permission.evaluate("edit", "private/key.txt", [scoped, catchAll]).action).toBe("allow")
+  })
+
+  test("answers a name that is not a known alias with a ruleset in force", () => {
+    const result = gate([{ permission: "edit", pattern: "*", action: "deny" }])
+
+    for (const name of ["constructor", "toString", "__proto__"]) {
+      expect(result.refuse(name)).toBe(`Tool not available: ${name}`)
+    }
   })
 })
