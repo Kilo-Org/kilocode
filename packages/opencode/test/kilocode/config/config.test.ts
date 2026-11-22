@@ -970,6 +970,32 @@ describe("unset propagation across layered config files", () => {
   const getGlobal = () =>
     Effect.runPromise(Config.Service.use((svc) => svc.getGlobal()).pipe(Effect.scoped, Effect.provide(layer)))
 
+  test("deletes a scalar permission entry cleared by a delete sentinel", async () => {
+    await using globalTmp = await tmpdir()
+    const jsonc = path.join(globalTmp.path, "kilo.jsonc")
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      // A settings save can write a permission as a bare scalar. Clearing its only
+      // pattern must remove the key instead of leaving an object of sentinels.
+      await writeConfig(globalTmp.path, { permission: { read: "allow" } }, "kilo.jsonc")
+
+      await saveGlobal(decode({ permission: { read: { "*": null } } }))
+
+      const written = JSON.parse(await Bun.file(jsonc).text())
+      // The cleared entry is gone; an empty container may remain, but no sentinel
+      // object is written in its place.
+      expect(written.permission ?? {}).not.toHaveProperty("read")
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
   test("removes subagent_model from every global config file when unset", async () => {
     await using globalTmp = await tmpdir()
     const json = path.join(globalTmp.path, "kilo.json")
