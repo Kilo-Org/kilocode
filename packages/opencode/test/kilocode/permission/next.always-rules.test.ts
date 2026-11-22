@@ -943,6 +943,57 @@ describe("saveAlwaysRules", () => {
     ),
   )
 
+  it.live("removing a tool-wide rule clears its scalar config entry", () =>
+    withDir({ git: true }, () =>
+      Effect.gen(function* () {
+        const seed = yield* ask({
+          id: PermissionV1.ID.make("permission_remove_wild_seed"),
+          sessionID: SessionID.make("session_test"),
+          permission: "webfetch",
+          patterns: ["https://example.com/a"],
+          metadata: {},
+          always: ["*"],
+          ruleset: [],
+        }).pipe(Effect.forkScoped)
+        yield* waitForPending(1)
+        yield* saveAlwaysRules({
+          requestID: PermissionV1.ID.make("permission_remove_wild_seed"),
+          approvedAlways: ["*"],
+        })
+        yield* reply({ requestID: PermissionV1.ID.make("permission_remove_wild_seed"), reply: "once" })
+        yield* Fiber.join(seed)
+
+        const cfg = yield* Config.Service
+        expect((yield* cfg.get()).permission?.webfetch).toBe("allow")
+
+        // A sensitive request prompts even while the tool is allowed, which is the
+        // only way the dock can show a saved tool-wide rule for this permission.
+        const offer = yield* ask({
+          id: PermissionV1.ID.make("permission_remove_wild_offer"),
+          sessionID: SessionID.make("session_test"),
+          permission: "webfetch",
+          patterns: ["https://example.com/b"],
+          metadata: { sandboxEscalation: true },
+          always: ["*"],
+          ruleset: [],
+        }).pipe(Effect.forkScoped)
+        yield* waitForPending(1)
+        yield* saveAlwaysRules({
+          requestID: PermissionV1.ID.make("permission_remove_wild_offer"),
+          removedAlways: ["*"],
+        })
+        yield* reply({
+          requestID: PermissionV1.ID.make("permission_remove_wild_offer"),
+          reply: "once",
+          interactive: true,
+        })
+        yield* Fiber.join(offer)
+
+        expect((yield* cfg.get()).permission?.webfetch).toBeUndefined()
+      }),
+    ),
+  )
+
   it.live("multi-pattern: auto-resolves when new rule covers blocking pattern and ruleset covers the rest", () =>
     withDir({ git: true }, () =>
       Effect.gen(function* () {
