@@ -80,15 +80,22 @@ const broaderAllow = {
   workspaceConfig: () => ({ permission: {} }),
 }
 const broaderRequest: PermissionRequest = { ...request, always: ["edit *"] }
-// The merged global scope supplies the row from a lower global file, so the row carries
-// a state indicator rather than editable controls.
+// The merged global scope supplies the wildcard row from a lower global file, so the row
+// carries a state indicator rather than editable controls.
 const otherFileAllow = {
   config: () => ({ permission: { edit: { "*": "allow" } } }),
   globalConfig: () => ({ permission: {} }),
   mergedGlobalConfig: () => ({ permission: { edit: { "*": "allow" } } }),
   workspaceConfig: () => ({ permission: {} }),
 }
-
+// The merged global scope supplies a named row from a lower global file; a named
+// pattern is removable from every file that holds it, so the row keeps its controls.
+const namedOtherFileAllow = {
+  config: () => ({ permission: { edit: { "edit *": "allow" } } }),
+  globalConfig: () => ({ permission: {} }),
+  mergedGlobalConfig: () => ({ permission: { edit: { "edit *": "allow" } } }),
+  workspaceConfig: () => ({ permission: {} }),
+}
 type Mode =
   | "reject"
   | "once"
@@ -103,6 +110,7 @@ type Mode =
   | "workspaceDeny"
   | "broader"
   | "otherFile"
+  | "namedOtherFile"
 type Call = { response: string; approved: string[]; denied: string[]; removed: string[]; feedback?: string }
 
 const cases: Array<{ mode: Mode; ctx: typeof savedAllow; request?: PermissionRequest }> = [
@@ -119,6 +127,7 @@ const cases: Array<{ mode: Mode; ctx: typeof savedAllow; request?: PermissionReq
   { mode: "workspaceDeny", ctx: workspaceDeny },
   { mode: "broader", ctx: broaderAllow, request: broaderRequest },
   { mode: "otherFile", ctx: otherFileAllow },
+  { mode: "namedOtherFile", ctx: namedOtherFileAllow, request: broaderRequest },
 ]
 
 for (const item of cases) {
@@ -168,6 +177,7 @@ for (const item of cases) {
       "workspaceDeny",
       "broader",
       "otherFile",
+      "namedOtherFile",
     ].includes(mode)
     const denied = mode === "removeDenied" || mode === "workspaceDeny"
     assert.equal(row()?.getAttribute("data-decision"), denied ? "denied" : "approved")
@@ -214,6 +224,13 @@ for (const item of cases) {
       assert.equal(row()?.getAttribute("data-decision"), "approved")
       enter()
     }
+    if (mode === "namedOtherFile") {
+      // The row keeps its controls, and switching the saved rule off sends its removal.
+      assert.equal(row()?.getAttribute("data-source"), null)
+      click('[aria-label="ui.permission.rule.removeFromAllowed"]')
+      assert.equal(row()?.getAttribute("data-decision"), "pending")
+      enter()
+    }
     if (mode === "once") enter()
 
     if (!plain) {
@@ -237,7 +254,7 @@ for (const item of cases) {
         response: plain ? "once" : "reject",
         approved: mode === "approve" ? ["*"] : [],
         denied: mode === "deny" ? ["*"] : [],
-        removed: mode === "remove" || mode === "removeDenied" ? ["*"] : [],
+        removed: mode === "namedOtherFile" ? ["edit *"] : mode === "remove" || mode === "removeDenied" ? ["*"] : [],
         feedback: plain ? undefined : "Use spaces, not tabs",
       },
     ])

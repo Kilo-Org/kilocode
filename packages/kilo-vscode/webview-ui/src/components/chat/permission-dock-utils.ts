@@ -85,12 +85,13 @@ function ruleCovers(entry: string, pattern: string): boolean {
  * nothing. A scalar merged value is the tool-wide `*` entry, and a `*` key covers
  * every pattern.
  *
- * `target` is the primary global file, the one the removal writes to. A row is offered
- * for removal when that file holds its pattern with the same action, so the removal
- * deletes the entry the row shows.
+ * `target` is the primary global file, the one the removal writes to first. A named
+ * pattern is also deleted from every other global file that holds it, so a named row
+ * needs no ownership check. A wildcard row does: when another global file holds a bare
+ * scalar, that file has no `*` path to delete, so the row shows a state indicator
+ * instead of a control.
  *
- * A row another scope decides is shown with a state indicator instead, because this
- * write changes only the primary global file.
+ * A row another scope decides is shown with a state indicator instead.
  */
 export function removableRuleIndices(input: {
   rules: string[]
@@ -106,10 +107,11 @@ export function removableRuleIndices(input: {
     const action =
       typeof input.global === "string" ? (pattern === "*" ? input.global : undefined) : input.global?.[pattern]
     if (action !== "allow" && action !== "deny") continue
-    // A row is removable when the primary global file holds that pattern with that
-    // action, so the removal deletes the entry the row shows.
+    // Named patterns are removed from every global file that holds them, so only the
+    // wildcard row needs the primary file to hold its own `*` entry.
     const own =
-      typeof input.target === "string" ? pattern === "*" && input.target === action : input.target?.[pattern] === action
+      pattern !== "*" ||
+      (typeof input.target === "string" ? input.target === action : input.target?.[pattern] === action)
     if (!own) continue
     if (coveredByWorkspace(input.workspace, pattern)) continue
     if (coveredByBroaderGlobal(input.global, pattern, action)) continue

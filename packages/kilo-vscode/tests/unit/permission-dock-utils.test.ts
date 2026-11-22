@@ -355,7 +355,7 @@ describe("removableRuleIndices", () => {
     ).toEqual(new Set([0]))
   })
 
-  it("leaves a row alone when only a lower global file holds its pattern", () => {
+  it("keeps a named row in scope when only a lower global file holds its pattern", () => {
     expect(
       call({
         rules: ["touch *"],
@@ -363,10 +363,10 @@ describe("removableRuleIndices", () => {
         target: { "*": "ask" },
         effective: { 0: "approved" },
       }),
-    ).toEqual(new Set())
+    ).toEqual(new Set([0]))
   })
 
-  it("leaves a row alone when the primary global file has no entry for the tool", () => {
+  it("keeps a named row in scope when the primary global file has no entry for the tool", () => {
     expect(
       call({
         rules: ["touch *"],
@@ -374,7 +374,7 @@ describe("removableRuleIndices", () => {
         target: undefined,
         effective: { 0: "approved" },
       }),
-    ).toEqual(new Set())
+    ).toEqual(new Set([0]))
   })
 
   it("leaves the wildcard row alone when the merged scalar comes from a lower global file", () => {
