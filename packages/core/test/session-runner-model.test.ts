@@ -1,8 +1,9 @@
 import { describe, expect } from "bun:test"
 import { LLM } from "@opencode-ai/llm"
 import { LLMClient } from "@opencode-ai/llm/route"
-import { DateTime, Effect } from "effect"
-import { Headers } from "effect/unstable/http"
+import { DateTime, Effect, Layer, Stream } from "effect"
+import { Headers, HttpClient, HttpClientResponse } from "effect/unstable/http" // kilocode_change
+import { RequestExecutor } from "@opencode-ai/llm/route" // kilocode_change
 import { Credential } from "@opencode-ai/core/credential"
 import { ConfigMigrateV1 } from "@opencode-ai/core/v1/config/migrate" // kilocode_change
 import { Integration } from "@opencode-ai/core/integration"
@@ -13,6 +14,13 @@ import { SessionRunnerModel } from "@opencode-ai/core/session/runner/model"
 import { SessionV2 } from "@opencode-ai/core/session"
 import { AbsolutePath } from "@opencode-ai/core/schema"
 import { it } from "./lib/effect"
+
+// kilocode_change start
+function required<T>(value: T | undefined): T {
+  if (value === undefined) throw new Error("Expected value")
+  return value
+}
+// kilocode_change end
 
 type Api =
   | {
@@ -74,8 +82,8 @@ describe("SessionRunnerModel", () => {
     }),
   )
 
-  // kilocode_change start - migration reports headers, so they must land as headers and not as body keys
-  it.effect("sends migrated provider headers and authToken as headers, not as body keys", () =>
+  // kilocode_change start - migrated request headers reach the sent request as headers
+  it.effect("sends migrated request headers and bearer token as request headers", () =>
     Effect.gen(function* () {
       const migrated = ConfigMigrateV1.migrate({
         provider: {
@@ -91,36 +99,49 @@ describe("SessionRunnerModel", () => {
         },
       })
 
-      const provider = migrated.providers!["custom"]!
-      const config = provider.models!["chat"]!.request!
+      const provider = required(migrated.providers?.["custom"])
+      const config = required(provider.models?.["chat"]?.request)
       const resolved = yield* SessionRunnerModel.fromCatalogModel(
         ModelV2.Info.make({
-          ...model({
-            type: "aisdk",
-            package: "@ai-sdk/openai-compatible",
-            url: "https://custom.example/v1",
-          }),
+          ...model({ type: "aisdk", package: "@ai-sdk/openai-compatible", url: "https://custom.example/v1" }),
           request: {
             headers: { ...provider.request?.headers, ...config.headers },
             body: { ...provider.request?.body, ...config.body },
           },
         }),
       )
-      const prepared = yield* LLMClient.prepare(LLM.request({ model: resolved, prompt: "Hello" }))
-      const body = JSON.stringify(prepared.body)
-      const request = LLM.request({ model: resolved, prompt: "Hello" })
-      const headers = yield* resolved.route.auth.apply({
-        request,
-        method: "POST",
-        url: "https://custom.example/v1/chat/completions",
-        body: "{}",
-        headers: Headers.fromInput(resolved.route.defaults.http?.headers),
-      })
 
-      expect(body).not.toContain("migrated-token")
-      expect(body).not.toContain("acme")
-      expect(headers.authorization).toBe("Bearer migrated-key")
-      expect(headers["x-tenant"]).toBe("acme")
+      // Read the payload the transport sends: stub only the HTTP client, so route defaults, the http
+      // overlay and auth are all applied first.
+      const sent: Array<{ headers: Record<string, string>; body: unknown }> = []
+      const http = Layer.succeed(
+        HttpClient.HttpClient,
+        HttpClient.make((request) =>
+          Effect.sync(() => {
+            sent.push({
+              headers: { ...request.headers },
+              body:
+                request.body && "body" in request.body && request.body.body instanceof Uint8Array
+                  ? JSON.parse(new TextDecoder().decode(request.body.body))
+                  : request.body,
+            })
+            return HttpClientResponse.fromWeb(request, new Response("", { status: 200 }))
+          }),
+        ),
+      )
+
+      yield* LLMClient.stream(LLM.request({ model: resolved, prompt: "Hello" })).pipe(
+        Stream.runDrain,
+        Effect.catchCause(() => Effect.void),
+        Effect.provide(LLMClient.layer.pipe(Layer.provide(RequestExecutor.layer.pipe(Layer.provide(http))))),
+      )
+
+      const wire = required(sent[0])
+      expect(wire.body).toMatchObject({ customField: "value" })
+      expect(JSON.stringify(wire.body)).not.toContain("migrated-token")
+      expect(JSON.stringify(wire.body)).not.toContain("acme")
+      expect(wire.headers["x-tenant"]).toBe("acme")
+      expect(wire.headers.authorization).toBe("Bearer migrated-key")
     }),
   )
   // kilocode_change end
