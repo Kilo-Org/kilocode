@@ -564,7 +564,7 @@ jobs:
           registry-url: "https://registry.npmjs.org"
 
       - name: Install @vscode/vsce
-        run: bun install -g @vscode/vsce@4.1.1
+        run: bun install -g @vscode/vsce@4.1.1 # kilocode_change
 
       # kilocode_change start - download into /tmp and extract the tar.zst packed by build-cli,
       # then apply changesets so the packaged VSIX ships the current changelog
@@ -657,7 +657,7 @@ jobs:
           package-manager-cache: false # kilocode_change
 
       - name: Install @vscode/vsce
-        run: bun install -g @vscode/vsce@4.1.1
+        run: bun install -g @vscode/vsce@4.1.1 # kilocode_change
 
       - name: Setup Git Committer
         id: committer
