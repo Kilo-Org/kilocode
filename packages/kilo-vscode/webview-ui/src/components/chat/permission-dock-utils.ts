@@ -41,19 +41,19 @@ export function savedRuleStates(rules: string[], saved: PermissionRule | undefin
  * entry, turn `*` into `.*` and `?` into `.`, anchor both ends, and make a trailing
  * ` *` optional so `touch *` also covers `touch`.
  *
- * The backend also folds case on Windows and on macOS file rules; this matcher
- * compares case exactly.
+ * Case folds always. The evaluator folds on Windows and for macOS file rules and
+ * compares exactly elsewhere, and the webview has no host platform value, so folding
+ * everywhere keeps a row read-only whenever a workspace entry may decide it.
  */
 function ruleCovers(entry: string, pattern: string): boolean {
   const value = pattern.replaceAll("\\", "/")
-  if (entry === "*" || entry === value) return true
   let escaped = entry
     .replaceAll("\\", "/")
     .replace(/[.+^${}()|[\]\\]/g, "\\$&")
     .replace(/\*/g, ".*")
     .replace(/\?/g, ".")
   if (escaped.endsWith(" .*")) escaped = escaped.slice(0, -3) + "( .*)?"
-  return new RegExp("^" + escaped + "$", "s").test(value)
+  return new RegExp("^" + escaped + "$", "si").test(value)
 }
 
 /**

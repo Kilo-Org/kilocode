@@ -211,6 +211,17 @@ describe("removableRuleIndices", () => {
     ).toEqual(new Set())
   })
 
+  it("leaves a row alone when a workspace entry matches with different letter case", () => {
+    expect(
+      call({
+        rules: ["src/foo.ts"],
+        global: { "src/foo.ts": "allow" },
+        workspace: { "SRC/*": "allow" },
+        effective: { 0: "approved" },
+      }),
+    ).toEqual(new Set())
+  })
+
   it("keeps an unrelated row in scope when the workspace scope covers another pattern", () => {
     expect(
       call({
