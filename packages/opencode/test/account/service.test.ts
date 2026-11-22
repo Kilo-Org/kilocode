@@ -486,6 +486,7 @@ it.live("remove keeps an account active when the remaining account org read fail
 )
 // kilocode_change end
 
+// kilocode_change start
 it.live("token refresh persists the new token", () =>
   Effect.gen(function* () {
     const id = storedKey("user-1", ONE)
