@@ -263,6 +263,16 @@ describe("Ask agent bash permissions", () => {
       ["grep .env", "allow"],
       ["rg .env", "allow"],
       ["ag .env", "allow"],
+      // A last argument that only ends in `.env` is treated as a file name, so a
+      // search term in that position gets the same level; a path operand after it
+      // does not.
+      ["rg -n process.env", "ask"],
+      ["grep -rn process.env", "ask"],
+      // A stream filter's input redirect follows the same rule.
+      ["tr -d ',' < .env", "ask"],
+      ["tr -d ',' < .env.local", "ask"],
+      ["tr -d ','", "allow"],
+      ["tr -d ',' < notes.txt", "allow"],
       // A process environment dump.
       ["printenv", "ask"],
       ["printenv HOME", "ask"],

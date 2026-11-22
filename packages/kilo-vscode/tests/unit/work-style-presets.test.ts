@@ -92,6 +92,12 @@ describe("work style presets", () => {
       expect(resolve(`${command} process.env`)).toBe("allow")
     }
     expect(bash["printenv *"]).toBe("ask")
+    // A stream filter's input redirect follows the same rule, and the
+    // trailing-operand suffix form covers a bare search term as well.
+    expect(bash["tr *<*.env*"]).toBe("ask")
+    expect(resolve("tr -d ',' < .env")).toBe("ask")
+    expect(resolve("tr -d ',' < notes.txt")).toBe("allow")
+    expect(resolve("rg -n process.env")).toBe("ask")
     expect(resolve("cat .env")).toBe("ask")
     expect(resolve("cat prod.env")).toBe("ask")
     expect(resolve("cat config/prod.env")).toBe("ask")

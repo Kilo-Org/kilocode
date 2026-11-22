@@ -3,13 +3,17 @@ export type ShellPermission = "allow" | "ask" | "deny"
 
 // The allowlisted commands whose first argument is the file whose lines they
 // print. `ls`, `tree`, `wc`, `which`, `type`, `file`, `du`, `df`, `date`,
-// `uname`, `whoami` and `tr` report metadata or transform a stream, so they keep
-// their current level.
+// `uname` and `whoami` report metadata, so they keep their current level; `tr`
+// takes character sets, so `STREAMS` covers its input redirect instead.
 const READERS = ["cat", "head", "tail", "less", "diff", "sort", "uniq", "cut", "jq"] as const
 
 // The grep-family commands whose first argument is a pattern, so a trailing name
 // can be the search term rather than a file.
 const SEARCHERS = ["grep", "rg", "ag"] as const
+
+// The stream filters take character sets, not paths, so their rules cover an input
+// redirect.
+const STREAMS = ["tr"] as const
 
 // Git commands that print a file's lines from a revision or a worktree path: the
 // object readers, and the two that print a path's content or history.
@@ -26,9 +30,15 @@ const GIT = ["git show", "git cat-file", "git diff", "git log", "git blame"] as 
  * including a wildcard, a quoted operand and a nested path; a searcher's
  * environment file, once it follows the search term, in any position when it is
  * `.env`, `.env.*` or matches `*.env.*`, and as the last operand when it matches
- * `*.env`; and, for the git commands that print a file, the file named as a path
- * anywhere in the command. A searcher's first operand is its search pattern, so a
- * bare pattern that reads like a file name is not gated.
+ * `*.env`; a stream filter's environment file behind an input redirect, so
+ * `tr -d ',' < .env` asks; and, for the git commands that print a file, the file
+ * named as a path anywhere in the command. A searcher's first operand is its
+ * search pattern, so a bare pattern that reads like a file name is not gated.
+ *
+ * A last argument that merely ends in `.env` counts as a file name, so a search
+ * term such as `process.env` in that position gets the same level. A pattern
+ * cannot tell a search term from a relative path, and the coverage is worth the
+ * extra prompt.
  *
  * `.env.example` documents the format and is allowed only as the exact lone
  * operand of a reader or a searcher: one literal path. A nested sample path and
@@ -83,6 +93,13 @@ export function envGuards(
     // search term (`rg -n process.env src/`). Only the directory-prefixed forms
     // above separate the two.
     samples[`${command} .env.example`] = "allow"
+  }
+
+  for (const command of STREAMS) {
+    if (!has(command)) continue
+    // The operands of `tr` are character sets, so one form covers `tr …<.env`,
+    // `tr … < .env` and a trailing argument after the file.
+    gated[`${command} *<*.env*`] = level
   }
 
   for (const prefix of GIT) {
