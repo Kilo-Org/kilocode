@@ -805,6 +805,7 @@ export const dict = {
 
   "dialog.model.noProviders": "Sağlayıcı yok",
   "dialog.model.unavailable": "Kilo modelleri kullanılamıyor",
+  "dialog.model.loadFailed": "Bu proje için sağlayıcılar yüklenemedi.",
 
   "prompt.placeholder.connecting": "Sunucuya bağlanılıyor...",
   "prompt.placeholder.default":

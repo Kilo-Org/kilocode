@@ -96,6 +96,35 @@ describe("env read permissions", () => {
     }),
   )
 
+  it.live("case variants of the secret file names ask on a case-insensitive darwin volume", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => {
+        const original = Object.getOwnPropertyDescriptor(process, "platform")
+        Object.defineProperty(process, "platform", { ...original, value: "darwin" })
+        return original
+      }),
+      () =>
+        Effect.sync(() => {
+          const set = Permission.merge(rules(), Permission.fromConfig({ read: { "*": "allow" } }))
+          expect(Permission.resolve("read", "project/.ENV", set).action).toBe("ask")
+          expect(Permission.resolve("read", "project/.Env", set).action).toBe("ask")
+          expect(Permission.resolve("read", "project/.ENV.LOCAL", set).action).toBe("ask")
+          expect(Permission.resolve("read", "project/.ENV.EXAMPLE", set).action).toBe("allow")
+          expect(Permission.resolve("read", "project/src/Index.ts", set).action).toBe("allow")
+
+          // A saved approval for another spelling covers the request the rules treat as the same file.
+          const saved = Permission.resolve("read", "project/.ENV", set, [
+            { permission: "read", pattern: "PROJECT/.Env", action: "allow" },
+          ])
+          expect(saved.action).toBe("allow")
+        }),
+      (original) =>
+        Effect.sync(() => {
+          if (original) Object.defineProperty(process, "platform", original)
+        }),
+    ),
+  )
+
   it.live("saved wildcard read approval does not bypass env ask", () =>
     withDir(() =>
       Effect.gen(function* () {

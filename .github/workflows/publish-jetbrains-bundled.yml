@@ -35,6 +35,7 @@ jobs:
       kind: ${{ steps.release.outputs.kind }}
       tag: ${{ steps.release.outputs.tag }}
       channel: ${{ steps.release.outputs.marketplace_channel }}
+      merge: ${{ steps.release.outputs.merge }}
     steps:
       - name: Checkout trusted validation scripts
         uses: actions/checkout@v6
@@ -56,11 +57,12 @@ jobs:
       - name: Validate release PR and tag
         id: release
         working-directory: release
-        run: bun ../script/jetbrains-release-validate.ts --pr "$PR_NUMBER"
+        run: bun ../script/jetbrains-release-validate.ts --pr "$PR_NUMBER" --merge "$MERGE_COMMIT"
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           PR_NUMBER: ${{ inputs.pr }}
+          MERGE_COMMIT: ${{ inputs.merge_commit }}
 
   bundle:
     needs: validate
@@ -81,7 +83,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-          ref: ${{ inputs.merge_commit }}
+          ref: ${{ needs.validate.outputs.merge }}
 
       - name: Save reviewed release metadata
         run: |
@@ -242,7 +244,7 @@ jobs:
           VERSION: ${{ needs.validate.outputs.version }}
           CHANNEL: ${{ needs.validate.outputs.channel }}
           TAG: ${{ needs.validate.outputs.tag }}
-          MERGE_COMMIT: ${{ inputs.merge_commit }}
+          MERGE_COMMIT: ${{ needs.validate.outputs.merge }}
           SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }}
 
       - name: Attest bundled plugin SBOM

@@ -60,6 +60,7 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
   const provider = useProvider()
   const vscode = useVSCode()
   const action = createProviderAction(vscode)
+  provider.trackDialog()
 
   const [state, setState] = createStore<ViewState>({})
 
