@@ -55,6 +55,13 @@ export function recoveryDirs(workspace: string, dirs: ReadonlyMap<string, string
  * When shouldContinue returns false the reply stops before the next attempt, so
  * disabling auto-approve cancels an in-flight retry. Its message is not
  * transient on purpose, so the retry helper stops instead of looping.
+ *
+ * Returns true only when the directory's instance no longer holds the request.
+ * A successful reply call is not itself the answer: one bounded `permission.list`
+ * on the same directory confirms it, so the prompt still reaches the user whenever
+ * the reply did not take effect. A not-found reply reports false for the same reason:
+ * a directory without that request answers with the same empty list a settled
+ * request produces, so it cannot confirm one.
  */
 export async function replyOnce(
   client: KiloClient,
@@ -67,11 +74,15 @@ export async function replyOnce(
       if (shouldContinue && !shouldContinue()) throw new Error(CANCELLED)
       return client.permission.reply({ requestID, directory, reply: "once" }, { throwOnError: true })
     })
-    return true
   } catch (error) {
-    if (!(error instanceof Error && error.message === CANCELLED)) {
-      console.error("[Kilo New] permission-handler: failed to reply once:", error)
-    }
+    if (error instanceof Error && error.message === CANCELLED) return false
+    if (isNotFoundError(error)) return false
+    console.error("[Kilo New] permission-handler: failed to reply once:", error)
+  }
+  try {
+    return await permissionSettled(client, directory, requestID)
+  } catch (error) {
+    console.error("[Kilo New] permission-handler: failed to confirm the reply:", error)
     return false
   }
 }
