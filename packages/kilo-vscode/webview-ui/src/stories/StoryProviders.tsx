@@ -333,6 +333,7 @@ interface StoryProvidersProps {
   features?: Partial<FeatureFlags>
   globalConfig?: Config
   projectConfig?: Config
+  workspaceConfig?: Config
   onConfigChange?: (config: Config) => void
   onGlobalConfigChange?: (config: Config) => void
   onProjectConfigChange?: (config: Config) => void
@@ -350,6 +351,7 @@ const ConfigWrapper: ParentComponent<{
   features?: Partial<FeatureFlags>
   globalConfig?: Config
   projectConfig?: Config
+  workspaceConfig?: Config
   onConfigChange?: (config: Config) => void
   onGlobalConfigChange?: (config: Config) => void
   onProjectConfigChange?: (config: Config) => void
@@ -359,6 +361,7 @@ const ConfigWrapper: ParentComponent<{
     const [cfg, setCfg] = createSignal(props.config)
     const [global, setGlobal] = createSignal(props.globalConfig ?? props.config)
     const [project, setProject] = createSignal(props.projectConfig ?? props.config)
+    const [workspace, setWorkspace] = createSignal(props.workspaceConfig ?? props.projectConfig ?? props.config)
     const [settings, setSettings] = createSignal<Record<string, unknown>>({})
     const [dirty, setDirty] = createSignal(false)
     const features = createMemo(() => {
@@ -379,6 +382,7 @@ const ConfigWrapper: ParentComponent<{
       globalConfig: createMemo(() => (scoped ? global() : cfg())),
       globalDraft: () => ({}),
       projectConfig: createMemo(() => (scoped ? project() : cfg())),
+      workspaceConfig: createMemo(() => (scoped ? workspace() : cfg())),
       collections: () => ({}),
       settings,
       shortcuts: () => ({ bindings: {}, selection: false }),
@@ -452,6 +456,7 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
             features={props.features}
             globalConfig={props.globalConfig}
             projectConfig={props.projectConfig}
+            workspaceConfig={props.workspaceConfig}
             onConfigChange={props.onConfigChange}
             onGlobalConfigChange={props.onGlobalConfigChange}
             onProjectConfigChange={props.onProjectConfigChange}

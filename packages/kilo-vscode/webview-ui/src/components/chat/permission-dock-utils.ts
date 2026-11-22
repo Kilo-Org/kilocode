@@ -1,4 +1,4 @@
-import type { ConfigOrigin, PermissionRule } from "../../types/messages"
+import type { PermissionRule } from "../../types/messages"
 
 export type RuleDecision = "approved" | "denied" | "pending"
 
@@ -36,18 +36,16 @@ export function savedRuleStates(rules: string[], saved: PermissionRule | undefin
 
 /**
  * The rows this prompt can change: the global config supplies the pattern, the
- * effective state matches that global entry, and the workspace overlay does not
- * define the same permission key. `source` is the overlay's recorded origin for
- * the permission key; when the workspace defines the key at all, the row stays
- * out of scope because this write cannot tell which of its patterns wins.
+ * effective state matches that global entry, and the merged workspace scope does
+ * not supply the same pattern. A row any other scope decides is shown without the
+ * removal control, because this write cannot change that scope.
  */
 export function removableRuleIndices(input: {
   rules: string[]
   global: PermissionRule | undefined
-  source: ConfigOrigin | undefined
+  workspace: PermissionRule | undefined
   effective: Record<number, RuleDecision>
 }): Set<number> {
-  if (input.source !== undefined && input.source !== "global") return new Set()
   const fromGlobal = savedRuleStates(input.rules, input.global)
   const result = new Set<number>()
   for (let i = 0; i < input.rules.length; i++) {
@@ -55,6 +53,9 @@ export function removableRuleIndices(input: {
     const action =
       typeof input.global === "string" ? (pattern === "*" ? input.global : undefined) : input.global?.[pattern]
     if (action !== "allow" && action !== "deny") continue
+    const local =
+      typeof input.workspace === "string" ? (pattern === "*" ? input.workspace : undefined) : input.workspace?.[pattern]
+    if (local === "allow" || local === "deny") continue
     if (fromGlobal[i] === input.effective[i]) result.add(i)
   }
   return result

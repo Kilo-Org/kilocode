@@ -56,6 +56,7 @@ function createConnection() {
   const patches: unknown[] = []
   const snapshot = {
     effective: {},
+    workspaceConfig: {},
     targets: {
       global: {
         scope: "global",
@@ -88,7 +89,7 @@ function createConnection() {
       overlay: async () => ({ data: { project: {}, targets: snapshot.targets } }),
       overlayUpdate: async (patch: unknown) => {
         patches.push(patch)
-        return { data: snapshot }
+        return { data: { effective: snapshot.effective, targets: snapshot.targets, project: snapshot.workspaceConfig } }
       },
     },
     experimental: {
@@ -186,6 +187,8 @@ describe("KiloProvider indexing refresh", () => {
       config: snapshot.config,
       globalConfig: snapshot.targets!.global.raw,
       projectConfig: snapshot.targets!.project.raw,
+      workspaceConfig: snapshot.workspaceConfig,
+      collections: snapshot.collections,
       settings: snapshot.settings,
       features: snapshot.features,
     }

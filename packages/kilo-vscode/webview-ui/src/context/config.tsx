@@ -45,6 +45,8 @@ interface ConfigContextValue {
   globalConfig: Accessor<Config>
   globalDraft: Accessor<Partial<Config>>
   projectConfig: Accessor<Config>
+  /** Merged workspace scope from the overlay, every project file combined. */
+  workspaceConfig: Accessor<Config>
   collections: Accessor<ConfigCollections>
   settings: Accessor<Record<string, unknown>>
   /** Shortcut labels and editor state for prompt shortcut hints. */
@@ -102,6 +104,7 @@ export const ConfigProvider: ParentComponent = (props) => {
   const [config, setConfig] = createSignal<Config>({})
   const [globalConfig, setGlobalConfig] = createSignal<Config>({})
   const [projectConfig, setProjectConfig] = createSignal<Config>({})
+  const [workspaceConfig, setWorkspaceConfig] = createSignal<Config>({})
   const [collections, setCollections] = createSignal<ConfigCollections>({})
   const [settings, setSettings] = createSignal<Record<string, unknown>>(initial)
   const [shortcuts, setShortcuts] = createSignal({ bindings: {} as Record<string, string>, selection: false })
@@ -173,6 +176,10 @@ export const ConfigProvider: ParentComponent = (props) => {
     if (message.type !== "shortcutContext") return
     setShortcuts({ bindings: message.bindings, selection: message.selection })
   })
+  // The merged workspace scope is read-only: no draft merges on top of it.
+  const applyWorkspace = (message: { workspaceConfig?: Config }) => {
+    if (message.workspaceConfig !== undefined) setWorkspaceConfig(message.workspaceConfig)
+  }
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type === "configLoaded") {
       // Skip if a save is in-flight — a stale configLoaded must not overwrite
@@ -199,6 +206,7 @@ export const ConfigProvider: ParentComponent = (props) => {
         setProjectConfig(mergeScopedConfig(project, hideRemovedMcp(projectDraft() as Config, removedMcp())))
         setSavedProject(project)
       }
+      applyWorkspace(message)
       setRemovedMcp((current) => retainUnconfirmedMcpRemovals(current, message.config))
       updateCollections(message.collections)
       setLoading(false)
@@ -231,6 +239,7 @@ export const ConfigProvider: ParentComponent = (props) => {
           setProjectConfig(project)
           setSavedProject(project)
         }
+        applyWorkspace(message)
         updateCollections(message.collections)
         setFeatures(message.features)
         setBindings(message.bindings ?? bindings())
@@ -254,6 +263,7 @@ export const ConfigProvider: ParentComponent = (props) => {
           setProjectConfig(mergeScopedConfig(project, hideRemovedMcp(projectDraft() as Config, removedMcp())))
           setSavedProject(project)
         }
+        applyWorkspace(message)
         updateCollections(message.collections)
         setFeatures(message.features)
         setBindings(message.bindings ?? bindings())
@@ -297,6 +307,7 @@ export const ConfigProvider: ParentComponent = (props) => {
         setProjectConfig(message.projectConfig)
         setSavedProject(message.projectConfig)
       }
+      applyWorkspace(message)
     }
     if (message.config) {
       setConfig(resolveConfig(message.config, draft(), has(draft() as Record<string, unknown>)))
@@ -474,6 +485,7 @@ export const ConfigProvider: ParentComponent = (props) => {
     globalConfig,
     globalDraft,
     projectConfig,
+    workspaceConfig,
     collections,
     settings,
     shortcuts,

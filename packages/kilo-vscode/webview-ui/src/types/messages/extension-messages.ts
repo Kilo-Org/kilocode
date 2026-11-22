@@ -776,6 +776,8 @@ export interface ConfigLoadedMessage {
   config: Config
   globalConfig?: Config
   projectConfig?: Config
+  /** Merged workspace scope from the overlay, every project file combined. */
+  workspaceConfig?: Config
   bindings?: { global?: SettingsConfigBinding; project?: SettingsConfigBinding }
   collections?: ConfigCollections
   settings?: ExtensionSettings
@@ -787,6 +789,8 @@ export interface ConfigUpdatedMessage {
   config: Config
   globalConfig?: Config
   projectConfig?: Config
+  /** Merged workspace scope from the overlay, every project file combined. */
+  workspaceConfig?: Config
   bindings?: { global?: SettingsConfigBinding; project?: SettingsConfigBinding }
   collections?: ConfigCollections
   settings?: ExtensionSettings
@@ -801,6 +805,8 @@ export interface ConfigUpdateFailedMessage {
   config?: Config
   globalConfig?: Config
   projectConfig?: Config
+  /** Merged workspace scope from the overlay, every project file combined. */
+  workspaceConfig?: Config
   bindings?: { global?: SettingsConfigBinding; project?: SettingsConfigBinding }
 }
 

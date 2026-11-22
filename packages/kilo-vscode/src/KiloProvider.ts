@@ -272,6 +272,8 @@ type SandboxSupportClient = {
 type ConfigSnapshot = {
   effective: Config
   targets: { global: ConfigTarget; project: ConfigTarget }
+  /** Merged workspace scope: every project config file combined. */
+  project?: Config
 }
 
 function sandboxClient(client: KiloClient | null) {
@@ -4135,6 +4137,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const bindings = this.bindingsFor(dir, snapshot.targets)
       const global = snapshot.targets.global.raw as Config
       const projectConfig = bindings.project ? (snapshot.targets.project.raw as Config) : undefined
+      // The overlay response carries the merged workspace scope as `project`; the
+      // config snapshot names the same data `workspaceConfig`.
+      const workspaceConfig = snapshot.project as Config | undefined
       // Capture the previous source before cachedGlobalConfig moves, so a source
       // change still triggers a catalog refresh.
       const previousSpeech = this.speechToTextSource()
@@ -4144,6 +4149,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         config: snapshot.effective,
         globalConfig: global,
         projectConfig,
+        workspaceConfig,
         bindings,
         settings: this.configSettings(),
         features,
@@ -4154,6 +4160,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         config: snapshot.effective,
         globalConfig: global,
         projectConfig,
+        workspaceConfig,
         bindings,
         settings: this.configSettings(),
         features,
@@ -4182,11 +4189,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const projectConfig = bindings.project ? (snapshot.targets?.project.raw as Config) : undefined
     const previousSpeech = this.speechToTextSource()
     this.cachedGlobalConfig = globalConfig ?? null
+    const workspaceConfig = snapshot.workspaceConfig
     this.cachedConfigMessage = {
       type: "configLoaded",
       config: snapshot.config,
       globalConfig,
       projectConfig,
+      workspaceConfig,
       bindings,
       collections: snapshot.collections,
       settings: snapshot.settings,
@@ -4198,6 +4207,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       config: snapshot.config,
       globalConfig,
       projectConfig,
+      workspaceConfig,
       bindings,
       collections: snapshot.collections,
       settings: snapshot.settings,

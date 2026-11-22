@@ -49,7 +49,7 @@ export const PermissionDock: Component<{
 }> = (props) => {
   const session = useSession()
   const language = useLanguage()
-  const { config, globalConfig, collections } = useConfig()
+  const { config, globalConfig, workspaceConfig } = useConfig()
 
   const fromChild = () => props.request.sessionID !== session.currentSessionID()
   // Skill shell batches are never persisted, so they show no auto-approve rules. The command
@@ -101,7 +101,7 @@ export const PermissionDock: Component<{
   const revocable = removableRuleIndices({
     rules: rules(),
     global: globalConfig().permission?.[props.request.toolName],
-    source: collections().permission?.find((entry) => entry.key === props.request.toolName)?.source,
+    workspace: workspaceConfig().permission?.[props.request.toolName],
     effective: loadState,
   })
   const [decisions, setDecisions] = createSignal<Record<number, RuleDecision>>({})

@@ -91,7 +91,7 @@ describe("removableRuleIndices", () => {
   const call = (input: {
     rules: string[]
     global?: Parameters<typeof savedRuleStates>[1]
-    source?: "global" | "project" | "system" | "default"
+    workspace?: Parameters<typeof savedRuleStates>[1]
     effective: Record<number, "approved" | "denied">
   }) => removableRuleIndices(input)
 
@@ -102,7 +102,7 @@ describe("removableRuleIndices", () => {
   })
 
   it("marks a denied row the global config tiles", () => {
-    expect(call({ rules: ["rm *"], global: { "rm *": "deny" }, source: "global", effective: { 0: "denied" } })).toEqual(
+    expect(call({ rules: ["rm *"], global: { "rm *": "deny" }, workspace: {}, effective: { 0: "denied" } })).toEqual(
       new Set([0]),
     )
   })
@@ -123,15 +123,25 @@ describe("removableRuleIndices", () => {
     expect(call({ rules: ["npm *"], effective: { 0: "approved" } })).toEqual(new Set())
   })
 
-  it("leaves every row alone when the workspace overlay defines the permission key", () => {
+  it("leaves a row alone when the workspace scope supplies the same pattern", () => {
     expect(
-      call({ rules: ["npm *"], global: { "npm *": "allow" }, source: "project", effective: { 0: "approved" } }),
+      call({
+        rules: ["npm *"],
+        global: { "npm *": "allow" },
+        workspace: { "npm *": "allow" },
+        effective: { 0: "approved" },
+      }),
     ).toEqual(new Set())
   })
 
-  it("leaves every row alone when a runtime source defines the permission key", () => {
+  it("keeps other rows of the same tool in scope", () => {
     expect(
-      call({ rules: ["npm *"], global: { "npm *": "allow" }, source: "system", effective: { 0: "approved" } }),
-    ).toEqual(new Set())
+      call({
+        rules: ["npm *", "git *"],
+        global: { "npm *": "allow", "git *": "allow" },
+        workspace: { "git *": "allow" },
+        effective: { 0: "approved", 1: "approved" },
+      }),
+    ).toEqual(new Set([0]))
   })
 })
