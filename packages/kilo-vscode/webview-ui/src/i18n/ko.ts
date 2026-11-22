@@ -1400,6 +1400,7 @@ export const dict = {
   "settings.saveBar.saveFailed": "설정을 저장할 수 없습니다",
   "settings.saveBar.dismissError": "닫기",
   "settings.saveBar.unconfirmedWrite": "확장 프로그램 호스트가 “{{name}}”을(를) 확인하지 않았습니다.",
+  "settings.saveBar.unconfirmedSave": "확장 프로그램 호스트가 저장을 확인하지 않았습니다. 다시 시도하세요.",
   "notifications.action.next": "다음",
   "notifications.action.close": "닫기",
   "notifications.action.tryModel": "{{model}} 시도",

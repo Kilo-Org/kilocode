@@ -1421,6 +1421,7 @@ export const dict = {
   "settings.saveBar.saveFailed": "Kunne ikke lagre innstillinger",
   "settings.saveBar.dismissError": "Avvis",
   "settings.saveBar.unconfirmedWrite": "«{{name}}» ble ikke bekreftet av utvidelsesverten.",
+  "settings.saveBar.unconfirmedSave": "Lagringen ble ikke bekreftet av utvidelsesverten. Prøv igjen.",
   "notifications.action.next": "Neste",
   "notifications.action.close": "Lukk",
   "notifications.action.tryModel": "Prøv {{model}}",

@@ -1455,6 +1455,8 @@ export const dict = {
   "settings.saveBar.saveFailed": "Einstellungen konnten nicht gespeichert werden",
   "settings.saveBar.dismissError": "Verwerfen",
   "settings.saveBar.unconfirmedWrite": "„{{name}}“ wurde vom Erweiterungshost nicht bestätigt.",
+  "settings.saveBar.unconfirmedSave":
+    "Das Speichern wurde vom Erweiterungshost nicht bestätigt. Versuchen Sie es erneut.",
   "notifications.action.next": "Weiter",
   "notifications.action.close": "Schließen",
   "notifications.action.tryModel": "{{model}} ausprobieren",
