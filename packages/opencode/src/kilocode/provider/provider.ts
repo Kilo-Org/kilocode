@@ -16,6 +16,7 @@ import { Effect, Schema } from "effect"
 import type { LanguageModelV3 } from "@ai-sdk/provider"
 import { mapValues, omit, pickBy } from "remeda"
 import { reasoningSummary } from "./reasoning-summary"
+import { parseAzureResourceName, parseVertexLocation } from "@opencode-ai/core/kilocode/provider-endpoint"
 import type { Provider } from "@/provider/provider"
 import type { Auth } from "@/auth"
 import type { Config } from "@/config/config"
@@ -293,6 +294,34 @@ export function patchCustomLoaderResult(
 // ---------------------------------------------------------------------------
 // getSmallModel helpers
 // ---------------------------------------------------------------------------
+
+/**
+ * Validates the endpoint inputs a provider model is configured with.
+ *
+ * A configured `baseURL` is used as given. Without one, a Vertex location must be a Google Cloud
+ * region or multi-region name, and an Azure resource name must be a single DNS label; anything else
+ * raises a configuration error when the model is used.
+ */
+export function resolveEndpointOptions(
+  providerID: string,
+  npm: string,
+  modelURL: string | undefined,
+  options: Record<string, any>,
+) {
+  if (typeof options.baseURL === "string" && options.baseURL !== "") return
+  if (providerID === "google-vertex") {
+    const derived =
+      npm.includes("@ai-sdk/google-vertex") ||
+      modelURL === undefined ||
+      modelURL === "" ||
+      modelURL.includes("${GOOGLE_VERTEX_ENDPOINT}")
+    if (derived) options.location = parseVertexLocation(options.location ?? "global")
+    return
+  }
+  if (providerID === "azure" && typeof options.resourceName === "string") {
+    options.resourceName = parseAzureResourceName(options.resourceName)
+  }
+}
 
 export function kiloSmallModelPriority(providerID: string): string[] | undefined {
   if (providerID.startsWith("kilo")) return ["kilo-auto/small"]

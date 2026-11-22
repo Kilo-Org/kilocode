@@ -21,7 +21,7 @@ export class EndpointConfigError extends Error {
 
 /** Accepts a Google Cloud region or multi-region name such as `global`, `eu`, or `us-central1`. */
 export const parseVertexLocation = (value: unknown) => {
-  const location = typeof value === "string" ? value.trim() : ""
+  const location = typeof value === "string" ? value.trim().toLowerCase() : ""
   if (!REGION.test(location)) {
     throw new EndpointConfigError(
       `Invalid Google Vertex location "${String(value)}". Use a Google Cloud region or multi-region name: for example, global, eu, or us-central1.`,
@@ -31,7 +31,7 @@ export const parseVertexLocation = (value: unknown) => {
 }
 
 export const isVertexLocation = (value: unknown) => {
-  return typeof value === "string" && REGION.test(value.trim())
+  return typeof value === "string" && REGION.test(value.trim().toLowerCase())
 }
 
 /** Accepts an Azure resource name, which is one DNS label and never a URL. */

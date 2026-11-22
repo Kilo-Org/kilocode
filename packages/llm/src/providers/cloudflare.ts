@@ -39,12 +39,26 @@ export const aiGatewayBaseURL = (input: GatewayURL) => {
   return `https://gateway.ai.cloudflare.com/v1/${encodeURIComponent(input.accountId)}/${encodeURIComponent(input.gatewayId?.trim() || "default")}/compat`
 }
 
+// kilocode_change start - the environment gateway credential goes to a Cloudflare AI Gateway endpoint
+const isGatewayHost = (baseURL: string | undefined) => {
+  if (baseURL === undefined) return true
+  try {
+    return new URL(baseURL).hostname.toLowerCase() === "gateway.ai.cloudflare.com"
+  } catch {
+    return false
+  }
+}
+// kilocode_change end
+
 const aiGatewayAuth = (input: AIGatewayOptions) => {
   if ("auth" in input && input.auth) return input.auth
-  const gateway = Auth.optional(input.gatewayApiKey, "gatewayApiKey")
-    .orElse(Auth.config("CLOUDFLARE_API_TOKEN"))
-    .orElse(Auth.config("CF_AIG_TOKEN"))
-    .pipe(Auth.bearerHeader("cf-aig-authorization"))
+  // kilocode_change start - resolve the environment gateway credential for a Cloudflare gateway endpoint
+  const explicit = Auth.optional(input.gatewayApiKey, "gatewayApiKey")
+  const source = isGatewayHost(input.baseURL)
+    ? explicit.orElse(Auth.config("CLOUDFLARE_API_TOKEN")).orElse(Auth.config("CF_AIG_TOKEN"))
+    : explicit
+  const gateway = source.pipe(Auth.bearerHeader("cf-aig-authorization"))
+  // kilocode_change end
   if (!("apiKey" in input) || input.apiKey === undefined) return gateway
   // kilocode_change start - keep the resolved gateway credential next to the upstream key;
   // `orElse(none)` keeps a gateway without its own authentication working

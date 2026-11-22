@@ -212,6 +212,34 @@ describe("Cloudflare", () => {
       )
     }),
   )
+  it.effect("sends the environment gateway credential to a Cloudflare gateway endpoint", () =>
+    Effect.gen(function* () {
+      yield* LLM.generate(
+        LLM.request({
+          model: CloudflareAIGateway.configure({
+            baseURL: "https://gateway.proxy.test/v1/custom/compat",
+            apiKey: "provider-token",
+          }).model("openai/gpt-4o-mini"),
+          prompt: "Say hello.",
+        }),
+      ).pipe(
+        withEnv({ CLOUDFLARE_API_TOKEN: "env-gateway-token" }),
+        Effect.provide(
+          dynamicResponse((input) =>
+            Effect.gen(function* () {
+              const web = yield* HttpClientRequest.toWeb(input.request).pipe(Effect.orDie)
+              expect(web.headers.get("authorization")).toBe("Bearer provider-token")
+              expect(web.headers.get("cf-aig-authorization")).toBeNull()
+              return input.respond(
+                sseEvents(deltaChunk({ role: "assistant", content: "Hello" }), deltaChunk({}, "stop")),
+                { headers: { "content-type": "text/event-stream" } },
+              )
+            }),
+          ),
+        ),
+      )
+    }),
+  )
   // kilocode_change end
 
   it.effect("allows a fully configured baseURL override", () =>

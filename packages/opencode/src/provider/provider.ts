@@ -40,6 +40,7 @@ import {
   patchConfigModel as patchKiloConfigModel,
   customProviderVariants,
   patchCustomLoaderResult,
+  resolveEndpointOptions,
   patchKiloProviderPrivacy,
   patchKiloProviderAuth,
   publicKiloProvider,
@@ -51,7 +52,7 @@ import {
 } from "@/kilocode/provider/provider"
 import * as ModelsRefresh from "@/kilocode/provider/models-refresh"
 import { bedrockAuth, providerKey, vertexAuth, vertexCredentials, vertexOptions } from "@/kilocode/provider/cloud-auth"
-import { EndpointConfigError, isVertexHost, parseAzureResourceName, parseVertexLocation, requestHost } from "@opencode-ai/core/kilocode/provider-endpoint" // kilocode_change
+import { EndpointConfigError, isVertexHost, requestHost } from "@opencode-ai/core/kilocode/provider-endpoint" // kilocode_change
 // kilocode_change end
 import { ProviderError } from "./error"
 
@@ -1846,22 +1847,8 @@ const layer = Layer.effect(
         const options = { ...provider.options }
         vertexOptions(model.providerID, model.api.npm, options) // kilocode_change - hydrate stored credentials
 
-        // kilocode_change start - require a plain endpoint value
-        if (model.providerID === "google-vertex" && typeof options.baseURL !== "string") {
-          const derived =
-            model.api.npm.includes("@ai-sdk/google-vertex") ||
-            model.api.url === undefined ||
-            model.api.url === "" ||
-            model.api.url.includes("${GOOGLE_VERTEX_ENDPOINT}")
-          if (derived) options.location = parseVertexLocation(options.location ?? "global")
-        }
-        if (
-          model.providerID === "azure" &&
-          typeof options.baseURL !== "string" &&
-          typeof options.resourceName === "string"
-        ) {
-          options.resourceName = parseAzureResourceName(options.resourceName)
-        }
+        // kilocode_change start - validate the endpoint inputs of the provider model
+        resolveEndpointOptions(model.providerID, model.api.npm, model.api.url, options)
         // kilocode_change end
 
         if (
