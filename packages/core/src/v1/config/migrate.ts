@@ -223,6 +223,10 @@ function migrateModel(info: typeof ConfigProviderV1.Model.Type, packageName?: st
   const packageID = info.provider?.npm ?? packageName
   const lowerer = ConfigProviderOptionsV1.get(packageID)
   const request = info.options && lowerer.request(info.options)
+  // kilocode_change start - lowering reports the request headers its options describe
+  const lowered = lowerer.headers?.(info.options ?? {})
+  const headers = lowered || info.headers ? { ...lowered, ...info.headers } : undefined
+  // kilocode_change end
   const costs = info.cost && [
     {
       input: info.cost.input,
@@ -259,19 +263,24 @@ function migrateModel(info: typeof ConfigProviderV1.Model.Type, packageName?: st
         ? undefined
         : { id: info.id },
     capabilities,
-    request: (info.headers || request) && {
-      headers: info.headers,
+    // kilocode_change start - lowering reports request headers alongside the request body
+    request: (headers || request) && {
+      headers,
       body: request,
     },
+    // kilocode_change end
     // kilocode_change - variant entries may be null (delete sentinel); migration has nothing to convert for those
     variants:
       info.variants &&
       Object.entries(info.variants)
         .filter((entry): entry is [string, NonNullable<(typeof info.variants)[string]>] => entry[1] !== null)
+        // kilocode_change start - variant lowering reports request headers alongside the request body
         .map(([id, options]) => ({
-        id,
-        body: lowerer.request(options),
-      })),
+          id,
+          body: lowerer.request(options),
+          headers: lowerer.headers?.(options),
+        })),
+    // kilocode_change end
     cost: costs,
     disabled: info.status === "deprecated" ? true : undefined,
     limit: info.limit && {
