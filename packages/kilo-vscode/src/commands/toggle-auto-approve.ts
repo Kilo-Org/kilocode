@@ -152,9 +152,7 @@ export function registerToggleAutoApprove(
     // recorded route, or a session this extension holds a directory for. Without one,
     // the request stays with the attention path.
     const dir =
-      directory ??
-      connectionService.getPermissionDirectory(event.properties.id) ??
-      resolve(event.properties.sessionID)
+      directory ?? connectionService.getPermissionDirectory(event.properties.id) ?? resolve(event.properties.sessionID)
     if (!dir) return false
     return replyOnce(client, event.properties.id, dir, () => generation === snapshot)
   }
