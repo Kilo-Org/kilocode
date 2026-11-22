@@ -36,27 +36,29 @@ const PATHS: Record<string, true> = {
   jq: true,
 }
 
-// A dotfile at the start of the arguments or after another one. Each form anchors
-// the operand against the character before it, so a longer word that merely ends
-// the same way does not match.
+// A dotfile as the first argument or after another one, alone or beside further
+// arguments. Each form matches on operand boundaries.
 function dotfiles(command: string, file: string) {
   return [`${command} ${file}`, `${command} ${file} *`, `${command} * ${file}`, `${command} * ${file} *`]
 }
 
 // A file inside a directory, matched by its trailing name. The `/` is required, so
-// this covers `config/prod.env` while leaving a word such as `process.env` alone:
-// without the separator the two are the same string, and guessing would gate an
-// ordinary code search.
+// the form covers `config/prod.env` and matches whole path operands only.
 function nested(command: string, file: string) {
   return [`${command} */${file}`, `${command} */${file} *`]
 }
 
 /**
  * Environment files are sensitive, so both surfaces that can open one apply the
- * same level: the `read` tool asks before reading any `*.env` or `*.env.*` path,
- * and these rules apply that level to the shell commands that print a file's
- * lines. A process environment dump applies it as well. `level` is `ask` for an
- * agent that can prompt and `deny` for a delegated one that cannot answer.
+ * same level: the `read` tool asks before it opens such a file, and these rules
+ * apply that level to the shell commands that print a file's lines. A process
+ * environment dump applies it as well. `level` is `ask` for an agent that can
+ * prompt and `deny` for a delegated one that cannot answer.
+ *
+ * The shapes covered are: a dotfile as the first argument or a later one, a file
+ * inside a directory, and, for a command whose first argument is a path, a bare
+ * trailing name. A searcher takes a pattern first, so there the anchored and
+ * nested forms apply.
  *
  * `.env.example` documents the format and stays allowed when it is the only
  * operand. The last matching rule wins, so it is emitted last: a command that
