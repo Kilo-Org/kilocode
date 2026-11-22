@@ -221,7 +221,7 @@ function exchange(code: string, redirect: string, pkce: Pkce) {
   })
 }
 
-// kilocode_change start - a refresh response may omit refresh_token, so it keeps the stored one
+// kilocode_change start - a refresh response may omit refresh_token or id_token, so it keeps the stored ones
 function refresh(methodID: Integration.MethodID, value: Pick<Credential.OAuth, "refresh" | "metadata">) {
   return request<RefreshResponse>(`${issuer}/oauth/token`, {
     method: "POST",
@@ -233,7 +233,11 @@ function refresh(methodID: Integration.MethodID, value: Pick<Credential.OAuth, "
     }).toString(),
   }).pipe(
     Effect.map((tokens) => {
-      const next = credential(methodID, { ...tokens, refresh_token: tokens.refresh_token ?? value.refresh })
+      const next = credential(methodID, {
+        ...tokens,
+        id_token: tokens.id_token ?? "",
+        refresh_token: tokens.refresh_token ?? value.refresh,
+      })
       return Credential.OAuth.make({ ...next, metadata: next.metadata ?? value.metadata })
     }),
   )
@@ -251,7 +255,7 @@ function request<A>(url: string, init: RequestInit) {
   })
 }
 
-function credential(methodID: Integration.MethodID, tokens: Omit<TokenResponse, "id_token"> & { id_token?: string }) {
+function credential(methodID: Integration.MethodID, tokens: TokenResponse) {
   const accountID = extractAccountID(tokens)
   return Credential.OAuth.make({
     type: "oauth",
@@ -289,8 +293,8 @@ function authorizeURL(redirect: string, pkce: Pkce, state: string) {
   })}`
 }
 
-function extractAccountID(tokens: Omit<TokenResponse, "id_token"> & { id_token?: string }) {
-  return (tokens.id_token ? claim(tokens.id_token) : undefined) ?? claim(tokens.access_token)
+function extractAccountID(tokens: TokenResponse) {
+  return claim(tokens.id_token) ?? claim(tokens.access_token)
 }
 
 function claim(token: string) {
