@@ -23,16 +23,15 @@ type Pkce = {
   challenge: string
 }
 
-// kilocode_change start - sign-in and refresh read separate token shapes
-type Token = {
+type TokenResponse = {
   id_token: string
   access_token: string
+  refresh_token: string
   expires_in?: number
 }
 
-type TokenResponse = Token & { refresh_token: string }
-
-type RefreshResponse = Token & { refresh_token?: string }
+// kilocode_change start - a refresh response may omit refresh_token; sign-in keeps the full shape
+type RefreshResponse = Omit<TokenResponse, "refresh_token"> & { refresh_token?: string }
 // kilocode_change end
 
 type Claims = {
@@ -99,7 +98,7 @@ const browser = {
         instructions: "Complete authorization in your browser. This window will close automatically.",
         callback: Deferred.await(code).pipe(
           Effect.flatMap((value) => exchange(value, redirect, pkce)),
-          Effect.map((tokens) => credential(browserMethodID, tokens, tokens.refresh_token)), // kilocode_change
+          Effect.map((tokens) => credential(browserMethodID, tokens)),
         ),
       }
     }),
@@ -145,13 +144,13 @@ const headless = {
                 authorization_code: string
                 code_verifier: string
               }
-              // kilocode_change start - sign-in passes the refresh secret from its own exchange
-              const tokens = yield* exchange(data.authorization_code, `${issuer}/deviceauth/callback`, {
-                verifier: data.code_verifier,
-                challenge: "",
-              })
-              return credential(headlessMethodID, tokens, tokens.refresh_token)
-              // kilocode_change end
+              return credential(
+                headlessMethodID,
+                yield* exchange(data.authorization_code, `${issuer}/deviceauth/callback`, {
+                  verifier: data.code_verifier,
+                  challenge: "",
+                }),
+              )
             }
             if (response.status !== 403 && response.status !== 404) {
               return yield* Effect.fail(new Error(`Device authorization failed: ${response.status}`))
@@ -219,7 +218,7 @@ function exchange(code: string, redirect: string, pkce: Pkce) {
   })
 }
 
-// kilocode_change start - refresh reads its own token shape
+// kilocode_change start - a refresh response may omit refresh_token, so it keeps the stored one
 function refresh(methodID: Integration.MethodID, value: Pick<Credential.OAuth, "refresh" | "metadata">) {
   return request<RefreshResponse>(`${issuer}/oauth/token`, {
     method: "POST",
@@ -231,8 +230,7 @@ function refresh(methodID: Integration.MethodID, value: Pick<Credential.OAuth, "
     }).toString(),
   }).pipe(
     Effect.map((tokens) => {
-      // keep the stored refresh secret unless the response supplies a replacement
-      const next = credential(methodID, tokens, tokens.refresh_token ?? value.refresh)
+      const next = credential(methodID, { ...tokens, refresh_token: tokens.refresh_token ?? value.refresh })
       return Credential.OAuth.make({ ...next, metadata: next.metadata ?? value.metadata })
     }),
   )
@@ -250,19 +248,17 @@ function request<A>(url: string, init: RequestInit) {
   })
 }
 
-// kilocode_change start - the refresh secret is an explicit argument
-function credential(methodID: Integration.MethodID, tokens: Token, refresh: string) {
+function credential(methodID: Integration.MethodID, tokens: TokenResponse) {
   const accountID = extractAccountID(tokens)
   return Credential.OAuth.make({
     type: "oauth",
     methodID,
-    refresh,
+    refresh: tokens.refresh_token,
     access: tokens.access_token,
     expires: Date.now() + (tokens.expires_in ?? 3600) * 1000,
     metadata: accountID ? { accountID } : undefined,
   })
 }
-// kilocode_change end
 
 async function generatePKCE(): Promise<Pkce> {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"
@@ -290,11 +286,9 @@ function authorizeURL(redirect: string, pkce: Pkce, state: string) {
   })}`
 }
 
-// kilocode_change start - reads the narrowed token shape shared by sign-in and refresh
-function extractAccountID(tokens: Token) {
+function extractAccountID(tokens: TokenResponse) {
   return claim(tokens.id_token) ?? claim(tokens.access_token)
 }
-// kilocode_change end
 
 function claim(token: string) {
   const part = token.split(".")[1]
