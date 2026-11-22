@@ -9,7 +9,9 @@
 
 import { isResourceName } from "@opencode-ai/llm/providers/azure"
 
-const REGION = /^[a-z][a-z0-9-]{0,62}$/
+// A region is one DNS label whose last character is a letter or digit, and one that never repeats a
+// hyphen, so a typo such as `eu-` or `us--east1` is a configuration error rather than a DNS failure.
+const REGION = /^(?!.*--)[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?$/
 
 /** Configuration error for a provider endpoint input. Its message is safe to show to the user. */
 export class EndpointConfigError extends Error {
