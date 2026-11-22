@@ -207,4 +207,36 @@ describe("tui sync", () => {
     }
   })
   // kilocode_change end
+
+  // kilocode_change start - a failed run that no longer owns the selection does not exit the TUI
+  test("a failed bootstrap for a previous workspace does not exit the app", async () => {
+    await using tmp = await tmpdir()
+    await Bun.write(`${tmp.path}/kv.json`, "{}")
+    const held = deferred<Response>()
+    const exited: unknown[] = []
+    const { app, project, sync } = await mount((url) => {
+      if (url.pathname === "/experimental/workspace") return json([{ id: "ws_a" }, { id: "ws_b" }])
+      if (url.pathname !== "/config") return undefined
+      const workspace = url.searchParams.get("workspace")
+      if (workspace === "ws_a") return held.promise
+      return json({ model: workspace ?? "default" })
+    }, tmp.path, undefined, (error) => exited.push(error))
+
+    try {
+      project.workspace.set("ws_a")
+      await Bun.sleep(20)
+      project.workspace.set("ws_b")
+      await wait(() => sync.data.config.model === "ws_b")
+
+      held.reject(new Error("Workspace not found"))
+      await Bun.sleep(80)
+
+      expect(exited).toEqual([])
+      expect(sync.data.config.model).toBe("ws_b")
+    } finally {
+      held.resolve(json({ model: "ws_a" }))
+      app.renderer.destroy()
+    }
+  })
+  // kilocode_change end
 })

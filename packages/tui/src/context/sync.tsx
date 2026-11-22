@@ -1021,6 +1021,9 @@ export const {
           })
         })
         .catch(async (e) => {
+          // kilocode_change start - a run that no longer owns the selection reports nothing and does not exit
+          if (!currentRun(run, workspace)) return
+          // kilocode_change end
           console.error("tui bootstrap failed", {
             error: e instanceof Error ? e.message : String(e),
             name: e instanceof Error ? e.name : undefined,
