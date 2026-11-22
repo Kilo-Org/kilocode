@@ -1978,6 +1978,8 @@ it.instance(
   },
 )
 
+// kilocode_change end
+
 // kilocode_change start - the configured region is normalized before the endpoint is built
 it.instance(
   "Google Vertex Anthropic: an upper-case configured region selects the regional endpoint",
@@ -2008,6 +2010,7 @@ it.instance(
 )
 // kilocode_change end
 
+// kilocode_change start - the configured project reaches the endpoint
 it.instance(
   "Google Vertex Anthropic: the configured project reaches the endpoint",
   Effect.gen(function* () {
