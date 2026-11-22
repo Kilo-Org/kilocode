@@ -1334,6 +1334,8 @@ export const dict = {
   "dialog.model.notSet": "Ikke angivet",
   "profile.personalAccount": "Personlig konto",
   "profile.switchingAccount": "Skifter konto…",
+  "profile.unavailableAccount": "Utilgængelig konto",
+  "profile.switchFailed": "Kunne ikke bekræfte kontoskiftet.",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/da.ts
 

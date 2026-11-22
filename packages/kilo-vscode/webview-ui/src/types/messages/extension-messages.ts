@@ -446,6 +446,19 @@ export interface ProfileDataMessage {
   data: ProfileData | null
 }
 
+/**
+ * Outcome of one `setOrganization` request, correlated by `requestID`.
+ * `data` is the profile read after the attempt, when that read succeeded.
+ */
+export interface OrganizationSwitchResultMessage {
+  type: "organizationSwitchResult"
+  requestID: string
+  organizationId: string | null
+  ok: boolean
+  data: ProfileData | null
+  error?: string
+}
+
 export interface DeviceAuthStartedMessage {
   type: "deviceAuthStarted"
   code?: string
@@ -1875,6 +1888,7 @@ export type ExtensionMessage =
   | GitRemoteUrlLoadedMessage
   | ActionMessage
   | ProfileDataMessage
+  | OrganizationSwitchResultMessage
   | ProviderUsageLoadedMessage
   | DeviceAuthStartedMessage
   | DeviceAuthCompleteMessage

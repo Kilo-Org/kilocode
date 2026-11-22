@@ -1331,6 +1331,8 @@ export const dict = {
 
   "profile.personalAccount": "Personal Account",
   "profile.switchingAccount": "Switching account…",
+  "profile.unavailableAccount": "Unavailable account",
+  "profile.switchFailed": "Could not confirm the account switch.",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/en.ts
 

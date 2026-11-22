@@ -1365,6 +1365,8 @@ export const dict = {
   "dialog.model.notSet": "Nicht festgelegt",
   "profile.personalAccount": "Persönliches Konto",
   "profile.switchingAccount": "Konto wird gewechselt…",
+  "profile.unavailableAccount": "Nicht verfügbares Konto",
+  "profile.switchFailed": "Kontowechsel konnte nicht bestätigt werden.",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/de.ts
 

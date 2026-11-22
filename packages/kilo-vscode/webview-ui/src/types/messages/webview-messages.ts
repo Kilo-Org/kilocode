@@ -222,6 +222,11 @@ export interface CancelLoginRequest {
 export interface SetOrganizationRequest {
   type: "setOrganization"
   organizationId: string | null
+  /**
+   * Correlates the `organizationSwitchResult` reply with this request. The host
+   * supplies one when a caller omits it, so every dispatched request is answered.
+   */
+  requestID?: string
 }
 
 export interface WebviewReadyRequest {

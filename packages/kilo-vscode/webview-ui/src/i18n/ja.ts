@@ -1329,6 +1329,8 @@ export const dict = {
   "dialog.model.notSet": "未設定",
   "profile.personalAccount": "個人アカウント",
   "profile.switchingAccount": "アカウントを切り替え中…",
+  "profile.unavailableAccount": "利用できないアカウント",
+  "profile.switchFailed": "アカウントの切り替えを確認できませんでした。",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/ja.ts
 
   "question.summary": "{{total}} 問中 {{n}} 問目",

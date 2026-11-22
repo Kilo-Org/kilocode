@@ -1322,6 +1322,8 @@ export const dict = {
 
   "profile.personalAccount": "Persoonlijk Account",
   "profile.switchingAccount": "Account wisselen…",
+  "profile.unavailableAccount": "Niet-beschikbaar account",
+  "profile.switchFailed": "Kon de accountwissel niet bevestigen.",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/en.ts
 

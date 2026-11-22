@@ -1456,11 +1456,27 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "logout":
           await handleLogout(this.authCtx)
           break
-        case "setOrganization":
+        case "setOrganization": {
+          const requestID =
+            typeof message.requestID === "string" && message.requestID.length > 0
+              ? message.requestID
+              : crypto.randomUUID()
           if (typeof message.organizationId === "string" || message.organizationId === null) {
-            await handleSetOrganization(this.authCtx, message.organizationId)
+            await handleSetOrganization(this.authCtx, message.organizationId, requestID)
+            break
           }
+          // A malformed id cannot be dispatched, but the caller still waits for its
+          // correlated outcome, so answer it rather than leaving the attempt pending.
+          // No message is attached, so the webview shows its localized failure copy.
+          this.postMessage({
+            type: "organizationSwitchResult",
+            requestID,
+            organizationId: null,
+            ok: false,
+            data: null,
+          })
           break
+        }
         case "openSettingsPanel":
           vscode.commands.executeCommand("kilo-code.new.settingsButtonClicked", message.tab, message.projectId)
           break

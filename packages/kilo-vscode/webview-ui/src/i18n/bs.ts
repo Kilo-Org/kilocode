@@ -1340,6 +1340,8 @@ export const dict = {
   "dialog.model.notSet": "Nije postavljeno",
   "profile.personalAccount": "Osobni račun",
   "profile.switchingAccount": "Prebacivanje računa…",
+  "profile.unavailableAccount": "Nedostupan račun",
+  "profile.switchFailed": "Nije moguće potvrditi promjenu računa.",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/bs.ts
 

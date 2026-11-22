@@ -1335,6 +1335,8 @@ export const dict = {
   "dialog.model.notSet": "Не задано",
   "profile.personalAccount": "Личный аккаунт",
   "profile.switchingAccount": "Переключение аккаунта…",
+  "profile.unavailableAccount": "Недоступный аккаунт",
+  "profile.switchFailed": "Не удалось подтвердить переключение аккаунта.",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/ru.ts
 
   "question.summary": "{{n}} из {{total}} вопросов",
