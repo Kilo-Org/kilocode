@@ -96,4 +96,33 @@ describe("agent permission rule editing", () => {
       bash: { "*": "deny", "git status": "allow" },
     })
   })
+
+  test("keeps a __proto__ tool key own instead of polluting Object.prototype", () => {
+    const next = toPermission([{ permission: "__proto__", pattern: "polluted", action: "allow" }])
+    expect((Object.prototype as Record<string, unknown>).polluted).toBeUndefined()
+    expect(Object.keys(next)).toContain("__proto__")
+    expect(JSON.stringify(next)).toBe('{"__proto__":{"polluted":"allow"}}')
+  })
+
+  test("keeps a __proto__ pattern as an own rule entry", () => {
+    const next = toPermission([
+      { permission: "bash", pattern: "__proto__", action: "deny" },
+      { permission: "bash", pattern: "git *", action: "allow" },
+    ])
+    const map = (next as Record<string, Record<string, string>>).bash
+    expect(Object.getOwnPropertyDescriptor(map, "__proto__")?.value).toBe("deny")
+    expect(Object.entries(map)).toEqual([
+      ["__proto__", "deny"],
+      ["git *", "allow"],
+    ])
+    expect(JSON.stringify(next)).toBe('{"bash":{"__proto__":"deny","git *":"allow"}}')
+  })
+
+  test("keeps a constructor tool key own without changing Object.prototype", () => {
+    const before = Object.entries(Object.prototype).length
+    const next = toPermission([{ permission: "constructor", pattern: "*", action: "ask" }])
+    expect(Object.keys(next)).toEqual(["constructor"])
+    expect(Object.entries((next as Record<string, Record<string, string>>).constructor)).toEqual([["*", "ask"]])
+    expect(Object.entries(Object.prototype).length).toBe(before)
+  })
 })

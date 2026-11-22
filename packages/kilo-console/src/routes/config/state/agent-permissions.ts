@@ -6,7 +6,8 @@ export type Permission = NonNullable<AgentPayload["permission"]>
 
 export function toPermission(input: unknown): Permission {
   if (!Array.isArray(input)) return record(input) as Permission
-  const result: Record<string, Record<string, PermissionAction>> = {}
+  // Null-prototype maps keep writes own, so __proto__ or constructor never hits an inherited member or setter.
+  const result = Object.create(null) as Record<string, Record<string, PermissionAction>>
   for (const entry of input) {
     const rule = record(entry)
     const tool = rule.permission
@@ -14,7 +15,7 @@ export function toPermission(input: unknown): Permission {
     if (typeof tool !== "string" || !tool) continue
     if (action !== "allow" && action !== "deny" && action !== "ask") continue
     const pattern = string(rule.pattern) || "*"
-    const map = result[tool] ?? {}
+    const map = result[tool] ?? (Object.create(null) as Record<string, PermissionAction>)
     map[pattern] = action
     result[tool] = map
   }

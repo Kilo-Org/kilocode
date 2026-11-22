@@ -1,5 +1,5 @@
 ---
-"kilo-code": patch
+"@kilocode/cli": patch
 ---
 
 Show every permission rule an agent stores in the agent builder's permissions card. A tool's default
