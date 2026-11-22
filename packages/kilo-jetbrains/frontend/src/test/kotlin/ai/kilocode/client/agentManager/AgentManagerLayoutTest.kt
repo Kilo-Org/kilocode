@@ -97,6 +97,11 @@ class AgentManagerLayoutTest : BasePlatformTestCase() {
         assertEquals(first.key, layout.parent(cloud.key))
         assertEquals(listOf("1", "1"), counts())
 
+        // The rendered count lives on the header row, so the persisted section still matches by value.
+        val header = layout.nodes(items).single { it.item.key == first.key }.item
+        assertEquals(1, (header as AgentManagerLayout.Header).count)
+        assertEquals(layout.section(first.key), header.section)
+
         val saved = PropertiesComponent.getInstance(project).getValue(STORAGE)!!
         val sections = Json.parseToJsonElement(saved).jsonObject.getValue("sections").jsonArray
         assertTrue(sections.all { it.jsonObject.keys == setOf("key", "title", "color") })

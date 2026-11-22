@@ -9,7 +9,6 @@ import com.intellij.ide.util.PropertiesComponent
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.util.UUID
@@ -18,14 +17,16 @@ import java.util.UUID
 @Suppress("TooManyFunctions")
 internal class AgentManagerLayout(private val properties: PropertiesComponent? = null) {
     @Serializable
-    data class Section(
-        override val key: String,
-        override val title: String,
-        val color: String? = null,
-        @Transient val count: Int = 0,
-    ) : ActiveItem {
-        @Transient
-        override val badges = listOf(ActiveBadge(count.toString()))
+    data class Section(override val key: String, override val title: String, val color: String? = null) : ActiveItem
+
+    /**
+     * A section header as rendered in the tree. The persisted [Section] stays free of display state;
+     * the count is computed on each refresh so it never participates in [Section] equality.
+     */
+    data class Header(val section: Section, val count: Int) : ActiveItem {
+        override val key get() = section.key
+        override val title get() = section.title
+        override val badges get() = listOf(ActiveBadge(count.toString()))
         override val inlineBadges get() = true
     }
 
@@ -173,7 +174,7 @@ internal class AgentManagerLayout(private val properties: PropertiesComponent? =
         val nodes = sorted(ROOT, roots).map { item ->
             val section = sections[item.key] ?: return@map ActiveTreeNode(item)
             val children = sorted(section.key, grouped[section.key].orEmpty()).map { ActiveTreeNode(it) }
-            ActiveTreeNode(section.copy(count = children.size), children, ActiveTreeColors.color(section.color))
+            ActiveTreeNode(Header(section, children.size), children, ActiveTreeColors.color(section.color))
         }
         // Retain temporarily undiscovered Cloud rows so a refresh cannot lose their placement.
         val visible = mapOf(ROOT to nodes.map { it.item.key }) + nodes.mapNotNull { node ->
