@@ -96,6 +96,12 @@ export namespace McpMigrator {
   export async function migrate(options?: {
     projectDir?: string
     skipGlobalPaths?: boolean
+    /**
+     * Read the global store that `skipGlobalPaths` skipped only to report whether it declared
+     * servers. Off by default, so skipping global paths stays hermetic: a caller that does not
+     * ask for the report never touches a global path.
+     */
+    reportSkippedGlobal?: boolean
   }): Promise<MigrationResult> {
     const warnings: string[] = []
     const skipped: Array<{ name: string; reason: string }> = []
@@ -104,17 +110,22 @@ export namespace McpMigrator {
     const allServers: Array<{ name: string; server: KilocodeMcpServer }> = []
 
     // 1. VSCode extension global storage (primary location for global MCP settings)
-    // Read even when the caller skipped global paths: a mode whose `mcp` group came from that
-    // store must report the group it cannot honour. Its servers never enter `allServers` then,
-    // so nothing from a skipped store is granted. A file that does not parse reads as absent.
+    // A caller that skipped global paths and asked for the report gets the store read only to
+    // answer whether a mode's `mcp` group lost it: its servers never enter `allServers` then, so
+    // nothing from a skipped store is granted. A file that does not parse reads as absent.
     const skipGlobal = options?.skipGlobalPaths === true
-    const vscodeSettingsPath = path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "mcp_settings.json")
-    const vscodeSettings = await readMcpSettings(vscodeSettingsPath)
-    const globalServers = Object.entries(vscodeSettings?.mcpServers ?? {})
-    const skippedGlobal = skipGlobal && globalServers.length > 0
-    if (!skipGlobal) {
-      for (const [name, server] of globalServers) {
-        allServers.push({ name, server })
+    const report = options?.reportSkippedGlobal === true
+    const readGlobal = !skipGlobal || report
+    let skippedGlobal = false
+    if (readGlobal) {
+      const vscodeSettingsPath = path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "mcp_settings.json")
+      const vscodeSettings = await readMcpSettings(vscodeSettingsPath)
+      const globalServers = Object.entries(vscodeSettings?.mcpServers ?? {})
+      skippedGlobal = skipGlobal && globalServers.length > 0
+      if (!skipGlobal) {
+        for (const [name, server] of globalServers) {
+          allServers.push({ name, server })
+        }
       }
     }
 
@@ -161,16 +172,18 @@ export namespace McpMigrator {
   /**
    * Load Kilocode MCP servers and report what the legacy stores declared.
    * `available` is true when a store this run read had at least one MCP server, even if
-   * none of them could be converted. `skippedGlobal` is true when the caller skipped global
-   * paths and the VS Code global store declared a server: that store is read only to answer
-   * the question, and none of its servers is loaded. This function handles all logging internally.
+   * none of them could be converted. `skippedGlobal` is true only when the caller asked for the
+   * report, skipped global paths, and the VS Code global store declared a server: that store is
+   * then read only to answer the question, and none of its servers is loaded. This function
+   * handles all logging internally.
    */
   export async function loadMcpConfig(
     projectDir: string,
     skipGlobalPaths?: boolean,
+    reportSkippedGlobal?: boolean,
   ): Promise<{ mcp: Record<string, ConfigMCP.Info>; available: boolean; skippedGlobal: boolean }> {
     try {
-      const result = await migrate({ projectDir, skipGlobalPaths })
+      const result = await migrate({ projectDir, skipGlobalPaths, reportSkippedGlobal })
 
       if (Object.keys(result.mcp).length > 0) {
         log.debug("loaded kilocode MCP servers", {

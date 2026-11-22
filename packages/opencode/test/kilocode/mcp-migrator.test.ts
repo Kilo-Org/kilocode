@@ -526,9 +526,38 @@ describe("McpMigrator", () => {
         await fs.mkdir(path.dirname(settings), { recursive: true })
         await Bun.write(settings, JSON.stringify({ mcpServers: { globalserver: { command: "npx" } } }))
 
-        const result = await McpMigrator.migrate({ projectDir: home.path, skipGlobalPaths: true })
+        const result = await McpMigrator.migrate({
+          projectDir: home.path,
+          skipGlobalPaths: true,
+          reportSkippedGlobal: true,
+        })
 
         expect(result.skippedGlobal).toBe(true)
+        expect(Object.keys(result.mcp)).toHaveLength(0)
+        expect(result.available).toBe(false)
+      } finally {
+        homedir.mockRestore()
+        if (appdata === undefined) delete process.env.APPDATA
+        else process.env.APPDATA = appdata
+      }
+    })
+
+    // Skipping global paths stays hermetic: a host whose real global store declares a server
+    // must not change this result, so the report is opt-in.
+    test("does not read a skipped global store unless the report is asked for", async () => {
+      await using home = await tmpdir()
+
+      const homedir = spyOn(os, "homedir").mockReturnValue(home.path)
+      const appdata = process.env.APPDATA
+      process.env.APPDATA = home.path
+      try {
+        const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "mcp_settings.json")
+        await fs.mkdir(path.dirname(settings), { recursive: true })
+        await Bun.write(settings, JSON.stringify({ mcpServers: { globalserver: { command: "npx" } } }))
+
+        const result = await McpMigrator.migrate({ projectDir: home.path, skipGlobalPaths: true })
+
+        expect(result.skippedGlobal).toBe(false)
         expect(Object.keys(result.mcp)).toHaveLength(0)
         expect(result.available).toBe(false)
       } finally {

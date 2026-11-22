@@ -30,9 +30,9 @@ export namespace KilocodeConfigInjector {
     // A migrated mode's `mcp` group grants the tools of every server the same migration
     // converted, whether its entry came from a project file or a global store: the legacy
     // group meant all MCP tools. The live CLI loader grants the same set, so both loaders
-    // follow this one rule. One pass only, and the two MCP facts pass separately: `available`
-    // reports a store this load read that declared a server none of them could convert, and
-    // `skippedGlobal` reports a global store this load skipped while it declared servers.
+    // follow this one rule. One pass only. The injector asks for nothing beyond the paths this
+    // call reads, so `skipGlobalPaths` here stays hermetic: the skipped-store report is the
+    // live loader's, which reads the same global stores for the modes themselves.
     const store = await McpMigrator.loadMcpConfig(options.projectDir, options.skipGlobalPaths)
 
     // Migrate custom modes
@@ -42,7 +42,6 @@ export namespace KilocodeConfigInjector {
       skipGlobalPaths: options.skipGlobalPaths,
       mcpServers: Object.keys(store.mcp),
       mcpAvailable: store.available,
-      mcpSkippedGlobal: store.skippedGlobal,
     })
 
     // Log skipped default modes and mode migration warnings (for debugging)
