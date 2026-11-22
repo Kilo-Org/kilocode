@@ -79,6 +79,20 @@ describe("vertexAuthFetch", () => {
     }
   })
 
+  test("attaches the access token to the regional mTLS host", async () => {
+    const stub = stubFetch()
+    try {
+      const url =
+        "https://us-central1-aiplatform.mtls.googleapis.com/v1/projects/p/locations/us-central1/models/x:streamRawPredict"
+      await vertexAuthFetch(undefined)(url)
+
+      expect(stub.calls).toHaveLength(1)
+      expect(new Headers(stub.calls[0].init?.headers).get("authorization")).toBe("Bearer vertex-token")
+    } finally {
+      stub.restore()
+    }
+  })
+
   test("forwards an explicit other host unchanged", async () => {
     const stub = stubFetch()
     const url = "https://proxy.example/v1/chat/completions"

@@ -421,6 +421,60 @@ describe("GoogleVertexPlugin", () => {
     }),
   )
 
+  it.effect("sends the Google access token to a Vertex mTLS host", () =>
+    Effect.gen(function* () {
+      googleAuthOptions.length = 0
+      const fetchCalls: { input: Parameters<typeof fetch>[0]; init?: RequestInit }[] = []
+      const plugin = yield* PluginV2.Service
+      const aisdk = yield* AISDK.Service
+      yield* addPlugin()
+      yield* aisdk.hook.sdk((evt) =>
+        Effect.promise(async () => {
+          if (evt.model.providerID !== "google-vertex") return
+          if (evt.package !== "@ai-sdk/openai-compatible") return
+          await evt.options.fetch(
+            "https://us-central1-aiplatform.mtls.googleapis.com/v1/projects/p/locations/us-central1",
+            {
+              headers: { "x-test": "1" },
+            },
+          )
+        }),
+      )
+      const originalFetch = fetch
+      ;(globalThis as typeof globalThis & { fetch: typeof fetch }).fetch = (async (
+        input: Parameters<typeof fetch>[0],
+        init?: RequestInit,
+      ) => {
+        fetchCalls.push({ input, init })
+        return new Response("ok")
+      }) as typeof fetch
+      yield* Effect.acquireUseRelease(
+        Effect.void,
+        () =>
+          aisdk.runSDK({
+            model: ModelV2.Info.make({
+              ...ModelV2.Info.empty(ProviderV2.ID.make("google-vertex"), ModelV2.ID.make("gemini")),
+              api: {
+                id: ModelV2.ID.make("gemini"),
+                type: "aisdk",
+                package: "@ai-sdk/openai-compatible",
+              },
+            }),
+            package: "@ai-sdk/openai-compatible",
+            options: { name: "google-vertex" },
+          }),
+        () =>
+          Effect.sync(() => {
+            ;(globalThis as typeof globalThis & { fetch: typeof fetch }).fetch = originalFetch
+          }),
+      )
+      expect(fetchCalls).toHaveLength(1)
+      expect(googleAuthOptions).toEqual([{ scopes: ["https://www.googleapis.com/auth/cloud-platform"] }])
+      expect(new Headers(fetchCalls[0].init?.headers).get("authorization")).toBe("Bearer vertex-token")
+      expect(new Headers(fetchCalls[0].init?.headers).get("x-test")).toBe("1")
+    }),
+  )
+
   it.effect("requires a Google Cloud region for the OpenAI-compatible Vertex location", () =>
     Effect.gen(function* () {
       const plugin = yield* PluginV2.Service

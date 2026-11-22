@@ -50,13 +50,19 @@ export const parseAzureResourceName = (value: string) => {
 }
 
 const VERTEX_SUFFIX = "-aiplatform.googleapis.com"
+const VERTEX_MTLS = "-aiplatform.mtls.googleapis.com"
 const VERTEX_REP = /^aiplatform\.([a-z0-9-]+)\.rep\.googleapis\.com$/
 
-/** True for `aiplatform.googleapis.com`, `<region>-aiplatform.googleapis.com`, and the regional rep host. */
+/**
+ * True for `aiplatform.googleapis.com`, `<region>-aiplatform.googleapis.com`, the regional rep host,
+ * and the mTLS hosts `aiplatform.mtls.googleapis.com` and `<region>-aiplatform.mtls.googleapis.com`.
+ */
 export const isVertexHost = (host: string) => {
   const name = host.trim().toLowerCase()
   if (name === "aiplatform.googleapis.com") return true
+  if (name === "aiplatform.mtls.googleapis.com") return true
   if (name.endsWith(VERTEX_SUFFIX)) return REGION.test(name.slice(0, -VERTEX_SUFFIX.length))
+  if (name.endsWith(VERTEX_MTLS)) return REGION.test(name.slice(0, -VERTEX_MTLS.length))
   const rep = VERTEX_REP.exec(name)
   return rep !== null && REGION.test(rep[1])
 }
