@@ -95,6 +95,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ needs.validate.outputs.tag }}
+          persist-credentials: false
 
       - name: Restore reviewed release metadata
         run: |
