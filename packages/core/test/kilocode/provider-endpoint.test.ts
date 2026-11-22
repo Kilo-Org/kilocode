@@ -1,9 +1,11 @@
 import { describe, expect, test } from "bun:test"
+import { resourceNameError } from "@opencode-ai/llm/providers/azure"
 import {
   dropBlankEndpoint,
   EndpointConfigError,
   isVertexHost,
   normalizeVertexLocation,
+  parseAzureResourceName,
   parseVertexLocation,
   vertexEndpointDerived,
 } from "../../src/kilocode/provider-endpoint"
@@ -93,5 +95,18 @@ describe("blank Vertex endpoint", () => {
   test("leaves options without a baseURL alone", () => {
     const options: Record<string, unknown> = { location: "eu" }
     expect(dropBlankEndpoint(options)).toEqual({ location: "eu" })
+  })
+})
+
+describe("Azure resource name", () => {
+  test("reports the shared resource name message as a configuration error", () => {
+    let caught: unknown
+    try {
+      parseAzureResourceName("proxy.example/")
+    } catch (error) {
+      caught = error
+    }
+    expect(caught).toBeInstanceOf(EndpointConfigError)
+    expect((caught as Error).message).toBe(resourceNameError("proxy.example/"))
   })
 })

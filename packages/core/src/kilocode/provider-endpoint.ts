@@ -7,7 +7,7 @@
  * attached only to a Vertex API host, and an explicit `baseURL` is used as given.
  */
 
-import { isResourceName } from "@opencode-ai/llm/providers/azure"
+import { isResourceName, resourceNameError } from "@opencode-ai/llm/providers/azure"
 
 // A region is one DNS label: it starts with a letter, ends with a letter or digit, has at most 63
 // characters, and never repeats a hyphen.
@@ -76,9 +76,7 @@ export const resolveVertexLocation = (
 /** Accepts an Azure resource name, which is one DNS label and never a URL. */
 export const parseAzureResourceName = (value: string) => {
   if (!isResourceName(value)) {
-    throw new EndpointConfigError(
-      `Invalid Azure resource name "${value}". Use the resource name alone, not a URL: for example, my-resource.`,
-    )
+    throw new EndpointConfigError(resourceNameError(value))
   }
   return value.trim()
 }

@@ -28,11 +28,12 @@ const resourceLabel = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/
 
 export const isResourceName = (value: string) => resourceLabel.test(value.trim())
 
+export const resourceNameError = (value: string) =>
+  `Invalid Azure resource name "${value}". Use the resource name alone, not a URL: for example, my-resource.`
+
 const parseResourceName = (value: string) => {
   if (!isResourceName(value)) {
-    throw new Error(
-      `Invalid Azure resource name "${value}". Use the resource name alone, not a URL: for example, my-resource.`,
-    )
+    throw new Error(resourceNameError(value))
   }
   return value.trim()
 }
