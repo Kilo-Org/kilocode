@@ -39,8 +39,11 @@ export namespace McpMigrator {
     available: boolean
     /**
      * Whether a global store this run did not read - because the caller skipped global paths -
-     * declared at least one MCP server. Such a store is read only to answer that question: its
-     * servers are never added to `mcp`, so a mode can report the `mcp` group it cannot honour.
+     * declared at least one MCP server. True only when the caller also asked for the report
+     * (`reportSkippedGlobal`): without that request the store is never opened, so `false` means
+     * "not checked", not "nothing was skipped". When the report is asked for, such a store is
+     * read only to answer the question: its servers are never added to `mcp`, so a mode can
+     * report the `mcp` group it cannot honour.
      */
     skippedGlobal: boolean
     warnings: string[]
@@ -99,7 +102,8 @@ export namespace McpMigrator {
     /**
      * Read the global store that `skipGlobalPaths` skipped only to report whether it declared
      * servers. Off by default, so skipping global paths stays hermetic: a caller that does not
-     * ask for the report never touches a global path.
+     * ask for the report never touches a global path, and `skippedGlobal` stays false, meaning
+     * "not checked".
      */
     reportSkippedGlobal?: boolean
   }): Promise<MigrationResult> {
@@ -174,8 +178,9 @@ export namespace McpMigrator {
    * `available` is true when a store this run read had at least one MCP server, even if
    * none of them could be converted. `skippedGlobal` is true only when the caller asked for the
    * report, skipped global paths, and the VS Code global store declared a server: that store is
-   * then read only to answer the question, and none of its servers is loaded. This function
-   * handles all logging internally.
+   * then read only to answer the question, and none of its servers is loaded. Without the
+   * report the store is never opened and `skippedGlobal` is false, meaning "not checked". This
+   * function handles all logging internally.
    */
   export async function loadMcpConfig(
     projectDir: string,
