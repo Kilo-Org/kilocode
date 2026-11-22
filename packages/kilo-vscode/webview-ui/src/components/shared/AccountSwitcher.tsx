@@ -70,7 +70,16 @@ export const AccountSwitcher: Component<{ class?: string }> = (props) => {
   }
 
   const unsubscribe = vscode.onMessage((message) => {
-    if (message.type === "organizationSwitchResult") settle(message)
+    if (message.type === "organizationSwitchResult") {
+      settle(message)
+      return
+    }
+    // While an attempt is switching, a null profile is the host's reset before the
+    // outcome. Outside that, it means the session ended, so a prior failure must
+    // not keep the control mounted for a signed-out user.
+    if (message.type === "profileData" && message.data === null && current().kind === "failed") {
+      setSwitch({ kind: "idle" })
+    }
   })
   onCleanup(unsubscribe)
 

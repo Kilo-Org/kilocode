@@ -314,6 +314,19 @@ try {
   await settle()
   const afterReset = switchPost(switchPosts().length - 1)
   assert.equal(afterReset.organizationId, "org-2", "Retry must stay available after a profile reset")
+
+  // 6. Signing out after a failed attempt must not leave the control mounted.
+  await push({
+    type: "organizationSwitchResult",
+    requestID: afterReset.requestID,
+    organizationId: "org-2",
+    ok: false,
+    data: null,
+    error: "switch rejected",
+  })
+  assert(root.querySelector(".account-switcher"), "a failure must keep the control mounted")
+  await push({ type: "profileData", data: null })
+  assert.equal(root.querySelector(".account-switcher"), null, "a signed-out session must not show the control")
 } finally {
   dispose()
   root.remove()
