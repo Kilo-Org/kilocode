@@ -2,6 +2,7 @@ package ai.kilocode.backend.app
 
 import ai.kilocode.backend.cli.CliServer
 import ai.kilocode.backend.cli.KiloBackendCliManager
+import ai.kilocode.backend.cli.KiloBackendHttpClients
 import ai.kilocode.backend.cli.KiloCliDataParser
 import ai.kilocode.backend.cli.ResponseFailure
 import ai.kilocode.backend.cli.bodyName
@@ -106,6 +107,11 @@ class KiloBackendAppService private constructor(
         private const val RETRY_DELAY_MS = 1000L
         private const val APP_LOAD_TIMEOUT_MS = 30_000L
         private const val READY_TIMEOUT_MS = 120_000L
+        /** Sign-out must not wait on a stalled CLI; matches the provider-settings call bound. */
+        private const val DISPOSE_TIMEOUT_SECONDS = 15L
+
+        /** Sign-out waits at most this long for the lifecycle mutex before dropping state alone. */
+        private const val CLOSE_TIMEOUT_MS = 5_000L
 
         /** Test factory — no IntelliJ deps needed. */
         internal fun create(
@@ -992,11 +998,42 @@ class KiloBackendAppService private constructor(
 
     /**
      * Log out from Kilo Gateway.
-     * Removes credentials and clears the profile from app state.
+     * Removes credentials and clears the profile from app state. A successful sign-out also drops
+     * the hosted session state derived from that credential — attachments, transcripts, statuses,
+     * retained owners — and asks the CLI to rebuild its global state, so the next sign-in starts
+     * from an empty hosted manager. A refused removal changes nothing.
      */
     suspend fun logout(): Boolean {
         val client = connection.api ?: throw IllegalStateException("Not connected")
         val result = client.authRemove(providerID = "kilo")
+        if (!result) return false
+        // Close before start: close() forgets retained owners, while start() on a started manager
+        // only rebinds transports and would restore the previous credential's continuity.
+        // Under the lifecycle mutex, so a concurrent CLI restart cannot swap the transport between
+        // the read below and the bind, which would leave the manager on a replaced client. That
+        // mutex is also held across a CLI download, so the wait is bounded: dropping the
+        // credential-derived state matters, binding to the replacement transport does not, and a
+        // later load() starts the manager on it.
+        var rebound = false
+        val bound = withTimeoutOrNull(CLOSE_TIMEOUT_MS) {
+            mutex.withLock {
+                hosted.close()
+                val api = connection.api
+                val http = connection.apiClient
+                val port = connection.port
+                // The CLI may already be gone; the manager just stays closed instead of throwing.
+                if (api != null && http != null && port != 0) hosted.start(api, http, port, chat)
+                rebound = true
+            }
+        }
+        if (bound == null && !rebound) {
+            // The wait expired before the block ran; dropping the credential-derived state is the
+            // part that matters, and the next load() starts the manager on its transport.
+            log.info("Sign-out: lifecycle busy, dropping hosted state without rebinding")
+            hosted.close()
+        }
+        // Clear the snapshot first: the CLI rebuild is best-effort, while the credential
+        // removal above is already final.
         synchronized(loadLock) {
             val current = _appState.value
             if (current is KiloAppState.Ready) {
@@ -1004,7 +1041,36 @@ class KiloBackendAppService private constructor(
                 setAppReady(current.data.copy(profile = null))
             }
         }
+        // After the credential removal: the CLI rebuilds global state without the account. Reads the
+        // transport again, so a restart in between is rebuilt from as well.
+        disposeGlobal(connection.apiClient, connection.port)
         return result
+    }
+
+    /**
+     * Best-effort `POST /global/dispose` so the CLI rebuilds global state; a failure never blocks
+     * sign-out. The client is bounded, because the shared API client has no call timeout and a
+     * stalled CLI would otherwise hold sign-out open.
+     */
+    private suspend fun disposeGlobal(http: OkHttpClient?, port: Int) {
+        if (http == null || port == 0) return
+        val request = Request.Builder()
+            .url("http://127.0.0.1:$port/global/dispose")
+            .header("Accept", "application/json")
+            .post("{}".toRequestBody("application/json".toMediaType()))
+            .build()
+        try {
+            withContext(Dispatchers.IO) {
+                KiloBackendHttpClients.bounded(http, DISPOSE_TIMEOUT_SECONDS)
+                    .newCall(request)
+                    .execute()
+                    .use { it.body?.string() }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.debug { "Global dispose skipped after logout: ${e.message}" }
+        }
     }
 
     /**
