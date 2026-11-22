@@ -1023,6 +1023,48 @@ describe("saveAlwaysRules", () => {
     ),
   )
 
+  it.live("removing a named pattern from a scalar entry keeps the entry and writes no sentinel", () =>
+    withDir({ git: true }, () =>
+      Effect.gen(function* () {
+        // A settings save can persist a permission as a bare scalar, which is the
+        // tool-wide default. The prompt then offers a named pattern the scalar does not
+        // list, and clearing that pattern must leave the saved default in place without
+        // a leftover key.
+        const dir = Global.Path.config
+        yield* Effect.promise(() =>
+          fs.writeFile(path.join(dir, "kilo.jsonc"), JSON.stringify({ permission: { read: "allow" } }, null, 2)),
+        )
+        const cfg = yield* Config.Service
+        yield* cfg.invalidate()
+        expect((yield* cfg.get()).permission?.read).toBe("allow")
+
+        const asking = yield* ask({
+          id: PermissionV1.ID.make("permission_scalar_remove"),
+          sessionID: SessionID.make("session_test"),
+          permission: "read",
+          patterns: ["/tmp/b.txt"],
+          metadata: { rules: ["/tmp/b.txt"] },
+          always: [],
+          ruleset: [],
+        }).pipe(Effect.forkScoped)
+        yield* waitForPending(1)
+        yield* saveAlwaysRules({
+          requestID: PermissionV1.ID.make("permission_scalar_remove"),
+          removedAlways: ["/tmp/b.txt"],
+        })
+        yield* reply({ requestID: PermissionV1.ID.make("permission_scalar_remove"), reply: "once" })
+        yield* Fiber.join(asking)
+
+        // The saved default survives, and the file holds no literal sentinel.
+        const text = yield* Effect.promise(() => fs.readFile(path.join(dir, "kilo.jsonc"), "utf8"))
+        expect(text).not.toContain("null")
+        expect(text).not.toContain("/tmp/b.txt")
+        yield* cfg.invalidate()
+        expect((yield* cfg.get()).permission?.read).toEqual({ "*": "allow" })
+      }),
+    ),
+  )
+
   it.live("a rule the config cannot express leaves the saved entry alone", () =>
     withDir({ git: true }, () =>
       Effect.gen(function* () {
