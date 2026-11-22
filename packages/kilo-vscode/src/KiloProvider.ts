@@ -741,7 +741,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.configBindings.clear()
     this.cachedConfigMessage = null
     this.resetProviders()
-    this.postMessage({ type: "workspaceDirectoryChanged", directory: directory ?? "" })
+    this.postDirectory(directory ?? "")
     this.postMessage({ type: "configBindingExpired", reason: "project-changed" })
     void this.fetchAndSendProviders()
   }
@@ -1424,6 +1424,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.contextSessionID = undefined
           this.setCurrentSession(null)
           this.focusSession()
+          this.postDirectory()
           break
         case "loadMessages":
           // Don't await: allow parallel loads so rapid session switching
@@ -6025,6 +6026,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       ...(activeFile ? { activeFile } : {}),
       ...(shell ? { shell } : {}),
     }
+  }
+
+  /** Tell the webview which directory the active prompt now resolves against. */
+  private postDirectory(directory = this.getWorkspaceDirectory()): void {
+    this.postMessage({ type: "workspaceDirectoryChanged", directory })
   }
 
   private getWorkspaceDirectory(sessionId?: string): string {
