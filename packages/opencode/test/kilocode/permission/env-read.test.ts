@@ -111,6 +111,12 @@ describe("env read permissions", () => {
           expect(Permission.resolve("read", "project/.ENV.LOCAL", set).action).toBe("ask")
           expect(Permission.resolve("read", "project/.ENV.EXAMPLE", set).action).toBe("allow")
           expect(Permission.resolve("read", "project/src/Index.ts", set).action).toBe("allow")
+
+          // A saved approval for another spelling covers the request the rules treat as the same file.
+          const saved = Permission.resolve("read", "project/.ENV", set, [
+            { permission: "read", pattern: "PROJECT/.Env", action: "allow" },
+          ])
+          expect(saved.action).toBe("allow")
         }),
       (original) =>
         Effect.sync(() => {
