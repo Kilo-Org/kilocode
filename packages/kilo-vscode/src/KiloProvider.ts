@@ -5224,10 +5224,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // `settingUpdateFailed` for an invalid value or a rejected write.
     try {
       if (key === "maxCost") {
+        const config = vscode.workspace.getConfiguration("kilo-code.new")
+        // The runtime limit takes effect before the write so in-flight sessions
+        // see the new limit immediately; a rejected write restores the stored one.
+        const previous = this.setMaxCost(config.get<number>("maxCost", 0))
         const normalized = this.setMaxCost(value)
-        await vscode.workspace
-          .getConfiguration("kilo-code.new")
-          .update("maxCost", normalized, vscode.ConfigurationTarget.Global)
+        try {
+          await config.update("maxCost", normalized, vscode.ConfigurationTarget.Global)
+        } catch (error) {
+          this.setMaxCost(previous)
+          throw error
+        }
         for (const sid of this.trackedSessionIds) {
           const oldLimit = this.activeAlerts.get(sid)
           if (oldLimit !== undefined) {

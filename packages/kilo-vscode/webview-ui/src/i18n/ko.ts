@@ -1396,6 +1396,7 @@ export const dict = {
   "settings.saveBar.cancel": "취소",
   "settings.saveBar.saving": "저장 중…",
   "settings.saveBar.saveFailed": "설정을 저장할 수 없습니다",
+  "settings.saveBar.dismissError": "닫기",
   "notifications.action.next": "다음",
   "notifications.action.close": "닫기",
   "notifications.action.tryModel": "{{model}} 시도",

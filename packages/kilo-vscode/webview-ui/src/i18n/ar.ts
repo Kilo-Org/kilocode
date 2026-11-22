@@ -1387,6 +1387,7 @@ export const dict = {
   "settings.saveBar.cancel": "إلغاء",
   "settings.saveBar.saving": "جارٍ الحفظ…",
   "settings.saveBar.saveFailed": "تعذر حفظ الإعدادات",
+  "settings.saveBar.dismissError": "رفض",
   "notifications.action.next": "التالي",
   "notifications.action.close": "إغلاق",
   "notifications.action.tryModel": "جرّب {{model}}",

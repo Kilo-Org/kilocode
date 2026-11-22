@@ -1441,6 +1441,7 @@ export const dict = {
   "settings.saveBar.cancel": "Cancelar",
   "settings.saveBar.saving": "Guardando…",
   "settings.saveBar.saveFailed": "No se pudieron guardar los ajustes",
+  "settings.saveBar.dismissError": "Descartar",
   "notifications.action.next": "Siguiente",
   "notifications.action.close": "Cerrar",
   "notifications.action.tryModel": "Probar {{model}}",

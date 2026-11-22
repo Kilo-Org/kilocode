@@ -1451,6 +1451,7 @@ export const dict = {
   "settings.saveBar.cancel": "Abbrechen",
   "settings.saveBar.saving": "Speichern…",
   "settings.saveBar.saveFailed": "Einstellungen konnten nicht gespeichert werden",
+  "settings.saveBar.dismissError": "Verwerfen",
   "notifications.action.next": "Weiter",
   "notifications.action.close": "Schließen",
   "notifications.action.tryModel": "{{model}} ausprobieren",

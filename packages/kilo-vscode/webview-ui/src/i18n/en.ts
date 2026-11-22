@@ -1414,6 +1414,7 @@ export const dict = {
   "settings.saveBar.saveAnyway": "Save anyway",
   "settings.saveBar.cancel": "Cancel",
   "settings.saveBar.saveFailed": "Couldn't save settings",
+  "settings.saveBar.dismissError": "Dismiss",
 
   "notifications.action.next": "Next",
   "notifications.action.close": "Close",

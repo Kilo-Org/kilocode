@@ -7,6 +7,7 @@ const { KiloProvider } = await import("../../src/KiloProvider")
 type Internals = {
   postMessage: (message: unknown) => void
   handleUpdateSetting: (key: string, value: unknown) => Promise<void>
+  costLimit: () => number | undefined
   trackedSessionIds: Set<string>
   activeAlerts: Map<string, number>
 }
@@ -15,9 +16,9 @@ type Write = { section: string | undefined; key: string; value: unknown; target:
 
 const original = vscode.workspace.getConfiguration
 
-function install(writes: Write[], reject?: unknown) {
+function install(writes: Write[], reject?: unknown, stored?: Record<string, unknown>) {
   vscode.workspace.getConfiguration = ((section?: string) => ({
-    get: (_key: string, fallback: unknown) => fallback,
+    get: (key: string, fallback: unknown) => stored?.[key] ?? fallback,
     update: async (key: string, value: unknown, target: unknown) => {
       writes.push({ section, key, value, target })
       if (reject !== undefined) throw reject
@@ -125,9 +126,16 @@ describe("handleUpdateSetting outcomes", () => {
 
     await internal.handleUpdateSetting("maxCost", 5)
 
-    expect(sent).toEqual([
-      { type: "settingUpdateFailed", key: "maxCost", message: "settings unavailable" },
-    ])
+    expect(sent).toEqual([{ type: "settingUpdateFailed", key: "maxCost", message: "settings unavailable" }])
     expect(internal.activeAlerts.get("ses_cost")).toBe(10)
+  })
+
+  it("restores the stored maxCost limit when the write rejects", async () => {
+    install([], new Error("settings.json is read-only"), { maxCost: 2 })
+    const { internal } = create()
+
+    await internal.handleUpdateSetting("maxCost", 9)
+
+    expect(internal.costLimit()).toBe(2)
   })
 })

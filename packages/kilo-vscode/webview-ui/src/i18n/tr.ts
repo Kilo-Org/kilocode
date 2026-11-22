@@ -1395,6 +1395,7 @@ export const dict = {
   "settings.saveBar.cancel": "İptal",
   "settings.saveBar.saving": "Kaydediliyor…",
   "settings.saveBar.saveFailed": "Ayarlar kaydedilemedi",
+  "settings.saveBar.dismissError": "Kapat",
   "notifications.action.next": "Sonraki",
   "notifications.action.close": "Kapat",
   "notifications.action.tryModel": "Dene {{model}}",

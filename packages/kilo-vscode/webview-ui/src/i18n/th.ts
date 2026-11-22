@@ -1393,6 +1393,7 @@ export const dict = {
   "settings.saveBar.cancel": "ยกเลิก",
   "settings.saveBar.saving": "กำลังบันทึก…",
   "settings.saveBar.saveFailed": "ไม่สามารถบันทึกการตั้งค่าได้",
+  "settings.saveBar.dismissError": "ปิด",
   "notifications.action.next": "ถัดไป",
   "notifications.action.close": "ปิด",
   "notifications.action.tryModel": "ลองใช้ {{model}}",

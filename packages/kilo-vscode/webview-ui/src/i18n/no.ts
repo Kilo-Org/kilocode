@@ -1417,6 +1417,7 @@ export const dict = {
   "settings.saveBar.cancel": "Avbryt",
   "settings.saveBar.saving": "Lagrer…",
   "settings.saveBar.saveFailed": "Kunne ikke lagre innstillinger",
+  "settings.saveBar.dismissError": "Avvis",
   "notifications.action.next": "Neste",
   "notifications.action.close": "Lukk",
   "notifications.action.tryModel": "Prøv {{model}}",

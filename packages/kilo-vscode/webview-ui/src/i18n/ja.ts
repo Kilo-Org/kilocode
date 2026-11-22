@@ -1413,6 +1413,7 @@ export const dict = {
   "settings.saveBar.cancel": "キャンセル",
   "settings.saveBar.saving": "保存中…",
   "settings.saveBar.saveFailed": "設定を保存できませんでした",
+  "settings.saveBar.dismissError": "閉じる",
   "notifications.action.next": "次へ",
   "notifications.action.close": "閉じる",
   "notifications.action.tryModel": "{{model}}を試す",

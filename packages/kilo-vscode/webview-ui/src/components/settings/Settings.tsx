@@ -268,7 +268,7 @@ const Settings: Component<SettingsProps> = (props) => {
   const server = useServer()
   const language = useLanguage()
   const vscode = useVSCode()
-  const { loading, isDirty, saving, saveError, saveConfig, discardConfig, features } = useConfig()
+  const { loading, isDirty, saving, saveError, saveConfig, discardConfig, clearSaveError, features } = useConfig()
   const session = useSession()
   const [active, setActive] = createSignal(props.tab ?? "models")
   const [errorExpanded, setErrorExpanded] = createSignal(false)
@@ -581,7 +581,7 @@ const Settings: Component<SettingsProps> = (props) => {
 
       {/* Save bar — the error stays visible even when nothing is dirty */}
       <Show when={saveError() || isDirty()}>
-        <div class="settings-save-bar-wrap">
+        <div class={`settings-save-bar-wrap${isDirty() ? "" : " settings-save-bar-wrap-error-only"}`}>
           <Show when={saveError()}>
             {(err) => (
               <div class="settings-save-bar-error">
@@ -602,6 +602,19 @@ const Settings: Component<SettingsProps> = (props) => {
                     {language.t("settings.saveBar.saveFailed")}:{" "}
                     <span class="settings-save-bar-error-firstline">{err().message}</span>
                   </span>
+                  {/* Without the save bar this is the only control, so the error needs its own way out. */}
+                  <Show when={!isDirty()}>
+                    <Button
+                      variant="ghost"
+                      size="small"
+                      onClick={(event: MouseEvent) => {
+                        event.stopPropagation()
+                        clearSaveError()
+                      }}
+                    >
+                      {language.t("settings.saveBar.dismissError")}
+                    </Button>
+                  </Show>
                 </div>
                 <Show when={errorExpanded()}>
                   <pre class="settings-save-bar-error-details">{err().details ?? err().message}</pre>

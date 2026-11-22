@@ -1415,6 +1415,7 @@ export const dict = {
   "settings.saveBar.saveAnyway": "در هر صورت ذخیره کن",
   "settings.saveBar.cancel": "لغو",
   "settings.saveBar.saveFailed": "ذخیره تنظیمات ممکن نشد",
+  "settings.saveBar.dismissError": "رد کردن",
 
   "notifications.action.next": "بعدی",
   "notifications.action.close": "بستن",

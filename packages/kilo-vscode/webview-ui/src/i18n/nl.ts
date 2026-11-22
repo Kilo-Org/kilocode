@@ -1408,6 +1408,7 @@ export const dict = {
   "settings.saveBar.cancel": "Annuleren",
   "settings.saveBar.saving": "Bezig met opslaan…",
   "settings.saveBar.saveFailed": "Instellingen konden niet worden opgeslagen",
+  "settings.saveBar.dismissError": "Negeren",
   "notifications.action.next": "Volgende",
   "notifications.action.close": "Sluiten",
   "notifications.action.tryModel": "Probeer {{model}}",
