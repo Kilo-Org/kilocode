@@ -104,6 +104,47 @@ export async function handleLogout(ctx: AuthContext): Promise<void> {
   }
 }
 
+/** The non-empty `message` a nested object carries, or nothing. */
+function nestedMessage(value: unknown): string | undefined {
+  if (!value || typeof value !== "object" || !("message" in value)) return undefined
+  const message = value.message
+  return typeof message === "string" && message.length > 0 ? message : undefined
+}
+
+/** Read a message out of one parsed response body, whatever shape the backend used. */
+function bodyText(body: unknown): string | undefined {
+  if (typeof body === "string") return body.length > 0 ? body : undefined
+  if (!body || typeof body !== "object") return undefined
+
+  if ("data" in body) {
+    const data = nestedMessage(body.data)
+    if (data) return data
+  }
+  if ("message" in body) {
+    const message = nestedMessage(body)
+    if (message) return message
+  }
+  if ("error" in body) {
+    const nested = body.error
+    if (typeof nested === "string") return nested.length > 0 ? nested : undefined
+    return nestedMessage(nested)
+  }
+  return undefined
+}
+
+/**
+ * Read the backend's own message out of the response body the SDK error
+ * interceptor attached to a thrown error. Anything else — no body, an empty
+ * body, or a shape that names no message — yields `undefined`, so the webview
+ * falls back to its localized copy instead of showing transport prose.
+ */
+function backendText(error: unknown): string | undefined {
+  if (!(error instanceof Error)) return undefined
+  const cause = error.cause
+  if (!cause || typeof cause !== "object" || !("body" in cause)) return undefined
+  return bodyText(cause.body)
+}
+
 /**
  * Handle organization switch.
  * Persists the selection, refreshes profile + providers since both change with
@@ -129,15 +170,17 @@ export async function handleSetOrganization(
 
   console.log("[Kilo New] KiloProvider: Switching organization:", organizationId ?? "personal")
 
+  let failed = false
   let failure: string | undefined
   try {
     await ctx.client.kilo.organization.set({ organizationId }, { throwOnError: true })
   } catch (error) {
     console.error("[Kilo New] KiloProvider: Failed to switch organization:", error)
-    failure = getErrorMessage(error)
+    failed = true
+    failure = backendText(error)
   }
 
-  if (failure === undefined) {
+  if (!failed) {
     ctx.invalidateProviderUsage()
     ctx.invalidateProviders()
     await ctx.disposeGlobal().catch((error) => {
@@ -148,6 +191,7 @@ export async function handleSetOrganization(
   // The profile read is the client's confirmation of the applied context, so a
   // failed read leaves the switch unconfirmed even when the write succeeded.
   let profile: ProfileData | null = null
+  let readFailed = false
   let profileError: string | undefined
   try {
     const result = await ctx.client.kilo.profile(undefined, { throwOnError: true })
@@ -155,22 +199,24 @@ export async function handleSetOrganization(
     ctx.postMessage({ type: "profileData", data: profile })
   } catch (error) {
     console.error("[Kilo New] KiloProvider: Failed to refresh profile after org switch:", error)
-    profileError = getErrorMessage(error)
+    readFailed = true
+    profileError = backendText(error)
   }
 
-  // Only backend-supplied text travels in `error`; a failure with no message of
-  // its own stays message-free so the webview shows the localized copy.
+  // Text travels in `error` only when the backend put it in the response body.
+  // A transport description is not backend text, so a failure without one stays
+  // message-free and the webview shows its localized copy.
   const message = failure ?? profileError
   ctx.postMessage({
     type: "organizationSwitchResult",
     requestID,
     organizationId,
-    ok: failure === undefined && profileError === undefined,
+    ok: !failed && !readFailed,
     data: profile,
     ...(message === undefined || message === "" ? {} : { error: message }),
   })
 
-  if (failure !== undefined) return
+  if (failed) return
 
   try {
     await ctx.fetchAndSendProviders()

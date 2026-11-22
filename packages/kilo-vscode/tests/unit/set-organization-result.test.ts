@@ -124,6 +124,44 @@ describe("handleSetOrganization", () => {
     expect(profiles(messages)).toBe(0)
   })
 
+  it("reports one failure with no error text when the profile read answers an empty body", async () => {
+    const { fake, messages } = ctx({
+      set: { status: 200, body: {} },
+      profile: { status: 500, body: {} },
+    })
+    await handleSetOrganization(fake, "org-1", "request-7")
+
+    const result = only(messages)
+    expect(result).toMatchObject({ requestID: "request-7", ok: false, data: null })
+    // No backend text, so the webview shows its own localized copy.
+    expect("error" in result).toBe(false)
+    expect(profiles(messages)).toBe(0)
+  })
+
+  it("reports the sentence a rejected switch nests under error.message", async () => {
+    const { fake, messages } = ctx({
+      set: { status: 400, body: { error: { message: "Organization is not available to this account" } } },
+      profile: { status: 200, body: profile },
+    })
+    await handleSetOrganization(fake, "org-9", "request-8")
+
+    const result = only(messages)
+    expect(result).toMatchObject({ requestID: "request-8", ok: false })
+    expect(result.error).toBe("Organization is not available to this account")
+  })
+
+  it("reports one failure with no error text when the switch is rejected with an empty body", async () => {
+    const { fake, messages } = ctx({
+      set: { status: 400, body: {} },
+      profile: { status: 200, body: profile },
+    })
+    await handleSetOrganization(fake, "org-9", "request-9")
+
+    const result = only(messages)
+    expect(result).toMatchObject({ requestID: "request-9", ok: false })
+    expect("error" in result).toBe(false)
+  })
+
   it("reports the switch error alongside the profile it read afterwards", async () => {
     const { fake, messages } = ctx({
       set: { status: 500, body: { message: "switch rejected" } },
