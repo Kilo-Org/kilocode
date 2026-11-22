@@ -213,44 +213,69 @@ describe("Ask agent bash permissions", () => {
   })
 
   // An environment file gets the same level from the shell as from the read rule.
-  // Both operand positions and nested paths count, because a pattern matches the
-  // whole command.
+  // A reader's file counts at any operand position, a searcher's only when the name
+  // is an operand, and a git reader's inside the revision spec.
   describe("environment files keep the read level", () => {
-    const commands = [
-      "cat .env",
-      "cat .env.local",
-      "cat .env notes.txt",
-      "head -n5 .env a.txt",
-      "tail -f .env",
-      "less .env",
-      "diff .env src/index.ts",
-      "grep x .env src/",
-      "rg TOKEN .env",
-      "ag KEY .env",
-      "sort .env",
-      "uniq .env",
-      "cut -d= -f1 .env",
-      "jq . .env",
-      "grep -rn KEY .env.local",
-      "head -n 5 .env.production",
-      "diff a.txt .env.local",
-      "cat config/prod.env",
-      "cat apps/web/.env.local",
-      "printenv HOME",
-      // A sample file is a later operand here, and the first operand sets the level.
-      "diff .env .env.example",
-      "cat .env.example .env",
+    const cases: [string, "allow" | "ask"][] = [
+      // A reader: any operand position, a glob, a quoted operand, a nested path.
+      ["cat .env", "ask"],
+      ["cat prod.env", "ask"],
+      ["cat config/prod.env", "ask"],
+      ["cat .env*", "ask"],
+      ['cat ".env"', "ask"],
+      ["head -n5 .env", "ask"],
+      ["tail -f .env", "ask"],
+      ["less .env", "ask"],
+      ["diff .env src/index.ts", "ask"],
+      ["sort .env", "ask"],
+      ["uniq .env", "ask"],
+      ["cut -d= -f1 .env", "ask"],
+      ["jq . .env", "ask"],
+      ["cat .env notes.txt", "ask"],
+      ["head -n 5 .env.production", "ask"],
+      ["diff a.txt .env.local", "ask"],
+      ["cat apps/web/.env.local", "ask"],
+      // The sample file is allowed only as the lone operand. A second operand and
+      // a nested path state their own level: a rule naming them needs a wildcard
+      // before the path.
+      ["cat .env.example", "allow"],
+      ["diff .env .env.example", "ask"],
+      ["cat .env.example .env", "ask"],
+      ["cat -n .env .env.example", "ask"],
+      ["cat -n .env config/.env.example", "ask"],
+      ["cat config/.env.example", "ask"],
+      // A searcher: the environment file is an operand, the pattern is first.
+      ["grep -rn KEY prod.env", "ask"],
+      ["rg -n SECRET prod.env", "ask"],
+      ["ag KEY prod.env", "ask"],
+      ["grep -n KEY .env", "ask"],
+      ["grep -rn KEY .env.local", "ask"],
+      ["grep x .env src/", "ask"],
+      ["grep -n KEY .env .env.example", "ask"],
+      ["grep -n KEY .env config/.env.example", "ask"],
+      // A search term that merely contains `.env` is not a file read.
+      ["grep process.env", "allow"],
+      ["rg -n process.env src/foo.ts", "allow"],
+      // A process environment dump.
+      ["printenv", "ask"],
+      ["printenv HOME", "ask"],
+      // A git reader: the environment file sits in the revision spec, and the
+      // sample asks there too because a spec cannot be restricted to one operand.
+      ["git show HEAD:.env", "ask"],
+      ["git cat-file -p HEAD:.env", "ask"],
+      ["git diff HEAD~1 .env", "ask"],
+      ["git show HEAD:.env HEAD:.env.example", "ask"],
+      ["git show HEAD:.env.example", "ask"],
+      ["git diff HEAD~1 .env .env.example", "ask"],
+      ["git show HEAD", "allow"],
+      ["git diff HEAD~1", "allow"],
     ]
 
-    for (const cmd of commands) {
-      test(`"${cmd}" → ask`, () => {
-        expect(Permission.evaluate("bash", cmd, ruleset).action).toBe("ask")
+    for (const [cmd, action] of cases) {
+      test(`"${cmd}" → ${action}`, () => {
+        expect(Permission.evaluate("bash", cmd, ruleset).action).toBe(action)
       })
     }
-
-    test("environment sample files stay allowed", () => {
-      expect(Permission.evaluate("bash", "cat .env.example", ruleset).action).toBe("allow")
-    })
 
     test("ordinary reads keep their allow", () => {
       expect(Permission.evaluate("bash", "cat README.md", ruleset).action).toBe("allow")

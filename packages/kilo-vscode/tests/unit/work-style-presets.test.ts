@@ -1,10 +1,15 @@
 import { describe, expect, it } from "bun:test"
+import { Wildcard } from "@opencode-ai/core/util/wildcard"
 import {
   buildWorkStyleApplyPlan,
   getDisplayPreset,
   getInitialWorkStyle,
   WORK_STYLE_PRESETS,
 } from "../../src/shared/work-style-presets"
+
+/** The readers and searchers `envGuards` derives a rule for, in table order. */
+const READERS = ["cat", "head", "tail", "less", "diff", "sort", "uniq", "cut", "jq"]
+const SEARCHERS = ["grep", "rg", "ag"]
 
 describe("work style presets", () => {
   it("shows onboarding for users without sessions", () => {
@@ -25,19 +30,63 @@ describe("work style presets", () => {
     expect(bash).toMatchObject({ "*": "ask", "rg *": "allow", "*>*": "ask" })
     expect(Object.keys(bash).at(-1)).toBe("*>*")
     // The shell readers apply the same level as the read rule for environment
-    // files, including a later operand and a nested path; the sample file stays allowed.
-    for (const command of ["cat", "head", "tail", "less", "diff", "grep", "rg", "ag", "uniq", "cut", "jq"]) {
-      expect(bash[`${command} .env`]).toBe("ask")
-      expect(bash[`${command} .env *`]).toBe("ask")
-      expect(bash[`${command} * .env`]).toBe("ask")
-      expect(bash[`${command} */.env`]).toBe("ask")
-      expect(bash[`${command} .env.*`]).toBe("ask")
-      expect(bash[`${command} * .env.local`]).toBeUndefined()
-      expect(bash[`${command} .env.example`]).toBe("allow")
+    // files. `envGuards` derives a rule only for a command the map already allows
+    // as `cmd *`, so the preset gates exactly this subset of the table.
+    const derived = (table: string[]) => table.filter((command) => `${command} *` in bash)
+    expect(derived(READERS)).toEqual(["cat", "head", "tail", "less", "diff", "uniq", "cut", "jq"])
+    expect(derived(SEARCHERS)).toEqual([...SEARCHERS])
+    // The table is pinned key by key, and resolution is checked the way
+    // `Permission.evaluate` does it: the last matching pattern wins.
+    const resolve = (command: string) => {
+      const entries = Object.entries(bash)
+      for (let index = entries.length - 1; index >= 0; index--) {
+        const [pattern, action] = entries[index]
+        if (Wildcard.match(command, pattern)) return action
+      }
+      return undefined
     }
-    expect(bash["cat *.env"]).toBe("ask")
-    expect(bash["rg *.env"]).toBeUndefined()
+    for (const command of derived(READERS)) {
+      expect(bash[`${command} *.env*`]).toBe("ask")
+      expect(bash[`${command} .env.example`]).toBe("allow")
+      // A nested sample path needs a `*` before the sample name, and that `*`
+      // spans a real environment file earlier on the command, so it is not
+      // emitted at all.
+      expect(bash[`${command} */.env.example`]).toBeUndefined()
+      expect(resolve(`${command} .env.example`)).toBe("allow")
+      expect(resolve(`${command} config/.env.example`)).toBe("ask")
+      expect(resolve(`${command} -n .env .env.example`)).toBe("ask")
+      expect(resolve(`${command} -n .env config/.env.example`)).toBe("ask")
+    }
+    // A sample allow names the sample path alone, never behind a wildcard.
+    for (const key of Object.keys(bash)) expect(key).not.toMatch(/\*\/\.env\.example$|^\S+ \*\.env\.example$/)
+    // Operand shapes the map states a level for.
+    expect(resolve("cat *.env*")).toBe("ask")
+    expect(resolve("cat -n .env .env.example")).toBe("ask")
+    expect(resolve("grep -n KEY .env config/.env.example")).toBe("ask")
+    for (const command of derived(SEARCHERS)) {
+      for (const file of [".env", ".env.*"]) {
+        expect(bash[`${command} ${file}`]).toBe("ask")
+        expect(bash[`${command} ${file} *`]).toBe("ask")
+        expect(bash[`${command} * ${file}`]).toBe("ask")
+        expect(bash[`${command} * ${file} *`]).toBe("ask")
+      }
+      expect(bash[`${command} * *.env`]).toBe("ask")
+      expect(bash[`${command} * *.env.*`]).toBe("ask")
+      expect(bash[`${command} .env.example`]).toBe("allow")
+      // A sample allow carries no wildcard before the sample name, and the
+      // searcher stays name-anchored: a lone search term that merely contains
+      // `.env` is not gated, so no `cmd *.env` form exists to catch it.
+      expect(bash[`${command} *.env.example`]).toBeUndefined()
+      expect(bash[`${command} * .env.example`]).toBeUndefined()
+      expect(bash[`${command} */.env.example`]).toBeUndefined()
+      expect(bash[`${command} *.env`]).toBeUndefined()
+      expect(resolve(`${command} process.env`)).toBe("allow")
+    }
     expect(bash["printenv *"]).toBe("ask")
+    expect(resolve("cat .env")).toBe("ask")
+    expect(resolve("cat prod.env")).toBe("ask")
+    expect(resolve("cat config/prod.env")).toBe("ask")
+    expect(resolve(`cat ".env"`)).toBe("ask")
     for (const command of [
       "touch *",
       "mkdir *",

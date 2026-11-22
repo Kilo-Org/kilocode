@@ -1,52 +1,19 @@
 // kilocode — shared by the CLI permission defaults and the VS Code work-style presets.
 export type ShellPermission = "allow" | "ask" | "deny"
 
-// The allowlisted commands whose arguments name a file whose lines they print:
-// the readers, the three grep-family searchers, and the line filters that print
-// the file they are handed. `ls`, `tree`, `wc`, `which`, `type`, `file`, `du`,
-// `df`, `date`, `uname`, `whoami` and `tr` report metadata or transform a
-// stream, so they keep their current level.
-const PRINTERS: Record<string, true> = {
-  cat: true,
-  head: true,
-  tail: true,
-  less: true,
-  diff: true,
-  grep: true,
-  rg: true,
-  ag: true,
-  sort: true,
-  uniq: true,
-  cut: true,
-  jq: true,
-}
+// The allowlisted commands whose first argument is the file whose lines they
+// print. `ls`, `tree`, `wc`, `which`, `type`, `file`, `du`, `df`, `date`,
+// `uname`, `whoami` and `tr` report metadata or transform a stream, so they keep
+// their current level.
+const READERS = ["cat", "head", "tail", "less", "diff", "sort", "uniq", "cut", "jq"] as const
 
-// The readers whose first argument is already a path, so a trailing name is
-// unambiguously a file. The grep family takes a pattern first, where a trailing
-// name can be the search term, so it stays anchored below.
-const PATHS: Record<string, true> = {
-  cat: true,
-  head: true,
-  tail: true,
-  less: true,
-  diff: true,
-  sort: true,
-  uniq: true,
-  cut: true,
-  jq: true,
-}
+// The grep-family commands whose first argument is a pattern, so a trailing name
+// can be the search term rather than a file.
+const SEARCHERS = ["grep", "rg", "ag"] as const
 
-// A dotfile as the first argument or after another one, alone or beside further
-// arguments. Each form matches on operand boundaries.
-function dotfiles(command: string, file: string) {
-  return [`${command} ${file}`, `${command} ${file} *`, `${command} * ${file}`, `${command} * ${file} *`]
-}
-
-// A file inside a directory, matched by its trailing name. The `/` is required, so
-// the form covers `config/prod.env` and matches whole path operands only.
-function nested(command: string, file: string) {
-  return [`${command} */${file}`, `${command} */${file} *`]
-}
+// Git readers whose first argument is a revision spec, and whose path follows it
+// after a `:` or in a later argument.
+const GIT = ["git show", "git cat-file", "git diff"] as const
 
 /**
  * Environment files are sensitive, so both surfaces that can open one apply the
@@ -55,15 +22,22 @@ function nested(command: string, file: string) {
  * environment dump applies it as well. `level` is `ask` for an agent that can
  * prompt and `deny` for a delegated one that cannot answer.
  *
- * The shapes covered are: a dotfile as the first argument or a later one, a file
- * inside a directory, and, for a command whose first argument is a path, a bare
- * trailing name. A searcher takes a pattern first, so there the anchored and
- * nested forms apply.
+ * The shapes covered are: a reader's environment file at any operand position,
+ * including a glob, a quoted operand and a nested path; a searcher's environment
+ * file named as an operand or reached through a nested path; a git reader's
+ * environment file in its revision spec.
  *
- * `.env.example` documents the format and stays allowed when it is the only
- * operand. The last matching rule wins, so it is emitted last: a command that
- * names a gated file anywhere among its operands asks, even when another operand
- * is a sample file.
+ * `.env.example` documents the format and is allowed only as the exact lone
+ * operand of a reader or a searcher: one literal path. A nested sample path and
+ * a git revision spec naming the sample ask instead, because a pattern cannot
+ * name those shapes without a wildcard before the path.
+ *
+ * A rule is one literal command prefix followed by an operand pattern, so a
+ * generated key never carries a wildcard ahead of the sample path. That keeps
+ * every rule a plain statement of the level for the operand it names.
+ *
+ * The last matching rule wins, so the sample allows are emitted last, and the
+ * gated rules themselves must follow the plain allows they override.
  *
  * Rules are derived from `allow`, so a map gains them only for commands it
  * already allows and never carries one that cannot match.
@@ -72,38 +46,42 @@ export function envGuards(
   allow: Readonly<Record<string, unknown>>,
   level: "ask" | "deny" = "ask",
 ): Record<string, ShellPermission> {
-  const general: Record<string, ShellPermission> = {}
-  const exact: Record<string, ShellPermission> = {}
-  for (const key of Object.keys(allow)) {
-    if (!key.endsWith(" *")) continue
-    const command = key.slice(0, -2)
-    if (!Object.hasOwn(PRINTERS, command)) continue
-    for (const rule of [
-      ...dotfiles(command, ".env"),
-      ...dotfiles(command, ".env.*"),
-      ...nested(command, ".env"),
-      ...nested(command, ".env.*"),
-      ...nested(command, "*.env"),
-      ...nested(command, "*.env.*"),
-    ]) {
-      general[rule] = level
-    }
-    // A reader takes a path first, so a bare trailing name is a file even with no
-    // separator. A searcher takes a pattern first, so it keeps the anchored forms.
-    if (Object.hasOwn(PATHS, command)) {
-      for (const rule of [
-        `${command} *.env`,
-        `${command} *.env *`,
-        `${command} *.env.*`,
-        `${command} *.env.* *`,
-      ]) {
-        general[rule] = level
-      }
-    }
-    exact[`${command} .env.example`] = "allow"
+  const gated: Record<string, ShellPermission> = {}
+  const samples: Record<string, ShellPermission> = {}
+  const has = (command: string) => Object.hasOwn(allow, `${command} *`)
+
+  for (const command of READERS) {
+    if (!has(command)) continue
+    // One form covers the bare name, a glob, a quoted operand, a nested path, and
+    // every operand position, because `*` spans spaces and operands alike.
+    gated[`${command} *.env*`] = level
+    samples[`${command} .env.example`] = "allow"
   }
+
+  for (const command of SEARCHERS) {
+    if (!has(command)) continue
+    // A searcher takes a pattern first, so its forms stay name-anchored: a lone
+    // search term that merely contains `.env` (`grep process.env`) is not gated.
+    for (const file of [".env", ".env.*"]) {
+      gated[`${command} ${file}`] = level
+      gated[`${command} ${file} *`] = level
+      gated[`${command} * ${file}`] = level
+      gated[`${command} * ${file} *`] = level
+    }
+    gated[`${command} * *.env`] = level
+    gated[`${command} * *.env.*`] = level
+    samples[`${command} .env.example`] = "allow"
+  }
+
+  for (const prefix of GIT) {
+    if (!has(prefix)) continue
+    gated[`${prefix} *.env`] = level
+    gated[`${prefix} *.env.*`] = level
+  }
+
   // `Wildcard.match` treats a trailing ` .*` as optional, so this covers the bare
   // dump and the argument form with one rule.
-  if (Object.hasOwn(allow, "printenv *")) general["printenv *"] = level
-  return { ...general, ...exact }
+  if (has("printenv")) gated["printenv *"] = level
+
+  return { ...gated, ...samples }
 }
