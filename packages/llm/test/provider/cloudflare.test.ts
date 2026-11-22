@@ -1,5 +1,5 @@
 import { describe, expect } from "bun:test"
-import { Config, ConfigProvider, Effect, Exit, Schema } from "effect" // kilocode_change
+import { Config, ConfigProvider, Effect, Schema } from "effect" // kilocode_change
 import { HttpClientRequest } from "effect/unstable/http"
 import { LLM } from "../../src"
 import { CloudflareAIGateway, CloudflareWorkersAI } from "../../src/providers/cloudflare"
@@ -27,7 +27,7 @@ const authHeaders = (headers: Record<string, string>) =>
 const gatewayRequest = (model: Model, env: Record<string, string>) =>
   Effect.gen(function* () {
     let captured: Record<string, string> | undefined
-    const exit = yield* LLM.generate(LLM.request({ model, prompt: "Say hello." })).pipe(
+    const result = yield* LLM.generate(LLM.request({ model, prompt: "Say hello." })).pipe(
       withEnv(env),
       Effect.provide(
         dynamicResponse((input) =>
@@ -40,9 +40,12 @@ const gatewayRequest = (model: Model, env: Record<string, string>) =>
           }),
         ),
       ),
-      Effect.exit,
+      Effect.match({
+        onFailure: (error) => ({ ok: false as const, reason: error.reason._tag }),
+        onSuccess: () => ({ ok: true as const, reason: undefined }),
+      }),
     )
-    return { exit, headers: captured }
+    return { ...result, headers: captured }
   })
 // kilocode_change end
 
@@ -226,7 +229,7 @@ describe("Cloudflare", () => {
 
       for (const item of cases) {
         const result = yield* gatewayRequest(item.model, item.env)
-        expect({ case: item.name, ok: Exit.isSuccess(result.exit) }).toEqual({ case: item.name, ok: true })
+        expect({ case: item.name, ok: result.ok }).toEqual({ case: item.name, ok: true })
         expect({ case: item.name, headers: result.headers }).toEqual({
           case: item.name,
           headers: item.headers,
@@ -242,7 +245,8 @@ describe("Cloudflare", () => {
         {},
       )
 
-      expect(Exit.isSuccess(result.exit)).toBe(false)
+      expect(result.ok).toBe(false)
+      expect(result.reason).toBe("InvalidRequest")
       expect(result.headers).toBeUndefined()
     }),
   )
@@ -251,7 +255,8 @@ describe("Cloudflare", () => {
     Effect.gen(function* () {
       const result = yield* gatewayRequest(gateway({ accountId: "test-account" }), {})
 
-      expect(Exit.isFailure(result.exit)).toBe(true)
+      expect(result.ok).toBe(false)
+      expect(result.reason).toBe("Authentication")
       expect(result.headers).toBeUndefined()
     }),
   )
