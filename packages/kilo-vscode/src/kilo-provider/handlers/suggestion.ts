@@ -45,6 +45,8 @@ export async function routeSuggestionWebviewMessage(
   }
 }
 
+// The webview names the session that owns the request; the fallback below
+// covers other callers that do not.
 export async function handleSuggestionAccept(
   ctx: SuggestionContext,
   requestID: string,

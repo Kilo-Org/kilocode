@@ -33,6 +33,9 @@ const KEY = "enabled"
  * Instead of writing to the CLI config, the attention coordinator delegates
  * `permission.asked` events here and auto-replies "once". This avoids config-layer
  * issues (merged vs global, sparse defaults) and works even when the sidebar is closed.
+ *
+ * The setting is user scoped: the controller follows the user value, and the toggle is
+ * written to the user setting.
  */
 export function registerToggleAutoApprove(
   context: vscode.ExtensionContext,
@@ -53,7 +56,7 @@ export function registerToggleAutoApprove(
     active = next
     generation++
     notify()
-    await vscode.workspace.getConfiguration(CONFIG).update(KEY, active, target())
+    await vscode.workspace.getConfiguration(CONFIG).update(KEY, active, vscode.ConfigurationTarget.Global)
   }
 
   const toggle = async () => {
@@ -88,12 +91,13 @@ export function registerToggleAutoApprove(
 
   const approve = async (event: Asked, directory?: string) => {
     if (!active) return false
+    const snapshot = generation
     const client = tryGetClient(connectionService)
     if (!client) return false
     if (event.properties.metadata?.["sandboxEscalation"] === true) return false
     const dir =
       directory ?? connectionService.getPermissionDirectory(event.properties.id) ?? resolve(event.properties.sessionID)
-    return replyOnce(client, event.properties.id, dir)
+    return replyOnce(client, event.properties.id, dir, () => generation === snapshot)
   }
 
   context.subscriptions.push(
@@ -128,14 +132,7 @@ export function registerToggleAutoApprove(
 }
 
 function readActive(): boolean {
-  return vscode.workspace.getConfiguration(CONFIG).get(KEY, false)
-}
-
-function target(): vscode.ConfigurationTarget {
-  const info = vscode.workspace.getConfiguration(CONFIG).inspect<boolean>(KEY)
-  if (info?.workspaceFolderValue !== undefined) return vscode.ConfigurationTarget.WorkspaceFolder
-  if (info?.workspaceValue !== undefined) return vscode.ConfigurationTarget.Workspace
-  return vscode.ConfigurationTarget.Global
+  return vscode.workspace.getConfiguration(CONFIG).inspect<boolean>(KEY)?.globalValue === true
 }
 
 function tryGetClient(connectionService: KiloConnectionService): KiloClient | undefined {

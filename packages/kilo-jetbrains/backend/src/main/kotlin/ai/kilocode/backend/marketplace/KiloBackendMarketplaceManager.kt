@@ -331,7 +331,8 @@ class KiloBackendMarketplaceManager(private val backend: KiloBackendAppService? 
         http.newCall(request).execute().use { response ->
             val text = response.body?.string().orEmpty()
             if (!response.isSuccessful) {
-                // Keep the CLI's own error detail; it is the only description of what went wrong.
+                // By design: the CLI's error text is logged and surfaced verbatim — it is the only
+                // description of a marketplace failure.
                 LOG.warn("marketplace request failed: $path HTTP ${response.code} $text")
                 throw RuntimeException("HTTP ${response.code}: ${text.ifBlank { "no response body" }}")
             }

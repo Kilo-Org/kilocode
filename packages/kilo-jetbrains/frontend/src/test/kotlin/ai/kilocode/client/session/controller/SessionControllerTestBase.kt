@@ -402,13 +402,13 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         title = title,
     )
 
-    protected fun session(id: String, title: String = "Session $id", dir: String = "/test") = SessionDto(
+    protected fun session(id: String, title: String = "Session $id", dir: String = "/test", created: Double = 1.0) = SessionDto(
         id = id,
         projectID = "prj",
         directory = dir,
         title = title,
         version = "1",
-        time = SessionTimeDto(created = 1.0, updated = 2.0),
+        time = SessionTimeDto(created = created, updated = 2.0),
     )
 
     protected fun workspaceReady(

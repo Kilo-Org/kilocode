@@ -806,6 +806,7 @@ export const dict = {
 
   "dialog.model.noProviders": "Geen providers",
   "dialog.model.unavailable": "Kilo-modellen niet beschikbaar",
+  "dialog.model.loadFailed": "Kan de providers voor dit project niet laden.",
 
   "prompt.placeholder.connecting": "Verbinden met server...",
   "prompt.placeholder.default":

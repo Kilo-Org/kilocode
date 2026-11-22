@@ -121,6 +121,8 @@ async function resolve(
     return false
   }
 
+  // The webview names the session that owns the request; the fallback covers
+  // other callers that do not.
   const sid = sessionID ?? ctx.currentSessionId
   const dir = ctx.getQuestionDirectory(requestID) ?? ctx.getWorkspaceDirectory(sid)
 

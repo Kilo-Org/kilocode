@@ -218,8 +218,8 @@ export interface SessionContextValue {
     deniedAlways: string[],
     feedback?: string,
   ) => boolean
-  replyToQuestion: (requestID: string, answers: string[][]) => void
-  rejectQuestion: (requestID: string) => void
+  replyToQuestion: (requestID: string, answers: string[][]) => boolean
+  rejectQuestion: (requestID: string) => boolean
   closeQuestion: (requestID: string) => void
   acceptSuggestion: (requestID: string, index: number) => void
   dismissSuggestion: (requestID: string) => void
@@ -235,7 +235,18 @@ export interface SessionContextValue {
   selectSession: (id: string, options?: { focus?: boolean; scrollToBottom?: boolean }) => void
   scrollBottomID: Accessor<string | undefined>
   consumeScrollBottom: (id: string) => boolean
+  /**
+   * Drops the cached transcript of a session (messages, their parts, tool parts,
+   * paging entry and loaded marker) while keeping the session row, its todos,
+   * its drafts and its status. Todos are session state, not transcript state: an
+   * idle or finished child never re-emits them, so reopening the session shows
+   * the checklist it had. Unlike `deleteSession` it is not permanent: reopening
+   * refetches the transcript, and the session keeps its prompt and status events.
+   * Transcript events are held out until the session is selected, so a session
+   * that keeps running does not rebuild the dropped cache before the refetch.
+   */
   releaseSession: (id: string) => void
+  /** Permanently forgets the session here: drops its data, drafts and later events. */
   deleteSession: (id: string) => void
   renameSession: (id: string, title: string) => void
   exportSessionTranscript: (id: string) => void

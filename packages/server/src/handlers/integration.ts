@@ -2,7 +2,7 @@ import { Integration } from "@opencode-ai/core/integration"
 import { Effect } from "effect"
 import { HttpApiBuilder, HttpApiSchema } from "effect/unstable/httpapi"
 import { Api } from "../api"
-import { InvalidRequestError } from "@opencode-ai/protocol/errors"
+import { AttemptNotFoundError, InvalidRequestError } from "@opencode-ai/protocol/errors" // kilocode_change - an absent attempt is a 404
 import { response } from "../location"
 
 const authorize = <A, R>(effect: Effect.Effect<A, Integration.AuthorizationError, R>) =>
@@ -75,19 +75,26 @@ export const IntegrationHandler = HttpApiBuilder.group(Api, "server.integration"
         Effect.fn(function* (ctx) {
           const service = yield* Integration.Service
           yield* service.attempt.complete({ attemptID: ctx.params.attemptID, code: ctx.payload.code }).pipe(
-            Effect.mapError(
-              (error) =>
-                new InvalidRequestError({
-                  message:
-                    error._tag === "Integration.CodeRequired"
-                      ? "Authorization code is required"
-                      : "Authentication failed",
-                  kind:
-                    error._tag === "Integration.CodeRequired"
-                      ? "integration_code_required"
-                      : "integration_authorization",
-                }),
-            ),
+            // kilocode_change start - an absent or collected attempt handle reports a 404, not a 400
+            Effect.mapError((error) => {
+              if (error._tag === "Integration.AttemptNotFound") {
+                return new AttemptNotFoundError({
+                  attemptID: ctx.params.attemptID,
+                  message: "OAuth attempt not found",
+                })
+              }
+              return new InvalidRequestError({
+                message:
+                  error._tag === "Integration.CodeRequired"
+                    ? "Authorization code is required"
+                    : "Authentication failed",
+                kind:
+                  error._tag === "Integration.CodeRequired"
+                    ? "integration_code_required"
+                    : "integration_authorization",
+              })
+            }),
+            // kilocode_change end
           )
           return HttpApiSchema.NoContent.make()
         }),

@@ -60,11 +60,12 @@ jobs:
 
       - name: Validate release PR and tag
         id: release
-        run: bun script/jetbrains-release-validate.ts --pr "$PR_NUMBER"
+        run: bun script/jetbrains-release-validate.ts --pr "$PR_NUMBER" --merge "$MERGE_COMMIT"
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr }}
+          MERGE_COMMIT: ${{ github.event.pull_request.merge_commit_sha || inputs.merge_commit }}
 
       - name: Save reviewed release metadata
         run: |
@@ -200,7 +201,7 @@ jobs:
           VERSION: ${{ steps.release.outputs.version }}
           CHANNEL: ${{ steps.release.outputs.marketplace_channel }}
           TAG: ${{ steps.release.outputs.tag }}
-          MERGE_COMMIT: ${{ github.event.pull_request.merge_commit_sha || inputs.merge_commit }}
+          MERGE_COMMIT: ${{ steps.release.outputs.merge }}
           SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }}
 
       - name: Attest plugin SBOM
@@ -258,7 +259,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr }}
-          MERGE_COMMIT: ${{ github.event.pull_request.merge_commit_sha || inputs.merge_commit }}
+          MERGE_COMMIT: ${{ steps.release.outputs.merge }}
 
       - name: Upload workflow artifact
         if: always()
