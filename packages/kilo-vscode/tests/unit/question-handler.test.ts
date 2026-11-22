@@ -6,6 +6,7 @@ import {
   handleQuestionReply,
   type QuestionContext,
 } from "../../src/kilo-provider/handlers/question"
+import { SESSION_ROUTE_UNRESOLVED } from "../../src/shared/session-route-error"
 
 function pending(id: string, sessionID: string): QuestionRequest {
   return {
@@ -170,7 +171,10 @@ describe("question handlers", () => {
 
     expect(ok).toBe(false)
     expect(replies).toEqual([])
-    expect(messages).toEqual([{ type: "questionError", requestID: "req-ambiguous" }])
+    expect(messages).toEqual([
+      { type: "error", message: SESSION_ROUTE_UNRESOLVED },
+      { type: "questionError", requestID: "req-ambiguous" },
+    ])
   })
 
   it("routes a reply through the recorded directory when the session maps to more than one project", async () => {

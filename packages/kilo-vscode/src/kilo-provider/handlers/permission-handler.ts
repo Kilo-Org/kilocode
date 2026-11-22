@@ -9,6 +9,7 @@ import type { KiloClient, PermissionRequest } from "@kilocode/sdk/v2/client"
 import { permissionSettled, respondToPermission } from "@kilocode/sdk/permission"
 import { retry } from "../../services/cli-backend/retry"
 import { isNotFoundError } from "./not-found"
+import { SESSION_ROUTE_UNRESOLVED } from "../../shared/session-route-error"
 
 export type RecoverablePermission = PermissionRequest
 export type PermissionResponse = "once" | "always" | "reject"
@@ -107,7 +108,8 @@ function permissionRoute(
   const recorded = ctx.getPermissionDirectory(permissionId)
   const claimed = ctx.isPermissionResponseClaimed?.(permissionId) ?? false
   if (!recorded && !claimed && ctx.isSessionAmbiguous?.(target)) {
-    console.error("[Kilo New] KiloProvider: Permission route is ambiguous across projects:", target)
+    console.error("[Kilo New] KiloProvider: Permission route has no single owning project:", target)
+    ctx.postMessage({ type: "error", message: SESSION_ROUTE_UNRESOLVED })
     ctx.postMessage({ type: "permissionError", permissionID: permissionId })
     return
   }

@@ -188,6 +188,7 @@ import {
 import { stopSessionProcesses } from "./kilo-provider/background-process"
 import { sandboxDefault, sandboxSessionMetadata } from "./shared/sandbox-session"
 import { REVERT_ERROR_CODE } from "./shared/revert-error"
+import { SESSION_ROUTE_UNRESOLVED } from "./shared/session-route-error"
 import {
   buildIndexingSettingsMessage,
   validIndexingSetting,
@@ -4987,8 +4988,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private stopSession(sid: string, scope?: "session" | "tree"): Promise<boolean> {
-    if (this.isAmbiguousSession(sid)) return Promise.resolve(false)
     this.cancelRetry(sid)
+    if (this.isAmbiguousSession(sid)) {
+      // Local retry state must still settle; only the backend call is refused.
+      console.warn("[Kilo New] KiloProvider: not aborting a session with no single owning directory:", sid)
+      return Promise.resolve(false)
+    }
     const client = this.client
     if (!client) return Promise.resolve(false)
     const dir = this.getWorkspaceDirectory(sid)
@@ -6174,7 +6179,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.postMessage({
       type: "error",
       sessionID,
-      message: `Session ${sessionID} is ambiguous across projects; cannot resolve a directory without a project qualifier.`,
+      message: SESSION_ROUTE_UNRESOLVED,
     })
   }
 

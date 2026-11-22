@@ -8,6 +8,7 @@
 
 import type { KiloClient, QuestionRequest } from "@kilocode/sdk/v2/client"
 import { isNotFoundError } from "./not-found"
+import { SESSION_ROUTE_UNRESOLVED } from "../../shared/session-route-error"
 
 export interface QuestionContext {
   readonly client: KiloClient | null
@@ -131,7 +132,8 @@ async function resolve(
   // one project has no single directory, so the reply is reported back.
   const recorded = ctx.getQuestionDirectory(requestID)
   if (!recorded && sid && ctx.isSessionAmbiguous?.(sid)) {
-    console.error("[Kilo New] KiloProvider: Question route is ambiguous across projects:", sid)
+    console.error("[Kilo New] KiloProvider: Question route has no single owning project:", sid)
+    ctx.postMessage({ type: "error", message: SESSION_ROUTE_UNRESOLVED })
     ctx.postMessage({ type: "questionError", requestID })
     return false
   }

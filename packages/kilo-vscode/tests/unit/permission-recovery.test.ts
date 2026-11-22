@@ -9,6 +9,7 @@ import {
   type PermissionContext,
 } from "../../src/kilo-provider/handlers/permission-handler"
 import { KiloConnectionService } from "../../src/services/cli-backend/connection-service"
+import { SESSION_ROUTE_UNRESOLVED } from "../../src/shared/session-route-error"
 
 /** Transient transport failures carry no HTTP status and are safe to retry. */
 function terminated() {
@@ -350,7 +351,10 @@ describe("handlePermissionResponse", () => {
 
     expect(saves).toEqual([])
     expect(replies).toEqual([])
-    expect(messages).toEqual([{ type: "permissionError", permissionID: "p1" }])
+    expect(messages).toEqual([
+      { type: "error", message: SESSION_ROUTE_UNRESOLVED },
+      { type: "permissionError", permissionID: "p1" },
+    ])
   })
 
   it("keeps a recorded permission directory authoritative when the session maps to more than one project", async () => {

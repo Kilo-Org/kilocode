@@ -4,6 +4,7 @@ import * as fs from "fs/promises"
 import * as os from "os"
 import * as path from "path"
 import { ProjectRouteService } from "../../src/agent-manager/project/route"
+import { SESSION_ROUTE_UNRESOLVED } from "../../src/shared/session-route-error"
 import type { DiffViewerProvider } from "../../src/diff/DiffViewerProvider"
 import type { PRReviewCommentData } from "../../src/shared/review-comments"
 
@@ -21,6 +22,7 @@ function mockConnection(getImpl?: (p: SessionGetParams) => Promise<unknown>, vcs
   const calls: SessionGetParams[] = []
   const projectCalls: string[] = []
   const revertCalls: Array<{ sessionID: string; messageID: string; directory?: string }> = []
+  const unrevertCalls: Array<{ sessionID: string; directory?: string }> = []
   const deleteCalls: Array<{ sessionID: string; messageID: string; directory?: string }> = []
   const abortCalls: Array<{ sessionID: string; directory?: string; scope?: string }> = []
   const client = {
@@ -42,6 +44,20 @@ function mockConnection(getImpl?: (p: SessionGetParams) => Promise<unknown>, vcs
       },
       revert: async (p: { sessionID: string; messageID: string; directory?: string }) => {
         revertCalls.push(p)
+        return {
+          data: {
+            id: p.sessionID,
+            slug: p.sessionID,
+            projectID: "prj-test",
+            directory: p.directory,
+            title: "s",
+            version: "1",
+            time: { created: 1, updated: 1 },
+          },
+        }
+      },
+      unrevert: async (p: { sessionID: string; directory?: string }) => {
+        unrevertCalls.push(p)
         return {
           data: {
             id: p.sessionID,
@@ -88,6 +104,7 @@ function mockConnection(getImpl?: (p: SessionGetParams) => Promise<unknown>, vcs
     calls,
     projectCalls,
     revertCalls,
+    unrevertCalls,
     deleteCalls,
     abortCalls,
     connection: {
@@ -153,6 +170,7 @@ type ProviderInternals = {
   refreshGitStatusFromParts: (parts: unknown[], sessionID?: string) => Promise<boolean>
   refreshSessionDetails: (sessionID: string, dir: string) => void
   handleRevertSession: (sessionID: string, messageID: string, partID?: string) => Promise<void>
+  handleUnrevertSession: (sessionID: string) => Promise<void>
   handleDeleteMessage: (sessionID: string, messageID: string, requestID?: string) => Promise<void>
   handleAbort: (sessionID?: string, scope?: "session" | "tree") => Promise<void>
   handleSendCommand: (
@@ -836,7 +854,7 @@ describe("KiloProvider route integration", () => {
   const refusal = (sessionID: string) => ({
     type: "error",
     sessionID,
-    message: `Session ${sessionID} is ambiguous across projects; cannot resolve a directory without a project qualifier.`,
+    message: SESSION_ROUTE_UNRESOLVED,
   })
 
   function ambiguousRoutes(): ProjectRouteService {
@@ -922,6 +940,23 @@ describe("KiloProvider route integration", () => {
 
     expect(abortCalls).toEqual([])
     expect(posted).toEqual([])
+  })
+
+  it("reports an unrevert when the session maps to more than one project", async () => {
+    const { connection, unrevertCalls } = mockConnection()
+    const provider = new KiloProvider({} as never, connection, undefined, {
+      routeService: ambiguousRoutes(),
+      rootDirectory: () => "/active/root",
+    })
+    const internal = provider as unknown as ProviderInternals
+    connect(internal)
+    const posted: unknown[] = []
+    internal.webview = { postMessage: async (message) => posted.push(message) }
+
+    await internal.handleUnrevertSession("same")
+
+    expect(unrevertCalls).toEqual([])
+    expect(posted).toContainEqual(refusal("same"))
   })
 
   it("reverts a message on a session with one exact route", async () => {
