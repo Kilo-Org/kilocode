@@ -3274,7 +3274,7 @@ class SessionController(
      */
     private fun reportSwitchFailure() {
         notifyAction(
-            KiloBundle.message("profile.notice.accountUnavailable"),
+            KiloBundle.message("profile.notice.switchUnavailable"),
             null,
             KiloBundle.message("profile.action.accountSettings"),
         ) {

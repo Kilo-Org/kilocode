@@ -628,7 +628,7 @@ class ViewSwitchingTest : SessionControllerTestBase() {
 
         // The picker reverted, so the overlay says why and points at the page that can retry.
         val note = actionNotifications.single().first
-        assertEquals(KiloBundle.message("profile.notice.accountUnavailable"), note.first)
+        assertEquals(KiloBundle.message("profile.notice.switchUnavailable"), note.first)
         assertNull(note.second)
         assertEquals(KiloBundle.message("profile.action.accountSettings"), note.third)
         assertTrue("the switch must not raise an error balloon", notifications.isEmpty())
