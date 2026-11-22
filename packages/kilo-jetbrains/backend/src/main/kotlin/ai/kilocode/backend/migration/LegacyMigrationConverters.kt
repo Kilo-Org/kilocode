@@ -630,11 +630,12 @@ object LegacyMigrationConverters {
         if (sel.commandRules) {
             val allowed = settings.allowedCommands.orEmpty()
             val denied = settings.deniedCommands.orEmpty()
-            if (allowed.isNotEmpty() || denied.isNotEmpty()) {
-                // The CLI takes the last matching rule, so the broadest rule comes first and every
-                // command the legacy lists name follows it in the same order.
-                val approvesListed =
-                    settings.autoApprovalEnabled == true && settings.alwaysAllowExecute == true
+            val carriesList = allowed.isNotEmpty() || denied.isNotEmpty()
+            // The CLI takes the last matching rule, so the broadest rule comes first and every
+            // command the legacy lists name follows it in the same order.
+            val approvesListed =
+                settings.autoApprovalEnabled == true && settings.alwaysAllowExecute == true
+            if (carriesList) {
                 permission["bash"] = buildJsonObject {
                     put("*", "ask")
                     if (approvesListed) {
@@ -643,7 +644,17 @@ object LegacyMigrationConverters {
                     for (cmd in denied) put("${cmd.trimEnd()} *", "deny")
                 }
             }
-            results.add(PermissionEntry("Command rules", MigrationItemStatus.success))
+            results.add(
+                if (carriesList && allowed.isNotEmpty() && !approvesListed) {
+                    PermissionEntry(
+                        "Command rules",
+                        MigrationItemStatus.warning,
+                        "Allow commands not migrated: execution auto-approval was not enabled",
+                    )
+                } else {
+                    PermissionEntry("Command rules", MigrationItemStatus.success)
+                }
+            )
         }
 
         if (sel.readPermission) {
@@ -672,16 +683,16 @@ object LegacyMigrationConverters {
             results.add(PermissionEntry("Write permission", MigrationItemStatus.success))
         }
 
-        if (sel.executePermission && !sel.commandRules) {
-            val approval = settings.autoApprovalEnabled == true && settings.alwaysAllowExecute == true
-            val refusal = settings.autoApprovalEnabled == true && settings.alwaysAllowExecute == false
-            if (approval) {
-                permission["bash"] = JsonPrimitive("allow")
-            } else if (refusal) {
-                permission["bash"] = JsonPrimitive("ask")
+        if (sel.executePermission) {
+            if (!sel.commandRules) {
+                val approval = settings.autoApprovalEnabled == true && settings.alwaysAllowExecute == true
+                val refusal = settings.autoApprovalEnabled == true && settings.alwaysAllowExecute == false
+                if (approval) {
+                    permission["bash"] = JsonPrimitive("allow")
+                } else if (refusal) {
+                    permission["bash"] = JsonPrimitive("ask")
+                }
             }
-            results.add(PermissionEntry("Execute permission", MigrationItemStatus.success))
-        } else if (sel.executePermission) {
             results.add(PermissionEntry("Execute permission", MigrationItemStatus.success))
         }
 

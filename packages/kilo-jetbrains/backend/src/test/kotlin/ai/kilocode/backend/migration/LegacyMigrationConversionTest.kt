@@ -1125,6 +1125,32 @@ class LegacyMigrationConversionTest {
     }
 
     @Test
+    fun `convertAutoApproval - allow list reports when it was not applied`() {
+        val settings = LegacySettings(
+            autoApprovalEnabled = true,
+            allowedCommands = listOf("git"),
+            deniedCommands = emptyList(),
+            alwaysAllowReadOnly = null, alwaysAllowReadOnlyOutsideWorkspace = null,
+            alwaysAllowWrite = null, alwaysAllowExecute = null,
+            alwaysAllowMcp = null, alwaysAllowModeSwitch = null, alwaysAllowSubtasks = null,
+            language = null, autocomplete = null,
+        )
+        val sel = MigrationAutoApprovalSelections(commandRules = true, readPermission = false, writePermission = false, executePermission = false, mcpPermission = false, taskPermission = false)
+        val conv = LegacyMigrationConverters.convertAutoApproval(settings, sel, emptyList())
+        assertEquals(
+            listOf(
+                PermissionEntry(
+                    "Command rules",
+                    MigrationItemStatus.warning,
+                    "Allow commands not migrated: execution auto-approval was not enabled",
+                )
+            ),
+            conv.results,
+        )
+        assertEquals("ask", conv.config!!["permission"]?.jsonObject?.get("bash")?.jsonObject?.get("*")?.jsonPrimitive?.content)
+    }
+
+    @Test
     fun `convertAutoApproval - command rules keep read and write asks`() {
         val settings = LegacySettings(
             autoApprovalEnabled = true,
