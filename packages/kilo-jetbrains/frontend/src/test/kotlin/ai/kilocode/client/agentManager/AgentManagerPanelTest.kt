@@ -2764,7 +2764,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             val row = row(panel, 2) as AgentManagerWorkspaceRow<*>
             assertEquals(row(panel, 1)::class, row::class)
             assertTrue(row(panel, 1) is AgentManagerWorkspaceRow<*>)
-            assertEquals("Active", row.badges.single().text)
+            assertEmpty(row.badges)
             assertSame(HostedWorkspaceIcons.cloud, row.icon)
             assertSame(SpinnerIcon.icon, row(panel, 3).icon)
             assertEquals("Cloud", row.section)
@@ -3139,7 +3139,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             branch = "kilo/branch",
             sessions = listOf(old, latest),
         )
-        val row = hostedWorkspaceRow(HostedWorkspaceRowData(dto, null), FakeAgentManagerFacade())
+        val row = hostedWorkspaceRow(HostedWorkspaceRowData(dto), FakeAgentManagerFacade())
         assertEquals("OpenRouter API access", row.title)
         assertEquals("kilo/branch", row.description)
         assertTrue(row.search.contains("OpenRouter API access"))
@@ -3258,7 +3258,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             .single { (it.element as? AgentManagerElement.Cloud)?.dto?.ref == ref }
         // Starting is work in progress; the row wears the same spinner local running sessions use.
         assertSame(SpinnerIcon.icon, row.icon)
-        assertEquals("Starting", row.badges.single().text)
+        assertEmpty(row.badges)
     }
 
     fun `test cloud create is retired after repeated successful omissions`() {

@@ -8,13 +8,11 @@ import ai.kilocode.client.agentManager.AgentManagerWorkspaceRow
 import ai.kilocode.client.agentManager.worktree.WorktreeIcons
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
-import ai.kilocode.rpc.dto.HostedWorkspaceStatusDto
 import ai.kilocode.rpc.dto.WorktreePrDto
 
 /** A Cloud workspace row in the Agent Manager tree, distinct from local worktrees. */
 internal data class HostedWorkspaceRowData(
     val dto: HostedWorkspaceDto,
-    val status: HostedWorkspaceStatusDto?,
     val kind: SessionActivityKind? = null,
     override val progress: String? = null,
 ) : AgentManagerRowData {
@@ -30,7 +28,6 @@ internal data class HostedWorkspaceRowData(
     override val search: String get() = (listOfNotNull(dto.name, dto.repositoryUrl, dto.branch, dto.ref.providerID,
         dto.ref.workspaceID) + dto.sessions.mapNotNull { it.title }).joinToString(" ")
     override val section get() = KiloBundle.message("worktree.section.cloud")
-    override val compute get() = HostedWorkspaceStatus.of(status).badge()
 }
 
 internal fun hostedWorkspaceRow(
