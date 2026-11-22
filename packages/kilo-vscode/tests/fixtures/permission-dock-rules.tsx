@@ -53,6 +53,13 @@ const workspaceAllow = {
   globalConfig: () => ({ permission: {} }),
   workspaceConfig: () => ({ permission: { edit: { "*": "allow" } } }),
 }
+// A workspace-supplied deny row, so the indicator's state wording is covered in
+// both directions.
+const workspaceDeny = {
+  config: () => ({ permission: { edit: { "*": "deny" } } }),
+  globalConfig: () => ({ permission: {} }),
+  workspaceConfig: () => ({ permission: { edit: { "*": "deny" } } }),
+}
 // Both scopes save the same allow for the row.
 const bothAllow = {
   config: () => ({ permission: { edit: { "*": "allow" } } }),
@@ -60,7 +67,17 @@ const bothAllow = {
   workspaceConfig: () => ({ permission: { edit: { "*": "allow" } } }),
 }
 
-type Mode = "reject" | "once" | "approve" | "deny" | "keyboard" | "remove" | "removeDenied" | "workspace" | "both"
+type Mode =
+  | "reject"
+  | "once"
+  | "approve"
+  | "deny"
+  | "keyboard"
+  | "remove"
+  | "removeDenied"
+  | "workspace"
+  | "both"
+  | "workspaceDeny"
 type Call = { response: string; approved: string[]; denied: string[]; removed: string[]; feedback?: string }
 
 const cases: Array<{ mode: Mode; ctx: typeof savedAllow }> = [
@@ -73,6 +90,7 @@ const cases: Array<{ mode: Mode; ctx: typeof savedAllow }> = [
   { mode: "removeDenied", ctx: savedDeny },
   { mode: "workspace", ctx: workspaceAllow },
   { mode: "both", ctx: bothAllow },
+  { mode: "workspaceDeny", ctx: workspaceDeny },
 ]
 
 for (const { mode, ctx } of cases) {
@@ -110,9 +128,12 @@ for (const { mode, ctx } of cases) {
   }
   const row = () => root.querySelector('[data-slot="permission-rule-row"]')
   try {
-    assert.equal(row()?.getAttribute("data-decision"), mode === "removeDenied" ? "denied" : "approved")
+    // Removing a saved rule and answering without feedback are the plain paths.
+    const plain = ["once", "remove", "removeDenied", "workspace", "both", "workspaceDeny"].includes(mode)
+    const denied = mode === "removeDenied" || mode === "workspaceDeny"
+    assert.equal(row()?.getAttribute("data-decision"), denied ? "denied" : "approved")
 
-    if (mode === "workspace" || mode === "both") {
+    if (mode === "workspace" || mode === "both" || mode === "workspaceDeny") {
       // A rule another scope supplies, shown with a state indicator.
       assert.equal(row()?.getAttribute("data-source"), "config")
       assert.equal(root.querySelector('[aria-label="ui.permission.rule.removeFromAllowed"]'), null)
@@ -121,7 +142,7 @@ for (const { mode, ctx } of cases) {
       // whether the saved rule allows or denies.
       assert.equal(
         root.querySelector('[data-slot="permission-rule-source"]')?.getAttribute("aria-label"),
-        "settings.autoApprove.level.allow \u2014 ui.permission.rule.fromConfig",
+        `settings.autoApprove.level.${mode === "workspaceDeny" ? "deny" : "allow"} \u2014 ui.permission.rule.fromConfig`,
       )
       enter()
     }
@@ -143,7 +164,7 @@ for (const { mode, ctx } of cases) {
     }
     if (mode === "once") enter()
 
-    if (!["once", "remove", "removeDenied", "workspace", "both"].includes(mode)) {
+    if (!plain) {
       click('[data-slot="permission-actions"] button:last-child')
       assert.equal(calls.length, 0, "Opening feedback must not submit a response")
       const input = root.querySelector<HTMLTextAreaElement>('[data-slot="permission-feedback-input"]')
@@ -159,8 +180,6 @@ for (const { mode, ctx } of cases) {
       click('[data-slot="permission-reject-confirm"]')
     }
 
-    // Removing a saved rule and answering without feedback are the plain paths.
-    const plain = ["once", "remove", "removeDenied", "workspace", "both"].includes(mode)
     assert.deepEqual(calls, [
       {
         response: plain ? "once" : "reject",
