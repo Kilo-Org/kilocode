@@ -22,10 +22,11 @@ const GIT = ["git show", "git cat-file", "git diff", "git log", "git blame"] as 
  * environment dump applies it as well. `level` is `ask` for an agent that can
  * prompt and `deny` for a delegated one that cannot answer.
  *
- * The shapes covered are: a reader's environment file at any operand position,
- * including a glob, a quoted operand and a nested path; a searcher's environment
- * file named as an operand or reached through a nested path; and, for the git
- * commands that print a file, the file named as a path or inside a revision spec.
+ * The shapes covered are: a file reader's environment file at any operand position,
+ * including a wildcard, a quoted operand and a nested path; a searcher's
+ * environment file as a leading or trailing operand, or as a nested path; and,
+ * for the git commands that print a file, the file named as a path anywhere in the
+ * command.
  *
  * `.env.example` documents the format and is allowed only as the exact lone
  * operand of a reader or a searcher: one literal path. A nested sample path and
