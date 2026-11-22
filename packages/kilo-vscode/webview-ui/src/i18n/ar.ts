@@ -125,6 +125,7 @@ export const dict = {
   "provider.connect.atomicChat.description":
     "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
   "provider.connect.apiKey.label": "مفتاح واجهة برمجة تطبيقات {{provider}}",
+  "provider.connect.apiKey.console": "افتح لوحة إدارة مفاتيح API لدى {{provider}}",
   "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
   "provider.connect.apiKey.placeholder": "مفتاح API",
   "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",

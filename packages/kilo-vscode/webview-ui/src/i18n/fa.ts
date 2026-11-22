@@ -129,6 +129,7 @@ export const dict = {
   "provider.connect.atomicChat.description":
     "به Atomic Chat روی دستگاه خود متصل شوید (پیش‌فرض http://127.0.0.1:1337). برای سرور محلی نیازی به کلید API نیست — Atomic Chat را راه‌اندازی کنید، یک مدل بارگذاری کنید، سپس متصل شوید.",
   "provider.connect.apiKey.label": "کلید API {{provider}}",
+  "provider.connect.apiKey.console": "باز کردن کنسول کلید API در {{provider}}",
   "provider.connect.apiKey.label.optional": "کلید API {{provider}} (اختیاری)",
   "provider.connect.apiKey.placeholder": "کلید API",
   "provider.connect.apiKey.placeholder.optional": "برای سرور محلی خالی بگذارید",

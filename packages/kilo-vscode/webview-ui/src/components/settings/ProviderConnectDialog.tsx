@@ -554,6 +554,7 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
         <Show when={providerApiKeyUrl(props.providerID)}>
           {(url) => (
             <a
+              class="provider-connect-byok-link"
               href={url()}
               onClick={(event) => {
                 event.preventDefault()
@@ -561,7 +562,7 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
                 openExternal(url())
               }}
             >
-              {language.t("provider.connect.apiKey.label", { provider: name() })}
+              {language.t("provider.connect.apiKey.console", { provider: name() })}
             </a>
           )}
         </Show>
