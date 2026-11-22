@@ -4,6 +4,8 @@
 
 - <https://accounts.x.ai>
   <!-- packages/opencode/src/plugin/xai.ts -->
+- <https://api.acedata.cloud>
+  <!-- packages/opencode/src/kilocode/provider/acedatacloud.ts -->
 - <https://api.apertis.ai/v1>
   <!-- packages/opencode/src/provider/model-cache.ts -->
   <!-- packages/opencode/src/provider/models.ts -->
@@ -159,6 +161,8 @@
   <!-- packages/opencode/src/kilocode/session/index.ts -->
 - <https://opncd.ai>
   <!-- packages/opencode/src/share/share-next.ts -->
+- <https://platform.acedata.cloud/api/v1/models/catalog/>
+  <!-- packages/opencode/src/kilocode/provider/acedatacloud.ts -->
 - <https://platform.acedata.cloud/console/applications?utm_source=vscode_marketplace&utm_medium=referral&utm_campaign=evergreen&utm_content=kilo_provider_api_key>
   <!-- packages/kilo-vscode/webview-ui/src/components/settings/provider-catalog.ts -->
 - <https://reddit.com/r/kilocode>

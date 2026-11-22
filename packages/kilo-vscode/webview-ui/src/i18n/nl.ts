@@ -175,6 +175,16 @@ export const dict = {
   "model.preview.label.cached": "Gecachet",
   "model.preview.label.average": "Gesch. gem. kosten",
   "model.preview.label.context": "Context",
+  "model.preview.value.unpublished": "Niet gepubliceerd",
+  "model.preview.label.outputLimit": "Uitvoerlimiet",
+  "model.preview.tooltip.clientBudget":
+    "Kilo gebruikt het ingestelde verzoekbudget. Dit is geen gepubliceerd modelmaximum.",
+  "model.preview.label.pricing": "Gebruikskosten",
+  "model.preview.value.usagePricing": "Niet geschat",
+  "model.preview.label.tools": "Ondersteuning voor tools",
+  "model.preview.reference.title": "Referentietarieven",
+  "model.preview.reference.description":
+    "Tokens zonder cache in een normale context. Cachegebruik en andere contextniveaus worden apart geprijsd.",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
   "model.preview.group.autoEfficientChoices": "Modelkeuzes",
   "model.preview.label.completion": "Voltooiing",

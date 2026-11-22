@@ -155,6 +155,16 @@ export const dict = {
   "model.preview.label.cached": "Cache",
   "model.preview.label.average": "Costo medio stimato",
   "model.preview.label.context": "Contesto",
+  "model.preview.value.unpublished": "Non pubblicato",
+  "model.preview.label.outputLimit": "Limite di output",
+  "model.preview.tooltip.clientBudget":
+    "Kilo usa il budget configurato per la richiesta. Non è un massimo pubblicato del modello.",
+  "model.preview.label.pricing": "Costo di utilizzo",
+  "model.preview.value.usagePricing": "Non stimato",
+  "model.preview.label.tools": "Supporto strumenti",
+  "model.preview.reference.title": "Tariffe di riferimento",
+  "model.preview.reference.description":
+    "Token non memorizzati nella cache in un contesto ordinario. Cache e altre fasce di contesto hanno prezzi separati.",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
   "model.preview.group.autoEfficientChoices": "Opzioni modello",
   "model.preview.label.completion": "Completamento",

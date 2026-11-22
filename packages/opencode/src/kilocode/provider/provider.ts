@@ -39,6 +39,8 @@ export const KILO_BUNDLED_PROVIDERS: Record<string, () => Promise<(options: any)
 // ---------------------------------------------------------------------------
 
 export const KILO_MODEL_SCHEMA_EXTENSIONS = {
+  unpublished: Schema.optional(Schema.Array(Schema.Literals(["context", "output", "pricing", "tools"]))),
+  referenceCost: optionalOmitUndefined(Schema.Struct({ input: Schema.Finite, output: Schema.Finite })),
   recommendedIndex: optionalOmitUndefined(Schema.Finite),
   prompt: Schema.optional(Schema.Literals(PROMPTS)),
   isFree: Schema.optional(Schema.Boolean),
@@ -83,6 +85,14 @@ export function patchModelsDevModel(providerID: string, source: any) {
 
 export function patchConfigModel(cfg: any, existing: any) {
   return {
+    referenceCost: existing?.referenceCost,
+    unpublished: existing?.unpublished?.filter((field: string) => {
+      if (field === "context") return cfg.limit?.context == null
+      if (field === "output") return cfg.limit?.output == null
+      if (field === "pricing") return cfg.cost?.input == null || cfg.cost?.output == null
+      if (field === "tools") return cfg.tool_call == null
+      return true
+    }),
     recommendedIndex: cfg.recommendedIndex ?? existing?.recommendedIndex,
     prompt: cfg.prompt ?? existing?.prompt,
     isFree: cfg.isFree ?? existing?.isFree,

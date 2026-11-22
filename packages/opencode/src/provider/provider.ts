@@ -51,6 +51,7 @@ import {
 } from "@/kilocode/provider/provider"
 import * as ModelsRefresh from "@/kilocode/provider/models-refresh"
 import { bedrockAuth, providerKey, vertexAuth, vertexCredentials, vertexOptions } from "@/kilocode/provider/cloud-auth"
+import { AceCatalog } from "@/kilocode/provider/acedatacloud"
 // kilocode_change end
 import { ProviderError } from "./error"
 
@@ -1468,7 +1469,16 @@ const layer = Layer.effect(
         const bridge = yield* EffectBridge.make()
         const cfg = yield* config.get()
         const modelsDev = yield* modelsDevSvc.get()
-        const catalog = mapValues(modelsDev, fromModelsDevProvider)
+        // kilocode_change start - discover Ace models only for configured or connected accounts
+        const ace =
+          AceCatalog.allowed(cfg) &&
+          Boolean(
+            cfg.provider?.acedatacloud ||
+              (yield* auth.get("acedatacloud").pipe(Effect.orDie)) ||
+              (yield* env.get("ACEDATACLOUD_API_KEY")),
+          )
+        const catalog = yield* AceCatalog.overlay(mapValues(modelsDev, fromModelsDevProvider), cfg, { active: ace })
+        // kilocode_change end
         const database = mapValues(catalog, toPublicInfo)
 
         const providers: Record<ProviderV2.ID, Info> = {} as Record<ProviderV2.ID, Info>
@@ -1639,11 +1649,7 @@ const layer = Layer.effect(
               existingModel?.api.npm === m.api.npm
                 ? (existingModel.variants ?? ProviderTransform.variants(m))
                 : ProviderTransform.variants(m)
-            const generated = customProviderVariants(
-              parsedModel,
-              model.provider?.npm ?? provider.npm,
-              baseGenerate,
-            )
+            const generated = customProviderVariants(parsedModel, model.provider?.npm ?? provider.npm, baseGenerate)
             const merged = mergeDeep(generated, model.variants ?? {})
             // kilocode_change end
             parsedModel.variants = mapValues(
@@ -1884,6 +1890,7 @@ const layer = Layer.effect(
 
         if (baseURL !== undefined) options["baseURL"] = baseURL
         if (options["apiKey"] === undefined && provider.key) options["apiKey"] = provider.key
+        AceCatalog.auth(model, options) // kilocode_change - native Messages uses Ace's documented Bearer auth
         if (model.headers)
           options["headers"] = {
             ...options["headers"],

@@ -176,6 +176,16 @@ export const dict = {
   "model.preview.label.cached": "کش شده",
   "model.preview.label.average": "هزینه تخمینی میانگین",
   "model.preview.label.context": "زمینه",
+  "model.preview.value.unpublished": "منتشر نشده",
+  "model.preview.label.outputLimit": "حد خروجی",
+  "model.preview.tooltip.clientBudget":
+    "Kilo از بودجه تنظیم‌شده درخواست استفاده می‌کند. این مقدار حداکثر اعلام‌شده مدل نیست.",
+  "model.preview.label.pricing": "هزینه استفاده",
+  "model.preview.value.usagePricing": "برآورد نشده",
+  "model.preview.label.tools": "پشتیبانی ابزار",
+  "model.preview.reference.title": "نرخ‌های مرجع",
+  "model.preview.reference.description":
+    "توکن‌های بدون حافظه نهان در زمینه معمولی. مصرف حافظه نهان و سایر سطوح زمینه جداگانه قیمت‌گذاری می‌شوند.",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
   "model.preview.group.autoEfficientChoices": "انتخاب‌های مدل",
   "model.preview.label.completion": "تکمیل",

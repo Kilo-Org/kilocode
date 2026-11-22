@@ -174,6 +174,16 @@ export const dict = {
   "model.preview.label.cached": "В кэше",
   "model.preview.label.average": "Средняя стоимость",
   "model.preview.label.context": "Контекст",
+  "model.preview.value.unpublished": "Не опубликовано",
+  "model.preview.label.outputLimit": "Лимит вывода",
+  "model.preview.tooltip.clientBudget":
+    "Kilo использует настроенный бюджет запроса. Это не опубликованный максимум модели.",
+  "model.preview.label.pricing": "Стоимость использования",
+  "model.preview.value.usagePricing": "Не оценена",
+  "model.preview.label.tools": "Поддержка инструментов",
+  "model.preview.reference.title": "Справочные тарифы",
+  "model.preview.reference.description":
+    "Некэшированные токены при обычном контексте. Кэш и другие уровни контекста тарифицируются отдельно.",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
   "model.preview.group.autoEfficientChoices": "Варианты моделей",
   "model.preview.label.completion": "Выполнение",

@@ -175,6 +175,16 @@ export const dict = {
   "model.preview.label.cached": "Кешовані",
   "model.preview.label.average": "Орієнт. сер. вартість",
   "model.preview.label.context": "Контекст",
+  "model.preview.value.unpublished": "Не опубліковано",
+  "model.preview.label.outputLimit": "Ліміт виводу",
+  "model.preview.tooltip.clientBudget":
+    "Kilo використовує налаштований бюджет запиту. Це не опублікований максимум моделі.",
+  "model.preview.label.pricing": "Вартість використання",
+  "model.preview.value.usagePricing": "Не оцінено",
+  "model.preview.label.tools": "Підтримка інструментів",
+  "model.preview.reference.title": "Довідкові тарифи",
+  "model.preview.reference.description":
+    "Некешовані токени зі звичайним контекстом. Кеш та інші рівні контексту тарифікуються окремо.",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
   "model.preview.group.autoEfficientChoices": "Варіанти моделей",
   "model.preview.label.completion": "Виконання",

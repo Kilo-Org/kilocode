@@ -175,6 +175,16 @@ export const dict = {
   "model.preview.label.cached": "W pamięci podręcznej",
   "model.preview.label.average": "Szac. średni koszt",
   "model.preview.label.context": "Kontekst",
+  "model.preview.value.unpublished": "Nie opublikowano",
+  "model.preview.label.outputLimit": "Limit wyjścia",
+  "model.preview.tooltip.clientBudget":
+    "Kilo używa skonfigurowanego budżetu żądania. Nie jest to opublikowane maksimum modelu.",
+  "model.preview.label.pricing": "Koszt użycia",
+  "model.preview.value.usagePricing": "Bez oszacowania",
+  "model.preview.label.tools": "Obsługa narzędzi",
+  "model.preview.reference.title": "Stawki referencyjne",
+  "model.preview.reference.description":
+    "Tokeny bez pamięci podręcznej w zwykłym kontekście. Pamięć podręczna i inne progi kontekstu mają osobne ceny.",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
   "model.preview.group.autoEfficientChoices": "Wybór modeli",
   "model.preview.label.completion": "Ukończenie",

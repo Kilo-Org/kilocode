@@ -8,6 +8,8 @@ export interface ProviderModel {
   contextLength?: number
   releaseDate?: string
   latest?: boolean
+  unpublished?: ("context" | "output" | "pricing" | "tools")[]
+  referenceCost?: { input: number; output: number }
   // Actual shape returned by the server (Provider.Model)
   limit?: { context: number; input?: number; output: number }
   variants?: Record<string, Record<string, unknown>>

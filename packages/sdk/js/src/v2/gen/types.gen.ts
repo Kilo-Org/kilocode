@@ -2841,6 +2841,11 @@ export type Model = {
       [key: string]: unknown
     }
   }
+  unpublished?: Array<"context" | "output" | "pricing" | "tools">
+  referenceCost?: {
+    input: number
+    output: number
+  }
   recommendedIndex?: number
   prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo" | "ling" | "gpt55"
   isFree?: boolean

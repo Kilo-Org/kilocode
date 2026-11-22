@@ -39876,6 +39876,26 @@
               "type": "object"
             }
           },
+          "unpublished": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["context", "output", "pricing", "tools"]
+            }
+          },
+          "referenceCost": {
+            "type": "object",
+            "properties": {
+              "input": {
+                "type": "number"
+              },
+              "output": {
+                "type": "number"
+              }
+            },
+            "required": ["input", "output"],
+            "additionalProperties": false
+          },
           "recommendedIndex": {
             "type": "number"
           },

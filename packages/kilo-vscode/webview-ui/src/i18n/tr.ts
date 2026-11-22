@@ -174,6 +174,16 @@ export const dict = {
   "model.preview.label.cached": "Önbellek",
   "model.preview.label.average": "Tahmini Ort. Maliyet",
   "model.preview.label.context": "Bağlam",
+  "model.preview.value.unpublished": "Yayımlanmadı",
+  "model.preview.label.outputLimit": "Çıktı sınırı",
+  "model.preview.tooltip.clientBudget":
+    "Kilo yapılandırılmış istek bütçesini kullanır. Bu, modelin yayımlanmış üst sınırı değildir.",
+  "model.preview.label.pricing": "Kullanım maliyeti",
+  "model.preview.value.usagePricing": "Tahmin edilmedi",
+  "model.preview.label.tools": "Araç desteği",
+  "model.preview.reference.title": "Referans fiyatlar",
+  "model.preview.reference.description":
+    "Normal bağlamdaki önbelleksiz token fiyatlarıdır. Önbellek kullanımı ve diğer bağlam kademeleri ayrı fiyatlandırılır.",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
   "model.preview.group.autoEfficientChoices": "Model seçenekleri",
   "model.preview.label.completion": "Tamamlama",

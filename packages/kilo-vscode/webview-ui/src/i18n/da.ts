@@ -175,6 +175,16 @@ export const dict = {
   "model.preview.label.cached": "Cached",
   "model.preview.label.average": "Est. gennemsnitspris",
   "model.preview.label.context": "Kontekst",
+  "model.preview.value.unpublished": "Ikke offentliggjort",
+  "model.preview.label.outputLimit": "Outputgrænse",
+  "model.preview.tooltip.clientBudget":
+    "Kilo bruger det konfigurerede forespørgselsbudget. Det er ikke modellens offentliggjorte maksimum.",
+  "model.preview.label.pricing": "Forbrugspris",
+  "model.preview.value.usagePricing": "Ikke estimeret",
+  "model.preview.label.tools": "Værktøjsunderstøttelse",
+  "model.preview.reference.title": "Referencepriser",
+  "model.preview.reference.description":
+    "Tokens uden cache i almindelig kontekst. Cacheforbrug og andre kontekstniveauer prissættes særskilt.",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
   "model.preview.group.autoEfficientChoices": "Modelvalg",
   "model.preview.label.completion": "Fuldførelse",

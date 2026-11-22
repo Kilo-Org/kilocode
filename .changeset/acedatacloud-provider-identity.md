@@ -1,5 +1,6 @@
 ---
 "kilo-code": patch
+"@kilocode/cli": patch
 ---
 
-Show the Ace Data Cloud logo and link its API key prompt to the application credential console when the provider is available in the model catalog.
+Discover Ace Data Cloud's live chat catalog and route each model through its published protocol. Show its logo and API key console action, retain user model overrides and identify unpublished limits, tool support and incomplete usage pricing.

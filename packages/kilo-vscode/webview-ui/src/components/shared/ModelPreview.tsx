@@ -64,6 +64,7 @@ export const ModelPreview: Component<Props> = (props) => {
           const choices = () => autoChoices(model(), props.models ?? [])
           const choicesLabel = () => language.t("model.preview.group.autoEfficientChoices")
           const ctx = () => model().limit?.context ?? model().contextLength
+          const unpublished = () => new Set(model().unpublished ?? [])
           const caps = () => model().capabilities
           const inputs = () => caps()?.input
           const activeModalities = () =>
@@ -169,7 +170,42 @@ export const ModelPreview: Component<Props> = (props) => {
                   <span class="model-preview-label">{language.t("model.preview.label.context")}</span>
                   <span class="model-preview-value">{fmtContext(ctx()!)}</span>
                 </Show>
+                <Show when={unpublished().has("context")}>
+                  <span class="model-preview-label">{language.t("model.preview.label.context")}</span>
+                  <span class="model-preview-value">{language.t("model.preview.value.unpublished")}</span>
+                </Show>
+                <Show when={unpublished().has("output")}>
+                  <span class="model-preview-label">{language.t("model.preview.label.outputLimit")}</span>
+                  <Tooltip value={language.t("model.preview.tooltip.clientBudget")} placement="top">
+                    <span class="model-preview-value">{language.t("model.preview.value.unpublished")}</span>
+                  </Tooltip>
+                </Show>
+                <Show when={unpublished().has("pricing")}>
+                  <span class="model-preview-label">{language.t("model.preview.label.pricing")}</span>
+                  <span class="model-preview-value">{language.t("model.preview.value.usagePricing")}</span>
+                </Show>
+                <Show when={unpublished().has("tools")}>
+                  <span class="model-preview-label">{language.t("model.preview.label.tools")}</span>
+                  <span class="model-preview-value">{language.t("model.preview.value.unpublished")}</span>
+                </Show>
               </div>
+
+              <Show when={model().referenceCost && unpublished().has("pricing")}>
+                <div class="model-preview-group">
+                  <div class="model-preview-group-title">{language.t("model.preview.reference.title")}</div>
+                  <div class="model-preview-grid">
+                    <span class="model-preview-label">{language.t("model.preview.label.input")}</span>
+                    <span class="model-preview-value">
+                      {model().referenceCost!.input.toLocaleString()} Credits / 1M
+                    </span>
+                    <span class="model-preview-label">{language.t("model.preview.label.output")}</span>
+                    <span class="model-preview-value">
+                      {model().referenceCost!.output.toLocaleString()} Credits / 1M
+                    </span>
+                  </div>
+                  <p>{language.t("model.preview.reference.description")}</p>
+                </div>
+              </Show>
 
               {/* Terminal Bench — independent from token pricing */}
               <Show when={bench()}>

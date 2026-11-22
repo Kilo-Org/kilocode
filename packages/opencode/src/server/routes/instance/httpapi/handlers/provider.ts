@@ -16,6 +16,8 @@ import {
 import { providerMetadata } from "@/kilocode/provider/metadata" // kilocode_change
 import { filterPromptTrainingModels } from "@/kilocode/provider/model-filter" // kilocode_change
 import { overlay as overlayAnacondaDesktop } from "@/kilocode/anaconda-desktop/provider" // kilocode_change
+import { AceCatalog } from "@/kilocode/provider/acedatacloud" // kilocode_change
+import { Env } from "@/env" // kilocode_change
 import { Effect, Schema } from "effect"
 import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
@@ -50,6 +52,7 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
     const svc = yield* ProviderAuth.Service
     const cache = yield* ModelCache.Service // kilocode_change
     const access = yield* Auth.Service // kilocode_change
+    const env = yield* Env.Service // kilocode_change
 
     const list = Effect.fn("ProviderHttpApi.list")(function* () {
       const config = yield* cfg.get()
@@ -60,28 +63,42 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
       for (const [key, value] of Object.entries(all)) {
         if ((enabled ? enabled.has(key) : true) && !disabled.has(key)) filtered[key] = value
       }
+      // kilocode_change start - listing a provider does not opt unrelated users into metadata requests
+      const ace =
+        AceCatalog.allowed(config) &&
+        Boolean(
+          config.provider?.acedatacloud ||
+            Option.getOrUndefined(yield* access.get("acedatacloud").pipe(Effect.option)) ||
+            (yield* env.get("ACEDATACLOUD_API_KEY")),
+        )
+      const catalog = yield* AceCatalog.overlay(mapValues(filtered, Provider.fromModelsDevProvider), config, {
+        active: ace,
+        notify: true,
+      })
+      // kilocode_change end
       const connected = yield* provider.list()
       // kilocode_change start
       const info = yield* access.get("kilo").pipe(Effect.option)
       const unavailable = Option.isNone(info) && ("kilo" in filtered || "kilo" in connected)
-      if (Option.isNone(info) || organization(config.provider?.kilo?.options, info.value)) delete filtered.kilo
+      if (Option.isNone(info) || organization(config.provider?.kilo?.options, info.value)) {
+        delete filtered.kilo
+        delete catalog.kilo
+      }
       const providers = filterPromptTrainingModels(
-        Object.assign(
-          mapValues(filtered, (item) => Provider.fromModelsDevProvider(item)),
-          connected,
-        ),
+        Object.assign(catalog, connected),
         config.hide_prompt_training_models === true,
       )
       // kilocode_change end
       // kilocode_change start
-      const failed = yield* cache.failedProviders()
+      const failed = [...(yield* cache.failedProviders()), ...AceCatalog.failed(ace)]
       // Note: connected only contains providers with non-empty models after Provider.Service.list(),
       // so failed must be checked explicitly for providers whose fetch returned an error.
       const failedSet = new Set(failed)
       if (unavailable) failedSet.add("kilo")
       const validProviders = pickBy(
         providers,
-        (item, id) => Object.keys(item.models).length > 0 || id in connected || failedSet.has(id),
+        (item, id) =>
+          Object.keys(item.models).length > 0 || id === "acedatacloud" || id in connected || failedSet.has(id),
       )
       // A failed provider can be entirely absent from `providers` (e.g. an org-scoped Kilo
       // catalog is deleted above at `delete filtered.kilo`, and `Provider.Service.list()` drops

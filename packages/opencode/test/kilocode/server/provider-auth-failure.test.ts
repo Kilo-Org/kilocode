@@ -5,6 +5,7 @@ import { Effect, Layer } from "effect"
 import { HttpClient, HttpRouter } from "effect/unstable/http"
 import { HttpApi, HttpApiBuilder } from "effect/unstable/httpapi"
 import { Auth } from "../../../src/auth"
+import { Env } from "../../../src/env"
 import { KiloViewers } from "../../../src/kilocode/presence/service"
 import { InstanceStore } from "../../../src/project/instance-store"
 import { Session } from "../../../src/session/session"
@@ -92,11 +93,14 @@ const layer = HttpRouter.serve(
               ),
       }),
       Layer.mock(ProviderAuth.Service)({}),
+      Layer.mock(Env.Service)({}),
       Layer.mock(ModelCache.Service)({
         failedProviders: () => Effect.succeed(state.failed),
         getFailure: (providerID: string) =>
           Effect.succeed(
-            providerID === "kilo" && state.failed.includes("kilo") ? { kind: "unauthorized" as const, status: 401 } : undefined,
+            providerID === "kilo" && state.failed.includes("kilo")
+              ? { kind: "unauthorized" as const, status: 401 }
+              : undefined,
           ),
       }),
       Layer.mock(Auth.Service)({
@@ -105,7 +109,9 @@ const layer = HttpRouter.serve(
             state.reads++
             if (state.failure) return Effect.fail(new Auth.AuthError({ message: "Cannot read credentials" }))
             return Effect.succeed(
-              state.orgId ? new Auth.Oauth({ type: "oauth", access: "token", refresh: "", expires: 0, accountId: state.orgId }) : undefined,
+              state.orgId
+                ? new Auth.Oauth({ type: "oauth", access: "token", refresh: "", expires: 0, accountId: state.orgId })
+                : undefined,
             )
           }),
       }),

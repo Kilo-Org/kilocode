@@ -177,6 +177,16 @@ export const dict = {
   "model.preview.label.cached": "Bufret",
   "model.preview.label.average": "Est. snittkostnad",
   "model.preview.label.context": "Kontekst",
+  "model.preview.value.unpublished": "Ikke publisert",
+  "model.preview.label.outputLimit": "Utgangsgrense",
+  "model.preview.tooltip.clientBudget":
+    "Kilo bruker det konfigurerte forespørselsbudsjettet. Dette er ikke modellens publiserte maksimum.",
+  "model.preview.label.pricing": "Brukskostnad",
+  "model.preview.value.usagePricing": "Ikke estimert",
+  "model.preview.label.tools": "Verktøystøtte",
+  "model.preview.reference.title": "Referansepriser",
+  "model.preview.reference.description":
+    "Tokens uten hurtigbuffer i vanlig kontekst. Hurtigbufferbruk og andre kontekstnivåer prises separat.",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
   "model.preview.group.autoEfficientChoices": "Modellvalg",
   "model.preview.label.completion": "Fullføring",

@@ -182,6 +182,16 @@ export const dict = {
   "model.preview.label.cached": "Zwischengespeichert",
   "model.preview.label.average": "Geschätzte Ø-Kosten",
   "model.preview.label.context": "Kontext",
+  "model.preview.value.unpublished": "Nicht veröffentlicht",
+  "model.preview.label.outputLimit": "Ausgabelimit",
+  "model.preview.tooltip.clientBudget":
+    "Kilo nutzt das konfigurierte Anfragebudget. Dies ist kein veröffentlichtes Modellmaximum.",
+  "model.preview.label.pricing": "Nutzungskosten",
+  "model.preview.value.usagePricing": "Nicht geschätzt",
+  "model.preview.label.tools": "Werkzeugunterstützung",
+  "model.preview.reference.title": "Referenzpreise",
+  "model.preview.reference.description":
+    "Ungecachte Tokens im normalen Kontext. Cache-Nutzung und andere Kontextstufen werden separat berechnet.",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
   "model.preview.group.autoEfficientChoices": "Modellauswahl",
   "model.preview.label.completion": "Abschluss",

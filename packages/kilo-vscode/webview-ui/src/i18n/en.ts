@@ -171,6 +171,16 @@ export const dict = {
   "model.preview.label.cached": "Cached",
   "model.preview.label.average": "Est. Average Cost",
   "model.preview.label.context": "Context",
+  "model.preview.value.unpublished": "Not published",
+  "model.preview.label.outputLimit": "Output limit",
+  "model.preview.tooltip.clientBudget":
+    "Kilo uses its configured request budget. This is not a published model maximum.",
+  "model.preview.label.pricing": "Usage cost",
+  "model.preview.value.usagePricing": "Not estimated",
+  "model.preview.label.tools": "Tool support",
+  "model.preview.reference.title": "Reference rates",
+  "model.preview.reference.description":
+    "Ordinary-context, uncached tokens. Cache usage and other context tiers are priced separately.",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
   "model.preview.group.autoEfficientChoices": "Model choices",
   "model.preview.label.completion": "Completion",
