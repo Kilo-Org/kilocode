@@ -4,18 +4,25 @@ export const SKILL_SHELL_DISABLED = "[skill shell execution disabled by policy]"
 export const SKILL_SHELL_UNTRUSTED = "[skill shell execution disabled for untrusted skill]"
 
 // Render a skill command for a permission prompt as a single, tamper-evident line.
-// Escape control chars (CR/LF/ESC/etc.) so a command can't repaint the terminal, and
-// bidi/format controls (U+202A-202E, U+2066-2069, U+200E/F, U+2028/9) so a Trojan-Source
-// style reorder can't make the visible text differ from what will execute.
-const CONTROL = /[\u0000-\u001f\u007f-\u009f\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]/g
+// Escape control chars (CR/LF/ESC/etc.) so a command can't repaint the terminal, and invisible
+// format chars (bidi marks and overrides, line/paragraph separators, zero-width characters,
+// variation selectors, tag characters, BOM), which belong to the same display policy: the prompt
+// shows each one as its literal escape, so the text presented matches the characters the command
+// carries. The class covers every character Unicode marks Default_Ignorable or Format, plus the C0
+// and C1 controls and the line and paragraph separators. Each escape writes `\x` below 0x100, `\u`
+// up to 0xffff and `\u{...}` above.
+const CONTROL =
+  /[\u0000-\u001f\u007f-\u009f\u00ad\u034f\u0600-\u0605\u061c\u06dd\u070f\u0890-\u0891\u08e2\u115f-\u1160\u17b4-\u17b5\u180b-\u180f\u200b-\u200f\u2028-\u202e\u2060-\u206f\u3164\ufe00-\ufe0f\ufeff\uffa0\ufff0-\ufffb\u{110bd}\u{110cd}\u{13430}-\u{1343f}\u{1bca0}-\u{1bca3}\u{1d173}-\u{1d17a}\u{e0000}-\u{e0fff}]/gu
 
 export function displayCommand(command: string) {
   return command.replace(CONTROL, (ch) => {
     if (ch === "\n") return "\\n"
     if (ch === "\r") return "\\r"
     if (ch === "\t") return "\\t"
-    const code = ch.charCodeAt(0)
-    return code <= 0xff ? "\\x" + code.toString(16).padStart(2, "0") : "\\u" + code.toString(16).padStart(4, "0")
+    const code = ch.codePointAt(0) ?? 0
+    if (code <= 0xff) return "\\x" + code.toString(16).padStart(2, "0")
+    if (code <= 0xffff) return "\\u" + code.toString(16).padStart(4, "0")
+    return "\\u{" + code.toString(16) + "}"
   })
 }
 
