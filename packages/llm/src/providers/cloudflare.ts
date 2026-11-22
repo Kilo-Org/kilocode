@@ -34,7 +34,10 @@ type WorkersAIURL = AtLeastOne<{
 export type WorkersAIOptions = WorkersAIURL & RouteDefaultsInput & ProviderAuthOption<"optional">
 
 export const aiGatewayBaseURL = (input: GatewayURL) => {
-  if (input.baseURL) return input.baseURL
+  // kilocode_change start - a blank or whitespace-only baseURL is unset, so the derived endpoint applies
+  const baseURL = input.baseURL?.trim()
+  if (baseURL) return baseURL
+  // kilocode_change end
   if (!input.accountId) throw new Error("CloudflareAIGateway.configure requires accountId unless baseURL is supplied")
   return `https://gateway.ai.cloudflare.com/v1/${encodeURIComponent(input.accountId)}/${encodeURIComponent(input.gatewayId?.trim() || "default")}/compat`
 }
@@ -54,8 +57,14 @@ const aiGatewayAuth = (input: AIGatewayOptions) => {
   if ("auth" in input && input.auth) return input.auth
   // kilocode_change start - resolve the environment gateway credential for a Cloudflare gateway endpoint;
   // on any other host the credential comes from `gatewayApiKey`
-  const explicit = Auth.optional(input.gatewayApiKey, "gatewayApiKey")
-  const source = isGatewayHost(input.baseURL)
+  const gatewayHost = isGatewayHost(input.baseURL)
+  const explicit = Auth.optional(
+    input.gatewayApiKey,
+    gatewayHost
+      ? "gatewayApiKey"
+      : "gatewayApiKey (the environment token is sent only to gateway.ai.cloudflare.com; alternatively set a cf-aig-authorization header)",
+  )
+  const source = gatewayHost
     ? explicit.orElse(Auth.config("CLOUDFLARE_API_TOKEN")).orElse(Auth.config("CF_AIG_TOKEN"))
     : explicit
   const gateway = source.pipe(Auth.bearerHeader("cf-aig-authorization"))
@@ -68,7 +77,10 @@ const aiGatewayAuth = (input: AIGatewayOptions) => {
 }
 
 export const workersAIBaseURL = (input: WorkersAIURL) => {
-  if (input.baseURL) return input.baseURL
+  // kilocode_change start - a blank or whitespace-only baseURL is unset, so the derived endpoint applies
+  const baseURL = input.baseURL?.trim()
+  if (baseURL) return baseURL
+  // kilocode_change end
   if (!input.accountId) throw new Error("CloudflareWorkersAI.configure requires accountId unless baseURL is supplied")
   return `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(input.accountId)}/ai/v1`
 }

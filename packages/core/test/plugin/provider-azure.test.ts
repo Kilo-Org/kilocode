@@ -179,6 +179,48 @@ describe("AzurePlugin", () => {
     ),
   )
 
+  // kilocode_change start - a whitespace-only resourceName counts as unset
+  it.effect("rejects a whitespace-only resourceName as missing when no endpoint is configured", () =>
+    withEnv({ AZURE_RESOURCE_NAME: undefined }, () =>
+      Effect.gen(function* () {
+        const aisdk = yield* AISDK.Service
+        yield* addPlugin()
+        const exit = yield* aisdk
+          .runSDK({
+            model: ModelV2.Info.make({
+              ...ModelV2.Info.empty(ProviderV2.ID.azure, ModelV2.ID.make("deployment")),
+              api: { id: ModelV2.ID.make("deployment"), type: "aisdk", package: "test-provider" },
+            }),
+            package: "@ai-sdk/azure",
+            options: { name: "azure", resourceName: "   " },
+          })
+          .pipe(Effect.exit)
+        expect(exit._tag).toBe("Failure")
+        expect(String(exit)).toContain("AZURE_RESOURCE_NAME is missing")
+        expect(String(exit)).not.toContain("Invalid Azure resource name")
+      }),
+    ),
+  )
+
+  it.effect("allows a whitespace-only resourceName when a baseURL is configured", () =>
+    withEnv({ AZURE_RESOURCE_NAME: undefined }, () =>
+      Effect.gen(function* () {
+        const aisdk = yield* AISDK.Service
+        yield* addPlugin()
+        const result = yield* aisdk.runSDK({
+          model: ModelV2.Info.make({
+            ...ModelV2.Info.empty(ProviderV2.ID.azure, ModelV2.ID.make("deployment")),
+            api: { id: ModelV2.ID.make("deployment"), type: "aisdk", package: "test-provider" },
+          }),
+          package: "@ai-sdk/azure",
+          options: { name: "azure", baseURL: "https://proxy.example.com/openai", resourceName: "   " },
+        })
+        expect(result.sdk).toBeDefined()
+      }),
+    ),
+  )
+  // kilocode_change end
+
   // kilocode_change start - a resource name must be a plain name
   it.effect("requires a plain Azure resourceName", () =>
     withEnv({ AZURE_RESOURCE_NAME: undefined }, () =>

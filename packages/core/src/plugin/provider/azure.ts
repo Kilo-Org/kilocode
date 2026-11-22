@@ -33,6 +33,13 @@ export const AzurePlugin = define({
       Effect.fn(function* (evt) {
         if (evt.package !== "@ai-sdk/azure") return
         if (evt.model.providerID === ProviderV2.ID.azure) {
+          // kilocode_change start - a blank or whitespace-only resourceName counts as unset
+          if (typeof evt.options.resourceName === "string") {
+            const trimmed = evt.options.resourceName.trim()
+            if (trimmed) evt.options.resourceName = trimmed
+            else delete evt.options.resourceName
+          }
+          // kilocode_change end
           if (
             !evt.options.resourceName &&
             !evt.options.baseURL &&

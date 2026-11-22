@@ -301,6 +301,82 @@ describe("Cloudflare", () => {
   )
   // kilocode_change end
 
+  // kilocode_change start - the missing-credential label names where the gateway credential can come from
+  it.effect("names the Cloudflare gateway host when a custom host has no gateway credential", () =>
+    Effect.gen(function* () {
+      const error = yield* LLMClient.prepare(
+        LLM.request({
+          model: CloudflareAIGateway.configure({
+            baseURL: "https://gateway.proxy.test/v1/custom/compat",
+          }).model("openai/gpt-4o-mini"),
+          prompt: "Say hello.",
+        }),
+      ).pipe(withEnv({ CLOUDFLARE_API_TOKEN: "env-gateway-token" }), Effect.flip)
+
+      const message = error.message
+      expect(message).toContain("gateway.ai.cloudflare.com")
+      expect(message).toContain("cf-aig-authorization")
+    }),
+  )
+
+  it.effect("keeps the plain environment-token label on the Cloudflare gateway host", () =>
+    Effect.gen(function* () {
+      const error = yield* LLMClient.prepare(
+        LLM.request({
+          model: CloudflareAIGateway.configure({
+            baseURL: "https://gateway.ai.cloudflare.com/v1/test-account/default/compat",
+          }).model("openai/gpt-4o-mini"),
+          prompt: "Say hello.",
+        }),
+      ).pipe(withEnv({ CLOUDFLARE_API_TOKEN: "", CF_AIG_TOKEN: "" }), Effect.flip)
+
+      // The environment token is consulted on this host, so the message names that credential and
+      // carries no custom-host hint.
+      const message = error.message
+      expect(message).toContain("Missing auth credential: CF_AIG_TOKEN")
+      expect(message).not.toContain("gateway.ai.cloudflare.com")
+    }),
+  )
+  // kilocode_change end
+
+  // kilocode_change start - a whitespace-only baseURL is unset and a padded one is trimmed
+  it.effect("derives the gateway endpoint when the baseURL is whitespace", () =>
+    Effect.gen(function* () {
+      const model = CloudflareAIGateway.configure({
+        accountId: "test-account",
+        gatewayId: "test-gateway",
+        baseURL: "   ",
+        apiKey: "test-token",
+      }).model("openai/gpt-4o-mini")
+
+      expect(model.route.endpoint.baseURL).toBe("https://gateway.ai.cloudflare.com/v1/test-account/test-gateway/compat")
+    }),
+  )
+
+  it.effect("trims a baseURL with surrounding spaces", () =>
+    Effect.gen(function* () {
+      const model = CloudflareAIGateway.configure({
+        baseURL: "  https://gateway.proxy.test/v1/custom/compat  ",
+        apiKey: "test-token",
+      }).model("openai/gpt-4o-mini")
+
+      expect(model.route.endpoint.baseURL).toBe("https://gateway.proxy.test/v1/custom/compat")
+    }),
+  )
+
+  it.effect("derives the Workers AI endpoint when the baseURL is whitespace", () =>
+    Effect.gen(function* () {
+      const model = CloudflareWorkersAI.configure({
+        accountId: "test-account",
+        baseURL: "   ",
+        apiKey: "test-token",
+      }).model("@cf/meta/llama-3.1-8b-instruct")
+
+      expect(model.route.endpoint.baseURL).toBe("https://api.cloudflare.com/client/v4/accounts/test-account/ai/v1")
+    }),
+  )
+  // kilocode_change end
+
   it.effect("allows a fully configured baseURL override", () =>
     Effect.gen(function* () {
       const prepared = yield* LLMClient.prepare(
