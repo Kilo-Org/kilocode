@@ -94,23 +94,24 @@ function permissions(info?: ConfigPermissionV1.Info, tools?: Readonly<Record<str
     effect: enabled ? ("allow" as const) : ("deny" as const),
   }))
   // kilocode_change start - v1 write and patch keys assert as edit, so a document authoring both spellings
-  // would let the authored order decide; emit the legacy spellings first so the current spelling wins the last match.
+  // would let the authored order decide; the legacy spellings come first so the current spelling wins the
+  // last match in the emitted ruleset.
   const entries = Object.entries(info ?? {})
-  const legacy = entries.filter(([action]) => normalizeAction(action) !== action)
-  const current = entries.filter(([action]) => normalizeAction(action) === action)
-  for (const [action, rule] of [...legacy, ...current]) {
+  const legacy = entries.filter(([name]) => normalizeAction(name) !== name)
+  const current = entries.filter(([name]) => normalizeAction(name) === name)
+  for (const [name, rule] of [...legacy, ...current]) {
     // kilocode_change end
     if (!rule) continue
-    const key = normalizeAction(action) // kilocode_change - v1 write and patch keys assert as edit
+    const action = normalizeAction(name) // kilocode_change - v1 write and patch keys assert as edit
     if (typeof rule === "string") {
-      rules.push({ action: key, resource: "*", effect: rule }) // kilocode_change
+      rules.push({ action, resource: "*", effect: rule }) // kilocode_change
       continue
     }
     // kilocode_change - per-resource effect may also be null (delete sentinel); skip those entries
     rules.push(
       ...Object.entries(rule)
         .filter((entry): entry is [string, "allow" | "ask" | "deny"] => entry[1] !== null)
-        .map(([resource, effect]) => ({ action: key, resource, effect })), // kilocode_change
+        .map(([resource, effect]) => ({ action, resource, effect })), // kilocode_change
     )
   }
   return rules.length ? rules : undefined
