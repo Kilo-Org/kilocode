@@ -280,5 +280,42 @@ describe("OpenAIPlugin", () => {
       expect(stored).toMatchObject({ access: "next-access", refresh: "next-refresh" })
     }),
   )
+
+  it.live("keeps stored metadata when the refresh response omits the id token", () =>
+    Effect.gen(function* () {
+      yield* addPlugin()
+      const integrations = yield* Integration.Service
+      const credentials = yield* Credential.Service
+      yield* stubTokenFetch({ access_token: "next-access", expires_in: 60 })
+      const actual = yield* Effect.scoped(
+        Effect.gen(function* () {
+          const saved = yield* credentials.create({
+            integrationID: Integration.ID.make("openai"),
+            label: "Work",
+            value: Credential.OAuth.make({
+              type: "oauth",
+              methodID: Integration.MethodID.make("chatgpt-browser"),
+              access: "old-access",
+              refresh: "old-refresh",
+              expires: 1,
+              metadata: { accountID: "acct-1" },
+            }),
+          })
+          const resolved = yield* integrations.connection.resolve({ type: "credential", id: saved.id, label: "Work" })
+          return { resolved, stored: (yield* credentials.get(saved.id))?.value }
+        }),
+      )
+      expect(actual.resolved).toMatchObject({
+        access: "next-access",
+        refresh: "old-refresh",
+        metadata: { accountID: "acct-1" },
+      })
+      expect(actual.stored).toMatchObject({
+        access: "next-access",
+        refresh: "old-refresh",
+        metadata: { accountID: "acct-1" },
+      })
+    }),
+  )
   // kilocode_change end
 })

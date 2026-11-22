@@ -30,8 +30,11 @@ type TokenResponse = {
   expires_in?: number
 }
 
-// kilocode_change start - a refresh response may omit refresh_token; sign-in keeps the full shape
-type RefreshResponse = Omit<TokenResponse, "refresh_token"> & { refresh_token?: string }
+// kilocode_change start - a refresh response may omit refresh_token or id_token; sign-in keeps the full shape
+type RefreshResponse = Omit<TokenResponse, "id_token" | "refresh_token"> & {
+  id_token?: string
+  refresh_token?: string
+}
 // kilocode_change end
 
 type Claims = {
@@ -248,7 +251,7 @@ function request<A>(url: string, init: RequestInit) {
   })
 }
 
-function credential(methodID: Integration.MethodID, tokens: TokenResponse) {
+function credential(methodID: Integration.MethodID, tokens: Omit<TokenResponse, "id_token"> & { id_token?: string }) {
   const accountID = extractAccountID(tokens)
   return Credential.OAuth.make({
     type: "oauth",
@@ -286,8 +289,8 @@ function authorizeURL(redirect: string, pkce: Pkce, state: string) {
   })}`
 }
 
-function extractAccountID(tokens: TokenResponse) {
-  return claim(tokens.id_token) ?? claim(tokens.access_token)
+function extractAccountID(tokens: Omit<TokenResponse, "id_token"> & { id_token?: string }) {
+  return (tokens.id_token ? claim(tokens.id_token) : undefined) ?? claim(tokens.access_token)
 }
 
 function claim(token: string) {
