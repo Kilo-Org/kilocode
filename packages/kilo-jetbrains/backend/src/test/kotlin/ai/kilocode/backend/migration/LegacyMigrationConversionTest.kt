@@ -4,6 +4,7 @@ import ai.kilocode.backend.migration.LegacyMigrationConverters.PermissionEntry
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
@@ -1107,25 +1108,20 @@ class LegacyMigrationConversionTest {
     // -----------------------------------------------------------------------
 
     @Test
-    fun `convertAutoApproval - command rules with no command lists grant only bash`() {
+    fun `convertAutoApproval - command rules with no command lists write no bash rule`() {
         val settings = LegacySettings(
             autoApprovalEnabled = true,
             allowedCommands = emptyList(),
             deniedCommands = emptyList(),
             alwaysAllowReadOnly = null, alwaysAllowReadOnlyOutsideWorkspace = null,
-            alwaysAllowWrite = null, alwaysAllowExecute = null,
+            alwaysAllowWrite = null, alwaysAllowExecute = true,
             alwaysAllowMcp = null, alwaysAllowModeSwitch = null, alwaysAllowSubtasks = null,
             language = null, autocomplete = null,
         )
         val sel = MigrationAutoApprovalSelections(commandRules = true, readPermission = false, writePermission = false, executePermission = false, mcpPermission = false, taskPermission = false)
         val conv = LegacyMigrationConverters.convertAutoApproval(settings, sel, emptyList())
-        assertNotNull(conv.config)
-        val perm = conv.config!!["permission"]?.jsonObject
-        assertNotNull(perm)
-        assertEquals("allow", perm["bash"]?.jsonPrimitive?.content)
-        assertFalse(perm.containsKey("read"))
-        assertFalse(perm.containsKey("edit"))
-        assertFalse(perm.containsKey("external_directory"))
+        assertNull(conv.config)
+        assertEquals(listOf(PermissionEntry("Command rules", MigrationItemStatus.success)), conv.results)
     }
 
     @Test
@@ -1133,7 +1129,7 @@ class LegacyMigrationConversionTest {
         val settings = LegacySettings(
             autoApprovalEnabled = true,
             allowedCommands = emptyList(),
-            deniedCommands = emptyList(),
+            deniedCommands = listOf("rm"),
             alwaysAllowReadOnly = false, alwaysAllowReadOnlyOutsideWorkspace = null,
             alwaysAllowWrite = false, alwaysAllowExecute = null,
             alwaysAllowMcp = null, alwaysAllowModeSwitch = null, alwaysAllowSubtasks = null,
@@ -1145,7 +1141,7 @@ class LegacyMigrationConversionTest {
         assertNotNull(perm)
         assertEquals("ask", perm["read"]?.jsonPrimitive?.content)
         assertEquals("ask", perm["edit"]?.jsonPrimitive?.content)
-        assertEquals("allow", perm["bash"]?.jsonPrimitive?.content)
+        assertEquals("deny", perm["bash"]?.jsonObject?.get("rm *")?.jsonPrimitive?.content)
     }
 
     @Test
@@ -1165,24 +1161,75 @@ class LegacyMigrationConversionTest {
     }
 
     @Test
-    fun `convertAutoApproval - command allow deny lists write bash rules`() {
-        val settings = LegacySettings(
-            autoApprovalEnabled = true,
-            allowedCommands = listOf("git", "npm run"),
-            deniedCommands = listOf("rm"),
-            alwaysAllowReadOnly = null, alwaysAllowReadOnlyOutsideWorkspace = null,
-            alwaysAllowWrite = null, alwaysAllowExecute = null,
-            alwaysAllowMcp = null, alwaysAllowModeSwitch = null, alwaysAllowSubtasks = null,
-            language = null, autocomplete = null,
+    fun `convertAutoApproval - command rules match the shared case fixture`() {
+        // The same file is read by the CLI suite
+        // (packages/opencode/test/kilocode/permission-command-migration.test.ts), which feeds each
+        // row's bash map to the real permission engine. Comparing the map here and the decisions
+        // there keeps the migrator and the CLI from drifting apart.
+        val resource = "/migration/command-rule-cases.json"
+        val stream = assertNotNull(
+            LegacyMigrationConversionTest::class.java.getResourceAsStream(resource),
+            "missing test resource $resource",
         )
-        val sel = MigrationAutoApprovalSelections(commandRules = true, readPermission = false, writePermission = false, executePermission = false, mcpPermission = false, taskPermission = false)
-        val conv = LegacyMigrationConverters.convertAutoApproval(settings, sel, emptyList())
-        val perm = conv.config!!["permission"]?.jsonObject
-        val bash = perm?.get("bash")?.jsonObject
-        assertNotNull(bash)
-        assertEquals("allow", bash["git *"]?.jsonPrimitive?.content)
-        assertEquals("allow", bash["npm run *"]?.jsonPrimitive?.content)
-        assertEquals("deny", bash["rm *"]?.jsonPrimitive?.content)
+        val cases = stream.bufferedReader().use { reader ->
+            Json.parseToJsonElement(reader.readText()).jsonArray
+        }
+        assertTrue(cases.isNotEmpty(), "fixture $resource is empty")
+        for (element in cases) {
+            val row = element.jsonObject
+            val name = row.getValue("name").jsonPrimitive.content
+            val settings = LegacySettings(
+                autoApprovalEnabled = row.getValue("autoApprovalEnabled").jsonPrimitive.content.toBooleanStrictOrNull(),
+                allowedCommands = row.getValue("allowed").jsonArray.map { it.jsonPrimitive.content },
+                deniedCommands = row.getValue("denied").jsonArray.map { it.jsonPrimitive.content },
+                alwaysAllowReadOnly = null, alwaysAllowReadOnlyOutsideWorkspace = null,
+                alwaysAllowWrite = null,
+                alwaysAllowExecute = row.getValue("alwaysAllowExecute").jsonPrimitive.content.toBooleanStrictOrNull(),
+                alwaysAllowMcp = null, alwaysAllowModeSwitch = null, alwaysAllowSubtasks = null,
+                language = null, autocomplete = null,
+            )
+            val sel = MigrationAutoApprovalSelections(commandRules = true, readPermission = false, writePermission = false, executePermission = false, mcpPermission = false, taskPermission = false)
+            val conv = LegacyMigrationConverters.convertAutoApproval(settings, sel, emptyList())
+            val expected = when (val bash = row.getValue("bash")) {
+                is JsonNull -> null
+                is JsonObject -> bash
+                else -> error("fixture case '$name' has a bash value that is neither an object nor null")
+            }
+            val actual = conv.config?.get("permission")?.jsonObject?.get("bash") as? JsonObject
+            assertEquals(expected, actual, "fixture case: $name")
+            // The CLI resolves the last matching rule, so the emitted order carries the decision.
+            assertEquals(expected?.keys?.toList(), actual?.keys?.toList(), "fixture case order: $name")
+        }
+    }
+
+    @Test
+    fun `convertAutoApproval - execute permission follows the master switch`() {
+        fun convert(master: Boolean?, execute: Boolean?): LegacySettings = LegacySettings(
+            autoApprovalEnabled = master,
+            allowedCommands = null,
+            deniedCommands = null,
+            alwaysAllowReadOnly = null,
+            alwaysAllowReadOnlyOutsideWorkspace = null,
+            alwaysAllowWrite = null,
+            alwaysAllowExecute = execute,
+            alwaysAllowMcp = null,
+            alwaysAllowModeSwitch = null,
+            alwaysAllowSubtasks = null,
+            language = null,
+            autocomplete = null,
+        )
+
+        val sel = MigrationAutoApprovalSelections(false, false, false, executePermission = true, false, false)
+        val bash = { settings: LegacySettings ->
+            LegacyMigrationConverters.convertAutoApproval(settings, sel, emptyList())
+                .config?.get("permission")?.jsonObject?.get("bash")?.jsonPrimitive?.content
+        }
+
+        assertEquals("allow", bash(convert(true, true)))
+        assertEquals("ask", bash(convert(true, false)))
+        assertNull(bash(convert(false, true)))
+        assertNull(bash(convert(null, true)))
+        assertNull(bash(convert(true, null)))
     }
 
     @Test

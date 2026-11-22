@@ -624,30 +624,24 @@ object LegacyMigrationConverters {
         sel: MigrationAutoApprovalSelections,
         mcpServers: List<String>,
     ): PermissionConversion {
-        val fallback = if (settings.autoApprovalEnabled == true) "allow" else "ask"
         val results = mutableListOf<PermissionEntry>()
         val permission = mutableMapOf<String, JsonElement>()
 
         if (sel.commandRules) {
-            val hasCommandLists = (settings.allowedCommands?.isNotEmpty() == true) || (settings.deniedCommands?.isNotEmpty() == true)
-            if (settings.autoApprovalEnabled == true && !hasCommandLists) {
-                permission["bash"] = JsonPrimitive("allow")
-            } else if (hasCommandLists) {
-                val bashRules = mutableMapOf<String, JsonElement>()
-                for (cmd in settings.allowedCommands ?: emptyList()) {
-                    bashRules["${cmd.trimEnd()} *"] = JsonPrimitive("allow")
-                }
-                for (cmd in settings.deniedCommands ?: emptyList()) {
-                    bashRules["${cmd.trimEnd()} *"] = JsonPrimitive("deny")
-                }
-                bashRules["*"] = JsonPrimitive(
-                    when (settings.alwaysAllowExecute) {
-                        true -> "allow"
-                        false -> "ask"
-                        null -> fallback
+            val allowed = settings.allowedCommands.orEmpty()
+            val denied = settings.deniedCommands.orEmpty()
+            if (allowed.isNotEmpty() || denied.isNotEmpty()) {
+                // The CLI takes the last matching rule, so the broadest rule comes first and every
+                // command the legacy lists name follows it in the same order.
+                val approvesListed =
+                    settings.autoApprovalEnabled == true && settings.alwaysAllowExecute == true
+                permission["bash"] = buildJsonObject {
+                    put("*", "ask")
+                    if (approvesListed) {
+                        for (cmd in allowed) put("${cmd.trimEnd()} *", "allow")
                     }
-                )
-                permission["bash"] = JsonObject(bashRules)
+                    for (cmd in denied) put("${cmd.trimEnd()} *", "deny")
+                }
             }
             results.add(PermissionEntry("Command rules", MigrationItemStatus.success))
         }
@@ -679,9 +673,11 @@ object LegacyMigrationConverters {
         }
 
         if (sel.executePermission && !sel.commandRules) {
-            if (settings.alwaysAllowExecute == true) {
+            val approval = settings.autoApprovalEnabled == true && settings.alwaysAllowExecute == true
+            val refusal = settings.autoApprovalEnabled == true && settings.alwaysAllowExecute == false
+            if (approval) {
                 permission["bash"] = JsonPrimitive("allow")
-            } else if (settings.alwaysAllowExecute == false) {
+            } else if (refusal) {
                 permission["bash"] = JsonPrimitive("ask")
             }
             results.add(PermissionEntry("Execute permission", MigrationItemStatus.success))

@@ -1,0 +1,111 @@
+[
+  {
+    "name": "master switch on, execute auto-approval on, allow and deny lists",
+    "autoApprovalEnabled": true,
+    "alwaysAllowExecute": true,
+    "allowed": ["git", "npm run"],
+    "denied": ["rm"],
+    "bash": { "*": "ask", "git *": "allow", "npm run *": "allow", "rm *": "deny" },
+    "decisions": {
+      "git status": "allow",
+      "npm run build": "allow",
+      "rm": "deny",
+      "rm -rf build": "deny",
+      "curl https://example.com": "ask"
+    }
+  },
+  {
+    "name": "master switch on, execute auto-approval off, allow and deny lists",
+    "autoApprovalEnabled": true,
+    "alwaysAllowExecute": false,
+    "allowed": ["git", "npm run"],
+    "denied": ["rm"],
+    "bash": { "*": "ask", "rm *": "deny" },
+    "decisions": {
+      "git status": "ask",
+      "npm run build": "ask",
+      "rm": "deny",
+      "rm -rf build": "deny",
+      "curl https://example.com": "ask"
+    }
+  },
+  {
+    "name": "master switch on, execute auto-approval unset, allow and deny lists",
+    "autoApprovalEnabled": true,
+    "alwaysAllowExecute": null,
+    "allowed": ["git", "npm run"],
+    "denied": ["rm"],
+    "bash": { "*": "ask", "rm *": "deny" },
+    "decisions": {
+      "git status": "ask",
+      "npm run build": "ask",
+      "rm": "deny",
+      "rm -rf build": "deny",
+      "curl https://example.com": "ask"
+    }
+  },
+  {
+    "name": "master switch on, execute auto-approval on, deny list only",
+    "autoApprovalEnabled": true,
+    "alwaysAllowExecute": true,
+    "allowed": [],
+    "denied": ["rm"],
+    "bash": { "*": "ask", "rm *": "deny" },
+    "decisions": {
+      "rm": "deny",
+      "rm -rf build": "deny",
+      "git status": "ask"
+    }
+  },
+  {
+    "name": "master switch on, execute auto-approval on, allow list only",
+    "autoApprovalEnabled": true,
+    "alwaysAllowExecute": true,
+    "allowed": ["git"],
+    "denied": [],
+    "bash": { "*": "ask", "git *": "allow" },
+    "decisions": {
+      "git status": "allow",
+      "git": "allow",
+      "npm run build": "ask"
+    }
+  },
+  {
+    "name": "master switch off, execute auto-approval on, allow and deny lists",
+    "autoApprovalEnabled": false,
+    "alwaysAllowExecute": true,
+    "allowed": ["git"],
+    "denied": ["rm"],
+    "bash": { "*": "ask", "rm *": "deny" },
+    "decisions": {
+      "git status": "ask",
+      "rm": "deny",
+      "curl https://example.com": "ask"
+    }
+  },
+  {
+    "name": "allow and deny prefix of the same command",
+    "autoApprovalEnabled": true,
+    "alwaysAllowExecute": true,
+    "allowed": ["git"],
+    "denied": ["git push"],
+    "bash": { "*": "ask", "git *": "allow", "git push *": "deny" },
+    "decisions": {
+      "git status": "allow",
+      "git push origin main": "deny",
+      "git push": "deny"
+    }
+  },
+  {
+    "name": "no command lists",
+    "autoApprovalEnabled": true,
+    "alwaysAllowExecute": true,
+    "allowed": [],
+    "denied": [],
+    "bash": null,
+    "decisions": {
+      "git status": "ask",
+      "curl https://example.com": "ask"
+    }
+  }
+]
