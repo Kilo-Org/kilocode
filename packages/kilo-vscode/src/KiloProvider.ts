@@ -2783,6 +2783,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
+    if (this.isAmbiguousSession(sessionID)) {
+      this.postAmbiguousSession(sessionID)
+      this.postMessage({ ...result, success: false })
+      return
+    }
+
     try {
       const response = await client.session.deleteMessage(
         { sessionID, messageID, directory: this.getWorkspaceDirectory(sessionID), queued: true },
@@ -4981,6 +4987,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private stopSession(sid: string, scope?: "session" | "tree"): Promise<boolean> {
+    if (this.isAmbiguousSession(sid)) return Promise.resolve(false)
     this.cancelRetry(sid)
     const client = this.client
     if (!client) return Promise.resolve(false)
@@ -5018,13 +5025,22 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private async handleAbort(sessionID?: string, scope?: "session" | "tree"): Promise<void> {
     const sid = sessionID || this.currentSession?.id
-    if (!sid || !(await this.stopSession(sid, scope))) return
+    if (!sid) return
+    if (this.isAmbiguousSession(sid)) {
+      this.postAmbiguousSession(sid)
+      return
+    }
+    if (!(await this.stopSession(sid, scope))) return
     this.mark(sid)
     this.publish(sid, { type: "idle" })
   }
 
   private async handleRevertSession(sessionID: string, messageID: string, partID?: string): Promise<void> {
     if (!this.client) return
+    if (this.isAmbiguousSession(sessionID)) {
+      this.postAmbiguousSession(sessionID)
+      return
+    }
     const dir = this.getWorkspaceDirectory(sessionID)
     const { data, error } = await this.client.session.revert({ sessionID, messageID, partID, directory: dir })
     if (error) {
@@ -5045,6 +5061,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private async handleUnrevertSession(sessionID: string): Promise<void> {
     if (!this.client) return
+    if (this.isAmbiguousSession(sessionID)) {
+      this.postAmbiguousSession(sessionID)
+      return
+    }
     const dir = this.getWorkspaceDirectory(sessionID)
     const { data, error } = await this.client.session.unrevert({ sessionID, directory: dir })
     if (error) {
@@ -5125,6 +5145,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       runPermissionResponse: (id, sid, action) => this.connectionService.runPermissionResponse(id, sid, action),
       isPermissionResponseClaimed: (id) => this.connectionService.isPermissionResponseClaimed(id),
       clearPermissionResponse: (id) => this.connectionService.clearPermissionResponse(id),
+      isSessionAmbiguous: (sid) => this.isAmbiguousSession(sid),
     }
   }
 
@@ -5143,6 +5164,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       getQuestionRevision: () => this.connectionService.getQuestionRevision(),
       pruneQuestionDirectories: (active: Set<string>, dirs: Set<string>) =>
         this.connectionService.pruneQuestionDirectories(active, dirs),
+      isSessionAmbiguous: (sid: string) => this.isAmbiguousSession(sid),
     }
   }
 
@@ -6075,6 +6097,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.postMessage({ type: "workspaceDirectoryChanged", directory })
   }
 
+  /**
+   * Directory a read-only or display path uses for a session.
+   *
+   * A session id that maps to more than one project has no single directory.
+   * Display paths keep a value, so they use the workspace-root resolution with
+   * a warning. Actions that change a session's state resolve through
+   * {@link isAmbiguousSession} first and report the unresolved directory to the
+   * webview.
+   */
   private getWorkspaceDirectory(sessionId?: string): string {
     const routed = this.routeSessionDirectory(sessionId ?? undefined)
     // Ambiguous ids degrade to the legacy resolution instead of throwing: this
@@ -6126,6 +6157,25 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return null
     }
     return undefined
+  }
+
+  /**
+   * Whether a raw session id resolves to no single project directory.
+   *
+   * Actions that change a session's state require a resolved directory, so
+   * they check this first.
+   */
+  private isAmbiguousSession(sessionId?: string): boolean {
+    return this.routeSessionDirectory(sessionId) === null
+  }
+
+  /** Report an unresolved session directory to the webview. */
+  private postAmbiguousSession(sessionID: string): void {
+    this.postMessage({
+      type: "error",
+      sessionID,
+      message: `Session ${sessionID} is ambiguous across projects; cannot resolve a directory without a project qualifier.`,
+    })
   }
 
   private isCurrentProjectDirectory(directory: string): boolean {

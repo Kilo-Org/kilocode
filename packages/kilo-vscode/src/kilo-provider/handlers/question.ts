@@ -22,6 +22,8 @@ export interface QuestionContext {
   clearQuestionDirectory(requestID: string): void
   getQuestionRevision(): number
   pruneQuestionDirectories(active: Set<string>, dirs: Set<string>): void
+  /** Whether a raw session id has no single project directory (Agent Manager). */
+  isSessionAmbiguous?(sessionId: string): boolean
 }
 
 interface QuestionRecovery {
@@ -124,7 +126,16 @@ async function resolve(
   // The webview names the session that owns the request; the fallback covers
   // other callers that do not.
   const sid = sessionID ?? ctx.currentSessionId
-  const dir = ctx.getQuestionDirectory(requestID) ?? ctx.getWorkspaceDirectory(sid)
+  // A recorded directory came from a directory-scoped question.list, so it is
+  // exact and stays authoritative. Without one, an id that maps to more than
+  // one project has no single directory, so the reply is reported back.
+  const recorded = ctx.getQuestionDirectory(requestID)
+  if (!recorded && sid && ctx.isSessionAmbiguous?.(sid)) {
+    console.error("[Kilo New] KiloProvider: Question route is ambiguous across projects:", sid)
+    ctx.postMessage({ type: "questionError", requestID })
+    return false
+  }
+  const dir = recorded ?? ctx.getWorkspaceDirectory(sid)
 
   try {
     await request(ctx.client.question, dir)

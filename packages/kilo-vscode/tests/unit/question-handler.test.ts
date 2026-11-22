@@ -32,6 +32,7 @@ function ctx(
     errors?: { list?: Record<string, unknown>; reply?: unknown | unknown[]; reject?: unknown | unknown[] }
     changeOnList?: string
     removeOnList?: string
+    ambiguous?: boolean
   } = {},
 ) {
   const messages: unknown[] = []
@@ -94,6 +95,7 @@ function ctx(
       revision += 1
     },
     getQuestionRevision: () => revision,
+    isSessionAmbiguous: () => opts.ambiguous ?? false,
     pruneQuestionDirectories: (active, scanned) => {
       const size = questionDirs.size
       for (const [id, dir] of questionDirs) {
@@ -157,6 +159,36 @@ describe("question handlers", () => {
         directory: "/workspace/.kilo/worktrees/current",
       },
     ])
+  })
+
+  it("reports a question reply when the session maps to more than one project and no directory is recorded", async () => {
+    const { fake, messages, replies } = ctx({ ambiguous: true })
+    const spy = spyOn(console, "error").mockImplementation(() => {})
+
+    const ok = await handleQuestionReply(fake, "req-ambiguous", [["Continue"]], "same")
+    spy.mockRestore()
+
+    expect(ok).toBe(false)
+    expect(replies).toEqual([])
+    expect(messages).toEqual([{ type: "questionError", requestID: "req-ambiguous" }])
+  })
+
+  it("routes a reply through the recorded directory when the session maps to more than one project", async () => {
+    const dir = "/workspace/.kilo/worktrees/origin"
+    const { fake, messages, replies, questionDirs } = ctx({
+      tracked: ["same"],
+      ambiguous: true,
+      extra: [dir],
+      pending: { [dir]: [pending("req-recorded", "same")] },
+    })
+    questionDirs.set("req-recorded", dir)
+
+    const ok = await handleQuestionReply(fake, "req-recorded", [["Continue"]], "same")
+
+    expect(ok).toBe(true)
+    expect(replies).toEqual([{ requestID: "req-recorded", answers: [["Continue"]], directory: dir }])
+    expect(messages).not.toContainEqual({ type: "questionError", requestID: "req-recorded" })
+    expect(questionDirs.has("req-recorded")).toBe(false)
   })
 
   it("removes a stale question when the backend reports it missing", async () => {

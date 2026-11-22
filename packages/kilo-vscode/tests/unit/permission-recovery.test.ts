@@ -65,6 +65,7 @@ function ctx(opts: {
   workspace?: string
   errors?: { list?: Record<string, unknown>; save?: unknown; reply?: unknown }
   extra?: string[]
+  ambiguous?: boolean
 }) {
   const messages: unknown[] = []
   const queries: string[] = []
@@ -90,6 +91,7 @@ function ctx(opts: {
       revision += 1
     },
     getPermissionRevision: () => revision,
+    isSessionAmbiguous: () => opts.ambiguous ?? false,
     prunePermissionDirectories: (active, dirs) => {
       for (const [key, dir] of permDirs) {
         if (active.has(key)) {
@@ -337,6 +339,33 @@ describe("handlePermissionResponse", () => {
 
     expect(permDirs.has("p1")).toBe(true)
     expect(messages).toEqual([{ type: "permissionError", permissionID: "p1" }])
+  })
+
+  it("reports a permission reply when the session maps to more than one project and no directory is recorded", async () => {
+    const { fake, messages, replies, saves } = ctx({ tracked: ["same"], ambiguous: true })
+    const spy = spyOn(console, "error").mockImplementation(() => {})
+
+    await handlePermissionResponse(fake, "p1", "same", "once", ["bun *"], [])
+    spy.mockRestore()
+
+    expect(saves).toEqual([])
+    expect(replies).toEqual([])
+    expect(messages).toEqual([{ type: "permissionError", permissionID: "p1" }])
+  })
+
+  it("keeps a recorded permission directory authoritative when the session maps to more than one project", async () => {
+    const dir = "/workspace/.kilo/worktrees/feature"
+    const { fake, messages, replies, permDirs } = ctx({
+      tracked: ["same"],
+      ambiguous: true,
+      permsPerDir: { [dir]: [pending("p1", "same")] },
+    })
+    permDirs.set("p1", dir)
+
+    await handlePermissionResponse(fake, "p1", "same", "once", [], [])
+
+    expect(replies).toEqual([{ requestID: "p1", reply: "once", directory: dir, interactive: true }])
+    expect(messages).toEqual([{ type: "permissionResolved", permissionID: "p1", sessionID: "same", response: "once" }])
   })
 })
 
