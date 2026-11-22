@@ -1,7 +1,7 @@
 import fs from "fs/promises"
 import path from "path"
 import { describe, expect } from "bun:test"
-import { Deferred, Effect, Fiber, Layer } from "effect"
+import { Deferred, Effect, FileSystem, Fiber, Layer, Option } from "effect" // kilocode_change - Option and File.Info for the missing-inode layer
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { FileMutation } from "@opencode-ai/core/file-mutation"
@@ -134,6 +134,38 @@ describe("FileMutation", () => {
         ).toMatchObject({ _tag: "FileMutation.TargetChangedError", path: target.canonical })
         expect(yield* Effect.promise(() => fs.readFile(targetPath, "utf8"))).toBe("later")
       }).pipe(provide(directory)),
+    ),
+  )
+
+  it.live("fails inspect when the filesystem reports no inode for an existing regular file", () =>
+    withTmp((directory) =>
+      Effect.gen(function* () {
+        const stripped = path.join(directory, "no-inode.txt")
+        const kept = path.join(directory, "with-inode.txt")
+        yield* Effect.promise(() => Promise.all([fs.writeFile(stripped, "content"), fs.writeFile(kept, "content")]))
+        const real = yield* Effect.promise(() => fs.stat(kept))
+        const filesystem = instrumentStat(
+          (target) => target === stripped,
+          (info) => (info.type === "File" ? { ...info, ino: Option.none<number>() } : info),
+        )
+
+        yield* Effect.gen(function* () {
+          const mutation = yield* LocationMutation.Service
+          const files = yield* FileMutation.Service
+          const bare = yield* mutation.resolve({ path: "no-inode.txt" })
+          const whole = yield* mutation.resolve({ path: "with-inode.txt" })
+
+          expect(yield* files.inspect(bare).pipe(Effect.flip)).toMatchObject({
+            _tag: "FileMutation.TargetKindError",
+            path: bare.canonical,
+          })
+          expect(yield* files.inspect(whole)).toEqual({
+            type: "file",
+            dev: real.dev,
+            ino: real.ino,
+          })
+        }).pipe(provide(directory, filesystem))
+      }),
     ),
   )
   // kilocode_change end
@@ -415,3 +447,21 @@ function instrumentWrites(run: <E>(write: Effect.Effect<void, E>, target: string
     }),
   ).pipe(Layer.provide(LayerNode.compile(FSUtil.node)))
 }
+
+// kilocode_change start - override reported stat info for the missing-inode branch
+function instrumentStat(
+  match: (target: string) => boolean,
+  override: (info: FileSystem.File.Info) => FileSystem.File.Info,
+) {
+  return Layer.effect(
+    FSUtil.Service,
+    Effect.gen(function* () {
+      const filesystem = yield* FSUtil.Service
+      return FSUtil.Service.of({
+        ...filesystem,
+        stat: (target) => filesystem.stat(target).pipe(Effect.map((info) => (match(target) ? override(info) : info))),
+      })
+    }),
+  ).pipe(Layer.provide(LayerNode.compile(FSUtil.node)))
+}
+// kilocode_change end
