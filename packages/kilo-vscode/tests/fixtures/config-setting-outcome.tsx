@@ -47,8 +47,9 @@ Object.assign(globalThis, {
 const { render } = await import("solid-js/web")
 const { VSCodeProvider } = await import("../../webview-ui/src/context/vscode")
 const { ConfigProvider, useConfig, settleBound } = await import("../../webview-ui/src/context/config")
-// Shorten the bound so the fixture proves the settle without a ten-second wait.
-settleBound.ms = 800
+// The bound cases shorten this so they prove the settle without a ten-second wait; every
+// other case keeps the real bound.
+const realBound = settleBound.ms
 const { post } = await import("../../webview-ui/src/utils/webview-message")
 
 interface ProbeError {
@@ -84,12 +85,21 @@ const Probe = () => {
 }
 
 const writes = () => sent.filter((message) => message.type === "updateSetting")
+/**
+ * A posted write without its generated id. The id differs every run, so the exact-shape
+ * assertions below describe only the key and value each call was written for.
+ */
+const stripWriteId = (message: WebviewMessage) => {
+  const copy: Record<string, unknown> = { ...message }
+  delete copy.writeId
+  return copy
+}
+const written = () => writes().map(stripWriteId)
 const lastWrite = () => {
   const write = writes().at(-1)
   assert.ok(write, "Expected a posted updateSetting message")
-  return write
+  return stripWriteId(write)
 }
-
 const failures: string[] = []
 const check = async (step: string, body: () => void | Promise<void>) => {
   try {
@@ -172,7 +182,7 @@ try {
     probe().applySetting(key, false)
     probe().applySetting(key, true)
     await settle()
-    assert.deepEqual(writes().slice(-2), [
+    assert.deepEqual(written().slice(-2), [
       { type: "updateSetting", key, value: false },
       { type: "updateSetting", key, value: true },
     ])
@@ -351,10 +361,17 @@ try {
   await check("a chain the host never answers settles at the bound", async () => {
     const key = "experimental.claudeMigration"
     const property = "claudeMigration"
-    const before = probe().settings()[property]
+    // The chain starts from a stored true, so sealing it on the value the host holds is
+    // observable as a return to true rather than to anything the writes left behind.
     probe().applySetting(property, true, key)
+    post({ type: "settingUpdated", key, value: true })
+    await settle()
+    const before = probe().settings()[property]
+    assert.equal(before, true, "the chain starts from a stored true")
+    settleBound.ms = 800
+    probe().applySetting(property, false, key)
     await Promise.resolve()
-    assert.equal(probe().settings()[property], true, "the display holds the optimistic value")
+    assert.equal(probe().settings()[property], false, "the display holds the optimistic value")
     await new Promise((r) => setTimeout(r, 1200))
     assert.equal(probe().settings()[property], before, "the chain settles on the value the host holds")
     assert.ok(probe().saveError() != null, "an unanswered write reports that the host did not answer")
@@ -363,15 +380,21 @@ try {
   await check("a write after an unanswered chain restores its own previous value", async () => {
     const key = "experimental.claudeMigration"
     const property = "claudeMigration"
-    const before = probe().settings()[property]
     probe().applySetting(property, true, key)
+    post({ type: "settingUpdated", key, value: true })
+    await settle()
+    const first = probe().settings()[property]
+    assert.equal(first, true, "the chain starts from a stored true")
+    settleBound.ms = 800
+    probe().applySetting(property, false, key)
     await Promise.resolve()
     await new Promise((r) => setTimeout(r, 1200))
-    probe().applySetting(property, false, key)
+    settleBound.ms = realBound
+    probe().applySetting(property, true, key)
     await Promise.resolve()
     post({ type: "settingUpdateFailed", key, message: "rejected after bound" })
     await settle()
-    assert.equal(probe().settings()[property], before, "the new chain restores the value before its own write")
+    assert.equal(probe().settings()[property], first, "the new chain restores the value before its own write")
     assert.deepEqual(probe().saveError(), { message: "rejected after bound", details: undefined })
   })
 
@@ -388,7 +411,35 @@ try {
     assert.equal(probe().settings()[key], false, "the stored value does not replace the newer edit")
     assert.equal(probe().isDirty(), true, "the newer edit stays pending")
   })
-
+  await check("a rejected write is told apart from a later write with the same value", async () => {
+    const key = "agentManager.browser.openLinksIn"
+    const property = "agentManagerBrowserOpenLinksIn"
+    const base = writes().length
+    // Two writes carry the same value; only the id can say which one the host is answering.
+    // The first is rejected, so the value the host holds comes from the second.
+    probe().applySetting(property, "integrated", key)
+    probe().applySetting(property, "external", key)
+    probe().applySetting(property, "integrated", key)
+    await settle()
+    const ids = writes()
+      .slice(base)
+      .map((write) => write.writeId)
+    assert.equal(ids.length, 3, "three writes were posted")
+    post({ type: "settingUpdateFailed", key, writeId: ids[0], message: "rejected first" })
+    await settle()
+    post({ type: "settingUpdated", key, value: "integrated", writeId: ids[2] })
+    await settle()
+    post({ type: "settingUpdated", key, value: "external", writeId: ids[1] })
+    await settle()
+    // The host applied the third write last, so that value is what it holds; a value-only
+    // match would settle on the rejected write's value instead.
+    assert.equal(
+      probe().settings()[property],
+      "integrated",
+      "the control shows the value of the last write the host stored",
+    )
+    assert.deepEqual(probe().saveError(), { message: "rejected first", details: undefined })
+  })
 } finally {
   dispose()
 }

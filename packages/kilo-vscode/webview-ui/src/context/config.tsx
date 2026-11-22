@@ -56,14 +56,22 @@ const settingProperties: Record<string, string> = {
  */
 export const settleBound = { ms: 10_000 }
 
+let writeCount = 0
+/**
+ * A fresh id for one `updateSetting` write. The host echoes it on that write's terminal
+ * message, so the answer names the write it settles even when two writes share a key, a
+ * value, or both.
+ */
+const nextWriteId = () => `w${(writeCount += 1).toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+
 /** One chain of `updateSetting` writes to a single key, reconciled with the host's answers. */
 interface PendingWrite {
   /** The `settings()` property the key writes. */
   property: string
   /** The rendered value before the chain's first write. */
   previous: unknown
-  /** Writes still awaiting a terminal message, oldest first, with their chain order. */
-  awaiting: { order: number; value: unknown }[]
+  /** Writes still awaiting a terminal message, oldest first, with their chain order and id. */
+  awaiting: { order: number; value: unknown; writeId: string }[]
   /** The value the newest orderable success confirmed. */
   stored: unknown
   /** Tells a confirmed `undefined` apart from no confirmation. */
@@ -229,15 +237,17 @@ export const ConfigProvider: ParentComponent = (props) => {
   }
   /**
    * Record a write before its optimistic update, so a rejected chain can restore what it
-   * replaced. Each write takes the chain's next order and restarts its settle bound.
+   * replaced, and return the id its outcome message must echo. Each write takes the chain's
+   * next order, binds that id to it, and restarts its settle bound.
    */
   const trackWrite = (writeKey: string, property: string, value: unknown) => {
+    const writeId = nextWriteId()
     const pending = pendingWrites.get(writeKey)
     if (pending == null) {
       const created: PendingWrite = {
         property,
         previous: savedSettings()[property],
-        awaiting: [{ order: 1, value }],
+        awaiting: [{ order: 1, value, writeId }],
         stored: undefined,
         hasStored: false,
         order: 1,
@@ -247,30 +257,49 @@ export const ConfigProvider: ParentComponent = (props) => {
       }
       pendingWrites.set(writeKey, created)
       armWrite(writeKey, created)
-      return
+      return writeId
     }
     pending.property = property
     pending.order += 1
-    pending.awaiting.push({ order: pending.order, value })
+    pending.awaiting.push({ order: pending.order, value, writeId })
     armWrite(writeKey, pending)
+    return writeId
+  }
+  /** Remove the write an answer's id names, or nothing when it carries no id or names none. */
+  const removeNamed = (pending: PendingWrite, writeId: string | undefined) => {
+    if (writeId == null) return undefined
+    const index = pending.awaiting.findIndex((write) => write.writeId === writeId)
+    if (index < 0) return undefined
+    return pending.awaiting.splice(index, 1)[0]
   }
   /**
-   * Record a success against the write it answers, matched by value to the writes still
-   * awaiting a terminal message. The host applies writes in order, so a success must not
-   * replace the value a newer success already confirmed: `stored` advances only when the
-   * arriving order is `storedOrder` or newer. A success whose value matches no awaiting
-   * write cannot be placed in the chain, so it keeps the rule that the last settled success
-   * wins and counts as the chain's newest order.
+   * Record a success against the write it answers. An id names exactly one write, so that
+   * write settles even when another write sent the same value, or when the host returned a
+   * different one (it stores `null` as `undefined`). An answer with no id falls back to the
+   * oldest write whose value the host returned, and to the oldest write when the host
+   * normalized that value; that write's own order is what the success confirms, so the
+   * fallback cannot advance `stored` past a value another success already confirmed. Either
+   * way `stored` only moves forward, to the newest write a success has confirmed.
    */
-  const confirmWrite = (pending: PendingWrite, value: unknown) => {
-    const matched = pending.awaiting.find((write) => write.value === value)
-    const order = matched?.order ?? pending.order
-    if (matched == null) pending.awaiting.shift()
-    else pending.awaiting.splice(pending.awaiting.indexOf(matched), 1)
-    if (pending.storedOrder != null && order < pending.storedOrder) return
+  const confirmWrite = (pending: PendingWrite, value: unknown, writeId?: string) => {
+    const named = removeNamed(pending, writeId)
+    if (writeId != null && named == null) return
+    const index = pending.awaiting.findIndex((write) => write.value === value)
+    const matched = named ?? pending.awaiting.splice(index < 0 ? 0 : index, 1)[0]
+    if (matched == null) return
+    if (pending.storedOrder != null && matched.order < pending.storedOrder) return
     pending.stored = value
     pending.hasStored = true
-    pending.storedOrder = order
+    pending.storedOrder = matched.order
+  }
+  /**
+   * Drop the write a rejection settles: the one its id names, or with no id the oldest
+   * pending write. An id that names no outstanding write leaves the chain untouched, so a
+   * duplicate answer cannot consume another write.
+   */
+  const rejectWrite = (pending: PendingWrite, writeId?: string) => {
+    if (removeNamed(pending, writeId) != null) return
+    if (writeId == null) pending.awaiting.shift()
   }
   /**
    * Adopt a host-stored value as both the rendered and the discard value. A newer draft edit
@@ -468,10 +497,10 @@ export const ConfigProvider: ParentComponent = (props) => {
       setSaveError({ message: message.message, details: message.details })
       return
     }
-    if (message.type === "settingUpdated") confirmWrite(pending, message.value)
+    if (message.type === "settingUpdated") confirmWrite(pending, message.value, message.writeId)
     else {
       // A rejection is reported at once, even while newer writes keep the chain pending.
-      pending.awaiting.shift()
+      rejectWrite(pending, message.writeId)
       setSaveError({ message: message.message, details: message.details })
     }
     // Every answer restarts the bound, so the timer only expires a chain that went quiet.
@@ -585,7 +614,7 @@ export const ConfigProvider: ParentComponent = (props) => {
    */
   function applySetting(key: string, value: unknown, writeKey?: string) {
     const wire = writeKey ?? key
-    trackWrite(wire, key, value)
+    const writeId = trackWrite(wire, key, value)
     setSavedSettings((prev) => ({ ...prev, [key]: value }))
     setSettings((prev) => ({ ...prev, [key]: value }))
     setSettingsDraft((prev) => {
@@ -594,7 +623,7 @@ export const ConfigProvider: ParentComponent = (props) => {
       return next
     })
     setSaveError(null)
-    vscode.postMessage({ type: "updateSetting", key: wire, value })
+    vscode.postMessage({ type: "updateSetting", key: wire, value, writeId })
   }
 
   function saveConfig() {
@@ -613,8 +642,8 @@ export const ConfigProvider: ParentComponent = (props) => {
     setSaveError(null)
     if (settingsDirty) {
       for (const [key, value] of Object.entries(pending)) {
-        trackWrite(key, key, value)
-        vscode.postMessage({ type: "updateSetting", key, value })
+        const writeId = trackWrite(key, key, value)
+        vscode.postMessage({ type: "updateSetting", key, value, writeId })
       }
       setSavedSettings((prev) => ({ ...prev, ...pending }))
       setSettingsDraft({})
