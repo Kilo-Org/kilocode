@@ -175,6 +175,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
   const vscode = useVSCode()
   const action = createProviderAction(vscode)
   onCleanup(action.dispose)
+  provider.trackDialog()
 
   const editing = () => !!props.existing
 

@@ -110,9 +110,9 @@ const WithSessions: ParentComponent<{ sessions?: typeof mockSessions }> = (props
   return (
     <VSCodeProvider>
       <ServerProvider>
-        <ConfigProvider>
-          <ProviderProvider>
-            <DialogProvider>
+        <DialogProvider>
+          <ConfigProvider>
+            <ProviderProvider>
               <LanguageContext.Provider value={{ locale, setLocale: noop, userOverride: () => "" as any, t }}>
                 <I18nProvider value={{ locale: () => "en", t, plural }}>
                   <SessionContext.Provider value={session as any}>
@@ -144,9 +144,9 @@ const WithSessions: ParentComponent<{ sessions?: typeof mockSessions }> = (props
                   </SessionContext.Provider>
                 </I18nProvider>
               </LanguageContext.Provider>
-            </DialogProvider>
-          </ProviderProvider>
-        </ConfigProvider>
+            </ProviderProvider>
+          </ConfigProvider>
+        </DialogProvider>
       </ServerProvider>
     </VSCodeProvider>
   )

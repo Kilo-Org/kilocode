@@ -241,6 +241,98 @@ it.live("remove switches to another org when the active account is removed", () 
   }),
 )
 
+// kilocode_change start
+it.live("remove keeps an account active when the remaining account has no organizations", () =>
+  Effect.gen(function* () {
+    const first = AccountID.make("user-1")
+    const second = AccountID.make("user-2")
+
+    yield* AccountRepo.Service.use((r) =>
+      r.persistAccount({
+        id: first,
+        email: "one@example.com",
+        url: "https://one.example.com",
+        accessToken: AccessToken.make("at_1"),
+        refreshToken: RefreshToken.make("rt_1"),
+        expiry: Date.now() + outsideEagerRefreshWindow,
+        orgID: Option.none(),
+      }),
+    )
+
+    yield* AccountRepo.Service.use((r) =>
+      r.persistAccount({
+        id: second,
+        email: "two@example.com",
+        url: "https://two.example.com",
+        accessToken: AccessToken.make("at_2"),
+        refreshToken: RefreshToken.make("rt_2"),
+        expiry: Date.now() + outsideEagerRefreshWindow,
+        orgID: Option.none(),
+      }),
+    )
+
+    const client = HttpClient.make((req) => Effect.succeed(json(req, [])))
+
+    yield* Account.use.remove(second).pipe(Effect.provide(live(client)))
+
+    const active = yield* AccountRepo.use.active()
+    expect(Option.getOrThrow(active)).toEqual(
+      expect.objectContaining({
+        id: first,
+        active_org_id: null,
+      }),
+    )
+  }),
+)
+// kilocode_change end
+
+// kilocode_change start
+it.live("remove keeps an account active when the remaining account org read fails", () =>
+  Effect.gen(function* () {
+    const first = AccountID.make("user-1")
+    const second = AccountID.make("user-2")
+
+    yield* AccountRepo.Service.use((r) =>
+      r.persistAccount({
+        id: first,
+        email: "one@example.com",
+        url: "https://one.example.com",
+        accessToken: AccessToken.make("at_1"),
+        refreshToken: RefreshToken.make("rt_1"),
+        expiry: Date.now() + outsideEagerRefreshWindow,
+        orgID: Option.some(OrgID.make("org-1")),
+      }),
+    )
+
+    yield* AccountRepo.Service.use((r) =>
+      r.persistAccount({
+        id: second,
+        email: "two@example.com",
+        url: "https://two.example.com",
+        accessToken: AccessToken.make("at_2"),
+        refreshToken: RefreshToken.make("rt_2"),
+        expiry: Date.now() + outsideEagerRefreshWindow,
+        orgID: Option.some(OrgID.make("org-2")),
+      }),
+    )
+
+    const client = HttpClient.make((req) =>
+      Effect.succeed(req.url === "https://one.example.com/api/orgs" ? json(req, {}, 500) : json(req, [], 404)),
+    )
+
+    yield* Account.use.remove(second).pipe(Effect.provide(live(client)))
+
+    const active = yield* AccountRepo.use.active()
+    expect(Option.getOrThrow(active)).toEqual(
+      expect.objectContaining({
+        id: first,
+        active_org_id: null,
+      }),
+    )
+  }),
+)
+// kilocode_change end
+
 it.live("token refresh persists the new token", () =>
   Effect.gen(function* () {
     const id = AccountID.make("user-1")

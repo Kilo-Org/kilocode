@@ -1653,6 +1653,9 @@ const usageProvider = {
   authStates: () => ({}),
   isModelValid: () => true,
   kiloUnavailable: () => false,
+  failures: () => [],
+  loadFailed: () => false,
+  trackDialog: () => {},
 }
 
 const usageStory = (open: boolean) => () => (

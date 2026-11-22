@@ -135,13 +135,25 @@ class LegacyMigrationEngine(
                 results.add(LegacyMigrationResultItem(profileName, MigrationItemCategory.provider, MigrationItemStatus.error, "Profile not found"))
                 continue
             }
-            sink.item(LegacyMigrationItemProgress(profileName, MigrationItemProgressStatus.migrating))
-            val conv = convertProvider(profileName, providerSettings) { store.oauthRaw(it) }
-            conv.auth?.let { backend.setAuth(PROVIDER_MAP[providerSettings["apiProvider"]?.jsonPrimitive?.content]?.id ?: "unknown", it) }
-            conv.config?.let { backend.updateGlobalConfig(it) }
-            val item = LegacyMigrationResultItem(profileName, MigrationItemCategory.provider, conv.status, conv.message)
-            results.add(item)
-            sink.item(LegacyMigrationItemProgress(profileName, conv.status.toProgressStatus(), conv.message))
+            val legacyProvider = providerSettings["apiProvider"]?.jsonPrimitive?.content
+            when (val resolution = resolveProvider(legacyProvider)) {
+                is ProviderResolution.Unresolved -> {
+                    results.add(LegacyMigrationResultItem(profileName, MigrationItemCategory.provider, resolution.status, resolution.message))
+                    sink.item(LegacyMigrationItemProgress(profileName, resolution.status.toProgressStatus(), resolution.message))
+                    continue
+                }
+
+                is ProviderResolution.Resolved -> {
+                    val mapping = resolution.mapping
+                    sink.item(LegacyMigrationItemProgress(profileName, MigrationItemProgressStatus.migrating))
+                    val conv = convertProvider(profileName, providerSettings) { store.oauthRaw(it) }
+                    conv.auth?.let { backend.setAuth(mapping.id, it) }
+                    conv.config?.let { backend.updateGlobalConfig(it) }
+                    val item = LegacyMigrationResultItem(profileName, MigrationItemCategory.provider, conv.status, conv.message)
+                    results.add(item)
+                    sink.item(LegacyMigrationItemProgress(profileName, conv.status.toProgressStatus(), conv.message))
+                }
+            }
         }
 
         // MCP servers
@@ -373,8 +385,10 @@ class LegacyMigrationEngine(
         if (profiles?.apiConfigs == null) return emptyList()
         return profiles.apiConfigs.entries.map { (profileName, settings) ->
             val provider: String = settings["apiProvider"]?.jsonPrimitive?.content ?: "unknown"
-            val mapping = PROVIDER_MAP[provider]
-            val unsupported = provider in UNSUPPORTED_PROVIDERS
+            val mapping = when (val resolution = resolveProvider(provider)) {
+                is ProviderResolution.Resolved -> resolution.mapping
+                is ProviderResolution.Unresolved -> null
+            }
             val modelField: String = mapping?.modelField ?: "apiModelId"
             val model: String? = settings[modelField]?.jsonPrimitive?.content
             val hasApiKey: Boolean = when {
@@ -391,7 +405,7 @@ class LegacyMigrationEngine(
                 provider = provider,
                 model = model,
                 hasApiKey = hasApiKey,
-                supported = mapping != null && !unsupported,
+                supported = mapping != null,
                 newProviderName = mapping?.name,
             )
         }
@@ -432,7 +446,10 @@ class LegacyMigrationEngine(
         profiles ?: return null
         val active = profiles.apiConfigs[profiles.currentApiConfigName] ?: return null
         val provider = active["apiProvider"]?.jsonPrimitive?.content ?: return null
-        val mapping = PROVIDER_MAP[provider] ?: return null
+        val mapping = when (val resolution = resolveProvider(provider)) {
+            is ProviderResolution.Resolved -> resolution.mapping
+            is ProviderResolution.Unresolved -> return null
+        }
         if (mapping.oauthSecretKey != null && provider !in oauthProviders) return null
         val modelField = mapping.modelField ?: "apiModelId"
         val model = active[modelField]?.jsonPrimitive?.content?.takeIf { it.isNotBlank() } ?: return null

@@ -772,7 +772,15 @@ const scenarios: Scenario[] = [
       path: route("/api/integration/attempt/{attemptID}", { attemptID: "con_missing" }),
       headers: ctx.headers(),
     }))
-    .status(500, undefined, "status"),
+    // kilocode_change start - a handle outside the retained set reports the unknown status
+    .json(
+      200,
+      locationData((data) => {
+        object(data)
+        check(data.status === "unknown", "a missing attempt should report an unknown status")
+      }),
+    ),
+  // kilocode_change end
   http.protected
     .post("/api/integration/attempt/{attemptID}/complete", "v2.integration.attempt.complete")
     .at((ctx) => ({
@@ -780,7 +788,7 @@ const scenarios: Scenario[] = [
       headers: ctx.headers(),
       body: {},
     }))
-    .status(500, undefined, "status"),
+    .status(404, undefined, "status"), // kilocode_change - a handle outside the retained set reports not-found
   http.protected
     .delete("/api/integration/attempt/{attemptID}", "v2.integration.attempt.cancel")
     .at((ctx) => ({

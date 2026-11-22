@@ -37,6 +37,7 @@ internal class KiloBackendProviderSettingsManager(
         private val FETCH by lazy { KiloBackendHttpClients.modelFetch() }
         private const val CALL_TIMEOUT_SECONDS = 15L
         private const val OAUTH_CALL_TIMEOUT_SECONDS = 60L
+        private const val GATEWAY_PROVIDER_ID = "kilo"
     }
 
     suspend fun state(directory: String): ProviderSettingsDto {
@@ -54,14 +55,23 @@ internal class KiloBackendProviderSettingsManager(
         val global = load("global_config", errors) {
             parsed(get("/global/config"))
         } ?: empty
-        val local = load("workspace_config", errors) {
+        // The resolved `/config` body carries every global value the project file does not override
+        // and includes other config sources, so it is the only body that describes the effective
+        // provider settings (npm, baseURL, env) the UI and `disconnect` rely on.
+        val resolved = load("workspace_config", errors) {
             parsed(get("/config?directory=${enc(directory)}"))
         } ?: empty
-        val cfg = scopedConfig(global.config, local.config)
-        val disabled = (global.disabled + local.disabled).distinct().sorted()
-        val enabled = (global.enabled + local.enabled).distinct().sorted()
-        val disabledScopes = scopedIds(global.disabled, local.disabled)
-        val enabledScopes = scopedIds(global.enabled, local.enabled)
+        // The resolved body also repeats every global list entry, so it cannot tell a workspace-scope
+        // entry from an inherited one. The overlay reports each file's raw content; it is used only
+        // for the scope maps, never for the config or the merged id lists.
+        val project = load("config_overlay", errors) {
+            KiloCliDataParser.parseConfigOverlayProject(get("/config/overlay?directory=${enc(directory)}&scope=project"))?.let { parsed(it) }
+        }
+        val cfg = scopedConfig(global.config, resolved.config)
+        val disabled = (global.disabled + resolved.disabled).distinct().sorted()
+        val enabled = (global.enabled + resolved.enabled).distinct().sorted()
+        val disabledScopes = scopedIds(global.disabled, project?.disabled ?: resolved.disabled, merged = project == null)
+        val enabledScopes = scopedIds(global.enabled, project?.enabled ?: resolved.enabled, merged = project == null)
         val result = ProviderSettingsDto(
             providers = providers?.first ?: emptyList(),
             connected = providers?.second ?: emptyList(),
@@ -85,6 +95,9 @@ internal class KiloBackendProviderSettingsManager(
     }
 
     suspend fun connect(input: ProviderConnectDto): ProviderActionResultDto {
+        if (input.providerId == GATEWAY_PROVIDER_ID) {
+            return ProviderActionResultDto(state(input.directory), error = "Kilo Gateway cannot be connected from provider settings.")
+        }
         val body = KiloCliDataParser.buildProviderAuthJson(input.key, input.metadata)
         put("/auth/${enc(input.providerId)}", body)
         dispose()
@@ -109,7 +122,7 @@ internal class KiloBackendProviderSettingsManager(
         val current = state(input.directory)
         val provider = current.providers.firstOrNull { it.id == input.providerId }
         val cfg = current.config[input.providerId]
-        if (input.providerId == "kilo") {
+        if (input.providerId == GATEWAY_PROVIDER_ID) {
             return ProviderActionResultDto(current, error = "Kilo Gateway cannot be disconnected from provider settings.")
         }
         if (provider?.source == "env" && cfg == null) {
@@ -144,7 +157,13 @@ internal class KiloBackendProviderSettingsManager(
             patch(input.directory, scope, KiloCliDataParser.buildDisabledProviderPatch(disabledFor(current, scope).filter { it != input.providerId }))
         }
         dispose()
-        return ProviderActionResultDto(state(input.directory))
+        // Clearing every scope the manager knows about can still leave the id disabled in a source
+        // it cannot edit (managed or org config), so report that instead of claiming success.
+        val next = state(input.directory)
+        if (input.providerId in next.disabled) {
+            return ProviderActionResultDto(next, error = "Provider is still disabled in another configuration source.")
+        }
+        return ProviderActionResultDto(next)
     }
 
     suspend fun saveCustom(input: CustomProviderSaveDto): ProviderActionResultDto {
@@ -277,12 +296,21 @@ internal class KiloBackendProviderSettingsManager(
         }.toMap()
     }
 
-    private fun scopedIds(global: List<String>, local: List<String>): Map<String, List<String>> {
+    /**
+     * Maps every listed id to the scopes whose config file lists it.
+     *
+     * `merged` says that [local] is not the project file's own list but the resolved config,
+     * which repeats whatever the global file sets. In that case an id that is already global
+     * must not also be attributed to the workspace, or the UI would claim a workspace override
+     * that does not exist and `enable` would rewrite the workspace file for nothing.
+     */
+    private fun scopedIds(global: List<String>, local: List<String>, merged: Boolean = false): Map<String, List<String>> {
         val globals = global.toSet()
+        val locals = local.toSet()
         return (global + local).distinct().associateWith { id ->
             buildList {
                 if (id in globals) add("global")
-                if (id in local && id !in globals) add("workspace")
+                if (id in locals && (!merged || id !in globals)) add("workspace")
             }
         }
     }
@@ -327,6 +355,7 @@ internal class KiloBackendProviderSettingsManager(
     private fun enc(value: String) = URLEncoder.encode(value, StandardCharsets.UTF_8)
 
     private fun validate(input: CustomProviderSaveDto): String? {
+        if (input.id.trim() == GATEWAY_PROVIDER_ID) return "Kilo Gateway cannot be saved as a custom provider."
         val env = input.envVar
         if (!Regex("^[a-zA-Z0-9_-]+$").matches(input.id.trim())) return "Provider ID can only contain letters, numbers, underscores, and hyphens."
         if (!input.baseUrl.startsWith("http://") && !input.baseUrl.startsWith("https://")) return "Base URL must start with http:// or https://."

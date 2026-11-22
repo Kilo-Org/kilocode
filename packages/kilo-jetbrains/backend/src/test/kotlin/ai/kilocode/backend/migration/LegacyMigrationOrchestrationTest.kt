@@ -67,6 +67,83 @@ class LegacyMigrationOrchestrationTest {
         assertEquals(MigrationItemStatus.error, report.items[0].status)
     }
 
+    @Test
+    fun `migrate - unmapped provider is reported and nothing is written`() {
+        val (eng, _, backend) = setup {
+            providerProfiles = """
+                {
+                  "currentApiConfigName": "p",
+                  "apiConfigs": {
+                    "p": { "apiProvider": "totally-unknown-provider", "apiKey": "sk-x" }
+                  }
+                }
+            """.trimIndent()
+        }
+        assertFalse(eng.detect().providers.single().supported)
+        val items = mutableListOf<LegacyMigrationItemProgress>()
+        val sessions = mutableListOf<LegacyMigrationSessionProgress>()
+        val report = eng.migrate(noSelections().copy(providers = listOf("p")), sink(items, sessions))
+        val item = report.items.single()
+        assertEquals(MigrationItemCategory.provider, item.category)
+        assertEquals(MigrationItemStatus.warning, item.status)
+        assertEquals("Unknown provider \"totally-unknown-provider\"", item.message)
+        assertEquals(emptyList(), backend.authCalls)
+        assertEquals(emptyList(), backend.configCalls)
+        assertEquals(1, items.size)
+        assertEquals(MigrationItemProgressStatus.warning, items[0].status)
+        assertEquals(item.message, items[0].message)
+    }
+
+    @Test
+    fun `migrate - unsupported provider is reported and nothing is written`() {
+        val (eng, _, backend) = setup {
+            providerProfiles = """
+                {
+                  "currentApiConfigName": "p",
+                  "apiConfigs": {
+                    "p": { "apiProvider": "glama", "apiKey": "sk-x" }
+                  }
+                }
+            """.trimIndent()
+        }
+        assertFalse(eng.detect().providers.single().supported)
+        val items = mutableListOf<LegacyMigrationItemProgress>()
+        val sessions = mutableListOf<LegacyMigrationSessionProgress>()
+        val report = eng.migrate(noSelections().copy(providers = listOf("p")), sink(items, sessions))
+        val item = report.items.single()
+        assertEquals(MigrationItemCategory.provider, item.category)
+        assertEquals(MigrationItemStatus.warning, item.status)
+        assertEquals("Provider \"glama\" is not supported in the new version", item.message)
+        assertEquals(emptyList(), backend.authCalls)
+        assertEquals(emptyList(), backend.configCalls)
+        assertEquals(1, items.size)
+        assertEquals(MigrationItemProgressStatus.warning, items[0].status)
+        assertEquals(item.message, items[0].message)
+    }
+
+    @Test
+    fun `migrate - profile without a provider type is reported and nothing is written`() {
+        val (eng, _, backend) = setup {
+            providerProfiles = """
+                {
+                  "currentApiConfigName": "p",
+                  "apiConfigs": {
+                    "p": { "apiKey": "sk-x" }
+                  }
+                }
+            """.trimIndent()
+        }
+        assertFalse(eng.detect().providers.single().supported)
+        val items = mutableListOf<LegacyMigrationItemProgress>()
+        val report = eng.migrate(noSelections().copy(providers = listOf("p")), itemSink(items))
+        val item = report.items.single()
+        assertEquals(MigrationItemStatus.error, item.status)
+        assertEquals("No provider type found", item.message)
+        assertEquals(emptyList(), backend.authCalls)
+        assertEquals(emptyList(), backend.configCalls)
+        assertEquals(MigrationItemProgressStatus.error, items.single().status)
+    }
+
     // -----------------------------------------------------------------------
     // MCP migration
     // -----------------------------------------------------------------------
