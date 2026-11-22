@@ -195,6 +195,28 @@ describe("GoogleVertexAnthropicPlugin", () => {
     }),
   )
 
+  it.effect("treats a blank Anthropic endpoint as unset and builds the regional endpoint", () =>
+    withEnv({ GOOGLE_CLOUD_LOCATION: "europe-west4", VERTEX_LOCATION: undefined }, () =>
+      Effect.gen(function* () {
+        const plugin = yield* PluginV2.Service
+        const aisdk = yield* AISDK.Service
+        yield* addPlugin(GoogleVertexAnthropicPlugin)
+        const result = yield* aisdk.runSDK({
+          model: ModelV2.Info.make({
+            ...ModelV2.Info.empty(ProviderV2.ID.make("google-vertex"), ModelV2.ID.make("claude-sonnet-4-5")),
+            api: { id: ModelV2.ID.make("claude-sonnet-4-5"), type: "aisdk", package: "test-provider" },
+          }),
+          package: "@ai-sdk/google-vertex/anthropic",
+          options: { name: "google-vertex", project: "project", baseURL: "   " },
+        })
+        expect("baseURL" in result.options).toBe(false)
+        expect(result.sdk.languageModel("claude-sonnet-4-5").config.baseURL).toBe(
+          "https://europe-west4-aiplatform.googleapis.com/v1/projects/project/locations/europe-west4/publishers/anthropic/models",
+        )
+      }),
+    ),
+  )
+
   // kilocode_change start - the location is validated when the model is used
   it.effect("requires a Google Cloud region for the Anthropic location", () =>
     Effect.gen(function* () {

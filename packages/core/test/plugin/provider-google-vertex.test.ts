@@ -671,6 +671,60 @@ describe("GoogleVertexPlugin", () => {
     }),
   )
 
+  it.effect("treats a blank OpenAI-compatible endpoint as unset and resolves the region", () =>
+    withEnv(
+      { GOOGLE_VERTEX_LOCATION: "europe-west4", GOOGLE_CLOUD_LOCATION: undefined, VERTEX_LOCATION: undefined },
+      () =>
+        Effect.gen(function* () {
+          const plugin = yield* PluginV2.Service
+          const aisdk = yield* AISDK.Service
+          yield* addPlugin()
+          const result = yield* aisdk.runSDK({
+            model: ModelV2.Info.make({
+              ...ModelV2.Info.empty(ProviderV2.ID.make("google-vertex"), ModelV2.ID.make("gemini")),
+              api: {
+                id: ModelV2.ID.make("gemini"),
+                type: "aisdk",
+                package: "@ai-sdk/openai-compatible",
+              },
+            }),
+            package: "@ai-sdk/openai-compatible",
+            options: { name: "google-vertex", baseURL: "   " },
+          })
+          expect("baseURL" in result.options).toBe(false)
+          expect(result.options.location).toBe("europe-west4")
+        }),
+    ),
+  )
+
+  it.effect("treats a blank native Vertex endpoint as unset and resolves the region", () =>
+    withEnv(
+      { GOOGLE_VERTEX_LOCATION: "europe-west4", GOOGLE_CLOUD_LOCATION: undefined, VERTEX_LOCATION: undefined },
+      () =>
+        Effect.gen(function* () {
+          vertexOptions.length = 0
+          const plugin = yield* PluginV2.Service
+          const aisdk = yield* AISDK.Service
+          yield* addPlugin()
+          yield* aisdk.runSDK({
+            model: ModelV2.Info.make({
+              ...ModelV2.Info.empty(ProviderV2.ID.make("google-vertex"), ModelV2.ID.make("gemini")),
+              api: {
+                id: ModelV2.ID.make("gemini"),
+                type: "aisdk",
+                package: "@ai-sdk/google-vertex",
+              },
+            }),
+            package: "@ai-sdk/google-vertex",
+            options: { name: "google-vertex", baseURL: "   " },
+          })
+          expect(vertexOptions).toHaveLength(1)
+          expect("baseURL" in vertexOptions[0]).toBe(false)
+          expect(vertexOptions[0].location).toBe("europe-west4")
+        }),
+    ),
+  )
+
   it.effect("persists a padded Vertex location in lowercase and expands the endpoint", () =>
     Effect.gen(function* () {
       const catalog = yield* Catalog.Service
