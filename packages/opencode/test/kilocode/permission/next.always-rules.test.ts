@@ -1023,30 +1023,53 @@ describe("saveAlwaysRules", () => {
     ),
   )
 
-  it.live("a rule the config cannot express writes nothing", () =>
+  it.live("a rule the config cannot express leaves the saved entry alone", () =>
     withDir({ git: true }, () =>
       Effect.gen(function* () {
+        // Seed the tool-wide action, then approve a concrete pattern this format
+        // cannot store. The concrete approval must not disturb the saved entry.
+        const seed = yield* ask({
+          id: PermissionV1.ID.make("permission_unexpressible_seed"),
+          sessionID: SessionID.make("session_test"),
+          permission: "webfetch",
+          patterns: ["https://example.com/a"],
+          metadata: { sandboxEscalation: true },
+          always: ["*"],
+          ruleset: [],
+        }).pipe(Effect.forkScoped)
+        yield* waitForPending(1)
+        yield* saveAlwaysRules({
+          requestID: PermissionV1.ID.make("permission_unexpressible_seed"),
+          approvedAlways: ["*"],
+        })
+        yield* reply({
+          requestID: PermissionV1.ID.make("permission_unexpressible_seed"),
+          reply: "once",
+          interactive: true,
+        })
+        yield* Fiber.join(seed)
+
+        const cfg = yield* Config.Service
+        expect((yield* cfg.get()).permission?.webfetch).toBe("allow")
+
         const asking = yield* ask({
           id: PermissionV1.ID.make("permission_unexpressible"),
           sessionID: SessionID.make("session_test"),
           permission: "webfetch",
-          patterns: ["https://example.com/a"],
-          metadata: {},
-          always: ["https://example.com/a"],
+          patterns: ["https://example.com/b"],
+          metadata: { sandboxEscalation: true },
+          always: ["https://example.com/b"],
           ruleset: [],
         }).pipe(Effect.forkScoped)
         yield* waitForPending(1)
         yield* saveAlwaysRules({
           requestID: PermissionV1.ID.make("permission_unexpressible"),
-          approvedAlways: ["https://example.com/a"],
+          approvedAlways: ["https://example.com/b"],
         })
-        yield* reply({ requestID: PermissionV1.ID.make("permission_unexpressible"), reply: "once" })
+        yield* reply({ requestID: PermissionV1.ID.make("permission_unexpressible"), reply: "once", interactive: true })
         yield* Fiber.join(asking)
 
-        // A scalar-only permission stores only its tool-wide action, so this request
-        // leaves the permission key untouched rather than deleting it.
-        const cfg = yield* Config.Service
-        expect((yield* cfg.get()).permission?.webfetch).toBeUndefined()
+        expect((yield* cfg.get()).permission?.webfetch).toBe("allow")
       }),
     ),
   )
