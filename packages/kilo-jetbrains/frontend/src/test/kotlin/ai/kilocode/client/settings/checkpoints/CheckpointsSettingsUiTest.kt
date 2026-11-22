@@ -360,6 +360,48 @@ class CheckpointsSettingsUiTest : BasePlatformTestCase() {
         assertEquals(listOf(true, false), rpc.configPatches.map { it.retention?.enabled })
     }
 
+    fun `test retry finishes the write-back after the page is disposed`() {
+        start(
+            ConfigDto(retention = RetentionConfigDto(enabled = false, maxAgeDays = 30)),
+            confirm = { true },
+        )
+        rpc.retention = RetentionStatusDto(policy = RetentionPolicyDto(true, 30))
+        rpc.configUpdateErrorWhen = { it.retention?.enabled == false }
+        val unrestored = KiloBundle.message("settings.checkpoints.cleanup.status.unrestored")
+
+        flushUntil { edt { runButton().isEnabled } }
+        edt { runButton().doClick(0) }
+
+        flushUntil(
+            describe = {
+                edt { "status='${cleanupStatus()}' retryVisible=${retryLink().isVisible} writes=${rpc.configPatches.size} failed=${rpc.configUpdateFailedAttempts} forces=${rpc.retentionForces}" }
+            },
+        ) {
+            edt { cleanupStatus().contains(unrestored) && retryLink().isVisible }
+        }
+
+        // Gate the write-back so the page can be disposed while the retry is in flight.
+        rpc.configUpdateErrorWhen = null
+        val attempts = rpc.configUpdateAttempts
+        rpc.configUpdateGate = CompletableDeferred()
+        edt { retryLink().doClick() }
+        flushUntil(
+            describe = { "attempts=${rpc.configUpdateAttempts} base=$attempts" },
+        ) { rpc.configUpdateAttempts > attempts }
+
+        edt {
+            requireNotNull(ui).dispose()
+            ui = null
+        }
+
+        // The write-back runs on the app scope, so releasing the gate must still land the write.
+        rpc.configUpdateGate?.complete(Unit)
+        flushUntil(
+            describe = { "patches=${rpc.configPatches.map { it.retention?.enabled }} attempts=${rpc.configUpdateAttempts}" },
+        ) { rpc.configPatches.map { it.retention?.enabled } == listOf(true, false) }
+        assertEquals(listOf(true, false), rpc.configPatches.map { it.retention?.enabled })
+    }
+
     private fun awaitManualRetention(policy: RetentionPatchDto): ManualRetentionResult {
         val done = CompletableDeferred<ManualRetentionResult>()
         app.runManualRetentionAsync(policy) { result -> done.complete(result) }

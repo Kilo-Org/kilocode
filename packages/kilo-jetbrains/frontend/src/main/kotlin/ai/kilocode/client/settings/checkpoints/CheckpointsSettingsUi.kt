@@ -217,7 +217,9 @@ internal class CheckpointsSettingsUi(
         LOG.info("manual session cleanup: retrying retention restore")
         val policy = RetentionPatchDto(enabled = false, maxAgeDays = baseline.days)
         // The write-back runs on the app-lifetime scope, so closing settings mid-retry cannot cancel it.
-        val job = app.restoreRetentionAsync(policy) { restored ->
+        // The job is deliberately not added to `jobs`: dispose() cancels that list, which would cancel
+        // an app-scope job and undo the guarantee this path exists to provide.
+        app.restoreRetentionAsync(policy) { restored ->
             ApplicationManager.getApplication().invokeLater({
                 if (isDisposed) {
                     // The notification outlives the page, so keep a retry offered when the write failed.
@@ -234,7 +236,6 @@ internal class CheckpointsSettingsUi(
                 notifyUnrestored()
             }, ModalityState.any())
         }
-        if (!isDisposed) jobs += job
     }
 
     private fun notifyFailed() {
