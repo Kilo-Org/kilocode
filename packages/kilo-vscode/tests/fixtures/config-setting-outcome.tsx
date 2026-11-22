@@ -416,21 +416,21 @@ try {
     const key = "agentManager.browser.openLinksIn"
     const property = "agentManagerBrowserOpenLinksIn"
     const base = writes().length
-    // Two writes carry the same value; only the id can say which one the host is answering.
-    // The first is rejected, so the value the host holds comes from the second.
-    probe().applySetting(property, "integrated", key)
+    // The middle write is rejected and the answers arrive out of issue order. The settle must
+    // land on the value of the last write the host stored, which is the newest one.
     probe().applySetting(property, "external", key)
+    probe().applySetting(property, "integrated", key)
     probe().applySetting(property, "integrated", key)
     await settle()
     const ids = writes()
       .slice(base)
       .map((write) => write.writeId)
     assert.equal(ids.length, 3, "three writes were posted")
-    post({ type: "settingUpdateFailed", key, writeId: ids[0], message: "rejected first" })
+    post({ type: "settingUpdateFailed", key, writeId: ids[1], message: "rejected middle" })
     await settle()
     post({ type: "settingUpdated", key, value: "integrated", writeId: ids[2] })
     await settle()
-    post({ type: "settingUpdated", key, value: "external", writeId: ids[1] })
+    post({ type: "settingUpdated", key, value: "external", writeId: ids[0] })
     await settle()
     // The host applied the third write last, so that value is what it holds; a value-only
     // match would settle on the rejected write's value instead.
@@ -439,7 +439,7 @@ try {
       "integrated",
       "the control shows the value of the last write the host stored",
     )
-    assert.deepEqual(probe().saveError(), { message: "rejected first", details: undefined })
+    assert.deepEqual(probe().saveError(), { message: "rejected middle", details: undefined })
   })
 } finally {
   dispose()
