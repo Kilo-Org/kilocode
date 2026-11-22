@@ -6,7 +6,7 @@ describe("commit-message git context", () => {
     const out = new Map([
       ["branch --show-current", "main"],
       ["log --oneline -5", "abc1234 init"],
-      ["diff --name-status --cached", "M\tsrc/index.ts"],
+      ["diff --name-status -z --cached", "M\0src/index.ts\0"],
       ["diff --cached -- src/index.ts", "+console.log('hi')"],
     ])
 
@@ -19,8 +19,10 @@ describe("commit-message git context", () => {
     }) as unknown as typeof Bun.spawnSync)
 
     try {
-      await getGitContext("/repo")
+      const ctx = await getGitContext("/repo")
 
+      // The per-file diff spawn must run, or this test checks fewer subprocesses than it claims.
+      expect(ctx.files).toEqual([{ status: "modified", path: "src/index.ts", diff: "+console.log('hi')" }])
       expect(spy).toHaveBeenCalledTimes(4)
       for (const call of spy.mock.calls) {
         expect(call[0]).toEqual(expect.arrayContaining(["git"]))
