@@ -602,20 +602,15 @@ const Settings: Component<SettingsProps> = (props) => {
                     {language.t("settings.saveBar.saveFailed")}:{" "}
                     <span class="settings-save-bar-error-firstline">{err().message}</span>
                   </span>
-                  {/* Without the save bar this is the only control, so the error needs its own way out. */}
-                  <Show when={!isDirty()}>
-                    <Button
-                      variant="ghost"
-                      size="small"
-                      onClick={(event: MouseEvent) => {
-                        event.stopPropagation()
-                        clearSaveError()
-                      }}
-                    >
+                </div>
+                {/* Outside the expander: a button inside `role="button"` is presentational to AT. */}
+                <Show when={!isDirty()}>
+                  <div class="settings-save-bar-error-actions">
+                    <Button variant="ghost" size="small" onClick={() => clearSaveError()}>
                       {language.t("settings.saveBar.dismissError")}
                     </Button>
-                  </Show>
-                </div>
+                  </div>
+                </Show>
                 <Show when={errorExpanded()}>
                   <pre class="settings-save-bar-error-details">{err().details ?? err().message}</pre>
                 </Show>
