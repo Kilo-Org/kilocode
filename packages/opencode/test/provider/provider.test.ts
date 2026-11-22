@@ -1994,11 +1994,9 @@ it.instance(
     expect(languageBaseURL(language)).toBe(
       "https://aiplatform.eu.rep.googleapis.com/v1/projects/test-project/locations/eu/publishers/anthropic/models",
     )
-    // the loader resolves the regional endpoint itself, so the provider options carry it
+    // the endpoint is built at model use, after the location is validated and normalized
     const info = yield* provider.getProvider(ProviderV2.ID.make("google-vertex-anthropic"))
-    expect(info.options?.baseURL).toBe(
-      "https://aiplatform.eu.rep.googleapis.com/v1/projects/test-project/locations/eu/publishers/anthropic/models",
-    )
+    expect(info.options?.baseURL).toBeUndefined()
   }),
   {
     config: {
@@ -2030,6 +2028,29 @@ it.instance(
     config: {
       provider: {
         "google-vertex-anthropic": { options: { project: "cfg-project" } },
+      },
+    },
+  },
+)
+// kilocode_change end
+
+// kilocode_change start - an invalid configured location is reported when the model is used
+it.instance(
+  "Google Vertex Anthropic: requires a Google Cloud region for the location",
+  Effect.gen(function* () {
+    const provider = yield* Provider.Service
+    const model = yield* provider.getModel(
+      ProviderV2.ID.make("google-vertex-anthropic"),
+      ModelV2.ID.make("claude-sonnet-4-6@default"),
+    )
+    const exit = yield* provider.getLanguage(model).pipe(Effect.exit)
+    expect(exit._tag).toBe("Failure")
+    expect(String(exit)).toContain("Invalid Google Vertex location")
+  }),
+  {
+    config: {
+      provider: {
+        "google-vertex-anthropic": { options: { project: "test-project", location: "proxy.example/x" } },
       },
     },
   },

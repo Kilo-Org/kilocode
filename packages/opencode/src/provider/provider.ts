@@ -595,13 +595,12 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       // kilocode_change end
       const autoload = Boolean(project)
       if (!autoload) return { autoload: false }
-      const baseURL = googleVertexAnthropicBaseURL(project, location)
       return {
         autoload: true,
         options: {
           project,
           location,
-          ...(baseURL && { baseURL }),
+          // kilocode_change - the endpoint is built at model use from the validated location
         },
         async getModel(sdk: any, modelID) {
           const id = String(modelID).trim()
@@ -1838,8 +1837,9 @@ const layer = Layer.effect(
         resolveEndpointOptions(model.providerID, model.api.url, options, envs)
         // kilocode_change end
 
+        // kilocode_change start - build the continental multi-region endpoint after the location is validated
         if (
-          model.providerID === "google-vertex" &&
+          (model.providerID === "google-vertex" || model.providerID === "google-vertex-anthropic") &&
           model.api.npm === "@ai-sdk/google-vertex/anthropic" &&
           !options.baseURL
         ) {
@@ -1849,6 +1849,7 @@ const layer = Layer.effect(
           )
           if (baseURL) options.baseURL = baseURL
         }
+        // kilocode_change end
 
         if (model.providerID === "google-vertex" && !model.api.npm.includes("@ai-sdk/openai-compatible")) {
           delete options.fetch
