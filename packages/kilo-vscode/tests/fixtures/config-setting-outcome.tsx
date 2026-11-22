@@ -390,7 +390,8 @@ try {
     await Promise.resolve()
     await new Promise((r) => setTimeout(r, 1200))
     settleBound.ms = realBound
-    probe().applySetting(property, true, key)
+    // A value different from `first`, so a rejection that restores nothing is visible.
+    probe().applySetting(property, false, key)
     await Promise.resolve()
     post({ type: "settingUpdateFailed", key, message: "rejected after bound" })
     await settle()
