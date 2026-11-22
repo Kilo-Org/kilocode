@@ -192,14 +192,11 @@ object LegacyMigrationConverters {
         oauthRaw: (String) -> String?,
     ): ProviderConversionResult {
         val provider = settings["apiProvider"]?.jsonPrimitive?.content
-            ?: return ProviderConversionResult(null, null, MigrationItemStatus.error, "No provider type found")
-
-        if (provider in UNSUPPORTED_PROVIDERS) {
-            return ProviderConversionResult(null, null, MigrationItemStatus.warning, "Provider \"$provider\" is not supported in the new version")
+        val mapping = when (val resolution = resolveProvider(provider)) {
+            is ProviderResolution.Resolved -> resolution.mapping
+            is ProviderResolution.Unresolved ->
+                return ProviderConversionResult(null, null, resolution.status, resolution.message)
         }
-
-        val mapping = PROVIDER_MAP[provider]
-            ?: return ProviderConversionResult(null, null, MigrationItemStatus.warning, "Unknown provider \"$provider\"")
 
         // OAuth providers (e.g. openai-codex) stored separately
         if (mapping.oauthSecretKey != null) {
