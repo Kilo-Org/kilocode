@@ -48,9 +48,12 @@ const evidence = await verifyEvidence()
 
 const flag = prerelease ? ["--pre-release"] : []
 
-// Resolved from the checkout so the Open VSX client comes from bun.lock, not a
-// registry fetch at publish time.
+// Resolved from the checkout so the Open VSX client comes from bun.lock.
 const ovsx = join(import.meta.dir, "..", "node_modules", ".bin", "ovsx")
+
+if (!existsSync(ovsx)) {
+  throw new Error(`Open VSX client not found: ${ovsx}`)
+}
 
 for (const target of targets) {
   const vsixPath = join(outDir, `kilo-vscode-${target}.vsix`)
