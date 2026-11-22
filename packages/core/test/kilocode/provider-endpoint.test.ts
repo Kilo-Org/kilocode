@@ -1,9 +1,11 @@
 import { describe, expect, test } from "bun:test"
 import {
+  dropBlankEndpoint,
   EndpointConfigError,
   isVertexHost,
   normalizeVertexLocation,
   parseVertexLocation,
+  vertexEndpointDerived,
 } from "../../src/kilocode/provider-endpoint"
 
 describe("Google Vertex location", () => {
@@ -52,5 +54,44 @@ describe("Vertex API host", () => {
     expect(isVertexHost("eu--aiplatform.mtls.googleapis.com")).toBe(false)
     expect(isVertexHost("aiplatform.eu-.rep.googleapis.com")).toBe(false)
     expect(isVertexHost("aiplatform.googleapis.com.evil.example")).toBe(false)
+  })
+})
+
+describe("blank Vertex endpoint", () => {
+  test("counts an unset or blank request URL as derived from the location", () => {
+    expect(vertexEndpointDerived("   ")).toBe(true)
+    expect(vertexEndpointDerived("\t\n")).toBe(true)
+    expect(vertexEndpointDerived("")).toBe(true)
+    expect(vertexEndpointDerived(undefined)).toBe(true)
+    expect(vertexEndpointDerived("https://${GOOGLE_VERTEX_LOCATION}-aiplatform.googleapis.com/v1")).toBe(true)
+  })
+
+  test("counts a concrete request URL as its own endpoint", () => {
+    expect(vertexEndpointDerived("https://proxy.example/v1")).toBe(false)
+  })
+
+  test("removes a blank baseURL", () => {
+    const spaced: Record<string, unknown> = { baseURL: "   " }
+    expect(dropBlankEndpoint(spaced)).toBe(spaced)
+    expect("baseURL" in spaced).toBe(false)
+
+    const empty: Record<string, unknown> = { baseURL: "" }
+    dropBlankEndpoint(empty)
+    expect("baseURL" in empty).toBe(false)
+  })
+
+  test("keeps a baseURL with a value exactly as given", () => {
+    const concrete: Record<string, unknown> = { baseURL: "https://proxy.example/v1" }
+    dropBlankEndpoint(concrete)
+    expect(concrete.baseURL).toBe("https://proxy.example/v1")
+
+    const padded: Record<string, unknown> = { baseURL: "  https://proxy.example/v1  " }
+    dropBlankEndpoint(padded)
+    expect(padded.baseURL).toBe("  https://proxy.example/v1  ")
+  })
+
+  test("leaves options without a baseURL alone", () => {
+    const options: Record<string, unknown> = { location: "eu" }
+    expect(dropBlankEndpoint(options)).toEqual({ location: "eu" })
   })
 })

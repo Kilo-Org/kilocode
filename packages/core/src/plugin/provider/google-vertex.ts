@@ -3,6 +3,7 @@ import { define } from "../internal"
 import { ProviderV2 } from "../../provider"
 // kilocode_change start - require a plain Vertex location and a Vertex API host
 import {
+  dropBlankEndpoint,
   isVertexHost,
   normalizeVertexLocation,
   parseVertexLocation,
@@ -101,6 +102,7 @@ export const GoogleVertexPlugin = define({
         if (evt.model.providerID === ProviderV2.ID.googleVertex && evt.package.includes("@ai-sdk/openai-compatible")) {
           // kilocode_change start - a location is a Vertex region only when the endpoint is derived from it;
           // an explicit other host keeps its own location input
+          dropBlankEndpoint(evt.options)
           if (vertexEndpointDerived(evt.options.baseURL))
             evt.options.location = parseVertexLocation(
               resolveVertexLocation(evt.options.location, process.env, "google-vertex"),
@@ -113,6 +115,7 @@ export const GoogleVertexPlugin = define({
         const mod = yield* Effect.promise(() => import("@ai-sdk/google-vertex"))
         const project = resolveProject(evt.options)
         // kilocode_change start - validate the location only when the endpoint derives from it
+        dropBlankEndpoint(evt.options)
         const raw = resolveVertexLocation(evt.options.location, process.env, "google-vertex")
         const location = vertexEndpointDerived(evt.options.baseURL) ? parseVertexLocation(raw) : raw
         // kilocode_change end
@@ -174,6 +177,7 @@ export const GoogleVertexAnthropicPlugin = define({
             : (process.env.GOOGLE_CLOUD_PROJECT ?? process.env.GCP_PROJECT ?? process.env.GCLOUD_PROJECT)
         // kilocode_change start - require a Google Cloud region only when the endpoint derives
         // from the location; an explicit other host keeps its own location input
+        dropBlankEndpoint(evt.options)
         const raw = resolveVertexLocation(evt.options.location, process.env, "google-vertex-anthropic")
         const location = vertexEndpointDerived(evt.options.baseURL) ? parseVertexLocation(raw) : raw
         // kilocode_change end

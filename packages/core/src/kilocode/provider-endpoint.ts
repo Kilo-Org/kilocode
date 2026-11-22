@@ -119,14 +119,20 @@ export const requestHost = (input: unknown) => {
   }
 }
 
+/** Removes a blank `baseURL` so it counts as unset on every provider endpoint path. */
+export const dropBlankEndpoint = (options: Record<string, any>) => {
+  if (typeof options.baseURL === "string" && options.baseURL.trim() === "") delete options.baseURL
+  return options
+}
+
 /**
  * True when the request URL cannot carry the caller's endpoint as given, so a Vertex location must be
- * resolved and validated: an unset, non-string or empty URL, or a catalog template. The location is
- * validated only when the request URL is derived from it; a concrete URL, including a Vertex API
+ * resolved and validated: an unset, blank or whitespace-only URL, or a catalog template. The location
+ * is validated only when the request URL is derived from it; a concrete URL, including a Vertex API
  * host, is used as given by both SDKs.
  */
 export const vertexEndpointDerived = (url: unknown): boolean => {
   if (url === undefined || typeof url !== "string") return true
-  if (url === "") return true
+  if (url.trim() === "") return true
   return url.includes("GOOGLE_VERTEX_ENDPOINT") || url.includes("GOOGLE_VERTEX_LOCATION")
 }

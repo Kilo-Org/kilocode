@@ -17,6 +17,7 @@ import type { LanguageModelV3 } from "@ai-sdk/provider"
 import { mapValues, omit, pickBy } from "remeda"
 import { reasoningSummary } from "./reasoning-summary"
 import {
+  dropBlankEndpoint,
   isVertexHost,
   parseAzureResourceName,
   parseVertexLocation,
@@ -305,13 +306,13 @@ export function patchCustomLoaderResult(
 /**
  * Validates the endpoint inputs a provider model is configured with.
  *
- * A Vertex location is validated only when the request URL derives from it: an unset or empty URL,
- * or a catalog template. Then the location is the option when set, otherwise the environment names
- * the region, otherwise the provider default; it must be a Google Cloud region or multi-region name,
- * and it is stored normalized. Any concrete URL, including a Vertex API host, is used as given by the
- * SDK, so its location input is not validated and is left untouched. An Azure resource name must be a
- * single DNS label unless a `baseURL` is configured. Anything else raises a configuration error
- * when the model is used.
+ * A Vertex location is validated when the request URL derives from it: an unset, blank or
+ * whitespace-only URL, or a catalog template. Then the location is the option when set, otherwise
+ * the environment names the region, otherwise the provider default; it must be a Google Cloud region
+ * or multi-region name, and it is stored normalized. Any concrete URL, including a Vertex API host,
+ * is used as given by the SDK, so its location input is not validated and is left untouched. An
+ * Azure resource name must be a single DNS label unless a `baseURL` is configured. Anything else
+ * raises a configuration error when the model is used.
  */
 export function resolveEndpointOptions(
   providerID: string,
@@ -319,7 +320,8 @@ export function resolveEndpointOptions(
   options: Record<string, any>,
   env: Record<string, string | undefined> = process.env,
 ) {
-  const url = typeof options.baseURL === "string" && options.baseURL !== "" ? options.baseURL : modelURL
+  dropBlankEndpoint(options)
+  const url = typeof options.baseURL === "string" ? options.baseURL : modelURL
   if (providerID === "google-vertex" || providerID === "google-vertex-anthropic") {
     if (vertexEndpointDerived(url)) {
       const location = resolveVertexLocation(options.location, env, providerID)
@@ -327,7 +329,7 @@ export function resolveEndpointOptions(
     }
     return
   }
-  if (typeof options.baseURL === "string" && options.baseURL !== "") return
+  if (typeof options.baseURL === "string") return
   if (providerID === "azure" && typeof options.resourceName === "string") {
     // A blank or whitespace-only name is unset, as in the catalog transform and the Azure plugin,
     // so it reports a missing name instead of an invalid one.

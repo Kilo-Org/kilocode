@@ -199,6 +199,30 @@ describe("resolveEndpointOptions", () => {
     expect(options.resourceName).toBe("   ")
   })
 
+  test("treats a whitespace-only baseURL as unset and resolves the location", () => {
+    const options: Record<string, unknown> = { baseURL: "   " }
+    resolveEndpointOptions("google-vertex", undefined, options, { GOOGLE_VERTEX_LOCATION: "europe-west4" })
+    expect(options.location).toBe("europe-west4")
+    expect("baseURL" in options).toBe(false)
+
+    const anthropic: Record<string, unknown> = { baseURL: "\t\n" }
+    resolveEndpointOptions("google-vertex-anthropic", undefined, anthropic, { GOOGLE_CLOUD_LOCATION: "europe-west4" })
+    expect(anthropic.location).toBe("europe-west4")
+    expect("baseURL" in anthropic).toBe(false)
+  })
+
+  test("refuses a non-region location when only a whitespace-only baseURL is set", () => {
+    const options: Record<string, unknown> = { baseURL: "   ", location: "proxy.example/x" }
+    expect(() => resolveEndpointOptions("google-vertex", undefined, options)).toThrow(/Invalid Google Vertex location/)
+  })
+
+  test("leaves the location untouched for an explicit concrete baseURL", () => {
+    const options: Record<string, unknown> = { baseURL: "https://proxy.example/v1", location: "proxy.example/x" }
+    resolveEndpointOptions("google-vertex", undefined, options, { GOOGLE_VERTEX_LOCATION: "europe-west4" })
+    expect(options.baseURL).toBe("https://proxy.example/v1")
+    expect(options.location).toBe("proxy.example/x")
+  })
+
   test("leaves other providers untouched", () => {
     const options: Record<string, unknown> = { location: "proxy.example/x", resourceName: "proxy.example/" }
     resolveEndpointOptions("openai", "https://api.openai.com/v1", options)
