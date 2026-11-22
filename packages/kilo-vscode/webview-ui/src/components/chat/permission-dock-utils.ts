@@ -72,10 +72,13 @@ export const TOOL_LABEL_KEYS: Record<string, string> = {
 
 export type PatternDescription = { kind: "single"; text: string } | { kind: "multi"; title: string; paths: string[] }
 
-/** Resolve the human-readable label for a tool (e.g. "Read", "Web Fetch"). */
+/**
+ * Resolve the human-readable label for a tool (e.g. "Read", "Web Fetch"). An unknown tool has no
+ * label key, so its own name is shown, and that name comes from the request itself.
+ */
 export function resolveLabel(tool: string, t: (key: string) => string): string {
   const key = TOOL_LABEL_KEYS[tool]
-  return key ? t(key) : tool
+  return key ? t(key) : displayText(tool)
 }
 
 export function describeRule(
@@ -84,8 +87,8 @@ export function describeRule(
   t: (key: string, params?: Record<string, string>) => string,
 ): string {
   if (tool === "doom_loop") {
-    // The repeated tool name is model-supplied, so escape it; the label template is not.
-    return t("ui.permission.doomLoop.rule", { tool: displayText(resolveLabel(rule, t)) })
+    // The repeated tool name is model-supplied; resolveLabel escapes an unknown one.
+    return t("ui.permission.doomLoop.rule", { tool: resolveLabel(rule, t) })
   }
   const label = resolveLabel(tool, t)
   return rule === "*" ? label : `${label} ${displayText(displayPattern(tool, rule))}`
@@ -117,7 +120,7 @@ export function describePatterns(
   if (tool === "doom_loop") {
     return {
       kind: "single",
-      text: t("ui.permission.doomLoop.prompt", { tool: displayText(resolveLabel(filtered[0], t)) }),
+      text: t("ui.permission.doomLoop.prompt", { tool: resolveLabel(filtered[0], t) }),
     }
   }
 

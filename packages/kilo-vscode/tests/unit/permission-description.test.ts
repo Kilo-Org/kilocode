@@ -229,6 +229,10 @@ describe("describeRule", () => {
   test("escapes the doom loop tool name", () => {
     expect(describeRule("doom_loop", "read\u202E", t)).toBe("Continue read\\u202e calls")
   })
+
+  test("escapes an unknown tool name used as its own label", () => {
+    expect(describeRule(`acme_\u202Elookup`, "src/app.ts", t)).toBe("acme_\\u202elookup src/app.ts")
+  })
 })
 
 describe("resolveLabel", () => {

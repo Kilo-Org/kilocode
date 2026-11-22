@@ -140,4 +140,11 @@ check({ ...base, toolName: "acme_lookup", args: { mcpInput: { query: `name${RAW}
   escaped(code, "MCP input")
 })
 
+// An unknown tool has no label key, so its own name is shown.
+check({ ...base, toolName: `acme_${RAW}lookup`, patterns: [`src/${RAW}gnp.exe`], args: {} }, (root) => {
+  const hint = text(root, '[data-slot="permission-hint"]')
+  assert.equal(hint, "acme_\\u202elookup src/\\u202egnp.exe")
+  escaped(hint, "Unknown tool label")
+})
+
 await window.happyDOM.close()
