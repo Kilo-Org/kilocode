@@ -233,6 +233,30 @@ try {
     "an empty error must fall back to the generic failure text",
   )
 
+  // A later profile read that shows the attempted account applied ends the
+  // failed attempt, so no stale alert and no Retry for an applied switch remain.
+  assert(alert(), "the failure is visible before the confirming read")
+  await push({ type: "profileData", data: profile("org-2") })
+  assert.equal(alert(), null, "a profile push that shows the target applied must clear the failure")
+  assert.equal(trigger().disabled, false, "the selector stays interactive after the clear")
+
+  // A push that still reports another account must leave the failure in place.
+  await push({ type: "profileData", data: profile("org-1") })
+  await open()
+  await press(option("Org Two"))
+  const unconfirmed = switchPost()
+  await push({
+    type: "organizationSwitchResult",
+    requestID: unconfirmed.requestID,
+    organizationId: "org-2",
+    ok: false,
+    data: null,
+    error: "profile unavailable",
+  })
+  await push({ type: "profileData", data: profile("org-1") })
+  assert(alert(), "a push for a different account must keep the failure")
+  assert.equal(trigger().disabled, false, "the selector is interactive for the retry")
+
   // Signing out ends any live attempt, so nothing returns after the next login.
   await open()
   await press(option("Org Two"))

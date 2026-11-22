@@ -41,6 +41,12 @@ type Attempt =
   | { kind: "pending"; requestID: string; target: string }
   | { kind: "failed"; message: string; target: string }
 
+/** Whether a profile push reports the attempted target as the applied account. */
+function applied(target: string, profile: ProfileData): boolean {
+  const current = profile.currentOrgId ?? PERSONAL
+  return target === current
+}
+
 const ProfileView: Component<ProfileViewProps> = (props) => {
   const vscode = useVSCode()
   const language = useLanguage()
@@ -56,14 +62,20 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
 
   // The correlated result owns termination: only the reply to this component's
   // request may clear the pending state, so a late reply is ignored. A null
-  // profile means the session ended, so no attempt may outlive it either.
+  // profile means the session ended, so no attempt may outlive it either. A
+  // failed attempt also ends once a later profile read shows its target applied,
+  // so a stale alert and a Retry for an applied switch cannot survive.
   const unsubscribe = vscode.onMessage((message) => {
-    if (message.type === "profileData" && message.data === null) {
-      setAttempt({ kind: "idle" })
+    const state = attempt()
+    if (message.type === "profileData") {
+      if (message.data === null) {
+        setAttempt({ kind: "idle" })
+        return
+      }
+      if (state.kind === "failed" && applied(state.target, message.data)) setAttempt({ kind: "idle" })
       return
     }
     if (message.type !== "organizationSwitchResult") return
-    const state = attempt()
     if (state.kind !== "pending" || state.requestID !== message.requestID) return
     if (message.ok) {
       setAttempt({ kind: "idle" })

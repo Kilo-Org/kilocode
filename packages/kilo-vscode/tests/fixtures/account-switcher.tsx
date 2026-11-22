@@ -333,6 +333,31 @@ try {
     error: "switch rejected",
   })
   assert(root.querySelector(".account-switcher"), "a failure must keep the control mounted")
+
+  // A later profile read that shows the attempted account applied ends the
+  // failed attempt, so no stale alert and no Retry for an applied switch remain.
+  await push({ type: "profileData", data: profile("org-2", true) })
+  assert.equal(alert(), null, "a profile push that shows the target applied must clear the failure")
+  assert.equal(trigger().disabled, false, "the trigger stays enabled after the clear")
+  assert.equal(trigger().textContent?.includes("Org Two"), true, "the label follows the applied account")
+
+  // A push that still reports another account keeps the failure.
+  await open()
+  row("Org One").click()
+  await settle()
+  const pendingElsewhere = switchPost(switchPosts().length - 1)
+  await push({
+    type: "organizationSwitchResult",
+    requestID: pendingElsewhere.requestID,
+    organizationId: "org-1",
+    ok: false,
+    data: null,
+    error: "profile unavailable",
+  })
+  await push({ type: "profileData", data: profile("org-2", true) })
+  assert(alert(), "a push for a different account must keep the failure")
+
+  // 7. Signing out after a failed attempt must not leave the control mounted.
   await push({ type: "profileData", data: null })
   assert.equal(root.querySelector(".account-switcher"), null, "a signed-out session must not show the control")
 

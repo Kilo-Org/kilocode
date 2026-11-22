@@ -74,13 +74,19 @@ export const AccountSwitcher: Component<{ class?: string }> = (props) => {
       settle(message)
       return
     }
+    if (message.type !== "profileData") return
     // A null profile means the session ended (logout or disconnect), so no
     // attempt may outlive it: a pending one would hang and a failed one would
     // show a retry to a signed-out user. `settle` ignores a late result once
     // the state is idle, so an answer that arrives later changes nothing.
-    if (message.type === "profileData" && message.data === null && current().kind !== "idle") {
-      setSwitch({ kind: "idle" })
+    if (message.data === null) {
+      if (current().kind !== "idle") setSwitch({ kind: "idle" })
+      return
     }
+    // A later profile read can show the attempted account applied, so a failed
+    // attempt ends rather than keeping a stale alert and a redundant retry.
+    const state = current()
+    if (state.kind === "failed" && message.data.currentOrgId === state.target) setSwitch({ kind: "idle" })
   })
   onCleanup(unsubscribe)
 
