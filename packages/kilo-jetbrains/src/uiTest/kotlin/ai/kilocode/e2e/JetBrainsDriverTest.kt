@@ -191,7 +191,9 @@ class JetBrainsDriverTest {
                 evidence.state("scenario.id", request.scenario.id)
                 evidence.state("scenario.lane", request.scenario.lane)
 
-                if (isTranscriptSessionOpen(request)) {
+                if (isPlanFollowup(request)) {
+                    planFollowup(request, ide, evidence)
+                } else if (isTranscriptSessionOpen(request)) {
                     openSession(request, descriptor, ide, toolWindow, window, evidence)
                 } else if (isPromptStream(request)) {
                     promptStream(request, descriptor, ide, toolWindow, window, evidence)
@@ -209,6 +211,18 @@ class JetBrainsDriverTest {
         evidence.write(resultPath)
     }
 
+    private fun isPlanFollowup(request: DriverRequest): Boolean =
+        request.scenario.id == FOLLOWUP_SCENARIO
+
+    private companion object {
+        /** IDE-local mode the prompt picker persists for the next new session. */
+        const val MODE_KEY = "kilo.session.agent"
+        const val MODE = "plan"
+
+        /** K1 scenario id the plan-follow-up branch is selected by; its expectations are assertions only. */
+        const val FOLLOWUP_SCENARIO = "followup.new-session"
+    }
+
     private fun isTranscriptSessionOpen(request: DriverRequest): Boolean =
         request.scenario.id == "session.open" &&
             "transcript.visible" in request.scenario.expected.ui &&
@@ -223,6 +237,118 @@ class JetBrainsDriverTest {
 
     private fun isTranscriptScenario(request: DriverRequest): Boolean =
         isTranscriptSessionOpen(request) || isPromptStream(request)
+
+    /**
+     * Plan-mode follow-up. The branch is selected by the K1 scenario id `followup.new-session`;
+     * the scenario's `expected` lists are assertions only. The plan agent writes its plan and
+     * finishes with `plan_exit`, the CLI asks "Ready to implement?", the driver answers `Start new
+     * session` through the real question card, and the CLI-created follow-up session must take over
+     * the transcript with the plan handoff. The asking and adopted session ids are recorded so the
+     * two can be compared. The flow drives the local CLI, so it refuses any lane but `local`.
+     */
+    private fun planFollowup(
+        request: DriverRequest,
+        ide: KiloIdePage,
+        evidence: DriverEvidence,
+    ) {
+        if (request.scenario.lane != "local") {
+            evidence.fail(
+                "followup.local-lane",
+                "$FOLLOWUP_SCENARIO drives the local CLI only; received lane '${request.scenario.lane}'",
+            )
+            return
+        }
+
+        val token = request.scenario.prompt.token
+        val sessions = SessionOpenPage(ide, watchdog)
+        val card = PlanFollowupPage(ide, watchdog)
+
+        // A new session seeds its agent from the IDE-local mode the picker persists. Without this
+        // the session runs as `code`, the CLI never offers `plan_exit`, and no follow-up question
+        // can appear. This writes the same key the picker's selectAgent() writes.
+        val mode = runCatching {
+            val properties = ide.driver.utility(PropertiesComponentUtility::class).getInstance()
+            properties.setValue(MODE_KEY, MODE)
+            properties.getValue(MODE_KEY)
+        }
+        if (mode.getOrNull() == MODE) {
+            evidence.pass("plan.mode", "$MODE_KEY=$MODE")
+        } else {
+            evidence.fail(
+                "plan.mode",
+                "could not put the session in plan mode: ${mode.exceptionOrNull()?.let(::actionable) ?: "read back '$mode'"}"
+            )
+            evidence.state("plan.mode.readback", mode.getOrNull() ?: "unset")
+            return
+        }
+
+        runCatching { sessions.submitLocal(token) }.onFailure { error ->
+            evidence.fail("question.visible", "the plan prompt could not be submitted: ${actionable(error)}")
+            return
+        }
+        evidence.pass("session.open", "plan prompt submitted through Chat")
+
+        if (runCatching { card.awaitVisible() }.isFailure) {
+            evidence.fail("question.visible", "the plan follow-up question never appeared; see the copied IDE logs")
+            return
+        }
+        evidence.pass("question.visible", PlanFollowupPage.QUESTION_VIEW)
+
+        val asking = runCatching { sessions.sessionId() }.getOrNull()
+        evidence.state("followup.asking.session", asking ?: "unknown")
+        val question = card.card()
+        val questionText = card.text(question)
+        evidence.state("question.text", questionText.take(1200))
+        if (questionText.contains(PlanFollowupPage.NEW_SESSION)) {
+            evidence.pass("question.requested", "the card offers '${PlanFollowupPage.NEW_SESSION}'")
+        } else {
+            evidence.fail("question.requested", "the card did not offer '${PlanFollowupPage.NEW_SESSION}'")
+        }
+
+        if (!card.select(question, PlanFollowupPage.NEW_SESSION)) {
+            evidence.fail("question.answered", "the '${PlanFollowupPage.NEW_SESSION}' option was not found")
+            return
+        }
+        evidence.state("question.selected", PlanFollowupPage.NEW_SESSION)
+        if (!card.submit(question)) {
+            evidence.fail("question.answered", "the question card has no '${PlanFollowupPage.SUBMIT}' button")
+            return
+        }
+        if (runCatching { card.awaitGone() }.isFailure) {
+            evidence.fail("question.answered", "the question card did not close after Submit")
+            return
+        }
+        evidence.pass("question.answered", "'${PlanFollowupPage.NEW_SESSION}' submitted through the question card")
+
+        val marker = "Plan file:"
+        val adopted = runCatching {
+            watchdog.value("the follow-up session takes over the transcript", timeout = 5.minutes) {
+                val id = sessions.sessionId()
+                if (id == null || id == asking || !sessions.transcriptText().contains(marker)) null else id
+            }
+        }.getOrNull()
+        if (adopted == null) {
+            evidence.fail(
+                "followup.adopted",
+                "no session other than '${asking ?: "unknown"}' rendered '$marker'; transcript=" +
+                    sessions.transcriptText().take(600),
+            )
+        } else {
+            // The wait above already requires a session other than the asking one, so only record the id.
+            evidence.pass("followup.adopted", adopted)
+            evidence.state("followup.adopted.session", adopted)
+            val line = sessions.transcriptText().lineSequence().firstOrNull { it.contains(marker) }?.trim().orEmpty()
+            evidence.state("followup.plan.marker", line.take(400))
+            if (line.isNotEmpty()) evidence.pass("followup.plan.marker", line)
+            else evidence.fail("followup.plan.marker", "the adopted transcript lost the plan marker")
+            val model = runCatching { sessions.awaitModel() }.getOrNull()
+            if (model != null) evidence.pass("session.ready", "turnCount=${model.turns} in $adopted")
+            else evidence.fail("session.ready", "the adopted transcript never loaded")
+        }
+
+        runCatching { ide.snapshot("plan-followup-settled") }
+        runCatching { ide.screenshot("plan-followup-settled") }
+    }
 
     /**
      * E2E for Advanced > Privacy > Send usage data. The switch edits the same

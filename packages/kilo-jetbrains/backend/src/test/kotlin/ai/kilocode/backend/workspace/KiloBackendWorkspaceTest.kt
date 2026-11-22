@@ -19,6 +19,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -32,6 +33,7 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -304,6 +306,16 @@ class KiloBackendWorkspaceTest {
         val err = ws.state.value as KiloWorkspaceState.Error
         assertTrue(err.message.contains("providers"))
         assertTrue(err.errors.any { it.resource == "providers" })
+        val item = err.errors.single { it.resource == "providers" }
+        val detail = assertNotNull(item.detail)
+        assertEquals("HTTP 500", detail)
+        assertFalse(detail.contains("chars="), detail)
+        assertTrue(
+            log.messages.any {
+                it.contains("Providers fetch failed: HTTP") && it.contains("chars=")
+            },
+            log.messages.toString(),
+        )
         assertTrue(log.messages.any { it.contains("Workspace error [${project}]: Failed to load:") && it.contains("providers") })
     }
 
@@ -337,8 +349,18 @@ class KiloBackendWorkspaceTest {
         assertTrue(err.message.contains("agents"))
         val item = err.errors.single { it.resource == "agents" }
         assertEquals(500, item.status)
-        assertTrue(item.detail?.contains("invalid agent config") == true)
-        assertTrue(log.messages.any { it.contains("agents response body:") && it.contains("invalid agent config") })
+        val detail = assertNotNull(item.detail)
+        assertEquals("HTTP 500", detail)
+        assertFalse(detail.contains("chars="), detail)
+        assertFalse(detail.contains("invalid agent config"), detail)
+        assertTrue(
+            log.messages.any {
+                it.contains("Agents fetch failed: HTTP 500:") && it.contains("chars=")
+            },
+            log.messages.toString(),
+        )
+        assertTrue(log.messages.none { it.contains("invalid agent config") })
+        assertTrue(log.throwables.none { it.contains("invalid agent config") }, log.throwables.toString())
         assertTrue(log.messages.any { it.contains("WARN: agents: all 3 attempts failed") })
         assertTrue(log.messages.none { it.contains("ERROR: agents: all 3 attempts failed") })
     }
@@ -685,8 +707,22 @@ class KiloBackendWorkspaceTest {
         )
         withTimeout(15_000) { reload.await() }
 
-        val ws = app.workspaces.get(project.toString())
-        assertTrue(ws !== initial)
+        // A new revision can also come from an independent config/telemetry publish of the initial
+        // load, so the awaited rev bump alone does not prove the reload rebuilt its workspaces.
+        // Poll the manager until it hands back a replacement instance under a real deadline.
+        val ws = assertNotNull(
+            withTimeoutOrNull(15_000) {
+                var replacement: KiloBackendWorkspace? = null
+                while (replacement == null) {
+                    replacement = runCatching { app.workspaces.get(project.toString()) }
+                        .getOrNull()
+                        ?.takeIf { it !== initial }
+                    if (replacement == null) delay(10)
+                }
+                replacement
+            },
+            "global.disposed did not rebuild the workspace; state=${app.appState.value}; logs=${log.messages}",
+        )
         val state = withTimeout(15_000) {
             ws.state.first {
                 it is KiloWorkspaceState.Ready &&

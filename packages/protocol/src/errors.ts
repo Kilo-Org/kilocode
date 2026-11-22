@@ -109,3 +109,14 @@ export class PtyNotFoundError extends Schema.TaggedErrorClass<PtyNotFoundError>(
   },
   { httpApiStatus: 404 },
 ) {}
+
+// kilocode_change start - an OAuth attempt handle the server never issued, or already collected
+export class AttemptNotFoundError extends Schema.TaggedErrorClass<AttemptNotFoundError>()(
+  "AttemptNotFoundError",
+  {
+    attemptID: Schema.String,
+    message: Schema.String,
+  },
+  { httpApiStatus: 404 },
+) {}
+// kilocode_change end

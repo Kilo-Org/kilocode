@@ -123,6 +123,11 @@ export const AttemptStatus = Schema.Union([
   Schema.Struct({ status: Schema.Literal("complete"), time: AttemptTime }),
   Schema.Struct({ status: Schema.Literal("failed"), message: Schema.String, time: AttemptTime }),
   Schema.Struct({ status: Schema.Literal("expired"), time: AttemptTime }),
+  // kilocode_change start - a cancelled attempt reports its own state while its record is retained, and
+  // any handle outside the retained set reports unknown.
+  Schema.Struct({ status: Schema.Literal("cancelled"), time: AttemptTime }),
+  Schema.Struct({ status: Schema.Literal("unknown") }),
+  // kilocode_change end
 ])
   .pipe(Schema.toTaggedUnion("status"))
   .annotate({ identifier: "Integration.AttemptStatus" })
