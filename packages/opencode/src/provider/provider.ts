@@ -584,11 +584,14 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         },
       }
     }),
-    "google-vertex-anthropic": Effect.fnUntraced(function* () {
+    // kilocode_change start - the configured project and region win over the environment
+    "google-vertex-anthropic": Effect.fnUntraced(function* (provider: Info) {
       const env = yield* dep.env()
-      const project = env["GOOGLE_CLOUD_PROJECT"] ?? env["GCP_PROJECT"] ?? env["GCLOUD_PROJECT"]
-      // kilocode_change - one region resolution, shared with the model-time validator
-      const location = resolveVertexLocation(undefined, env, "google-vertex-anthropic")
+      const project =
+        provider.options?.project ?? env["GOOGLE_CLOUD_PROJECT"] ?? env["GCP_PROJECT"] ?? env["GCLOUD_PROJECT"]
+      // one region resolution, shared with the model-time validator
+      const location = resolveVertexLocation(provider.options?.location, env, "google-vertex-anthropic")
+      // kilocode_change end
       const autoload = Boolean(project)
       if (!autoload) return { autoload: false }
       const baseURL = googleVertexAnthropicBaseURL(project, location)

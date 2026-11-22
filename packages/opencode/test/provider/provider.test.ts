@@ -1953,6 +1953,56 @@ it.instance(
 )
 // kilocode_change end
 
+// kilocode_change start - the loader resolves the region and project from config before the environment
+it.instance(
+  "Google Vertex Anthropic: the configured location wins over the environment region",
+  Effect.gen(function* () {
+    yield* set("GOOGLE_CLOUD_PROJECT", "test-project")
+    yield* set("GOOGLE_CLOUD_LOCATION", "eu")
+    const provider = yield* Provider.Service
+    const model = yield* provider.getModel(
+      ProviderV2.ID.make("google-vertex-anthropic"),
+      ModelV2.ID.make("claude-sonnet-4-6@default"),
+    )
+    const language = yield* provider.getLanguage(model)
+    expect(languageBaseURL(language)).toBe(
+      "https://aiplatform.us.rep.googleapis.com/v1/projects/test-project/locations/us/publishers/anthropic/models",
+    )
+  }),
+  {
+    config: {
+      provider: {
+        "google-vertex-anthropic": { options: { location: "us" } },
+      },
+    },
+  },
+)
+
+it.instance(
+  "Google Vertex Anthropic: the configured project reaches the endpoint",
+  Effect.gen(function* () {
+    yield* set("GOOGLE_CLOUD_PROJECT", "env-project")
+    yield* set("GOOGLE_CLOUD_LOCATION", "eu")
+    const provider = yield* Provider.Service
+    const model = yield* provider.getModel(
+      ProviderV2.ID.make("google-vertex-anthropic"),
+      ModelV2.ID.make("claude-sonnet-4-6@default"),
+    )
+    const language = yield* provider.getLanguage(model)
+    expect(languageBaseURL(language)).toBe(
+      "https://aiplatform.eu.rep.googleapis.com/v1/projects/cfg-project/locations/eu/publishers/anthropic/models",
+    )
+  }),
+  {
+    config: {
+      provider: {
+        "google-vertex-anthropic": { options: { project: "cfg-project" } },
+      },
+    },
+  },
+)
+// kilocode_change end
+
 it.instance("Google Vertex: keeps regional Claude endpoints unchanged", () =>
   Effect.gen(function* () {
     yield* set("GOOGLE_CLOUD_PROJECT", "test-project")
