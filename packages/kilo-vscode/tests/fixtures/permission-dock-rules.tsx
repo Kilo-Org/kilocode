@@ -18,7 +18,10 @@ Object.assign(globalThis, {
   cancelAnimationFrame: window.cancelAnimationFrame.bind(window),
 })
 
+// Webview modules read `window` at import time, so they load only after happy-dom is installed as
+// a global. Static imports hoist above that assignment, so the signal factory loads here too.
 const { render } = await import("solid-js/web")
+const { createSignal } = await import("solid-js")
 const { SessionContext } = await import("../../webview-ui/src/context/session")
 const { LanguageContext } = await import("../../webview-ui/src/context/language")
 const { ConfigContext } = await import("../../webview-ui/src/context/config")
@@ -36,14 +39,19 @@ const session = { currentSessionID: () => request.sessionID }
 const language = { t: (key: string) => key }
 Object.defineProperty(document, "hasFocus", { value: () => true })
 
+// Every case runs with a known home directory, so a home-prefixed entry resolves to it.
+const home = { homeDir: () => "/home/me" }
+
 // The same rule saved in the global config: the dock can delete it.
 const savedAllow = {
+  ...home,
   config: () => ({ permission: { edit: { "*": "allow" } } }),
   globalConfig: () => ({ permission: { edit: { "*": "allow" } } }),
   mergedGlobalConfig: () => ({ permission: { edit: { "*": "allow" } } }),
   workspaceConfig: () => ({ permission: {} }),
 }
 const savedDeny = {
+  ...home,
   config: () => ({ permission: { edit: { "*": "deny" } } }),
   globalConfig: () => ({ permission: { edit: { "*": "deny" } } }),
   mergedGlobalConfig: () => ({ permission: { edit: { "*": "deny" } } }),
@@ -51,6 +59,7 @@ const savedDeny = {
 }
 // A rule that another config scope supplies.
 const workspaceAllow = {
+  ...home,
   config: () => ({ permission: { edit: { "*": "allow" } } }),
   globalConfig: () => ({ permission: {} }),
   mergedGlobalConfig: () => ({ permission: {} }),
@@ -59,6 +68,7 @@ const workspaceAllow = {
 // A workspace-supplied deny row, so the indicator's state wording is covered in
 // both directions.
 const workspaceDeny = {
+  ...home,
   config: () => ({ permission: { edit: { "*": "deny" } } }),
   globalConfig: () => ({ permission: {} }),
   mergedGlobalConfig: () => ({ permission: {} }),
@@ -66,6 +76,7 @@ const workspaceDeny = {
 }
 // Both scopes save the same allow for the row.
 const bothAllow = {
+  ...home,
   config: () => ({ permission: { edit: { "*": "allow" } } }),
   globalConfig: () => ({ permission: { edit: { "*": "allow" } } }),
   mergedGlobalConfig: () => ({ permission: { edit: { "*": "allow" } } }),
@@ -74,6 +85,7 @@ const bothAllow = {
 // The primary global file holds the row, and a broader entry of the same merged scope
 // supplies the same action, so the broader entry decides the pattern.
 const broaderAllow = {
+  ...home,
   config: () => ({ permission: { edit: { "edit *": "allow" } } }),
   globalConfig: () => ({ permission: { edit: { "edit *": "allow" } } }),
   mergedGlobalConfig: () => ({ permission: { edit: { "*": "allow", "edit *": "allow" } } }),
@@ -83,6 +95,7 @@ const broaderRequest: PermissionRequest = { ...request, always: ["edit *"] }
 // The merged global scope supplies the wildcard row from a lower global file, so the row
 // carries a state indicator.
 const otherFileAllow = {
+  ...home,
   config: () => ({ permission: { edit: { "*": "allow" } } }),
   globalConfig: () => ({ permission: {} }),
   mergedGlobalConfig: () => ({ permission: { edit: { "*": "allow" } } }),
@@ -91,10 +104,36 @@ const otherFileAllow = {
 // The merged global scope supplies a named row from a lower global file; a named
 // pattern is removable from every file that holds it, so the row keeps its controls.
 const namedOtherFileAllow = {
+  ...home,
   config: () => ({ permission: { edit: { "edit *": "allow" } } }),
   globalConfig: () => ({ permission: {} }),
   mergedGlobalConfig: () => ({ permission: { edit: { "edit *": "allow" } } }),
   workspaceConfig: () => ({ permission: {} }),
+}
+// All three scopes save the row, and the workspace also holds a home-prefixed entry that
+// resolves above the row, so the workspace supplies it.
+const homeWorkspaceRequest: PermissionRequest = {
+  ...request,
+  toolName: "edit",
+  always: ["/home/me/notes.md"],
+  args: {},
+}
+const homeWorkspace = {
+  ...home,
+  config: () => ({ permission: { edit: { "/home/me/notes.md": "allow" } } }),
+  globalConfig: () => ({ permission: { edit: { "/home/me/notes.md": "allow" } } }),
+  mergedGlobalConfig: () => ({ permission: { edit: { "/home/me/notes.md": "allow" } } }),
+  workspaceConfig: () => ({ permission: { edit: { "/home/me/notes.md": "allow", "~/*": "allow" } } }),
+}
+// The same entry with no home directory to resolve it: it may decide the row once the
+// rules run, so the row keeps its indicator.
+const homeUnknown = {
+  ...home,
+  homeDir: () => undefined,
+  config: homeWorkspace.config,
+  globalConfig: homeWorkspace.globalConfig,
+  mergedGlobalConfig: homeWorkspace.mergedGlobalConfig,
+  workspaceConfig: () => ({ permission: { edit: { "~/*": "allow" } } }),
 }
 type Mode =
   | "reject"
@@ -111,9 +150,15 @@ type Mode =
   | "broader"
   | "otherFile"
   | "namedOtherFile"
+  | "homeWorkspace"
+  | "homeUnknown"
 type Call = { response: string; approved: string[]; denied: string[]; removed: string[]; feedback?: string }
 
-const cases: Array<{ mode: Mode; ctx: typeof savedAllow; request?: PermissionRequest }> = [
+// The dock reads `homeDir` beside the four config scopes, and the unresolved-prefix case
+// passes an unknown directory instead of the shared one.
+type Ctx = Omit<typeof savedAllow, "homeDir"> & { homeDir: () => string | undefined }
+
+const cases: Array<{ mode: Mode; ctx: Ctx; request?: PermissionRequest }> = [
   { mode: "reject", ctx: savedAllow },
   { mode: "once", ctx: savedAllow },
   { mode: "approve", ctx: savedAllow },
@@ -128,6 +173,8 @@ const cases: Array<{ mode: Mode; ctx: typeof savedAllow; request?: PermissionReq
   { mode: "broader", ctx: broaderAllow, request: broaderRequest },
   { mode: "otherFile", ctx: otherFileAllow },
   { mode: "namedOtherFile", ctx: namedOtherFileAllow, request: broaderRequest },
+  { mode: "homeWorkspace", ctx: homeWorkspace, request: homeWorkspaceRequest },
+  { mode: "homeUnknown", ctx: homeUnknown, request: homeWorkspaceRequest },
 ]
 
 for (const item of cases) {
@@ -178,6 +225,8 @@ for (const item of cases) {
       "broader",
       "otherFile",
       "namedOtherFile",
+      "homeWorkspace",
+      "homeUnknown",
     ].includes(mode)
     const denied = mode === "removeDenied" || mode === "workspaceDeny"
     assert.equal(row()?.getAttribute("data-decision"), denied ? "denied" : "approved")
@@ -187,7 +236,9 @@ for (const item of cases) {
       mode === "both" ||
       mode === "workspaceDeny" ||
       mode === "broader" ||
-      mode === "otherFile"
+      mode === "otherFile" ||
+      mode === "homeWorkspace" ||
+      mode === "homeUnknown"
     ) {
       // A rule another scope supplies, shown with a state indicator.
       assert.equal(row()?.getAttribute("data-source"), "config")
@@ -258,6 +309,65 @@ for (const item of cases) {
         feedback: plain ? undefined : "Use spaces, not tabs",
       },
     ])
+  } finally {
+    dispose()
+    root.remove()
+  }
+}
+
+// A prompt can mount before the first config payload arrives. The row states follow the
+// config accessors, so the row starts with its live controls and switches to the state
+// indicator when the payload lands, without mounting again.
+{
+  const [live, setLive] = createSignal<Record<string, unknown>>({})
+  const ctx = {
+    config: () => live(),
+    globalConfig: () => live(),
+    mergedGlobalConfig: () => live(),
+    workspaceConfig: () => live(),
+    homeDir: () => "/home/me",
+  }
+  const root = document.createElement("div")
+  document.body.append(root)
+  const calls: Call[] = []
+  const dispose = render(
+    () => (
+      <SessionContext.Provider value={session as never}>
+        <LanguageContext.Provider value={language as never}>
+          <ConfigContext.Provider value={ctx as never}>
+            <PermissionDock
+              request={request}
+              responding={false}
+              onDecide={(_id, response, approved, denied, removed, feedback) => {
+                calls.push({ response, approved, denied, removed, feedback })
+              }}
+            />
+          </ConfigContext.Provider>
+        </LanguageContext.Provider>
+      </SessionContext.Provider>
+    ),
+    root,
+  )
+  const row = () => root.querySelector('[data-slot="permission-rule-row"]')
+  try {
+    assert.equal(row()?.getAttribute("data-decision"), "pending")
+    assert.equal(row()?.getAttribute("data-source"), null)
+    assert(root.querySelector('[data-slot="permission-rule-toggle"]'))
+
+    setLive({ permission: { edit: { "*": "allow" } } })
+
+    assert.equal(row()?.getAttribute("data-decision"), "approved")
+    assert.equal(row()?.getAttribute("data-source"), "config")
+    assert.equal(root.querySelector('[data-slot="permission-rule-toggle"]'), null)
+    assert.equal(root.querySelector('[aria-label="ui.permission.rule.removeFromAllowed"]'), null)
+    // The state indicator names the saved action the config payload carries.
+    assert.equal(
+      root.querySelector('[data-slot="permission-rule-source"]')?.getAttribute("aria-label"),
+      "settings.autoApprove.level.allow \u2014 ui.permission.rule.fromConfig",
+    )
+    // Answering a row the config now supplies sends no removal request.
+    document.body.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }))
+    assert.deepEqual(calls, [{ response: "once", approved: [], denied: [], removed: [], feedback: undefined }])
   } finally {
     dispose()
     root.remove()

@@ -1,4 +1,5 @@
 import * as path from "path"
+import { homedir } from "node:os"
 import { existsSync, readFileSync } from "fs"
 import * as vscode from "vscode"
 import { TRANSIENT as MEMORY_TRANSIENT } from "@kilocode/kilo-memory/schema"
@@ -276,6 +277,8 @@ type ConfigSnapshot = {
   mergedGlobal?: Config
   /** Merged workspace scope: every project config file combined. */
   project?: Config
+  /** Home directory of the machine that runs the rules. */
+  homeDir?: string
 }
 
 /**
@@ -289,7 +292,13 @@ function fromOverlay(data: {
   project: Config
   targets: { global: ConfigTarget; project: ConfigTarget }
 }): ConfigSnapshot {
-  return { effective: data.effective, targets: data.targets, mergedGlobal: data.global, project: data.project }
+  return {
+    effective: data.effective,
+    targets: data.targets,
+    mergedGlobal: data.global,
+    project: data.project,
+    homeDir: homedir(),
+  }
 }
 
 function sandboxClient(client: KiloClient | null) {
@@ -4208,6 +4217,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // The merged global scope is every global config file combined, which differs
       // from the single file the delete targets.
       const mergedGlobalConfig = (snapshot.mergedGlobal ?? global) as Config
+      const homeDir = snapshot.homeDir
       // Capture the previous source before cachedGlobalConfig moves, so a source
       // change still triggers a catalog refresh.
       const previousSpeech = this.speechToTextSource()
@@ -4217,6 +4227,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         config: snapshot.effective,
         globalConfig: global,
         mergedGlobalConfig,
+        ...(homeDir !== undefined ? { homeDir } : {}),
         projectConfig,
         workspaceConfig,
         bindings,
@@ -4229,6 +4240,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         config: snapshot.effective,
         globalConfig: global,
         mergedGlobalConfig,
+        ...(homeDir !== undefined ? { homeDir } : {}),
         projectConfig,
         workspaceConfig,
         bindings,
@@ -4261,11 +4273,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.cachedGlobalConfig = globalConfig ?? null
     const mergedGlobalConfig = (snapshot.mergedGlobal ?? snapshot.globalConfig ?? globalConfig) as Config
     const workspaceConfig = snapshot.workspaceConfig
+    const homeDir = snapshot.homeDir
     this.cachedConfigMessage = {
       type: "configLoaded",
       config: snapshot.config,
       globalConfig,
       mergedGlobalConfig,
+      ...(homeDir !== undefined ? { homeDir } : {}),
       projectConfig,
       workspaceConfig,
       bindings,
@@ -4279,6 +4293,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       config: snapshot.config,
       globalConfig,
       mergedGlobalConfig,
+      ...(homeDir !== undefined ? { homeDir } : {}),
       projectConfig,
       workspaceConfig,
       bindings,
@@ -4310,6 +4325,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       config: snapshot?.effective,
       globalConfig: snapshot?.targets.global.raw,
       mergedGlobalConfig: snapshot?.mergedGlobal ?? snapshot?.targets.global.raw,
+      ...(snapshot?.homeDir !== undefined ? { homeDir: snapshot.homeDir } : {}),
       projectConfig: bindings?.project ? snapshot?.targets.project.raw : undefined,
       bindings,
     })

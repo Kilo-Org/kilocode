@@ -793,6 +793,8 @@ export interface ConfigLoadedMessage {
   globalConfig?: Config
   /** Merged global scope: every global config file combined. */
   mergedGlobalConfig?: Config
+  /** Home directory of the machine that runs the rules; a config entry may start with ~ or $HOME. */
+  homeDir?: string
   projectConfig?: Config
   /** Merged workspace scope from the overlay, every project file combined. */
   workspaceConfig?: Config
@@ -809,6 +811,8 @@ export interface ConfigUpdatedMessage {
   globalConfig?: Config
   /** Merged global scope: every global config file combined. */
   mergedGlobalConfig?: Config
+  /** Home directory of the machine that runs the rules; a config entry may start with ~ or $HOME. */
+  homeDir?: string
   projectConfig?: Config
   /** Merged workspace scope from the overlay, every project file combined. */
   workspaceConfig?: Config
@@ -828,6 +832,8 @@ export interface ConfigUpdateFailedMessage {
   globalConfig?: Config
   /** Merged global scope: every global config file combined. */
   mergedGlobalConfig?: Config
+  /** Home directory of the machine that runs the rules; a config entry may start with ~ or $HOME. */
+  homeDir?: string
   projectConfig?: Config
   bindings?: { global?: SettingsConfigBinding; project?: SettingsConfigBinding }
 }

@@ -198,6 +198,7 @@ describe("KiloProvider indexing refresh", () => {
       config: snapshot.config,
       globalConfig: snapshot.targets!.global.raw,
       mergedGlobalConfig: snapshot.mergedGlobal,
+      homeDir: snapshot.homeDir,
       projectConfig: snapshot.targets!.project.raw,
       workspaceConfig: snapshot.workspaceConfig,
       collections: snapshot.collections,

@@ -166,6 +166,7 @@ describe("removableRuleIndices", () => {
     target?: Parameters<typeof savedRuleStates>[1]
     workspace?: Parameters<typeof savedRuleStates>[1]
     effective: Record<number, "approved" | "denied">
+    home?: string
   }) =>
     removableRuleIndices({
       ...input,
@@ -390,5 +391,128 @@ describe("removableRuleIndices", () => {
 
   it("keeps the wildcard row in scope when the primary global file holds the scalar", () => {
     expect(call({ rules: ["*"], global: "allow", target: "allow", effective: { 0: "approved" } })).toEqual(new Set([0]))
+  })
+
+  // A workspace entry written with a home prefix is expanded before it is compared, so
+  // the home directory the rules run in decides whether it covers the row.
+  it("leaves a row alone when a `~/` workspace entry covers it after expansion", () => {
+    expect(
+      call({
+        rules: ["/home/me/.ssh/id"],
+        global: { "/home/me/.ssh/id": "allow" },
+        workspace: { "~/.ssh/*": "allow" },
+        effective: { 0: "approved" },
+        home: "/home/me",
+      }),
+    ).toEqual(new Set())
+  })
+
+  it("keeps the row in scope when the same entry resolves to another home directory", () => {
+    expect(
+      call({
+        rules: ["/home/me/.ssh/id"],
+        global: { "/home/me/.ssh/id": "allow" },
+        workspace: { "~/.ssh/*": "allow" },
+        effective: { 0: "approved" },
+        home: "/srv",
+      }),
+    ).toEqual(new Set([0]))
+  })
+
+  it("resolves a bare `~` entry to the home directory", () => {
+    expect(
+      call({
+        rules: ["/home/me"],
+        global: { "/home/me": "allow" },
+        workspace: { "~": "allow" },
+        effective: { 0: "approved" },
+        home: "/home/me",
+      }),
+    ).toEqual(new Set())
+  })
+
+  it("resolves a `$HOME/` entry to the home directory", () => {
+    expect(
+      call({
+        rules: ["/home/me/proj/file"],
+        global: { "/home/me/proj/file": "allow" },
+        workspace: { "$HOME/proj/*": "allow" },
+        effective: { 0: "approved" },
+        home: "/home/me",
+      }),
+    ).toEqual(new Set())
+  })
+
+  it("resolves a `$HOME` entry without a separator to the home directory", () => {
+    expect(
+      call({
+        rules: ["/home/me"],
+        global: { "/home/me": "allow" },
+        workspace: { $HOME: "allow" },
+        effective: { 0: "approved" },
+        home: "/home/me",
+      }),
+    ).toEqual(new Set())
+  })
+
+  it("does not read a trailing separator as a directory prefix", () => {
+    // The evaluator anchors both ends and has no directory rule, so `$HOME/` matches
+    // only the home directory's own path and does not decide a path below it.
+    expect(
+      call({
+        rules: ["/home/me/proj/file"],
+        global: { "/home/me/proj/file": "allow" },
+        workspace: { "$HOME/": "allow" },
+        effective: { 0: "approved" },
+        home: "/home/me",
+      }),
+    ).toEqual(new Set([0]))
+  })
+
+  it("leaves a row alone when the home directory is unknown", () => {
+    expect(
+      call({
+        rules: ["/home/me/.ssh/id"],
+        global: { "/home/me/.ssh/id": "allow" },
+        workspace: { "~/.ssh/*": "allow" },
+        effective: { 0: "approved" },
+      }),
+    ).toEqual(new Set())
+  })
+
+  it("leaves a row alone when an unresolved `$HOME` entry may decide it", () => {
+    expect(
+      call({
+        rules: ["/home/me/.ssh/id"],
+        global: { "/home/me/.ssh/id": "allow" },
+        workspace: { $HOME: "allow" },
+        effective: { 0: "approved" },
+      }),
+    ).toEqual(new Set())
+  })
+
+  it("leaves a row alone when only a global entry written with a home prefix holds it", () => {
+    // The removal names request patterns, so an entry stored under a home prefix is not
+    // one this prompt can delete.
+    expect(
+      call({
+        rules: ["/home/me/.ssh/id"],
+        global: { "~/.ssh/id": "allow" },
+        effective: { 0: "approved" },
+        home: "/home/me",
+      }),
+    ).toEqual(new Set())
+  })
+
+  it("keeps a row in scope when an absolute workspace entry decides another path", () => {
+    expect(
+      call({
+        rules: ["/home/me/.ssh/id"],
+        global: { "/home/me/.ssh/id": "allow" },
+        workspace: { "/home/me/notes/*": "allow" },
+        effective: { 0: "approved" },
+        home: "/home/me",
+      }),
+    ).toEqual(new Set([0]))
   })
 })

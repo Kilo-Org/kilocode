@@ -132,6 +132,8 @@ interface ConfigContextValue {
   globalConfig: Accessor<Config>
   /** Merged global scope: every global config file combined. */
   mergedGlobalConfig: Accessor<Config>
+  /** Home directory of the machine that runs the rules; a config entry may start with ~ or $HOME. */
+  homeDir: Accessor<string | undefined>
   globalDraft: Accessor<Partial<Config>>
   projectConfig: Accessor<Config>
   /** Merged workspace scope from the overlay, every project file combined. */
@@ -195,6 +197,7 @@ export const ConfigProvider: ParentComponent = (props) => {
   const [config, setConfig] = createSignal<Config>({})
   const [globalConfig, setGlobalConfig] = createSignal<Config>({})
   const [mergedGlobalConfig, setMergedGlobalConfig] = createSignal<Config>({})
+  const [homeDir, setHomeDir] = createSignal<string | undefined>(undefined)
   const [projectConfig, setProjectConfig] = createSignal<Config>({})
   const [workspaceConfig, setWorkspaceConfig] = createSignal<Config>({})
   const [collections, setCollections] = createSignal<ConfigCollections>({})
@@ -424,6 +427,11 @@ export const ConfigProvider: ParentComponent = (props) => {
   const applyMergedGlobal = (message: { mergedGlobalConfig?: Config }) => {
     if (message.mergedGlobalConfig !== undefined) setMergedGlobalConfig(message.mergedGlobalConfig)
   }
+  // The directory belongs to the machine that runs the rules, so it arrives with the
+  // same scopes the dock compares and never from a local guess.
+  const applyHomeDir = (message: { homeDir?: string }) => {
+    if (message.homeDir !== undefined) setHomeDir(message.homeDir)
+  }
   // The merged workspace scope is read-only: no draft merges on top of it.
   const applyWorkspace = (message: { workspaceConfig?: Config }) => {
     if (message.workspaceConfig !== undefined) setWorkspaceConfig(message.workspaceConfig)
@@ -455,6 +463,7 @@ export const ConfigProvider: ParentComponent = (props) => {
         setSavedProject(project)
       }
       applyMergedGlobal(message)
+      applyHomeDir(message)
       applyWorkspace(message)
       setRemovedMcp((current) => retainUnconfirmedMcpRemovals(current, message.config))
       updateCollections(message.collections)
@@ -489,6 +498,7 @@ export const ConfigProvider: ParentComponent = (props) => {
           setSavedProject(project)
         }
         applyMergedGlobal(message)
+        applyHomeDir(message)
         applyWorkspace(message)
         updateCollections(message.collections)
         setFeatures(message.features)
@@ -514,6 +524,7 @@ export const ConfigProvider: ParentComponent = (props) => {
           setSavedProject(project)
         }
         applyMergedGlobal(message)
+        applyHomeDir(message)
         applyWorkspace(message)
         updateCollections(message.collections)
         setFeatures(message.features)
@@ -806,6 +817,7 @@ export const ConfigProvider: ParentComponent = (props) => {
     config,
     globalConfig,
     mergedGlobalConfig,
+    homeDir,
     globalDraft,
     projectConfig,
     workspaceConfig,

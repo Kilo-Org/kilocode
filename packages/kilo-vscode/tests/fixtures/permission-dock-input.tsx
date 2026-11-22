@@ -30,6 +30,7 @@ const config = {
   globalConfig: () => ({ permission: {} }),
   mergedGlobalConfig: () => ({ permission: {} }),
   workspaceConfig: () => ({ permission: {} }),
+  homeDir: () => "/home/me",
 }
 Object.defineProperty(document, "hasFocus", { value: () => true })
 

@@ -50,7 +50,7 @@ export const PermissionDock: Component<{
 }> = (props) => {
   const session = useSession()
   const language = useLanguage()
-  const { config, globalConfig, mergedGlobalConfig, workspaceConfig } = useConfig()
+  const { config, globalConfig, mergedGlobalConfig, workspaceConfig, homeDir } = useConfig()
 
   const fromChild = () => props.request.sessionID !== session.currentSessionID()
   // Skill shell batches are never persisted, so they show no auto-approve rules. The command
@@ -94,21 +94,28 @@ export const PermissionDock: Component<{
   const diffs = createMemo(() => permissionDiffs(props.request))
 
   // Pre-populate toggle states from existing config rules so previously
-  // approved/denied patterns show their saved state immediately.
-  const saved = config().permission?.[props.request.toolName]
-  const loadState = savedRuleStates(rules(), saved)
+  // approved/denied patterns show their saved state immediately. Both this and the
+  // removal gate read the config accessors, so they are memos: a prompt that mounts
+  // before the first config payload corrects its rows when the payload arrives, and a
+  // config change while the prompt is open refreshes them.
+  const saved = createMemo(() => config().permission?.[props.request.toolName])
+  const loadState = createMemo(() => savedRuleStates(rules(), saved()))
   // A row carries its removal control when the merged global scope supplies the saved
   // action and no other scope or broader entry decides the pattern. A named pattern is
   // removed from every global file that holds it; a wildcard row also requires the
   // primary global file to hold its own entry. Rows from the workspace scope show a
-  // state indicator because this write changes global files only.
-  const revocable = removableRuleIndices({
-    rules: rules(),
-    global: mergedGlobalConfig().permission?.[props.request.toolName],
-    target: globalConfig().permission?.[props.request.toolName],
-    workspace: workspaceConfig().permission?.[props.request.toolName],
-    effective: loadState,
-  })
+  // state indicator because this write changes global files only. `homeDir` resolves a
+  // `~` or `$HOME` prefix on those entries, as the backend does before it matches.
+  const revocable = createMemo(() =>
+    removableRuleIndices({
+      rules: rules(),
+      global: mergedGlobalConfig().permission?.[props.request.toolName],
+      target: globalConfig().permission?.[props.request.toolName],
+      workspace: workspaceConfig().permission?.[props.request.toolName],
+      effective: loadState(),
+      home: homeDir(),
+    }),
+  )
   const [decisions, setDecisions] = createSignal<Record<number, RuleDecision>>({})
   const [expanded, setExpanded] = createSignal(rulesExpandedPreference)
   // Rejecting is a two-step flow: Deny reveals an optional feedback field, then Reject confirms.
@@ -134,6 +141,8 @@ export const PermissionDock: Component<{
 
   const collectRules = () => {
     const all = rules()
+    const states = loadState()
+    const removable = revocable()
     const approved: string[] = []
     const denied: string[] = []
     const removed: string[] = []
@@ -145,13 +154,14 @@ export const PermissionDock: Component<{
       else if (d === "denied") denied.push(rule)
       // Switching off a saved rule asks the host to delete it. A slot that was
       // never saved has nothing to delete, so it stays a plain cancel.
-      else if (revocable.has(index) && loadState[index]) removed.push(rule)
+      else if (removable.has(index) && states[index]) removed.push(rule)
     }
     return { approved, denied, removed }
   }
 
   const toggleRule = (index: number, decision: RuleDecision) => {
-    const current = decisions()[index] ?? loadState[index] ?? "pending"
+    const states = loadState()
+    const current = decisions()[index] ?? states[index] ?? "pending"
     // Activating the active control undoes the row. Switching off the state the config
     // saves keeps a "pending" slot, which `collectRules` reads as a deletion request;
     // undoing a local change drops the slot so the row falls back to the saved state.
@@ -160,12 +170,12 @@ export const PermissionDock: Component<{
       return
     }
     const updated = { ...decisions() }
-    if (loadState[index] === current) updated[index] = "pending"
+    if (states[index] === current) updated[index] = "pending"
     else delete updated[index]
     setDecisions(updated)
   }
 
-  const decision = (index: number): RuleDecision => decisions()[index] ?? loadState[index] ?? "pending"
+  const decision = (index: number): RuleDecision => decisions()[index] ?? loadState()[index] ?? "pending"
 
   const approveTooltip = (index: number) =>
     decision(index) === "approved"
@@ -333,24 +343,24 @@ export const PermissionDock: Component<{
                         <div
                           data-slot="permission-rule-row"
                           data-decision={decision(index())}
-                          data-source={!revocable.has(index()) && loadState[index()] ? "config" : undefined}
+                          data-source={!revocable().has(index()) && loadState()[index()] ? "config" : undefined}
                         >
                           <div data-slot="permission-rule-actions">
                             <Show
-                              when={revocable.has(index()) || !loadState[index()]}
+                              when={revocable().has(index()) || !loadState()[index()]}
                               fallback={
                                 <Tooltip value={language.t("ui.permission.rule.fromConfig")} placement="top">
                                   <span
                                     data-slot="permission-rule-source"
                                     role="img"
                                     aria-label={`${language.t(
-                                      loadState[index()] === "approved"
+                                      loadState()[index()] === "approved"
                                         ? "settings.autoApprove.level.allow"
                                         : "settings.autoApprove.level.deny",
                                     )} — ${language.t("ui.permission.rule.fromConfig")}`}
                                   >
                                     <Icon
-                                      name={loadState[index()] === "approved" ? "check-small" : "close-small"}
+                                      name={loadState()[index()] === "approved" ? "check-small" : "close-small"}
                                       size="small"
                                     />
                                   </span>
