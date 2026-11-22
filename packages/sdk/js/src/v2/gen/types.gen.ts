@@ -22905,6 +22905,10 @@ export type V2IntegrationAttemptCompleteErrors = {
    * AttemptNotFoundError
    */
   404: AttemptNotFoundError
+  /**
+   * ConflictError
+   */
+  409: ConflictError
 }
 
 export type V2IntegrationAttemptCompleteError =

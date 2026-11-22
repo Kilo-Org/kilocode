@@ -2,7 +2,7 @@ import { Integration } from "@opencode-ai/core/integration"
 import { Effect } from "effect"
 import { HttpApiBuilder, HttpApiSchema } from "effect/unstable/httpapi"
 import { Api } from "../api"
-import { AttemptNotFoundError, InvalidRequestError } from "@opencode-ai/protocol/errors" // kilocode_change - an absent attempt is a 404
+import { AttemptNotFoundError, ConflictError, InvalidRequestError } from "@opencode-ai/protocol/errors" // kilocode_change - an absent attempt is a 404 and a settling one a 409
 import { response } from "../location"
 
 const authorize = <A, R>(effect: Effect.Effect<A, Integration.AuthorizationError, R>) =>
@@ -81,6 +81,12 @@ export const IntegrationHandler = HttpApiBuilder.group(Api, "server.integration"
                 return new AttemptNotFoundError({
                   attemptID: ctx.params.attemptID,
                   message: "OAuth attempt not found",
+                })
+              }
+              if (error._tag === "Integration.AttemptCompleting") {
+                return new ConflictError({
+                  message: "OAuth attempt is already completing",
+                  resource: ctx.params.attemptID,
                 })
               }
               return new InvalidRequestError({
