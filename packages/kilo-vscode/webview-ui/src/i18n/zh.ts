@@ -786,6 +786,7 @@ export const dict = {
 
   "dialog.model.noProviders": "无供应商",
   "dialog.model.unavailable": "Kilo 模型不可用",
+  "dialog.model.loadFailed": "无法加载此项目的供应商。",
 
   "prompt.placeholder.connecting": "正在连接服务器...",
   "prompt.placeholder.error": "连接失败。请检查输出面板或重启扩展。",

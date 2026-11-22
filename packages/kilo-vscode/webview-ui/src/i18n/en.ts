@@ -792,6 +792,7 @@ export const dict = {
 
   "dialog.model.noProviders": "No providers",
   "dialog.model.unavailable": "Kilo models unavailable",
+  "dialog.model.loadFailed": "Could not load providers for this project.",
 
   "prompt.placeholder.connecting": "Connecting to server...",
   "prompt.placeholder.default": "Type a message, @ to mention files... (Enter to send, Shift+Enter for new line)",
