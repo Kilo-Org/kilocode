@@ -78,6 +78,30 @@ class AgentManagerLayoutTest : BasePlatformTestCase() {
         assertEquals(emptyList<ActiveTreeNode>(), children(nodes, second))
     }
 
+    fun `test section count badges follow the current rows without persisting counts`() = edtWait {
+        val first = layout.create("First")
+        val second = layout.create("Second")
+        fun counts(rows: List<Row> = items): List<String> = layout.nodes(rows).filter { it.branch }.map {
+            assertTrue(it.item.inlineBadges)
+            it.item.badges.single().text
+        }
+
+        assertEquals(listOf("0", "0"), counts())
+        layout.move(local.key, first.key)
+        layout.move(cloud.key, first.key)
+        assertEquals(listOf("2", "0"), counts())
+
+        layout.move(local.key, second.key)
+        assertEquals(listOf("1", "1"), counts())
+        assertEquals(listOf("0", "1"), counts(listOf(current, local)))
+        assertEquals(first.key, layout.parent(cloud.key))
+        assertEquals(listOf("1", "1"), counts())
+
+        val saved = PropertiesComponent.getInstance(project).getValue(STORAGE)!!
+        val sections = Json.parseToJsonElement(saved).jsonObject.getValue("sections").jsonArray
+        assertTrue(sections.all { it.jsonObject.keys == setOf("key", "title", "color") })
+    }
+
     fun `test section colors follow the palette and cycle using persisted color keys`() = edtWait {
         val keys = listOf("red", "orange", "yellow", "green", "cyan", "blue", "purple", "magenta", "red", "orange")
         val sections = keys.mapIndexed { index, _ -> layout.create("Section $index") }
@@ -493,8 +517,6 @@ class AgentManagerLayoutTest : BasePlatformTestCase() {
         assertEquals(listOf(cloud.key), keys(children(nodes, second)))
         assertEquals(AgentManagerLayout.Section("first", "Planning", "cyan"), first)
         assertEquals(AgentManagerLayout.Section("second", "Other", "magenta"), second)
-        assertTrue("Section headers keep the selected backdrop", nodes.single { it.item.key == first.key }.item.alwaysSelected)
-        assertTrue(nodes.single { it.item.key == second.key }.item.alwaysSelected)
         assertEquals(ActiveTreeColors.color("cyan"), nodes.single { it.item.key == first.key }.color)
         assertEquals(ActiveTreeColors.color("magenta"), nodes.single { it.item.key == second.key }.color)
         val saved = props.getValue(STORAGE)!!

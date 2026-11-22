@@ -54,7 +54,6 @@ internal class ActiveTreeGeometry(private val view: ActiveTreeView, private val 
         }
         if (state.selectionColor != null) {
             surface.update(view.background, state.selectionColor, true, true)
-            if (entry.allowsChildren) surface.selectionArc = 0
             paintLocal(g, surface, area(entry, frame))
         }
         val path = TreePath(entry.path)

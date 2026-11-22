@@ -1,13 +1,15 @@
 package ai.kilocode.client.agentManager
 
+import ai.kilocode.client.ui.active.ActiveBadge
 import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.active.ActiveMove
-import ai.kilocode.client.ui.tree.ActiveTreeNode
 import ai.kilocode.client.ui.tree.ActiveTreeColors
+import ai.kilocode.client.ui.tree.ActiveTreeNode
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.util.UUID
@@ -16,9 +18,15 @@ import java.util.UUID
 @Suppress("TooManyFunctions")
 internal class AgentManagerLayout(private val properties: PropertiesComponent? = null) {
     @Serializable
-    data class Section(override val key: String, override val title: String, val color: String? = null) : ActiveItem {
-        // The backdrop stays the same on hover and selection; selection is painted as an underline.
-        override val alwaysSelected = true
+    data class Section(
+        override val key: String,
+        override val title: String,
+        val color: String? = null,
+        @Transient val count: Int = 0,
+    ) : ActiveItem {
+        @Transient
+        override val badges = listOf(ActiveBadge(count.toString()))
+        override val inlineBadges get() = true
     }
 
     @Serializable
@@ -160,9 +168,9 @@ internal class AgentManagerLayout(private val properties: PropertiesComponent? =
             return rows.sortedBy { rank[it.key] ?: Int.MAX_VALUE }
         }
         val nodes = sorted(ROOT, grouped[ROOT].orEmpty() + state.sections).map { item ->
-            ActiveTreeNode(item, sections[item.key]?.let { section ->
-                sorted(section.key, grouped[section.key].orEmpty()).map { ActiveTreeNode(it) }
-            }, color = ActiveTreeColors.color(sections[item.key]?.color))
+            val section = sections[item.key] ?: return@map ActiveTreeNode(item)
+            val children = sorted(section.key, grouped[section.key].orEmpty()).map { ActiveTreeNode(it) }
+            ActiveTreeNode(section.copy(count = children.size), children, ActiveTreeColors.color(section.color))
         }
         // Retain temporarily undiscovered Cloud rows so a refresh cannot lose their placement.
         val visible = mapOf(ROOT to nodes.map { it.item.key }) + nodes.mapNotNull { node ->
