@@ -2485,6 +2485,7 @@ export type ProviderConfig = {
 export type McpLocalConfig = {
   type: "local"
   command: Array<string>
+  cwd?: string
   environment?: {
     [key: string]: string
   }
@@ -5576,6 +5577,12 @@ export type SessionMessagesResponse = {
 export type ProviderNotFoundError = {
   _tag: "ProviderNotFoundError"
   providerID: string
+  message: string
+}
+
+export type AttemptNotFoundError = {
+  _tag: "AttemptNotFoundError"
+  attemptID: string
   message: string
 }
 
@@ -9072,6 +9079,16 @@ export type IntegrationAttemptStatus =
         created: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
         expires: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       }
+    }
+  | {
+      status: "cancelled"
+      time: {
+        created: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+        expires: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      }
+    }
+  | {
+      status: "unknown"
     }
 
 export type PermissionV2Request = {
@@ -22884,6 +22901,14 @@ export type V2IntegrationAttemptCompleteErrors = {
    * UnauthorizedError
    */
   401: UnauthorizedError
+  /**
+   * AttemptNotFoundError
+   */
+  404: AttemptNotFoundError
+  /**
+   * ConflictError
+   */
+  409: ConflictError
 }
 
 export type V2IntegrationAttemptCompleteError =

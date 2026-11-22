@@ -150,6 +150,17 @@ export const ProvidersDisabledExpanded: Story = {
   ),
 }
 
+export const ProvidersLoadFailure: Story = {
+  name: "ProvidersTab — load failure",
+  render: () => (
+    <StoryProviders loadFailed>
+      <div style={{ "max-height": "700px", overflow: "auto" }}>
+        <ProvidersTab />
+      </div>
+    </StoryProviders>
+  ),
+}
+
 export const ModelsAutocompleteOpen: Story = {
   name: "ModelsTab — autocomplete model picker open",
   render: () => (

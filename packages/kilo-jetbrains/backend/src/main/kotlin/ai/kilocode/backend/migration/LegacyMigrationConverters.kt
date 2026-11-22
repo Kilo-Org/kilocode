@@ -192,14 +192,11 @@ object LegacyMigrationConverters {
         oauthRaw: (String) -> String?,
     ): ProviderConversionResult {
         val provider = settings["apiProvider"]?.jsonPrimitive?.content
-            ?: return ProviderConversionResult(null, null, MigrationItemStatus.error, "No provider type found")
-
-        if (provider in UNSUPPORTED_PROVIDERS) {
-            return ProviderConversionResult(null, null, MigrationItemStatus.warning, "Provider \"$provider\" is not supported in the new version")
+        val mapping = when (val resolution = resolveProvider(provider)) {
+            is ProviderResolution.Resolved -> resolution.mapping
+            is ProviderResolution.Unresolved ->
+                return ProviderConversionResult(null, null, resolution.status, resolution.message)
         }
-
-        val mapping = PROVIDER_MAP[provider]
-            ?: return ProviderConversionResult(null, null, MigrationItemStatus.warning, "Unknown provider \"$provider\"")
 
         // OAuth providers (e.g. openai-codex) stored separately
         if (mapping.oauthSecretKey != null) {
@@ -230,7 +227,10 @@ object LegacyMigrationConverters {
         val apiKey = settings[mapping.key]?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }
             ?: return ProviderConversionResult(null, null, MigrationItemStatus.warning, "No API key found in profile")
 
-        // Kilo gateway — write OAuth-shaped auth with 1-year expiry
+        // The Kilo gateway is the only provider whose static token is stored in an OAuth-shaped
+        // envelope: exactly the one the CLI's own Kilo sign-in writes (type=oauth, the token as both
+        // access and refresh, a 1-year expiry, and the organization as accountId). Every other
+        // provider stores an api credential, even when the legacy profile names an organization.
         val auth = if (mapping.id == "kilo") {
             val org = mapping.organizationIdField?.let { settings[it]?.jsonPrimitive?.content }
             buildJsonObject {
@@ -241,30 +241,20 @@ object LegacyMigrationConverters {
                 org?.let { put("accountId", it) }
             }
         } else {
-            val orgId = mapping.organizationIdField?.let { settings[it]?.jsonPrimitive?.content }
-            if (orgId != null) {
-                buildJsonObject {
-                    put("type", "oauth")
-                    put("access", apiKey)
-                    put("refresh", "")
-                    put("expires", 0)
-                    put("accountId", orgId)
-                }
-            } else {
-                buildJsonObject {
-                    put("type", "api")
-                    put("key", apiKey)
-                }
+            buildJsonObject {
+                put("type", "api")
+                put("key", apiKey)
             }
         }
 
-        // Custom base URL config
+        // Custom base URL config. The secret lives in the credential record written by setAuth
+        // (see KiloCliDataParser.buildCustomProviderPatch and the custom-provider save path), so the
+        // provider options carry baseURL only.
         val urlConfig = mapping.urlField?.let { settings[it]?.jsonPrimitive?.content?.takeIf { u -> u.isNotBlank() } }?.let { url ->
             buildJsonObject {
                 put("provider", buildJsonObject {
                     put(mapping.id, buildJsonObject {
                         put("options", buildJsonObject {
-                            put("apiKey", apiKey)
                             put("baseURL", url)
                         })
                     })

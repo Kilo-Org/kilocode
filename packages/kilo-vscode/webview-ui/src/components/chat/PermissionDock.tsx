@@ -21,7 +21,8 @@ import { useConfig } from "../../context/config"
 import {
   describePatterns,
   describeRule,
-  displaySkillCommand,
+  displayLines,
+  displayText,
   savedRuleStates,
   type RuleDecision,
 } from "./permission-dock-utils"
@@ -60,19 +61,20 @@ export const PermissionDock: Component<{
   const rules = () => props.request.args?.rules ?? props.request.always ?? []
   // Rules like "git *" or "git log *" — strip the trailing wildcard for display.
   // A bare "*" (global wildcard) becomes empty so only the tool name shows.
-  const label = (rule: string) => (rule === "*" ? "" : rule.replace(/ \*$/, ""))
+  // The rule text is model-supplied, so escape it before it reaches the card.
+  const label = (rule: string) => (rule === "*" ? "" : displayText(rule.replace(/ \*$/, "")))
+  // The command the request carries. Each command surface normalizes its IDN hosts and escapes
+  // controls for display; the copy button returns exactly these bytes.
   const command = () => {
     const cmd = props.request.args?.command
-    if (typeof cmd !== "string") return undefined
-    // Normalize IDN/Unicode hostnames to punycode ASCII to prevent homograph attacks.
-    return normalizeUrls(cmd)
+    return typeof cmd === "string" ? cmd : undefined
   }
   const text = (rule: string) => (command() ? label(rule) : describeRule(props.request.toolName, rule, language.t))
   const external = () => props.request.toolName === "external_directory"
   const sandboxEscalation = () => props.request.toolName === "sandbox_escalation"
   const cmdDescription = () => {
     const val = props.request.args?.description
-    return typeof val === "string" && val.length > 0 ? val : undefined
+    return typeof val === "string" && val.length > 0 ? displayText(val) : undefined
   }
   const description = createMemo(() =>
     command() ? null : describePatterns(props.request.toolName, props.request.patterns, language.t),
@@ -160,8 +162,8 @@ export const PermissionDock: Component<{
     if (sandboxEscalation()) return language.t("notification.permission.titleSandboxEscalation")
     const skill = props.request.args?.skill
     if (skillShell() && typeof skill === "string" && skill.length > 0)
-      // Escape the untrusted skill name so bidi/control chars can't reorder the header text.
-      return language.t("notification.permission.titleSkillShell", { skill: displaySkillCommand(skill) })
+      // Escape the skill name so the header shows exactly the characters the request carries.
+      return language.t("notification.permission.titleSkillShell", { skill: displayText(skill) })
     return fromChild()
       ? language.t("notification.permission.titleSubagent")
       : language.t("notification.permission.title")
@@ -331,7 +333,7 @@ export const PermissionDock: Component<{
                               <span data-slot="permission-rule-label">
                                 {language.t("ui.permission.toolLabel.externalDirectory")}{" "}
                               </span>
-                              <span data-slot="permission-rule-path">{rule}</span>
+                              <span data-slot="permission-rule-path">{displayText(rule)}</span>
                             </Show>
                           </code>
                         </div>
@@ -367,7 +369,13 @@ export const PermissionDock: Component<{
                     </div>
                   </Show>
                   <Show when={command()}>
-                    {(cmd) => <PermissionCommand command={cmd()} plain={props.request.args.heredoc === true} />}
+                    {(cmd) => (
+                      <PermissionCommand
+                        command={displayLines(normalizeUrls(cmd()))}
+                        raw={cmd()}
+                        plain={props.request.args.heredoc === true}
+                      />
+                    )}
                   </Show>
 
                   {(() => {
@@ -396,8 +404,11 @@ export const PermissionDock: Component<{
                 </>
               }
             >
-              {/* Verbatim commands (args.commands), control-char/bidi-escaped so the displayed command matches execution. */}
-              <For each={skillShellCommands()}>{(cmd) => <PermissionCommand command={displaySkillCommand(cmd)} />}</For>
+              {/* Verbatim commands (args.commands): Unicode hosts are normalized to punycode like the
+                  ordinary command, then escaped for display; copying returns the original bytes. */}
+              <For each={skillShellCommands()}>
+                {(cmd) => <PermissionCommand command={displayText(normalizeUrls(cmd))} raw={cmd} />}
+              </For>
             </Show>
 
             <Show when={input()}>
@@ -405,7 +416,7 @@ export const PermissionDock: Component<{
                 <div data-slot="permission-input">
                   <div data-slot="permission-input-label">{language.t("ui.messagePart.mcp.input")}</div>
                   <div data-slot="permission-input-code">
-                    <code>{json()}</code>
+                    <code>{displayLines(json())}</code>
                   </div>
                 </div>
               )}

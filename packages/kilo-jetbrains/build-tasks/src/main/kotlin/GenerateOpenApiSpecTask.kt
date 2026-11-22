@@ -155,11 +155,11 @@ abstract class GenerateOpenApiSpecTask : DefaultTask() {
         val url = "$API/v$version"
         logger.lifecycle("Fetching pinned Kilo CLI release metadata from $url")
         val conn = URI(url).toURL().openConnection() as HttpURLConnection
-        conn.connectTimeout = 30_000
-        conn.readTimeout = 120_000
+        conn.connectTimeout = GitHubHttp.CONNECT_TIMEOUT_MS
+        conn.readTimeout = GitHubHttp.READ_TIMEOUT_MS
         conn.instanceFollowRedirects = true
-        conn.setRequestProperty("Accept", "application/vnd.github+json")
-        conn.setRequestProperty("User-Agent", "Kilo-JetBrains-Gradle")
+        conn.setRequestProperty("Accept", GitHubHttp.METADATA_ACCEPT)
+        conn.setRequestProperty("User-Agent", GitHubHttp.USER_AGENT)
         token.getOrNull()
             ?.trim()
             ?.takeIf { it.isNotEmpty() }
@@ -222,11 +222,11 @@ abstract class GenerateOpenApiSpecTask : DefaultTask() {
 
     private fun downloadOnce(url: String, file: File) {
         val conn = URI(url).toURL().openConnection() as HttpURLConnection
-        conn.connectTimeout = 30_000
-        conn.readTimeout = 120_000
+        conn.connectTimeout = GitHubHttp.CONNECT_TIMEOUT_MS
+        conn.readTimeout = GitHubHttp.READ_TIMEOUT_MS
         conn.instanceFollowRedirects = true
-        conn.setRequestProperty("Accept", "application/octet-stream")
-        conn.setRequestProperty("User-Agent", "Kilo-JetBrains-Gradle")
+        conn.setRequestProperty("Accept", GitHubHttp.ASSET_ACCEPT)
+        conn.setRequestProperty("User-Agent", GitHubHttp.USER_AGENT)
         try {
             val code = conn.responseCode
             if (code !in 200..299) {

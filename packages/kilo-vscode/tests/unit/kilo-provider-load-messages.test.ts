@@ -1301,6 +1301,32 @@ describe("KiloProvider.handleLoadMessages / focus mode freshness", () => {
     expect(client.stopped).toEqual([{ sessionID: "s2", directory: "/repo/s2" }])
   })
 
+  it("posts the workspace root once clearSession stops the session overriding it", async () => {
+    // The prompt's mention search resolves against the directory the webview
+    // was last told about. A worktree session overrides the workspace root, so
+    // clearing the session must announce the root that is effective again —
+    // otherwise a mention picked after the clear still resolves in the worktree.
+    const client = createClient()
+    const { provider, internal, sent } = makeProvider(client, { rootDirectory: () => "/repo/project-b" })
+    internal.currentSession = { id: "s1", directory: "/repo/worktree" }
+    internal.contextSessionID = "s1"
+    internal.sessionDirectories.set("s1", "/repo/worktree")
+
+    const listener = Promise.withResolvers<(message: ClearSessionRequest) => Promise<void>>()
+    internal.setupWebviewMessageHandler({
+      onDidReceiveMessage: (handler: (message: ClearSessionRequest) => Promise<void>) => {
+        listener.resolve(handler)
+        return { dispose: () => {} }
+      },
+    })
+    const receive = await listener.promise
+    await receive({ type: "clearSession" })
+
+    expect(internal.contextSessionID).toBeUndefined()
+    expect(sent).toContainEqual({ type: "workspaceDirectoryChanged", directory: "/repo/project-b" })
+    provider.dispose()
+  })
+
   it("refetches the tail page on focus-mode reselection and posts a reconcile snapshot", async () => {
     // Regression: switching to an already-loaded session sent mode: "focus"
     // which only refreshed session metadata and status — not messages. If

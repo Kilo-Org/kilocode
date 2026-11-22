@@ -779,6 +779,7 @@ export const dict = {
 
   "dialog.model.noProviders": "Ingen leverandører",
   "dialog.model.unavailable": "Kilo-modeller er utilgjengelige",
+  "dialog.model.loadFailed": "Kunne ikke laste inn leverandører for dette prosjektet.",
 
   "prompt.placeholder.connecting": "Kobler til server...",
   "prompt.placeholder.error": "Tilkobling mislyktes. Sjekk utdatapanelet eller start utvidelsen på nytt.",

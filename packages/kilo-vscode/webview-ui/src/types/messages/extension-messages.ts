@@ -564,6 +564,8 @@ export interface ProvidersLoadedMessage {
   kiloUnavailable?: boolean
   /** Typed reasons providers failed to load, so the UI can explain why instead of hiding them. */
   failures?: ProviderFailure[]
+  /** The provider read for this project failed, so the payload carries no provider data. */
+  loadFailed?: boolean
 }
 
 export interface AgentsLoadedMessage {
@@ -1870,6 +1872,7 @@ export type ExtensionMessage =
   | SpeechToTextModelsLoadedMessage
   | ProvidersLoadedMessage
   | { type: "providersLoading" }
+  | { type: "providersReset" }
   | AgentsLoadedMessage
   | SkillsLoadedMessage
   | CommandsLoadedMessage

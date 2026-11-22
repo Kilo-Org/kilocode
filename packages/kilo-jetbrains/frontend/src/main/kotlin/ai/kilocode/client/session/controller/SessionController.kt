@@ -1224,7 +1224,7 @@ class SessionController(
     }
 
     private fun approve(request: PermissionRequestDto) {
-        approve(request.id) { toPermission(request) }
+        approve(request.id) { toPermission(request, isHosted) }
     }
 
     private fun approve(permission: Permission) {
@@ -1342,7 +1342,7 @@ class SessionController(
 
     /** ERROR card for a refused reply, mirroring the card approve() shows on failure. */
     private fun errorCard(request: PermissionRequestDto, message: String): Permission =
-        toPermission(request).copy(state = PermissionRequestState.ERROR, message = message)
+        toPermission(request, isHosted).copy(state = PermissionRequestState.ERROR, message = message)
 
     /**
      * Cards the batch still owes a human, in request order.
@@ -1354,7 +1354,7 @@ class SessionController(
         val failure = batch.refused.associate { (request, message) -> request.id to message }
         return permissions.mapNotNull { request ->
             failure[request.id]?.let { message -> errorCard(request, message) }
-                ?: if (manual(request.metadata)) toPermission(request) else null
+                ?: if (manual(request.metadata)) toPermission(request, isHosted) else null
         }
     }
 
@@ -2031,7 +2031,7 @@ class SessionController(
             // Under auto-approve, replyAll approves ordinary permissions and skips sensitive ones.
             // Queue the skipped sensitive cards and an ERROR card for every refused reply, so a
             // refusal stays visible instead of being stranded. Otherwise queue every pending one.
-            val cards = if (autoApprove) leftovers(replyAll(permissions), permissions) else permissions.map(::toPermission)
+            val cards = if (autoApprove) leftovers(replyAll(permissions), permissions) else permissions.map { toPermission(it, isHosted) }
             if (cards.isEmpty()) return
             runEdt {
                 if (disposed) return@runEdt
@@ -2172,7 +2172,7 @@ class SessionController(
             // After auto-approve only skipped sensitive permissions and refused replies still need a
             // human card; queue those. Otherwise queue the whole pending set so each request is
             // resolved in turn.
-            val queue = if (batch != null) leftovers(batch, permissions) else permissions.map(::toPermission)
+            val queue = if (batch != null) leftovers(batch, permissions) else permissions.map { toPermission(it, isHosted) }
             // An "idle" status is still a status. It means no live work, not "nothing to recover", so it
             // must not shadow the transcript: a session reopened after a failed turn is idle on the
             // server and would otherwise recover as if it had never failed.
@@ -2511,7 +2511,7 @@ class SessionController(
                 }
             }
             // Replay must never auto-approve historical requests; only the successful live probe may do that.
-            permissions.values.map(::toPermission).forEach(::enqueue)
+            permissions.values.map { toPermission(it, isHosted) }.forEach(::enqueue)
             if (questions.isNotEmpty()) model.setState(SessionState.AwaitingQuestion(toQuestion(questions.values.last())))
             else if (permissions.isNotEmpty()) promote()
             events.filterIsInstance<ChatEventDto.SessionUpdated>().lastOrNull()?.let { model.setSession(it.session) }
@@ -2707,7 +2707,7 @@ class SessionController(
             reapplyBackgroundAgents()
             return
         }
-        show(toPermission(event.request))
+        show(toPermission(event.request, isHosted))
         reapplyBackgroundAgents()
     }
 
@@ -3896,7 +3896,7 @@ private fun ConfigWarningDto.toDetailLine(): String {
     return "$head\n$tail"
 }
 
-private fun toPermission(dto: PermissionRequestDto): Permission {
+private fun toPermission(dto: PermissionRequestDto, hosted: Boolean): Permission {
     val ref = dto.tool?.let { ToolCallRef(it.messageID, it.callID) }
     val state = dto.metadata["state"]?.let { raw ->
         PermissionRequestState.values().firstOrNull { item -> item.name.equals(raw, ignoreCase = true) }
@@ -3939,6 +3939,7 @@ private fun toPermission(dto: PermissionRequestDto): Permission {
         message = dto.message ?: dto.metadata["message"],
         tool = ref,
         state = state,
+        hosted = hosted,
     )
 }
 

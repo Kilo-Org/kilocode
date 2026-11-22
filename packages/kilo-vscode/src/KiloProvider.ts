@@ -740,8 +740,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.cachedProviderUsageMessage = null
     this.configBindings.clear()
     this.cachedConfigMessage = null
-    this.postMessage({ type: "workspaceDirectoryChanged", directory: directory ?? "" })
+    this.resetProviders()
+    this.postDirectory(directory ?? "")
     this.postMessage({ type: "configBindingExpired", reason: "project-changed" })
+    void this.fetchAndSendProviders()
   }
 
   public setDiffVirtualProvider(provider: import("./DiffVirtualProvider").DiffVirtualProvider): void {
@@ -1132,12 +1134,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /** Retry failed workspace initialization against the newly selected project. */
   public async retryInitialization(): Promise<void> {
     const dir = this.settingsDirectory()
-    if (
-      this.cachedProvidersMessage &&
-      this.cachedConfigMessage &&
-      this.cachedProvidersDirectory === dir &&
-      this.cachedConfigDirectory === dir
-    )
+    if (this.retainedProviders() && this.cachedConfigMessage && sameDirectory(this.cachedConfigDirectory ?? "", dir))
       return
     await this.fetchAndSendConfig()
     await Promise.all([
@@ -1427,6 +1424,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.contextSessionID = undefined
           this.setCurrentSession(null)
           this.focusSession()
+          this.postDirectory()
           break
         case "loadMessages":
           // Don't await: allow parallel loads so rapid session switching
@@ -2875,7 +2873,19 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private invalidateProviders(): void {
     this.providersGeneration++
     this.cachedProvidersMessage = null
+    this.cachedProvidersDirectory = null
     this.postMessage({ type: "providersLoading" })
+  }
+
+  /**
+   * Drop the provider view for a different project. The rows describe one project's read, so the
+   * webview drops every row rather than only the gateway one.
+   */
+  private resetProviders(): void {
+    this.invalidateProviders()
+    // The saved keys are part of the project's own read, so only a project change replaces them.
+    this.storedProviderKeys = {}
+    this.postMessage({ type: "providersReset" })
   }
 
   /** Fetch providers and send to webview. Coalesced: at most one in-flight + one queued. */
@@ -2892,16 +2902,19 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.providersQueued = false
         const client = this.client
         if (!client) {
-          // Nothing was loaded, so remember to fetch once a client is available.
-          // The webview retries may already be spent by then.
-          if (!this.cachedProvidersMessage) this.providersRetry = true
-          if (this.cachedProvidersMessage && generation === this.providersGeneration)
-            this.postMessage(this.cachedProvidersMessage)
+          // Keep the provider view on the panel's project: replay only a payload loaded for
+          // that project, and mark the fetch to run once a client is available.
+          const retained = this.retainedProviders()
+          if (retained && generation === this.providersGeneration) this.postMessage(retained)
+          else this.providersRetry = true
           return
         }
         try {
+          // Read the provider view for the same directory that keys the retained payload, so a
+          // panel with an explicit project reads that project.
+          const dir = this.settingsDirectory()
           const { response, authMethods, authStates, storedKeys, organizationId, ready, unavailable } =
-            await fetchProviderData(client, this.getWorkspaceDirectory())
+            await fetchProviderData(client, dir)
           if (generation !== this.providersGeneration || client !== this.client) {
             if (!this.providersQueued) return
             generation = this.providersGeneration
@@ -2927,7 +2940,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             failures: response.failures,
           }
           this.cachedProvidersMessage = message
-          this.cachedProvidersDirectory = this.settingsDirectory()
+          this.cachedProvidersDirectory = dir
           this.providersRetry = false
           this.postMessage(message)
           this.catalogRetry.update(unavailable)
@@ -2937,8 +2950,23 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             generation = this.providersGeneration
             continue
           }
-          // A rejected fetch leaves nothing cached, so retry on the next connect.
-          if (!this.cachedProvidersMessage) this.providersRetry = true
+          // This project has no provider payload yet, so publish an explicit failure for it:
+          // the view reports the failure rather than a loading state. Either way the fetch runs
+          // again on the next connect.
+          this.providersRetry = true
+          if (!this.retainedProviders()) {
+            this.postMessage({
+              type: "providersLoaded",
+              providers: {},
+              connected: [],
+              defaults: {},
+              ready: false,
+              defaultSelection: computeDefaultSelection(null, "", ""),
+              authMethods: {},
+              authStates: {},
+              loadFailed: true,
+            })
+          }
           // Keep backing off while the last loaded Kilo catalog was unavailable.
           const last = this.cachedProvidersMessage as { kiloUnavailable?: boolean } | null
           this.catalogRetry.update(last?.kiloUnavailable === true)
@@ -2979,7 +3007,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.client,
       (m) => this.postMessage(m),
       getErrorMessage,
-      this.getWorkspaceDirectory(),
+      // Provider actions read and write the config of the project the panel shows.
+      this.settingsDirectory(),
       () => this.fetchAndSendProviders(),
     )
     const set = (m: unknown) => {
@@ -4512,6 +4541,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return this.projectDirectory ?? this.getRootDirectory()
   }
 
+  /** The retained provider payload, only while it was loaded for the panel's project. */
+  private retainedProviders(): unknown | null {
+    if (this.cachedProvidersMessage === null || this.cachedProvidersDirectory === null) return null
+    if (!sameDirectory(this.cachedProvidersDirectory, this.settingsDirectory())) return null
+    return this.cachedProvidersMessage
+  }
+
   private async handleAgentManagerSettingsMessage(
     message: TypedWebviewMessage & { projectId?: string; branch?: string; requestId?: string },
   ): Promise<boolean> {
@@ -5990,6 +6026,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       ...(activeFile ? { activeFile } : {}),
       ...(shell ? { shell } : {}),
     }
+  }
+
+  /** Tell the webview which directory the active prompt now resolves against. */
+  private postDirectory(directory = this.getWorkspaceDirectory()): void {
+    this.postMessage({ type: "workspaceDirectoryChanged", directory })
   }
 
   private getWorkspaceDirectory(sessionId?: string): string {

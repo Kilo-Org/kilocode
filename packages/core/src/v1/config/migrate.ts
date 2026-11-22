@@ -66,10 +66,24 @@ export function migrate(info: typeof ConfigV1.Info.Type) {
     plugins: info.plugin?.map((plugin) =>
       typeof plugin === "string" ? plugin : { package: plugin[0], options: plugin[1] },
     ),
-    experimental: info.experimental?.policies && { policies: info.experimental.policies },
+    experimental: policies(info), // kilocode_change - v1 provider lists become provider.use policy statements
     providers: providers(info.provider),
   }
 }
+
+// kilocode_change start - v1 selection lists restricted providers directly, so the
+// translated statements come last and win over authored policies in the same document.
+function policies(info: typeof ConfigV1.Info.Type) {
+  const rule = (effect: "allow" | "deny", resource: string) => ({ effect, action: "provider.use" as const, resource })
+  const legacy = [
+    ...(info.enabled_providers ? [rule("deny", "*")] : []),
+    ...(info.enabled_providers ?? []).map((id) => rule("allow", id)),
+    ...(info.disabled_providers ?? []).map((id) => rule("deny", id)),
+  ]
+  const statements = [...(info.experimental?.policies ?? []), ...legacy]
+  return statements.length ? { policies: statements } : undefined
+}
+// kilocode_change end
 
 function permissions(info?: ConfigPermissionV1.Info, tools?: Readonly<Record<string, boolean>>) {
   const rules: Array<{ action: string; resource: string; effect: "allow" | "ask" | "deny" }> = Object.entries(
@@ -209,6 +223,10 @@ function migrateModel(info: typeof ConfigProviderV1.Model.Type, packageName?: st
   const packageID = info.provider?.npm ?? packageName
   const lowerer = ConfigProviderOptionsV1.get(packageID)
   const request = info.options && lowerer.request(info.options)
+  // kilocode_change start - lowering reports the request headers its options describe
+  const lowered = lowerer.headers?.(info.options ?? {})
+  const headers = lowered || info.headers ? { ...lowered, ...info.headers } : undefined
+  // kilocode_change end
   const costs = info.cost && [
     {
       input: info.cost.input,
@@ -245,19 +263,24 @@ function migrateModel(info: typeof ConfigProviderV1.Model.Type, packageName?: st
         ? undefined
         : { id: info.id },
     capabilities,
-    request: (info.headers || request) && {
-      headers: info.headers,
+    // kilocode_change start - lowering reports request headers alongside the request body
+    request: (headers || request) && {
+      headers,
       body: request,
     },
+    // kilocode_change end
     // kilocode_change - variant entries may be null (delete sentinel); migration has nothing to convert for those
     variants:
       info.variants &&
       Object.entries(info.variants)
         .filter((entry): entry is [string, NonNullable<(typeof info.variants)[string]>] => entry[1] !== null)
+        // kilocode_change start - variant lowering reports request headers alongside the request body
         .map(([id, options]) => ({
-        id,
-        body: lowerer.request(options),
-      })),
+          id,
+          body: lowerer.request(options),
+          headers: lowerer.headers?.(options),
+        })),
+    // kilocode_change end
     cost: costs,
     disabled: info.status === "deprecated" ? true : undefined,
     limit: info.limit && {

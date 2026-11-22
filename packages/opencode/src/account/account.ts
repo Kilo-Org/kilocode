@@ -12,7 +12,9 @@ import {
 
 import { withTransientReadRetry } from "@/util/effect-http-client"
 import { AccountRepo, type AccountRow } from "./repo"
-import { normalizeServerUrl } from "./url"
+// kilocode_change start
+import { normalizeServerUrl } from "@opencode-ai/core/account/key"
+// kilocode_change end
 import {
   type AccountError,
   AccessToken,
@@ -32,6 +34,7 @@ import {
   type PollResult,
   PollSlow,
   PollSuccess,
+  RemoteID, // kilocode_change
   UserCode,
 } from "./schema"
 
@@ -56,6 +59,7 @@ export {
   PollDenied,
   PollError,
   PollResult,
+  RemoteID, // kilocode_change
 } from "./schema"
 
 export type AccountOrgs = {
@@ -116,7 +120,7 @@ class DeviceTokenError extends Schema.Class<DeviceTokenError>("DeviceTokenError"
 const DeviceToken = Schema.Union([DeviceTokenSuccess, DeviceTokenError])
 
 class User extends Schema.Class<User>("User")({
-  id: AccountID,
+  id: RemoteID, // kilocode_change
   email: Schema.String,
 }) {}
 
@@ -353,11 +357,20 @@ const layer: Layer.Layer<Service, never, AccountRepo.Service | HttpClient.HttpCl
       yield* repo.remove(accountID)
       if (Option.isNone(active) || active.value.id !== accountID) return
 
-      const next = (yield* orgsByAccount()).flatMap((group) =>
-        group.orgs.map((org) => ({ accountID: group.account.id, orgID: org.id })),
-      )[0]
-      if (!next) return
-      yield* repo.use(next.accountID, Option.some(next.orgID))
+      // kilocode_change start
+      const groups = yield* orgsByAccount()
+      const next = groups
+        .flatMap((group) => group.orgs.map((org) => ({ accountID: group.account.id, orgID: org.id })))
+        .at(0)
+      if (next) {
+        yield* repo.use(next.accountID, Option.some(next.orgID))
+        return
+      }
+
+      const fallback = groups.at(0)?.account
+      if (!fallback) return
+      yield* repo.use(fallback.id, Option.none())
+      // kilocode_change end
     })
 
     const config = Effect.fn("Account.config")(function* (accountID: AccountID, orgID: OrgID) {
@@ -448,7 +461,7 @@ const layer: Layer.Layer<Service, never, AccountRepo.Service | HttpClient.HttpCl
       const refreshToken = parsed.refresh_token
 
       yield* repo.persistAccount({
-        id: account.id,
+        remoteID: account.id, // kilocode_change
         email: account.email,
         url: input.server,
         accessToken,
