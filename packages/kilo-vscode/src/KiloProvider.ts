@@ -5046,9 +5046,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private async handleAbort(sessionID?: string, scope?: "session" | "tree"): Promise<void> {
     const sid = sessionID || this.currentSession?.id
     if (!sid) return
-    // Local retry state settles here, the same as stopSession, so a refusal still cancels it.
-    this.cancelRetry(sid)
     if (this.isAmbiguousSession(sid)) {
+      // stopSession settles local retry state, and this refusal returns before it, so settle it here.
+      this.cancelRetry(sid)
       this.postAmbiguousSession(sid)
       return
     }
