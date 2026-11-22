@@ -126,6 +126,34 @@ class UserProfileConfigurableTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test logout with the notice up clears the account and the notice`() {
+        val profile = ProfileDto(email = "alice@test.com", name = "Alice")
+        rpc.completeResult = ProfileSyncDto(error = LoadErrorDto(resource = "profile", status = 500))
+        rpc.completeGate = CompletableDeferred()
+
+        edt { buttons(panel).first { it.text == "Login with Kilo Code" }.doClick() }
+        flushUntil { text(panel).contains("Sign in to Kilo Code") }
+        edt {
+            app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = profile)
+            panel.update(app._state.value)
+        }
+        edt { rpc.completeGate!!.complete(Unit) }
+        flushUntil { text(panel).contains(notice) }
+
+        // Logging out is definitive: it must drop the account and the notice, not lean on a later
+        // account-less emission (which keeps the held account while the notice is up).
+        rpc.fakeProfile = profile
+        edt { buttons(panel).first { it.text == "Log Out" }.doClick() }
+        flushUntil { buttons(panel).any { it.text == "Login with Kilo Code" } }
+
+        edt {
+            val t = text(panel)
+            assertFalse("the dead account must leave the card", t.contains("Alice"))
+            assertFalse("the notice must go with it", t.contains(notice))
+            assertTrue("the sign-in must be offered", buttons(panel).any { it.text == "Login with Kilo Code" })
+        }
+    }
+
     fun `test organization switch updates balance UI`() {
         val orgs = listOf(ProfileOrganizationDto(id = "org_1", name = "Acme", role = "ADMIN"))
         val personal = ProfileDto(

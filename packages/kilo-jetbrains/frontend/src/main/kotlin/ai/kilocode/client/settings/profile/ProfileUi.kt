@@ -118,10 +118,10 @@ internal class ProfileUi(
     /**
      * Update from a full app state snapshot.
      *
-     * A null profile is only treated as transient (keep the logged-in card without updating
-     * account content) when [KiloAppStateDto.progress]`.profile` is [ProfileStatusDto.PENDING],
-     * meaning a switch or initial load is still in flight. Any other null (no progress,
-     * NOT_LOGGED_IN, etc.) clears the profile and shows the logged-out card.
+     * A null profile is treated as transient (keep the logged-in card without updating account
+     * content) when [KiloAppStateDto.progress]`.profile` is [ProfileStatusDto.PENDING], meaning a
+     * switch or initial load is still in flight. Otherwise a null clears the profile and shows the
+     * logged-out card, except while the account notice is up — see below.
      *
      * An emission that carries a different account than the one the notice was raised against proves
      * a read completed, so it ends the notice. A reload that republishes the held account changed
@@ -132,6 +132,7 @@ internal class ProfileUi(
      * marks it [ProfileStatusDto.NOT_LOGGED_IN], the same state a definitive sign-out produces, so
      * this emission cannot tell an outage from a sign-out. Dropping the account here would hide the
      * failure the notice reports. The notice's own retry reports its read, and that answer decides.
+     * A logout clears both explicitly instead of going through this branch.
      */
     @RequiresEdt
     fun update(state: KiloAppStateDto) {
@@ -289,8 +290,12 @@ internal class ProfileUi(
                 telemetry("Account Logout Success", mapOf("surface" to "settings"))
                 withContext(edt) {
                     login = LoginState.Idle
-                    applyState()
+                    // A logout is definitive and user-initiated, so it clears the account and the
+                    // notice outright. Relying on the next state emission would not do it: while the
+                    // notice is up, an account-less emission deliberately keeps the held account.
                     clearUnavailable()
+                    prof = null
+                    applyState()
                 }
             } catch (e: CancellationException) {
                 throw e
