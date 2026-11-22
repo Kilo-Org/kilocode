@@ -19,8 +19,8 @@ describe("displayText", () => {
   })
 
   it("escapes invisible format characters in single-line text", () => {
-    expect(displayText("\u200b\u200c\u200d\ufeff\u061c")).toBe(
-      "\\u200b\\u200c\\u200d\\ufeff\\u061c",
+    expect(displayText("\u200b\u200c\u200d\ufeff\u061c\u2060\u2064")).toBe(
+      "\\u200b\\u200c\\u200d\\ufeff\\u061c\\u2060\\u2064",
     )
   })
 
@@ -30,6 +30,8 @@ describe("displayText", () => {
     expect(displayText("a\u200db")).toBe("a\\u200db")
     expect(displayText("\ufeffname")).toBe("\\ufeffname")
     expect(displayText("a\u061cb")).toBe("a\\u061cb")
+    expect(displayText("a\u2060b")).toBe("a\\u2060b")
+    expect(displayText("a\u2064b")).toBe("a\\u2064b")
   })
 })
 
@@ -48,6 +50,10 @@ describe("displayLines", () => {
 
   it("escapes invisible format characters in block text", () => {
     expect(displayLines("{\n  \"a\": \"x\u200by\ufeff\"\n}")).toBe("{\n  \"a\": \"x\\u200by\\ufeff\"\n}")
+  })
+
+  it("escapes zero-width format characters in block text", () => {
+    expect(displayLines("{\n  \"a\": \"x\u2060y\u2064\"\n}")).toBe("{\n  \"a\": \"x\\u2060y\\u2064\"\n}")
   })
 })
 

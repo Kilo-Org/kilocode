@@ -244,7 +244,7 @@ class PermissionViewTest : BasePlatformTestCase() {
                 meta = PermissionMeta(
                     raw = mapOf("skillShell" to "true", "skill" to "git-status"),
                     // \u202e (RLO) would otherwise reverse the trailing text in the prompt.
-                    skillCommands = listOf("rm \u202etxt.exe", "a\nb"),
+                    skillCommands = listOf("rm \u202etxt.exe", "a\nb", "x\u2060y\u2064z"),
                 ),
             )
         )
@@ -253,6 +253,11 @@ class PermissionViewTest : BasePlatformTestCase() {
         assertTrue("Expected escaped RLO, got: ${label.text}", label.text.contains("rm \\u202etxt.exe"))
         assertTrue("Expected escaped newline, got: ${label.text}", label.text.contains("a\\nb"))
         assertFalse("Raw control char must not reach the label", label.text.contains("\u202e"))
+        assertTrue(
+            "Expected escaped zero-width characters, got: ${label.text}",
+            label.text.contains("x\\u2060y\\u2064z"),
+        )
+        assertFalse("Raw zero-width char must not reach the label", label.text.contains("\u2060"))
     }
 
     fun `test skill-shell header escapes control and bidi characters in the skill name`() {

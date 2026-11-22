@@ -17,10 +17,11 @@ describe("displayCommand", () => {
   })
 
   it("escapes zero-width format characters as literals", () => {
-    // ZWSP (U+200B) and BOM (U+FEFF) occupy no width, so they must show as literals
-    const out = displayCommand("echo \u200bok\ufeff rm -rf /")
-    expect(out).toBe("echo \\u200bok\\ufeff rm -rf /")
-    expect(out).not.toMatch(/[\u200b-\u200f\ufeff]/)
+    // ZWSP (U+200B), BOM (U+FEFF) and the word-joiner range (U+2060..U+2064) occupy no width,
+    // so they must show as literals
+    const out = displayCommand("echo \u200bok\ufeff\u2060\u2064 rm -rf /")
+    expect(out).toBe("echo \\u200bok\\ufeff\\u2060\\u2064 rm -rf /")
+    expect(out).not.toMatch(/[\u200b-\u200f\u2060-\u2064\ufeff]/)
   })
 
   it("leaves ordinary commands unchanged", () => {

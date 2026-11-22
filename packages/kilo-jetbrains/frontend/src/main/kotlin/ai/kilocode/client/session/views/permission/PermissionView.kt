@@ -333,10 +333,13 @@ class PermissionView(
     private fun isEscapedControlOrFormat(code: Int): Boolean =
         code < 0x20 ||
             code in 0x7f..0x9f ||
-            code in 0x200e..0x200f ||
+            code == 0x061c ||
+            code in 0x200b..0x200f ||
             code in 0x2028..0x2029 ||
             code in 0x202a..0x202e ||
-            code in 0x2066..0x2069
+            code in 0x2060..0x2064 ||
+            code in 0x2066..0x2069 ||
+            code == 0xfeff
 
     private fun description(permission: Permission): String = if (permission.name == "bash") {
         permission.meta.raw["description"] ?: toolLabel(permission.name)
