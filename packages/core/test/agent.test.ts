@@ -163,5 +163,46 @@ describe("AgentV2", () => {
       }
     }),
   )
+
+  it.effect("treats case variants of the secret file rules as matched on darwin", () =>
+    Effect.gen(function* () {
+      const agent = yield* AgentV2.Service
+      yield* AgentPlugin.Plugin.effect(
+        host({
+          agent: agentHost(agent),
+        }),
+      ).pipe(
+        Effect.provideService(
+          Location.Service,
+          Location.Service.of(location({ directory: AbsolutePath.make("/project") })),
+        ),
+      )
+
+      yield* Effect.acquireUseRelease(
+        Effect.sync(() => {
+          const original = Object.getOwnPropertyDescriptor(process, "platform")
+          Object.defineProperty(process, "platform", { ...original, value: "darwin" })
+          return original
+        }),
+        () =>
+          Effect.gen(function* () {
+            for (const id of ["build", "plan", "general", "explore"]) {
+              const info = yield* agent.get(AgentV2.ID.make(id))
+              expect(info).toBeDefined()
+              if (!info) throw new Error(`missing built-in agent ${id}`)
+              // A case-insensitive volume resolves every spelling below to the file the rule names.
+              expect(PermissionV2.evaluate("read", "project/.ENV", info.permissions).effect).toBe("ask")
+              expect(PermissionV2.evaluate("read", "project/.Env", info.permissions).effect).toBe("ask")
+              expect(PermissionV2.evaluate("read", "project/.ENV.LOCAL", info.permissions).effect).toBe("ask")
+              expect(PermissionV2.evaluate("read", "project/.ENV.EXAMPLE", info.permissions).effect).toBe("allow")
+            }
+          }),
+        (original) =>
+          Effect.sync(() => {
+            if (original) Object.defineProperty(process, "platform", original)
+          }),
+      )
+    }),
+  )
   // kilocode_change end
 })
