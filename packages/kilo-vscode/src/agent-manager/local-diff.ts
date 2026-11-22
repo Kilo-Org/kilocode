@@ -143,7 +143,8 @@ async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<M
     git.execGit(["-c", "core.quotepath=false", "diff", "--raw", "--numstat", "--no-renames", anc], dir, {
       priority: true,
     }),
-    git.execGit(["ls-files", "--others", "--exclude-standard"], dir, { priority: true }),
+    // `-z` keeps real names; text output C-quotes non-ASCII names, which then fail to stat.
+    git.execGit(["ls-files", "--others", "--exclude-standard", "-z"], dir, { priority: true }),
   ])
   if (tracked.code !== 0) {
     log?.("git diff --raw --numstat failed", { code: tracked.code, stderr: tracked.stderr.trim() })
@@ -193,9 +194,8 @@ async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<M
     return markGenerated(result)
   }
 
-  const files = untracked.stdout.trim()
-  if (!files) return markGenerated(result)
-  const paths = files.split("\n").filter((file) => file && !seen.has(file))
+  const paths = untracked.stdout.split("\0").filter((file) => file && !seen.has(file))
+  if (!paths.length) return markGenerated(result)
 
   for (let index = 0; index < paths.length; index += MAX_SUMMARY_FILES) {
     const entries = await Promise.all(
@@ -265,12 +265,12 @@ async function detailMeta(
   const tracked = await git.execGit(["ls-files", "--error-unmatch", "--", file], dir, { signal, priority: true })
   check(signal)
   if (tracked.code !== 0) {
-    const untracked = await git.execGit(["ls-files", "--others", "--exclude-standard", "--", file], dir, {
+    const untracked = await git.execGit(["ls-files", "--others", "--exclude-standard", "-z", "--", file], dir, {
       signal,
       priority: true,
     })
     check(signal)
-    if (untracked.code !== 0 || !untracked.stdout.split("\n").includes(file)) return undefined
+    if (untracked.code !== 0 || !untracked.stdout.split("\0").includes(file)) return undefined
     const value = await measure(full)
     if (!value) return undefined
     return {
