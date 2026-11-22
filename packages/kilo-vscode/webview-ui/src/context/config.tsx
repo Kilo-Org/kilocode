@@ -307,7 +307,6 @@ export const ConfigProvider: ParentComponent = (props) => {
         setProjectConfig(message.projectConfig)
         setSavedProject(message.projectConfig)
       }
-      applyWorkspace(message)
     }
     if (message.config) {
       setConfig(resolveConfig(message.config, draft(), has(draft() as Record<string, unknown>)))
