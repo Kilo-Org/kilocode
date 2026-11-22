@@ -70,14 +70,14 @@ const dispose = render(
 
 const settle = () => window.happyDOM.waitUntilComplete()
 
-const profile = (currentOrgId: string | null): ProfileData => ({
+const profile = (currentOrgId: string | null, hasPersonalAccount = false): ProfileData => ({
   profile: {
     email: "user@example.test",
     organizations: [
       { id: "org-1", name: "Org One", role: "admin" },
       { id: "org-2", name: "Org Two", role: "member" },
     ],
-    hasPersonalAccount: false,
+    hasPersonalAccount,
   },
   balance: null,
   kiloPass: null,
@@ -240,7 +240,8 @@ try {
   assert.equal(alert(), null, "a profile push that shows the target applied must clear the failure")
   assert.equal(trigger().disabled, false, "the selector stays interactive after the clear")
 
-  // A push that still reports another account must leave the failure in place.
+  // A push that still shows the account the attempt started from must leave the
+  // failure in place.
   await push({ type: "profileData", data: profile("org-1") })
   await open()
   await press(option("Org Two"))
@@ -254,14 +255,41 @@ try {
     error: "profile unavailable",
   })
   await push({ type: "profileData", data: profile("org-1") })
-  assert(alert(), "a push for a different account must keep the failure")
+  assert(alert(), "a push that still shows the origin must keep the failure")
   assert.equal(trigger().disabled, false, "the selector is interactive for the retry")
+
+  // With no personal account, a profile whose currentOrgId is null is displayed
+  // as its first organization, so an attempt that starts in that state starts
+  // from the organization the selector shows rather than from personal. A push
+  // that still reports currentOrgId: null leaves that displayed account alone,
+  // so the failure and its Retry must stay.
+  await push({ type: "profileData", data: profile(null) })
+  assert.equal(trigger().textContent?.includes("Org One"), true, "the selector shows the first organization")
+  await open()
+  await press(option("Org Two"))
+  const divergent = switchPost()
+  await push({
+    type: "organizationSwitchResult",
+    requestID: divergent.requestID,
+    organizationId: "org-2",
+    ok: false,
+    data: null,
+    error: "profile unavailable",
+  })
+  assert(alert(), "the failure is visible before the unconfirming push")
+  await push({ type: "profileData", data: profile(null) })
+  assert(alert(), "a push that still shows the first organization must keep the failure")
+  assert.equal(retryButton().isConnected, true, "the Retry stays available while the displayed account is unchanged")
+  // Naming that same organization explicitly also leaves the displayed account
+  // unchanged, so it keeps the failure too.
+  await push({ type: "profileData", data: profile("org-1") })
+  assert(alert(), "a push that names the same displayed organization must keep the failure")
 
   // A push that reports an account other than the one the attempt started from
   // was superseded by a switch made in the other surface, so it ends the
   // failure: the failed attempt here started on Org One and the push reports
   // personal.
-  await push({ type: "profileData", data: profile(null) })
+  await push({ type: "profileData", data: profile(null, true) })
   assert.equal(alert(), null, "a push for another account must clear the failure")
   assert.equal(trigger().disabled, false, "the selector stays interactive after the clear")
 
