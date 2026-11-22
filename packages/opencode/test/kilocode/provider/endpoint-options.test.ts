@@ -27,6 +27,17 @@ describe("resolveEndpointOptions", () => {
     )
   })
 
+  test("applies the same region rule to the Vertex Anthropic provider", () => {
+    const valid: Record<string, unknown> = { location: "eu" }
+    resolveEndpointOptions("google-vertex-anthropic", "@ai-sdk/google-vertex/anthropic", undefined, valid)
+    expect(valid.location).toBe("eu")
+
+    const invalid: Record<string, unknown> = { location: "proxy.example/x" }
+    expect(() =>
+      resolveEndpointOptions("google-vertex-anthropic", "@ai-sdk/google-vertex/anthropic", undefined, invalid),
+    ).toThrow(/Invalid Google Vertex location/)
+  })
+
   test("accepts a single-label Azure resource name", () => {
     const options: Record<string, unknown> = { resourceName: " my-resource " }
     resolveEndpointOptions("azure", "@ai-sdk/azure", undefined, options)

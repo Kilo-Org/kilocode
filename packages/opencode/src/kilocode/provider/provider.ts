@@ -309,7 +309,7 @@ export function resolveEndpointOptions(
   options: Record<string, any>,
 ) {
   if (typeof options.baseURL === "string" && options.baseURL !== "") return
-  if (providerID === "google-vertex") {
+  if (providerID === "google-vertex" || providerID === "google-vertex-anthropic") {
     const derived =
       npm.includes("@ai-sdk/google-vertex") ||
       modelURL === undefined ||
