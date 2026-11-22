@@ -49,6 +49,33 @@ const model = (api: Api, variants: ModelV2.Info["variants"] = []) =>
     limit: { context: 100, output: 20 },
   })
 
+// kilocode_change start - run one turn and record the payload the transport sends
+type Wire = { readonly headers: Record<string, string>; readonly body: unknown }
+
+function capture(model: Parameters<typeof LLM.request>[0]["model"], sent: Wire[]) {
+  const http = Layer.succeed(
+    HttpClient.HttpClient,
+    HttpClient.make((request) =>
+      Effect.sync(() => {
+        sent.push({
+          headers: { ...request.headers },
+          body:
+            request.body && "body" in request.body && request.body.body instanceof Uint8Array
+              ? JSON.parse(new TextDecoder().decode(request.body.body))
+              : request.body,
+        })
+        return HttpClientResponse.fromWeb(request, new Response("", { status: 200 }))
+      }),
+    ),
+  )
+  return LLMClient.stream(LLM.request({ model, prompt: "Hello" })).pipe(
+    Stream.runDrain,
+    Effect.catchCause(() => Effect.void),
+    Effect.provide(LLMClient.layer.pipe(Layer.provide(RequestExecutor.layer.pipe(Layer.provide(http))))),
+  )
+}
+// kilocode_change end
+
 describe("SessionRunnerModel", () => {
   it.effect("maps catalog OpenAI AI SDK models into native Responses routes", () =>
     Effect.gen(function* () {
@@ -97,23 +124,7 @@ describe("SessionRunnerModel", () => {
         },
       })
 
-      const sent: Array<{ headers: Record<string, string>; body: unknown }> = []
-      const http = Layer.succeed(
-        HttpClient.HttpClient,
-        HttpClient.make((request) =>
-          Effect.sync(() => {
-            sent.push({
-              headers: { ...request.headers },
-              body:
-                request.body && "body" in request.body && request.body.body instanceof Uint8Array
-                  ? JSON.parse(new TextDecoder().decode(request.body.body))
-                  : request.body,
-            })
-            return HttpClientResponse.fromWeb(request, new Response("", { status: 200 }))
-          }),
-        ),
-      )
-
+      const sent: Wire[] = []
       for (const id of ["keyed", "tokenonly"]) {
         const entry = required(migrated.providers?.[id])
         const config = required(entry.models?.["chat"]?.request)
@@ -126,11 +137,7 @@ describe("SessionRunnerModel", () => {
             },
           }),
         )
-        yield* LLMClient.stream(LLM.request({ model: resolved, prompt: "Hello" })).pipe(
-          Stream.runDrain,
-          Effect.catchCause(() => Effect.void),
-          Effect.provide(LLMClient.layer.pipe(Layer.provide(RequestExecutor.layer.pipe(Layer.provide(http))))),
-        )
+        yield* capture(resolved, sent)
       }
 
       const [keyed, tokenonly] = sent.map((item) => required(item))
@@ -160,28 +167,8 @@ describe("SessionRunnerModel", () => {
         }),
       )
 
-      const sent: Array<{ headers: Record<string, string>; body: unknown }> = []
-      const http = Layer.succeed(
-        HttpClient.HttpClient,
-        HttpClient.make((request) =>
-          Effect.sync(() => {
-            sent.push({
-              headers: { ...request.headers },
-              body:
-                request.body && "body" in request.body && request.body.body instanceof Uint8Array
-                  ? JSON.parse(new TextDecoder().decode(request.body.body))
-                  : request.body,
-            })
-            return HttpClientResponse.fromWeb(request, new Response("", { status: 200 }))
-          }),
-        ),
-      )
-
-      yield* LLMClient.stream(LLM.request({ model: resolved, prompt: "Hello" })).pipe(
-        Stream.runDrain,
-        Effect.catchCause(() => Effect.void),
-        Effect.provide(LLMClient.layer.pipe(Layer.provide(RequestExecutor.layer.pipe(Layer.provide(http))))),
-      )
+      const sent: Wire[] = []
+      yield* capture(resolved, sent)
 
       const wire = required(sent[0])
       expect(wire.headers["x-api-key"]).toBe("both-key")
