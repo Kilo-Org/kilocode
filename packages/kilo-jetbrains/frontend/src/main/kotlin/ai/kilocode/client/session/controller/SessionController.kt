@@ -3277,8 +3277,11 @@ class SessionController(
             KiloBundle.message("profile.notice.accountUnavailable"),
             null,
             KiloBundle.message("profile.action.accountSettings"),
-            ::openProfile,
-        )
+        ) {
+            // The balloon outlives the click by design; a controller disposed in between must not
+            // open the page for a session that is gone.
+            if (!disposed) openProfile()
+        }
     }
 
     fun openProfile() {
