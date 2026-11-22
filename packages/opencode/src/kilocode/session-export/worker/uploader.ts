@@ -23,8 +23,9 @@ export class Uploader {
   private active: Promise<void> | undefined
   private requested = false
   private next = 0
-  // Identity the ingest endpoint rejected, so a batch is not re-sent while the same credential is in effect.
-  private rejected: string | undefined
+  // Credential identity the ingest endpoint rejected, plus the status that paused delivery, so a batch
+  // is not re-sent while that same credential is in effect.
+  private rejected: { fingerprint: string; status: number } | undefined
 
   constructor(private readonly deps: UploaderDeps) {
     this.periodic = setInterval(() => this.scheduleFlush("periodic"), Config.flushIntervalMs)
@@ -73,11 +74,17 @@ export class Uploader {
     try {
       while (true) {
         const cred = await credential(this.deps)
-        if (this.rejected !== undefined) {
+        const rejected = this.rejected
+        if (rejected) {
           // A rejected credential suspends the queue: nothing can be delivered until it changes, so
-          // the pause is decided before any batch is read.
-          if (this.rejected === cred.fingerprint) return
+          // the pause is decided before any batch is read, and delivery resuming is reported once.
+          if (rejected.fingerprint === cred.fingerprint) return
           this.rejected = undefined
+          this.deps.reportTelemetry({
+            kind: "telemetry",
+            name: "session_export.upload_auth_released",
+            props: { status: rejected.status },
+          })
         }
         const now = Date.now()
         rows = sessionRows(this.deps.storage.pendingEvents({ now, limitBytes: Config.flushSizeBytes }))
@@ -155,7 +162,7 @@ export class Uploader {
         if (res.status === 401 || res.status === 403) {
           // The endpoint refused the credential. Keep the rows pending and stop draining until the
           // credential changes, so a rejected batch is not retransmitted and nothing is discarded.
-          this.rejected = cred.fingerprint
+          this.rejected = { fingerprint: cred.fingerprint, status: res.status }
           this.deps.reportTelemetry({
             kind: "telemetry",
             name: "session_export.upload_auth_rejected",

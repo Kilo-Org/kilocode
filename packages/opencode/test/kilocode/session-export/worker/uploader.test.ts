@@ -435,6 +435,7 @@ describe("Uploader", () => {
     await uploader.flush("test")
     await uploader.flush("test")
     expect(calls.length).toBe(1)
+    expect(telemetry.some((item) => item.name === "session_export.upload_auth_released")).toBe(false)
 
     uploader.dispose()
   })
@@ -466,6 +467,7 @@ describe("Uploader", () => {
   })
 
   test("a changed credential resumes uploads after a rejection", async () => {
+    const telemetry: Array<{ name: string; props?: Record<string, unknown> }> = []
     const calls: RequestInit[] = []
     process.env.KILO_SESSION_EXPORT_AUTH_TOKEN = "stale-token"
     const uploader = new Uploader({
@@ -477,7 +479,7 @@ describe("Uploader", () => {
           status: new Headers(init.headers).get("authorization") === "Bearer fresh-token" ? 204 : 401,
         })
       },
-      reportTelemetry: () => {},
+      reportTelemetry: (msg) => telemetry.push(msg),
       agentVersion: "v0",
       surface: "test",
     })
@@ -492,6 +494,12 @@ describe("Uploader", () => {
     expect(calls.length).toBe(2)
     expect(new Headers(calls[1].headers).get("authorization")).toBe("Bearer fresh-token")
     expect(storage.pendingEvents({ now: Date.now(), limitBytes: 1_000_000 }).length).toBe(0)
+    expect(telemetry.map((item) => item.name)).toEqual([
+      "session_export.upload_auth_rejected",
+      "session_export.upload_auth_released",
+      "session_export.uploaded",
+    ])
+    expect(telemetry[1].props).toEqual({ status: 401 })
 
     uploader.dispose()
   })
