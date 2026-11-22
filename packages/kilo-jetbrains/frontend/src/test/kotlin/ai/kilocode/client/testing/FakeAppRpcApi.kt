@@ -434,14 +434,24 @@ class FakeAppRpcApi : KiloAppRpcApi {
     /** When set, [setOrganization] returns this result instead of the profile-derived one. */
     var organizationResult: ProfileSyncDto? = null
 
+    /** Number of [refreshProfile] calls, so a test can tell the tolerant read from [refreshAccount]. */
+    var profileReads = 0
+        private set
+
+    /** Number of [refreshAccount] calls, the reporting read the account notice offers. */
+    var accountReads = 0
+        private set
+
     override suspend fun refreshProfile(): ProfileDto? {
         assertNotEdt("refreshProfile")
+        profileReads++
         refreshError?.let { throw it }
         return fakeProfile
     }
 
     override suspend fun refreshAccount(): ProfileSyncDto {
         assertNotEdt("refreshAccount")
+        accountReads++
         refreshAccountError?.let { throw it }
         refreshAccountResult?.let { result ->
             result.profile?.let { p -> fakeProfile = p }

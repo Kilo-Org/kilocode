@@ -127,6 +127,9 @@ class SessionController(
   private val telemetry: (String, Map<String, String>) -> Unit = { event, props -> Telemetry.send(event, props) },
   private val notify: (String, String) -> Unit = { title, body -> KiloNotifications.error(title, body) },
   private val notifyInfo: (String, String) -> Unit = { title, body -> KiloNotifications.info(title, body) },
+  private val notifyAction: (String, String?, String, () -> Unit) -> Unit = { title, body, label, action ->
+    KiloNotifications.warning(title, body, label, action)
+  },
   private val timers: UiTimerSource = UiTimers,
   private val log: KiloLog = LOG,
 ) : Disposable {
@@ -3242,6 +3245,9 @@ class SessionController(
                         if (disposed) return@edt
                         target = null
                         refreshAccountOverlay()
+                        // The switch finished, so reverting the picker is right; without this the
+                        // overlay would quietly show the previous account with no way to find out why.
+                        reportSwitchFailure()
                     }
                     return@launch
                 }
@@ -3258,6 +3264,21 @@ class SessionController(
                 }
             }
         }
+    }
+
+    /**
+     * Report an organization switch whose follow-up account read did not complete.
+     *
+     * The switch itself finished, so the previous account stays on screen. The balloon names that
+     * outcome and its action opens the page that can re-read the details.
+     */
+    private fun reportSwitchFailure() {
+        notifyAction(
+            KiloBundle.message("profile.notice.accountUnavailable"),
+            null,
+            KiloBundle.message("profile.action.accountSettings"),
+            ::openProfile,
+        )
     }
 
     fun openProfile() {

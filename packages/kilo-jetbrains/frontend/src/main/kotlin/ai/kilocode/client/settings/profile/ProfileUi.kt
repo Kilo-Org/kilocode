@@ -93,6 +93,12 @@ internal class ProfileUi(
 
     /** Whether an account step reported that its follow-up account read did not complete. */
     private var unavailable = false
+
+    /**
+     * The account the notice was raised against. A read that completes and brings a different
+     * account clears the notice; a reload that republishes the held account changed nothing.
+     */
+    private var held: ProfileDto? = null
     private var shown: Card? = null
 
     init {
@@ -116,15 +122,21 @@ internal class ProfileUi(
      * account content) when [KiloAppStateDto.progress]`.profile` is [ProfileStatusDto.PENDING],
      * meaning a switch or initial load is still in flight. Any other null (no progress,
      * NOT_LOGGED_IN, etc.) clears the profile and shows the logged-out card.
+     *
+     * An emission that carries a different account than the one the notice was raised against proves
+     * a read completed, so it ends the notice. A reload that republishes the held account changed
+     * nothing: its own read did not produce a new account, so the notice stays.
      */
     @RequiresEdt
     fun update(state: KiloAppStateDto) {
         checkEdt()
         this.status = state.status
-        val transient = state.profile == null && state.progress?.profile == ProfileStatusDto.PENDING
+        val fresh = state.profile
+        if (fresh != null && unavailable && fresh != held) clearUnavailable()
+        val transient = fresh == null && state.progress?.profile == ProfileStatusDto.PENDING
         when {
-            state.profile != null -> {
-                prof = state.profile
+            fresh != null -> {
+                prof = fresh
                 login = LoginState.Idle
             }
             transient -> { /* keep existing prof and account UI untouched */ }
@@ -321,6 +333,7 @@ internal class ProfileUi(
     private fun showUnavailable(fallback: ProfileDto?, appStatus: KiloAppStatusDto) {
         unavailable = true
         val known = prof ?: fallback
+        held = known
         if (known == null) {
             login = LoginState.Error(accountUnavailable(), LoginState.Retry.PROFILE)
             sync()
@@ -332,11 +345,13 @@ internal class ProfileUi(
 
     /**
      * Clear the notice an account step left behind, now that a read completed. Only a completed
-     * read clears it: an unrelated state emission keeps the notice in place.
+     * read clears it: an unrelated state emission keeps the notice in place, and so does a reload
+     * that republishes the account the notice was raised against.
      */
     @RequiresEdt
     private fun clearUnavailable() {
         unavailable = false
+        held = null
         val current = login
         if (current is LoginState.Error && current.retry == LoginState.Retry.PROFILE) login = LoginState.Idle
         account.setNotice(null)

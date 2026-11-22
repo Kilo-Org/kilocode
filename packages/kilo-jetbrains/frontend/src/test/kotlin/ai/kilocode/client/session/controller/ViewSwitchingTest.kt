@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.controller
 
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.rpc.dto.ChatEventDto
@@ -600,7 +601,7 @@ class ViewSwitchingTest : SessionControllerTestBase() {
         assertEquals(null, appRpc.orgSelections.last())
     }
 
-    fun `test failed organization switch clears the switching overlay`() {
+    fun `test failed organization switch clears the switching overlay and offers the account settings`() {
         projectRpc.state.value = workspaceReady()
         rpc.recent.add(session("ses_1"))
         appRpc.state.value = KiloAppStateDto(
@@ -624,6 +625,18 @@ class ViewSwitchingTest : SessionControllerTestBase() {
         assertEquals(false, shows.last().account.switching)
         assertNull(shows.last().account.targetOrgId)
         assertEquals(listOf<String?>("org_1"), appRpc.orgSelections)
+
+        // The picker reverted, so the overlay says why and points at the page that can retry.
+        val note = actionNotifications.single().first
+        assertEquals(KiloBundle.message("profile.notice.accountUnavailable"), note.first)
+        assertNull(note.second)
+        assertEquals(KiloBundle.message("profile.action.accountSettings"), note.third)
+        assertTrue("the switch must not raise an error balloon", notifications.isEmpty())
+        edt { actionNotifications.single().second() }
+        assertTrue(
+            "the action must open the profile settings",
+            appRpc.telemetry.any { it.event == "Profile Settings Opened" && it.properties["surface"] == "session_overlay" },
+        )
     }
 
     fun `test replay includes current overlay event`() {

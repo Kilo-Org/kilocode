@@ -739,6 +739,99 @@ class UserProfileConfigurableTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test a read that brings a different account clears the notice`() {
+        val orgs = listOf(
+            ProfileOrganizationDto(id = "org_1", name = "Acme", role = "ADMIN"),
+            ProfileOrganizationDto(id = "org_2", name = "Beta", role = "ADMIN"),
+        )
+        val personal = ProfileDto(
+            email = "alice@test.com",
+            name = "Alice",
+            organizations = orgs,
+            balance = ProfileBalanceDto(10.0),
+        )
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = personal)
+        edt { panel.update(personal, KiloAppStatusDto.READY) }
+        rpc.organizationResult = ProfileSyncDto(error = LoadErrorDto(resource = "profile", status = 500))
+
+        edt { combos(panel).single().selectedIndex = 1 }
+        flushUntil { text(panel).contains(notice) }
+
+        // A later read answers with the account the switch moved to, so the notice has served its
+        // purpose and the card shows the new details.
+        val moved = personal.copy(currentOrgId = "org_1")
+        edt {
+            app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = moved)
+            panel.update(app._state.value)
+        }
+        flush()
+
+        edt {
+            val t = text(panel)
+            assertFalse("a read that brings a different account clears the notice", t.contains(notice))
+            assertTrue("the account must stay visible", t.contains("Alice"))
+        }
+
+        // With the notice gone, the next Refresh takes the tolerant read again.
+        rpc.fakeProfile = moved.copy(balance = ProfileBalanceDto(25.0))
+        edt { buttons(panel).first { it.text == "Refresh" }.doClick() }
+        flush()
+
+        edt { assertTrue("a plain refresh must show what it read", text(panel).contains("\$25.00")) }
+        assertEquals(listOf(1, 0), listOf(rpc.profileReads, rpc.accountReads))
+    }
+
+    fun `test a reload that republishes the held account keeps the notice`() {
+        val orgs = listOf(ProfileOrganizationDto(id = "org_1", name = "Acme", role = "ADMIN"))
+        val personal = ProfileDto(
+            email = "alice@test.com",
+            name = "Alice",
+            organizations = orgs,
+            balance = ProfileBalanceDto(10.0),
+        )
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = personal)
+        edt { panel.update(personal, KiloAppStatusDto.READY) }
+        rpc.organizationResult = ProfileSyncDto(error = LoadErrorDto(resource = "profile", status = 500))
+
+        edt { combos(panel).single().selectedIndex = 1 }
+        flushUntil { text(panel).contains(notice) }
+
+        // The CLI disposes its instances after the switch, so the plugin reloads. Its own read
+        // failed too, and the service republishes the account it already held.
+        edt {
+            app._state.value = KiloAppStateDto(
+                KiloAppStatusDto.LOADING,
+                progress = LoadProgressDto(profile = ProfileStatusDto.PENDING),
+            )
+            panel.update(app._state.value)
+        }
+        flush()
+        edt {
+            app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = personal)
+            panel.update(app._state.value)
+        }
+        flush()
+
+        edt {
+            val t = text(panel)
+            assertTrue("a reload that read nothing must keep the notice", t.contains(notice))
+            assertTrue("the account must stay visible", t.contains("Alice"))
+            assertTrue("Refresh must stay reachable", buttons(panel).any { it.text == "Refresh" })
+        }
+
+        // The retry still takes the reporting read, so a failing read cannot wipe the account.
+        rpc.refreshAccountResult = ProfileSyncDto(error = LoadErrorDto(resource = "profile", status = 503))
+        edt { buttons(panel).first { it.text == "Refresh" }.doClick() }
+        flushUntil { !text(panel).contains("Refreshing") }
+
+        edt {
+            val t = text(panel)
+            assertTrue("the notice must stay when the read cannot complete", t.contains(notice))
+            assertTrue("the account must not be wiped by the retry", t.contains("Alice"))
+        }
+        assertEquals(listOf(0, 1), listOf(rpc.profileReads, rpc.accountReads))
+    }
+
     fun `test failed profile read after sign-in without an earlier account shows the notice with Refresh`() {
         rpc.completeResult = ProfileSyncDto(error = LoadErrorDto(resource = "profile", status = 500))
         rpc.completeGate = CompletableDeferred()
