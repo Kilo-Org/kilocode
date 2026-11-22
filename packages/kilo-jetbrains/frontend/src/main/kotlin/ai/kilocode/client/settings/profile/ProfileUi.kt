@@ -126,13 +126,18 @@ internal class ProfileUi(
      * An emission that carries a different account than the one the notice was raised against proves
      * a read completed, so it ends the notice. A reload that republishes the held account changed
      * nothing: its own read did not produce a new account, so the notice stays.
+     *
+     * A definitive signed-out emission ([ProfileStatusDto.NOT_LOGGED_IN]) also ends the notice: the
+     * card must offer the sign-in rather than keep asking the user to refresh an account that is
+     * gone. A pending load and an emission that carries no progress at all leave it alone.
      */
     @RequiresEdt
     fun update(state: KiloAppStateDto) {
         checkEdt()
         this.status = state.status
         val fresh = state.profile
-        if (fresh != null && unavailable && fresh != held) clearUnavailable()
+        val signedOut = fresh == null && state.progress?.profile == ProfileStatusDto.NOT_LOGGED_IN
+        if (unavailable && (signedOut || (fresh != null && fresh != held))) clearUnavailable()
         val transient = fresh == null && state.progress?.profile == ProfileStatusDto.PENDING
         when {
             fresh != null -> {

@@ -781,6 +781,39 @@ class UserProfileConfigurableTest : BasePlatformTestCase() {
         assertEquals(listOf(1, 0), listOf(rpc.profileReads, rpc.accountReads))
     }
 
+    fun `test a signed-out emission ends the notice and offers the sign-in`() {
+        val profile = ProfileDto(email = "alice@test.com", name = "Alice")
+        rpc.completeResult = ProfileSyncDto(error = LoadErrorDto(resource = "profile", status = 500))
+        rpc.completeGate = CompletableDeferred()
+
+        edt { buttons(panel).first { it.text == "Login with Kilo Code" }.doClick() }
+        flushUntil { text(panel).contains("Sign in to Kilo Code") }
+        edt {
+            app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = profile)
+            panel.update(app._state.value)
+        }
+        edt { rpc.completeGate!!.complete(Unit) }
+        flushUntil { text(panel).contains(notice) }
+
+        // The CLI then answers definitively signed out: the notice has nothing left to ask for, so
+        // the card must offer the sign-in instead of keeping "Signed in, but ...".
+        edt {
+            app._state.value = KiloAppStateDto(
+                KiloAppStatusDto.READY,
+                progress = LoadProgressDto(profile = ProfileStatusDto.NOT_LOGGED_IN),
+            )
+            panel.update(app._state.value)
+        }
+        flush()
+
+        edt {
+            val t = text(panel)
+            assertFalse("a signed-out emission must end the notice", t.contains(notice))
+            assertTrue("the sign-in must be offered", buttons(panel).any { it.text == "Login with Kilo Code" })
+            assertFalse("the dead account must leave the card", t.contains("Alice"))
+        }
+    }
+
     fun `test a reload that republishes the held account keeps the notice`() {
         val orgs = listOf(ProfileOrganizationDto(id = "org_1", name = "Acme", role = "ADMIN"))
         val personal = ProfileDto(
