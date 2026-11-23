@@ -16,12 +16,7 @@ type CopyKey = Extract<keyof typeof dict, `tui.permissions.${string}`>
 
 type ControllerState =
   | { readonly status: "idle" }
-  | {
-      readonly status: "checking"
-      readonly requestID?: string
-      readonly sessionID?: string
-      readonly directory?: string
-    }
+  | { readonly status: "checking"; readonly requestID?: string; readonly sessionID?: string }
   | {
       readonly status: "offer"
       readonly requestID?: string
@@ -39,7 +34,7 @@ type ControllerState =
       readonly location: LocationRef
       readonly action: Decision
     }
-  | { readonly status: "normal"; readonly projectID?: string; readonly directory?: string }
+  | { readonly status: "normal"; readonly projectID?: string }
 
 type Decision = "update" | "skip" | "clear"
 
@@ -56,6 +51,12 @@ type Controller = {
   readonly manual: (location: LocationRef, sessionID?: string) => Promise<LoadResult>
   readonly decide: (decision: Decision, change?: Change) => void
   readonly dismiss: () => void
+  readonly settled: () => Promise<void>
+}
+
+type ControllerLease = {
+  readonly controller: Controller
+  readonly [Symbol.dispose]: () => void
 }
 // Sets applied to each project, keyed by project ID; the sidebar shows them while any are applied.
 type Applied = {
@@ -89,16 +90,9 @@ function definePlugin(): Plugin.Definition {
   return {
     id: "kilocode.permissions.tui",
     setup(context) {
-      const controllers = new Map<string, Controller>()
       const [navigation, setNavigation] = createSignal<Navigation>()
       const applied = createApplied(context)
-      const controller = (directory: string) => {
-        const existing = controllers.get(directory)
-        if (existing) return existing
-        const created = createController(context, applied)
-        controllers.set(directory, created)
-        return created
-      }
+      const controller = createControllers(context, applied)
       const open = () => {
         void openManual(context, controller).catch((error) => {
           context.ui.toast.show({ variant: "error", message: String(error) })
@@ -114,12 +108,11 @@ function definePlugin(): Plugin.Definition {
       context.ui.slot({
         replace: "session.permission",
         render(input) {
-          const current = controller(
-            input.directory ?? context.location?.directory ?? context.data.location.default().directory,
-          )
+          const lease = controller(`session:${input.request.sessionID}`)
+          onCleanup(() => lease[Symbol.dispose]())
           return (
             <PermissionGate
-              controller={current}
+              controller={lease.controller}
               request={input.request}
               directory={input.directory}
               registerNavigation={setNavigation}
@@ -192,6 +185,26 @@ function definePlugin(): Plugin.Definition {
   }
 }
 
+function createControllers(context: Plugin.Context, applied: Applied) {
+  const controllers = new Map<string, { controller: Controller; users: number }>()
+  return (key: string): ControllerLease => {
+    const entry = controllers.get(key) ?? { controller: createController(context, applied), users: 0 }
+    controllers.set(key, entry)
+    entry.users++
+    return {
+      controller: entry.controller,
+      [Symbol.dispose]() {
+        entry.users--
+        if (entry.users > 0) return
+        // A replacement prompt can rejoin a submission; otherwise release its state after the RPC finishes.
+        void entry.controller.settled().then(() => {
+          if (entry.users === 0 && controllers.get(key) === entry) controllers.delete(key)
+        })
+      },
+    }
+  }
+}
+
 function createApplied(context: Plugin.Context): Applied {
   const [sets, setSets] = createStore<Record<string, readonly Preset[]>>({})
   const dispose = context.client.rpc(KiloPermissionsRpc.Definition).events.on("updated", (event) => {
@@ -224,9 +237,9 @@ function createController(context: Plugin.Context, applied: Applied): Controller
     if (sessionID) await context.data.session.permission.sync(sessionID)
   }
 
-  const fail = (message: CopyKey, projectID?: string, directory?: string) => {
+  const fail = (message: CopyKey, projectID?: string) => {
     context.ui.toast.show({ variant: "error", message: t(message) })
-    setState({ status: "normal", projectID, directory })
+    setState({ status: "normal", projectID })
   }
 
   const load = async (
@@ -234,13 +247,13 @@ function createController(context: Plugin.Context, applied: Applied): Controller
     requestID: string | undefined,
     sessionID: string | undefined,
     manual: boolean,
+    generation = ++loads,
   ): Promise<LoadResult> => {
-    const generation = ++loads
-    setState({ status: "checking", requestID, sessionID, directory: location.directory })
+    setState({ status: "checking", requestID, sessionID })
     try {
       const result = await context.client.rpc(KiloPermissionsRpc.Definition).list({}, { location })
       if (generation !== loads) return undefined
-      const normal = { status: "normal", projectID: result.projectID, directory: location.directory } as const
+      const normal = { status: "normal", projectID: result.projectID } as const
       if (!result.enabled) {
         setState(normal)
         return manual ? "disabled" : undefined
@@ -271,7 +284,7 @@ function createController(context: Plugin.Context, applied: Applied): Controller
       return offer
     } catch {
       if (generation !== loads) return undefined
-      fail("tui.permissions.loadFailed", undefined, location.directory)
+      fail("tui.permissions.loadFailed")
       return manual ? "failed" : undefined
     }
   }
@@ -291,46 +304,41 @@ function createController(context: Plugin.Context, applied: Applied): Controller
       }
     } catch {
       await syncAfterFailure(offer)
-      fail("tui.permissions.applyFailed", offer.projectID, offer.location.directory)
+      fail("tui.permissions.applyFailed", offer.projectID)
       return
     }
     try {
       await sync(offer.sessionID)
     } catch {
-      fail("tui.permissions.saveFailed", offer.projectID, offer.location.directory)
+      fail("tui.permissions.saveFailed", offer.projectID)
       return
     }
     if (decision !== "skip") await applied.refresh(offer.location)
-    setState({ status: "normal", projectID: offer.projectID, directory: offer.location.directory })
+    setState({ status: "normal", projectID: offer.projectID })
   }
 
   const api: Controller = {
     state,
     ensure(request) {
-      const current = state()
-      // A submission already targets its own location; a new request only takes over its prompt.
-      if (current.status === "submitting") return retarget(current, request)
-      // A request from another location (a child session in another directory) needs that location's own answer,
-      // so an offer, check or decision for this controller's last location is only reused for the same directory.
-      const directory = context.data.session.get(request.sessionID)?.location.directory
-      if (current.status !== "idle" && sameDirectory(current, directory)) {
-        if (current.status !== "normal") retarget(current, request)
-        return
-      }
-      setState({ status: "checking", requestID: request.id, sessionID: request.sessionID, directory })
-      const started = resolveSessionLocation(context, request.sessionID)
-        .then((location) => {
-          if (!location) {
-            fail("tui.permissions.loadFailed")
-            return
-          }
-          return load(location, request.id, request.sessionID, false)
-        })
-        .catch(() => fail("tui.permissions.loadFailed"))
-        .then(() => undefined)
-        .finally(() => {
-          if (operation === started) operation = undefined
-        })
+      const generation = ++loads
+      const waiting = operation
+      const started = (async () => {
+        // Finish any decision for the previous request before loading this request's location.
+        await waiting
+        if (generation !== loads) return
+        setState({ status: "checking", requestID: request.id, sessionID: request.sessionID })
+        const location = await resolveSessionLocation(context, request.sessionID)
+        if (generation !== loads) return
+        if (!location) {
+          fail("tui.permissions.loadFailed")
+          return
+        }
+        await load(location, request.id, request.sessionID, false, generation)
+      })().catch(() => {
+        if (generation === loads) fail("tui.permissions.loadFailed")
+      }).finally(() => {
+        if (operation === started) operation = undefined
+      })
       operation = started
     },
     async manual(location, sessionID) {
@@ -368,10 +376,9 @@ function createController(context: Plugin.Context, applied: Applied): Controller
     dismiss() {
       if (state().status === "offer") setState({ status: "idle" })
     },
-  }
-
-  const retarget = (current: Exclude<ControllerState, { status: "idle" | "normal" }>, request: PermissionRequest) => {
-    if (current.requestID !== request.id) setState({ ...current, requestID: request.id, sessionID: request.sessionID })
+    async settled() {
+      while (operation) await operation
+    },
   }
 
   const syncAfterFailure = async (offer: Offer) => {
@@ -385,12 +392,6 @@ function createController(context: Plugin.Context, applied: Applied): Controller
   return api
 }
 
-// An unknown directory on either side keeps the current state, as before locations were compared.
-function sameDirectory(state: Exclude<ControllerState, { status: "idle" }>, directory: string | undefined) {
-  const current = state.status === "offer" || state.status === "submitting" ? state.location.directory : state.directory
-  return directory === undefined || current === undefined || current === directory
-}
-
 async function resolveSessionLocation(context: Plugin.Context, sessionID: string): Promise<LocationRef | undefined> {
   const current = context.data.session.get(sessionID)
   if (current) return current.location
@@ -398,7 +399,7 @@ async function resolveSessionLocation(context: Plugin.Context, sessionID: string
   return context.data.session.get(sessionID)?.location
 }
 
-async function openManual(context: Plugin.Context, getController: (directory: string) => Controller) {
+async function openManual(context: Plugin.Context, getController: (key: string) => ControllerLease) {
   const route = context.ui.router.current()
   const location =
     route.type === "session"
@@ -408,7 +409,8 @@ async function openManual(context: Plugin.Context, getController: (directory: st
     await context.ui.dialog.alert({ title: t("tui.permissions.title"), message: t("tui.permissions.loadFailed") })
     return
   }
-  const selectedController = getController(location.directory)
+  using lease = getController(route.type === "session" ? `session:${route.sessionID}` : `directory:${location.directory}`)
+  const selectedController = lease.controller
   const result = await selectedController.manual(location, route.type === "session" ? route.sessionID : undefined)
   if (typeof result !== "object") {
     if (result === "active") return

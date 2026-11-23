@@ -6,9 +6,9 @@ import { directory, json } from "../fixture/tui-client"
 const location = { directory, project: { id: "project", directory, canonical: directory } }
 const sessionID = "ses_permissions"
 const requestID = "per_permissions"
-function permissionRequest(id: string): PermissionRequest {
+function permissionRequest(id: string, permissionID = requestID): PermissionRequest {
   return {
-    id: requestID,
+    id: permissionID,
     sessionID: id,
     action: "shell",
     resources: ["bun run check"],
@@ -47,6 +47,7 @@ type State = {
   readonly applyFailure?: boolean
   readonly delayApply?: Promise<void>
   readonly delaySkip?: Promise<void>
+  readonly delayList?: Promise<void>
   /** The sets that match the project now; every set by default. */
   readonly presets?: readonly (typeof presets)[number][]
   readonly unidentified?: boolean
@@ -75,22 +76,25 @@ function state(overrides: Partial<State> = {}): State {
   }
 }
 
-function sessionFetch(id: string, sessionLocation = location) {
+function sessionInfo(id: string, sessionLocation = location, parentID?: string) {
+  return {
+    id,
+    parentID,
+    projectID: sessionLocation.project.id,
+    title: "Permission fixture",
+    agent: "build",
+    model: { providerID: "demo", id: "model" },
+    location: { directory: sessionLocation.directory },
+    cost: 0,
+    tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+    time: { created: 0, updated: 0 },
+  }
+}
+
+function sessionFetch(id: string, sessionLocation = location, parentID?: string) {
   return async (url: URL) => {
     if (url.pathname === `/api/session/${id}`)
-      return json({
-        data: {
-          id,
-          projectID: sessionLocation.project.id,
-          title: "Permission fixture",
-          agent: "build",
-          model: { providerID: "demo", id: "model" },
-          location: { directory: sessionLocation.directory },
-          cost: 0,
-          tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
-          time: { created: 0, updated: 0 },
-        },
-      })
+      return json({ data: sessionInfo(id, sessionLocation, parentID) })
     if (url.pathname === `/api/session/${id}/message`) return json({ data: [], cursor: {} })
     if (url.pathname === `/api/session/${id}/inbox`) return json({ data: [] })
     if (url.pathname === "/api/agent")
@@ -111,18 +115,24 @@ function sessionFetch(id: string, sessionLocation = location) {
 
 function fixtureFetch(
   current: State,
-  input?: { readonly sessionID?: string; readonly sessionLocation?: typeof location },
+  input?: {
+    readonly sessionID?: string
+    readonly sessionLocation?: typeof location
+    readonly parentID?: string
+    readonly requestID?: string
+  },
 ) {
   const id = input?.sessionID ?? sessionID
   const sessionLocation = input?.sessionLocation ?? location
   return async (url: URL, requestInput: Request) => {
     if (url.pathname === `/api/session/${id}/permission`) {
-      return json({ data: current.pending ? [permissionRequest(id)] : [] })
+      return json({ data: current.pending ? [permissionRequest(id, input?.requestID)] : [] })
     }
     if (url.pathname === "/api/permission/saved") return json({ data: [] })
     if (url.pathname.startsWith("/api/rpc/kilocode.permissions/")) {
       if (url.pathname.endsWith("/list")) {
         current.listLocations.push(decodeURIComponent(url.search))
+        if (current.delayList) await current.delayList
         return json({
           output: {
             enabled: true,
@@ -169,7 +179,7 @@ function fixtureFetch(
       current.replyCalls += 1
       return new Response(null, { status: 204 })
     }
-    return sessionFetch(id, sessionLocation)(url)
+    return sessionFetch(id, sessionLocation, input?.parentID)(url)
   }
 }
 
@@ -426,6 +436,102 @@ test("routes child-session permission setup through the child location", async (
   await app.ready
   await until(app, "child permission offer", (frame) => frame.includes("Set up project permissions"))
   expect(current.listLocations.some((value) => value.includes("opencode-child"))).toBe(true)
+})
+
+for (const phase of ["offer", "checking", "submitting"] as const) {
+  test(`a child request replaces the parent's ${phase} without reusing its location`, async () => {
+    const pending = Promise.withResolvers<void>()
+    const parent = state({
+      ...(phase === "checking" ? { delayList: pending.promise } : {}),
+      ...(phase === "submitting" ? { delayApply: pending.promise } : {}),
+    })
+    const child = state({ presets: [presets[1]] })
+    const childID = "ses_permissions_child"
+    const childRequestID = "per_permissions_child"
+    const childLocation = {
+      directory: "/tmp/opencode-child",
+      project: { id: "child-project", directory: "/tmp/opencode-child", canonical: "/tmp/opencode-child" },
+    }
+    const parentFetch = fixtureFetch(parent)
+    const childFetch = fixtureFetch(child, {
+      sessionID: childID,
+      sessionLocation: childLocation,
+      parentID: sessionID,
+      requestID: childRequestID,
+    })
+    await using app = await createAppFixture({
+      width: 100,
+      height: 34,
+      args: { sessionID },
+      config: { animations: false, tabs: { mode: "off" } },
+      fetch: (url, request) => {
+        if (url.pathname === "/api/session") {
+          return json({
+            data: url.searchParams.get("parentID") === sessionID ? [sessionInfo(childID, childLocation, sessionID)] : [],
+            cursor: {},
+          })
+        }
+        if (url.pathname.startsWith(`/api/session/${childID}`) || decodeURIComponent(url.search).includes(childLocation.directory))
+          return childFetch(url, request)
+        return parentFetch(url, request)
+      },
+    })
+    try {
+      await app.ready
+      await until(app, "parent permission", (frame) =>
+        frame.includes(phase === "checking" ? "Checking project permissions" : "Set up project permissions"),
+      )
+      if (phase === "submitting") {
+        await confirmOfferReview(app)
+        await until(app, "parent submission", (frame) => frame.includes("Applying project permissions"))
+      }
+      parent.pending = false
+      emitReplied(app)
+      const offer = await until(app, "child offer", (frame) => frame.includes("› [✓] TypeScript checks"))
+      expect(offer).not.toContain("Kilo / Bun checks")
+      expect(child.listLocations.some((value) => value.includes("opencode-child"))).toBe(true)
+      await confirmOfferReview(app)
+      await until(app, "child applied", () => child.decision === "accepted")
+      expect(child.calls).toEqual(["apply typescript-checks"])
+      pending.resolve()
+      await until(app, "normal child prompt", (frame) => frame.includes("Permission required"))
+      expect(parent.calls).toEqual(phase === "submitting" ? ["apply kilo-bun-checks"] : [])
+      expect(child.replyCalls).toBe(0)
+    } finally {
+      pending.resolve()
+    }
+  })
+}
+
+test("releasing a prompt forgets its old decision before a new request after a reset", async () => {
+  const current = state()
+  await using app = await createAppFixture({
+    width: 100,
+    height: 34,
+    args: { sessionID },
+    config: { animations: false, tabs: { mode: "off" } },
+    fetch: fixtureFetch(current),
+  })
+  await app.ready
+  await until(app, "permission offer", (frame) => frame.includes("Set up project permissions"))
+  app.mockInput.pressEscape()
+  await until(app, "normal prompt", (frame) => frame.includes("Permission required"))
+  expect(current.decision).toBe("skipped")
+  current.pending = false
+  emitReplied(app)
+  await until(app, "prompt released", (frame) => frame.includes("ctrl+p commands"))
+
+  // A reset outside this TUI must not leave a discarded controller suppressing the next offer.
+  current.decision = null
+  current.pending = true
+  app.events.emit({
+    id: "evt_after_reset",
+    created: Date.now(),
+    type: "permission.asked",
+    data: permissionRequest(sessionID, "per_after_reset"),
+  })
+  await until(app, "fresh permission offer", (frame) => frame.includes("Set up project permissions"))
+  expect(current.skipped).toBe(1)
 })
 
 test("does not start a second decision when the original request disappears during apply", async () => {
