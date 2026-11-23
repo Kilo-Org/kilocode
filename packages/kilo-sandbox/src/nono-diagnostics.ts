@@ -71,14 +71,15 @@ function fromSession(value: Session, fallback: number): Diagnostics | undefined 
     ]),
   ]
   const exit = typeof value.exit_code === "number" ? value.exit_code : fallback
-  // `command_failed_likely_sandbox` and `command_failed_application` are generic advice that appears on every run,
-  // including successful ones, so they are not a signal; a failure without a specific code stays `unknown`.
+  // Some denials are recorded only as a data-access violation (#1796/#2209), and metadata violations are noisy
+  // enough to ignore. `command_failed_*` is generic advice present on every run, successful ones included.
+  const data = operations.some((operation) => operation === "file-read-data" || operation === "file-write-data")
   const kind: DenialKind | undefined =
     codes.includes("sandbox_denied_network") || operations.includes("network-outbound")
       ? "denied-network"
       : codes.includes("sandbox_denied_unix_socket")
         ? "denied-socket"
-        : codes.includes("sandbox_denied_path") || paths.length > 0
+        : codes.includes("sandbox_denied_path") || data || paths.length > 0
           ? "denied-path"
           : codes.includes("command_not_found")
             ? "not-found"
@@ -88,9 +89,11 @@ function fromSession(value: Session, fallback: number): Diagnostics | undefined 
   return kind === undefined ? undefined : { kind, codes, paths, exit, text: "" }
 }
 
+/** Raw stderr only names a denial for a failed launch; a successful command's error-looking text is not one. */
 function fromOutput(code: number, text: string): Diagnostics | undefined {
+  if (code === 0) return undefined
   const trimmed = text.trim()
-  const kind: DenialKind | undefined = /Command execution failed:.*cannot find binary path/.test(text)
+  const kind: DenialKind = /Command execution failed:.*cannot find binary path/.test(text)
     ? "not-found"
     : /Operation not permitted|Permission denied/.test(text)
       ? "denied-path"
@@ -98,12 +101,10 @@ function fromOutput(code: number, text: string): Diagnostics | undefined {
             text,
           )
         ? "denied-network"
-        : code === 0
-          ? undefined
-          : trimmed.length === 0
-            ? "unknown"
-            : "application"
-  return kind === undefined ? undefined : { kind, codes: [], paths: [], exit: code, text }
+        : trimmed.length === 0
+          ? "unknown"
+          : "application"
+  return { kind, codes: [], paths: [], exit: code, text }
 }
 
 export function classify(input: {
@@ -113,6 +114,15 @@ export function classify(input: {
 }): Diagnostics | undefined {
   const text = redact(input.stderr, input.secrets ?? [])
   const parsed = session(text)
-  const result = parsed === undefined ? fromOutput(input.code, text) : fromSession(parsed, input.code)
-  return result === undefined ? undefined : { ...result, text }
+  const loose = fromOutput(input.code, text)
+  if (parsed === undefined) return loose
+  const strict = fromSession(parsed, input.code)
+  // `undefined` here is the session's success verdict; the raw fallback must never overturn it.
+  if (strict === undefined) return undefined
+  // A session can parse while its denial records are incomplete (#1796/#2209); the raw output may still name the
+  // cause. Upgrade only an otherwise unknown verdict, and only from a specific raw signal: a bare "application"
+  // guess must not overwrite the honest unknown.
+  const specific = loose !== undefined && loose.kind !== "unknown" && loose.kind !== "application"
+  const kind = strict.kind === "unknown" && specific ? loose.kind : strict.kind
+  return { ...strict, kind, text }
 }
