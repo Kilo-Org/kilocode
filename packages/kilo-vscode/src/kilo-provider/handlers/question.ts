@@ -8,6 +8,7 @@
 
 import type { KiloClient, QuestionRequest } from "@kilocode/sdk/v2/client"
 import { isNotFoundError } from "./not-found"
+import { SESSION_ROUTE_UNRESOLVED } from "../../shared/session-route-error"
 
 export interface QuestionContext {
   readonly client: KiloClient | null
@@ -22,6 +23,8 @@ export interface QuestionContext {
   clearQuestionDirectory(requestID: string): void
   getQuestionRevision(): number
   pruneQuestionDirectories(active: Set<string>, dirs: Set<string>): void
+  /** Whether a raw session id has no single project directory (Agent Manager). */
+  isSessionAmbiguous?(sessionId: string): boolean
 }
 
 interface QuestionRecovery {
@@ -124,7 +127,19 @@ async function resolve(
   // The webview names the session that owns the request; the fallback covers
   // other callers that do not.
   const sid = sessionID ?? ctx.currentSessionId
-  const dir = ctx.getQuestionDirectory(requestID) ?? ctx.getWorkspaceDirectory(sid)
+  // A recorded directory came from a directory-scoped question.list, so it is
+  // exact and stays authoritative. Without one, an id that maps to more than
+  // one project has no single directory, so the reply is reported back.
+  const recorded = ctx.getQuestionDirectory(requestID)
+  if (!recorded && sid && ctx.isSessionAmbiguous?.(sid)) {
+    console.error("[Kilo New] KiloProvider: Question route has no single owning project:", sid)
+    // Scoped to the session so the notice settles that session, and the dock
+    // resets through questionError, which carries no text of its own.
+    ctx.postMessage({ type: "error", sessionID: sid, message: SESSION_ROUTE_UNRESOLVED })
+    ctx.postMessage({ type: "questionError", requestID })
+    return false
+  }
+  const dir = recorded ?? ctx.getWorkspaceDirectory(sid)
 
   try {
     await request(ctx.client.question, dir)

@@ -10,7 +10,7 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../context/language"
 
-export const PermissionCommand: Component<{ command: string; plain?: boolean }> = (props) => {
+export const PermissionCommand: Component<{ command: string; raw?: string; plain?: boolean }> = (props) => {
   const language = useLanguage()
   const [copied, setCopied] = createSignal(false)
   const state = { signal: { aborted: false } }
@@ -39,7 +39,8 @@ export const PermissionCommand: Component<{ command: string; plain?: boolean }> 
   })
 
   const copy = () => {
-    navigator.clipboard.writeText(props.command)
+    // `command` is the escaped display form; copy the text that the request carries.
+    navigator.clipboard.writeText(props.raw ?? props.command)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }

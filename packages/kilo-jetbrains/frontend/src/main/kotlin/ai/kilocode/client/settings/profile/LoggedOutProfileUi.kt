@@ -5,6 +5,7 @@ import ai.kilocode.client.settings.auth.DeviceOAuthInfo
 import ai.kilocode.client.settings.auth.DeviceOAuthPanel
 import ai.kilocode.client.settings.auth.DeviceOAuthText
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
 import ai.kilocode.rpc.dto.KiloAppStatusDto
@@ -35,6 +36,7 @@ internal class LoggedOutProfileUi(
     private val retry: () -> Unit,
     private val cancel: () -> Unit,
     private val browse: (String) -> Unit,
+    private val refresh: () -> Unit,
     private val timers: UiTimerSource = UiTimers,
 ) : JPanel(BorderLayout()) {
 
@@ -54,6 +56,12 @@ internal class LoggedOutProfileUi(
 
     private val authRetryBtn = JButton(KiloBundle.message("profile.login.tryAgain"))
         .also { it.addActionListener { login() } }
+
+    private val authRefreshBtn = JButton(KiloBundle.message("profile.action.refresh"))
+        .also {
+            it.isVisible = false
+            it.addActionListener { refresh() }
+        }
 
     private val auth = DeviceOAuthPanel(
         DeviceOAuthText(
@@ -138,7 +146,9 @@ internal class LoggedOutProfileUi(
     private fun loginErrorCard(): JPanel {
         val p = padded()
         p.add(errLabel, gbc(0))
-        p.add(authRetryBtn, gbc(1, UiStyle.Gap.sm()).centered())
+        p.add(Stack.horizontal(UiStyle.Gap.md())
+            .next(authRetryBtn)
+            .next(authRefreshBtn), gbc(1, UiStyle.Gap.sm()).centered())
         return p
     }
 
@@ -154,7 +164,23 @@ internal class LoggedOutProfileUi(
         }
 
         if (target == OutMode.LOGIN_ERROR && login is LoginState.Error) {
-            errLabel.text = login.message
+            if (errLabel.text != login.message) errLabel.text = login.message
+            // Exactly one action recovers from the failure: restarting the sign-in, or re-reading
+            // the account of a sign-in that already finished.
+            val reRead = login.retry == LoginState.Retry.PROFILE
+            var changed = false
+            if (authRefreshBtn.isVisible != reRead) {
+                authRefreshBtn.isVisible = reRead
+                changed = true
+            }
+            if (authRetryBtn.isVisible != !reRead) {
+                authRetryBtn.isVisible = !reRead
+                changed = true
+            }
+            if (changed) {
+                errLabel.parent?.revalidate()
+                repaint()
+            }
         }
 
         if (mode != target) {

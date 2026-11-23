@@ -940,6 +940,55 @@ class HostedStreamLifecycleTest {
         }
     }
 
+    @Test
+    fun `each organization serves calls from its own attachment`() = runBlocking(Dispatchers.Default) {
+        mock.profile = """{"profile":{"email":"test@test.com","name":"Test"},"balance":null,"currentOrgId":"org_1"}"""
+        ready()
+        app.hosted.retain(session, "org_1")
+        app.hosted.messages(session, "org_1")
+        assertTrue(mock.awaitFeed(path), "native stream did not open")
+        assertEquals(1, mock.requestCount(attach))
+        assertTrue(mock.lastHostedAttachPath.orEmpty().contains("organizationID=org_1"))
+
+        mock.hostedAttach = """{"attachmentID":"wrk_att_next","session":{"providerID":"cloud","sessionID":"ses_cloud"},"expiresAt":1}"""
+        app.hosted.messages(session, "org_2")
+
+        // Each lease serves the organization it was minted for, so the second organization gets
+        // its own lease.
+        assertEquals(2, mock.requestCount(attach))
+        assertTrue(mock.lastHostedAttachPath.orEmpty().contains("organizationID=org_2"))
+        assertTrue(mock.awaitRequestCount("/kilocode/session-host/attachment/wrk_att_test", 1))
+        assertTrue(mock.awaitFeedClosed(path), "previous native feed stayed open")
+        assertTrue(mock.lastHostedMessagePath.orEmpty().contains("workspace=wrk_att_next"))
+    }
+
+    @Test
+    fun `same organization reuses the live attachment`() = runBlocking(Dispatchers.Default) {
+        mock.profile = """{"profile":{"email":"test@test.com","name":"Test"},"balance":null,"currentOrgId":"org_1"}"""
+        ready()
+        app.hosted.retain(session, "org_1")
+        app.hosted.messages(session, "org_1")
+        app.hosted.messages(session, "org_1")
+
+        assertEquals(1, mock.requestCount(attach))
+        assertTrue(mock.lastHostedMessagePath.orEmpty().contains("workspace=wrk_att_test"))
+    }
+
+    @Test
+    fun `personal selection serves calls from a personal attachment`() = runBlocking(Dispatchers.Default) {
+        mock.profile = """{"profile":{"email":"test@test.com","name":"Test"},"balance":null,"currentOrgId":"org_1"}"""
+        ready()
+        app.hosted.retain(session, "org_1")
+        app.hosted.messages(session, "org_1")
+        app.hosted.messages(session, null)
+
+        assertEquals(2, mock.requestCount(attach))
+        assertFalse(
+            mock.lastHostedAttachPath.orEmpty().contains("organizationID="),
+            "personal call served from an organization lease: ${mock.lastHostedAttachPath}",
+        )
+    }
+
     private fun preparing(revision: Int, attempt: String = "attempt_live", body: JsonObjectBuilder.() -> Unit): String =
         buildJsonObject {
             put("type", "preparing")

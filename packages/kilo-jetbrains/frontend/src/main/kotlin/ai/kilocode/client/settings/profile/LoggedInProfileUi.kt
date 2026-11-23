@@ -60,6 +60,13 @@ internal class LoggedInProfileUi(
         accessibleContext.accessibleName = KiloBundle.message("settings.kilo.displayName")
     }
 
+    /** Explains that the account is signed in while its latest details could not be read. */
+    private val noticeLabel = JBLabel().apply {
+        name = "kilo.profile.notice"
+        foreground = UiStyle.Colors.weak()
+        isVisible = false
+    }
+
     private val titleLabel = JBLabel(KiloBundle.message("profile.balance.title")).apply {
         foreground = UiStyle.Colors.weak()
     }
@@ -166,6 +173,7 @@ internal class LoggedInProfileUi(
 
     private val content = Stack.vertical(UiStyle.Gap.lg()).apply {
         next(header)
+        next(noticeLabel)
         next(combo)
         next(balanceCard)
         next(actionRow.align(HAlign.CENTER, VAlign.CENTER))
@@ -173,6 +181,8 @@ internal class LoggedInProfileUi(
 
     private var applying = false
     private var refreshing = false
+    // Whether the current profile shows the balance card on its own (balance or Kilo Pass).
+    private var balanceAllowed = false
     // Stable identity cache: (orgId or null for personal) to display name.
     // Reflects what is currently shown in the retained combo model.
     private var comboKeys: List<Pair<String?, String>> = emptyList()
@@ -232,7 +242,8 @@ internal class LoggedInProfileUi(
         var changed = false
         changed = visible(titleLabel, bal != null) || changed
         changed = visible(valueLabel, bal != null) || changed
-        changed = visible(refreshBtn, bal != null || showPass) || changed
+        balanceAllowed = bal != null || showPass
+        changed = visible(refreshBtn, balanceAllowed || noticeLabel.isVisible) || changed
         if (bal != null) {
             val balText = formatBalance(bal.balance)
             if (valueLabel.text != balText) {
@@ -241,9 +252,37 @@ internal class LoggedInProfileUi(
             }
         }
         changed = syncPass(item, showPass) || changed
-        changed = visible(balanceCard, bal != null || showPass) || changed
+        changed = visible(balanceCard, balanceAllowed || noticeLabel.isVisible) || changed
 
         applyOrganizations(profile)
+        if (changed) syncLayout()
+    }
+
+    /**
+     * Show why the account details are not the latest.
+     *
+     * While the notice is shown the Refresh action stays reachable even for an account whose
+     * balance and Kilo Pass would otherwise hide it, so the balance card that holds it stays
+     * visible too. Passing null hides the notice.
+     */
+    @RequiresEdt
+    fun setNotice(text: String?) {
+        var changed = false
+        if (text == null) {
+            changed = visible(noticeLabel, false)
+        } else {
+            if (!noticeLabel.isVisible) {
+                noticeLabel.isVisible = true
+                changed = true
+            }
+            if (noticeLabel.text != text) {
+                noticeLabel.text = text
+                changed = true
+            }
+        }
+        val show = noticeLabel.isVisible
+        changed = visible(refreshBtn, balanceAllowed || show) || changed
+        changed = visible(balanceCard, balanceAllowed || show) || changed
         if (changed) syncLayout()
     }
 

@@ -1,7 +1,7 @@
 export * as FileMutation from "./file-mutation"
 
 import { makeLocationNode } from "./effect/app-node"
-import { Context, Effect, Layer, Schema } from "effect"
+import { Context, Effect, Layer, Option, Schema } from "effect" // kilocode_change - Option for filesystem identity
 import { dirname } from "path"
 import { KeyedMutex } from "./effect/keyed-mutex"
 import { FSUtil } from "./fs-util"
@@ -16,9 +16,25 @@ export interface WriteInput {
   readonly content: string | Uint8Array
 }
 
+// kilocode_change start - bind a write to the filesystem identity the approval covered
+export type Identity =
+  | { readonly type: "file"; readonly dev: number; readonly ino: number }
+  | { readonly type: "absent" }
+
+export class TargetChangedError extends Schema.TaggedErrorClass<TargetChangedError>()(
+  "FileMutation.TargetChangedError",
+  { path: Schema.String },
+) {}
+
+export class TargetKindError extends Schema.TaggedErrorClass<TargetKindError>()("FileMutation.TargetKindError", {
+  path: Schema.String,
+}) {}
+// kilocode_change end
+
 export interface TextWriteInput {
   readonly target: Target
   readonly content: string
+  readonly approved: Identity // kilocode_change - the identity observed when the write was approved
 }
 
 export interface ConditionalWriteInput extends WriteInput {
@@ -52,11 +68,22 @@ export interface RemoveResult {
 }
 
 export interface Interface {
+  // kilocode_change start - identity binding for approved writes
+  /**
+   * Observe the filesystem identity a write approval covers. Fails with `TargetKindError` when the target is not a
+   * regular file or its filesystem identity is unavailable.
+   */
+  readonly inspect: (target: Target) => Effect.Effect<Identity, FSUtil.Error | TargetKindError>
+  // kilocode_change end
   /** Create without replacing an existing target. */
   readonly create: (input: WriteInput) => Effect.Effect<WriteResult, TargetExistsError | FSUtil.Error>
   readonly write: (input: WriteInput) => Effect.Effect<WriteResult, FSUtil.Error>
   /** Write text while retaining an existing UTF-8 BOM and emitting at most one BOM. */
-  readonly writeTextPreservingBom: (input: TextWriteInput) => Effect.Effect<WriteResult, FSUtil.Error>
+  // kilocode_change start - the write must carry its approved identity
+  readonly writeTextPreservingBom: (
+    input: TextWriteInput,
+  ) => Effect.Effect<WriteResult, FSUtil.Error | TargetChangedError>
+  // kilocode_change end
   /** Commit only if an existing target still has the expected bytes. */
   readonly writeIfUnchanged: (
     input: ConditionalWriteInput,
@@ -105,18 +132,70 @@ const layer = Layer.effect(
       ),
     )
 
+    // kilocode_change start - observe the filesystem identity a write approval covers
+    const inspect = Effect.fn("FileMutation.inspect")(function* (target: Target) {
+      const info = yield* fs
+        .stat(target.canonical)
+        .pipe(Effect.catchReason("PlatformError", "NotFound", () => Effect.succeed(undefined)))
+      if (info === undefined) return { type: "absent" } satisfies Identity
+      if (info.type !== "File") return yield* Effect.fail(new TargetKindError({ path: target.canonical }))
+      const ino = Option.getOrUndefined(info.ino)
+      // kilocode_change - a zero inode is not a usable identity: some filesystems report it for every file on the
+      // volume, so a dev/ino comparison would match any of them. Fail as a typed error, not a defect.
+      if (ino === undefined || ino === 0) return yield* Effect.fail(new TargetKindError({ path: target.canonical }))
+      return { type: "file", dev: info.dev, ino } satisfies Identity
+    })
+    // kilocode_change end
+
     const writeTextPreservingBom = Effect.fn("FileMutation.writeTextPreservingBom")((input: TextWriteInput) =>
       withTargetLock(input.target)(
         Effect.gen(function* () {
+          // kilocode_change start - write only the filesystem object the approval covered
           const next = splitBom(input.content)
-          const current = yield* fs
-            .readFile(input.target.canonical)
-            .pipe(Effect.catchReason("PlatformError", "NotFound", () => Effect.succeed(undefined)))
-          yield* fs.writeWithDirs(
-            input.target.canonical,
-            joinBom(next.text, Boolean(current && hasUtf8Bom(current)) || next.bom),
+          if (input.approved.type === "absent") {
+            const create = fs.writeFileString(input.target.canonical, joinBom(next.text, next.bom), { flag: "wx" })
+            yield* create.pipe(
+              Effect.catchReason("PlatformError", "NotFound", () =>
+                fs.ensureDir(dirname(input.target.canonical)).pipe(Effect.andThen(create)),
+              ),
+              Effect.catchReason("PlatformError", "AlreadyExists", () =>
+                Effect.fail(new TargetChangedError({ path: input.target.canonical })),
+              ),
+            )
+            return writeResult(input.target, false)
+          }
+          const approved = input.approved
+          const changed = () => new TargetChangedError({ path: input.target.canonical })
+          const bom = yield* Effect.scoped(
+            Effect.gen(function* () {
+              const file = yield* fs
+                .open(input.target.canonical, { flag: "r" })
+                .pipe(Effect.catchReason("PlatformError", "NotFound", () => Effect.fail(changed())))
+              const info = yield* file.stat
+              if (info.dev !== approved.dev || Option.getOrUndefined(info.ino) !== approved.ino)
+                return yield* Effect.fail(changed())
+              // collect the BOM prefix across short reads
+              const head = new Uint8Array(3)
+              let size = 0
+              while (size < 3) {
+                const chunk = yield* file.readAlloc(3 - size)
+                if (Option.isNone(chunk)) break
+                const bytes = chunk.value
+                if (bytes.length === 0) break
+                const take = Math.min(bytes.length, 3 - size)
+                head.set(bytes.subarray(0, take), size)
+                size += take
+              }
+              return hasUtf8Bom(head.subarray(0, size))
+            }),
           )
-          return writeResult(input.target, current !== undefined)
+          // kilocode_change - state the scope of the identity check:
+          // the identity is verified on the descriptor opened for the read/BOM probe, so it covers the target identity
+          // as of the check. The content write then reopens the path through writeWithDirs. KeyedMutex serializes
+          // agent-internal writes to one target.
+          yield* fs.writeWithDirs(input.target.canonical, joinBom(next.text, bom || next.bom))
+          return writeResult(input.target, true)
+          // kilocode_change end
         }),
       ),
     )
@@ -168,7 +247,7 @@ const layer = Layer.effect(
       ),
     )
 
-    return Service.of({ create, write, writeTextPreservingBom, writeIfUnchanged, remove })
+    return Service.of({ inspect, create, write, writeTextPreservingBom, writeIfUnchanged, remove }) // kilocode_change - inspect registered
   }),
 )
 
