@@ -291,13 +291,9 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Увійдіть у ChatGPT знову, а потім надішліть повідомлення ще раз, щоб продовжити використання моделей Codex.",
 
-  "provider.failure.unauthorized": "Облікові дані відхилено (HTTP {{status}}). Увійдіть знову.",
-  "provider.failure.unauthorizedNoStatus": "Облікові дані відхилено. Увійдіть знову.",
-  "provider.failure.unauthenticated": "Вхід не виконано.",
-  "provider.failure.network": "Не вдалося з’єднатися з провайдером. Перевірте з’єднання.",
-  "provider.failure.http": "Помилка провайдера (HTTP {{status}}).",
-  "provider.failure.httpNoStatus": "Помилка провайдера.",
-  "provider.failure.schema": "Неочікувана відповідь від провайдера.",
+  "error.upstreamTimeout.title": "Сервер AI-провайдера не відповів у вчас",
+  "error.upstreamTimeout.description":
+    "Звичайно це тимчасова проблема на стороні сервера, а не проблема з вашими налаштуваннями. Kilo автоматично повторює такі спроби, але якщо помилка повторюється, надішліть повідомлення ще раз або перевірте сторінку статусу провайдера.",
 
   "notification.permission.title": "Потрібен дозвіл",
   "notification.permission.titleSubagent": "Потрібен дозвіл (підагент)",

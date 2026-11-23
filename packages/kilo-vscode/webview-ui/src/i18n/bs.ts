@@ -290,13 +290,9 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Ponovo se prijavite na ChatGPT, a zatim ponovo pošaljite poruku da nastavite koristiti Codex modele.",
 
-  "provider.failure.unauthorized": "Vjerodajnice su odbijene (HTTP {{status}}). Prijavite se ponovo.",
-  "provider.failure.unauthorizedNoStatus": "Vjerodajnice su odbijene. Prijavite se ponovo.",
-  "provider.failure.unauthenticated": "Niste prijavljeni.",
-  "provider.failure.network": "Nije moguće doći do provajdera. Provjerite svoju vezu.",
-  "provider.failure.http": "Greška provajdera (HTTP {{status}}).",
-  "provider.failure.httpNoStatus": "Greška provajdera.",
-  "provider.failure.schema": "Neočekivan odgovor od provajdera.",
+  "error.upstreamTimeout.title": "Server pružatelja AI usporio je",
+  "error.upstreamTimeout.description":
+    "Ovo je obično privremeni problem na strani servera, a ne problem vaše konfiguracije. Kilo automatski ponavlja ove greške, ali ako se to nastavlja, ponovo pošaljite poruku ili provjerite statusnu stranicu pružatelja.",
 
   "notification.permission.title": "Potrebna dozvola",
   "notification.permission.titleSubagent": "Potrebna dozvola (podagent)",

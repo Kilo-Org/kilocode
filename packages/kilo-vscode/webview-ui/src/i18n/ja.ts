@@ -290,13 +290,9 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Codex モデルを引き続き使用するには、ChatGPT に再度ログインしてから、メッセージを再送信してください。",
 
-  "provider.failure.unauthorized": "認証情報が拒否されました (HTTP {{status}})。再度サインインしてください。",
-  "provider.failure.unauthorizedNoStatus": "認証情報が拒否されました。再度サインインしてください。",
-  "provider.failure.unauthenticated": "サインインしていません。",
-  "provider.failure.network": "プロバイダーに接続できませんでした。接続を確認してください。",
-  "provider.failure.http": "プロバイダーエラー (HTTP {{status}})。",
-  "provider.failure.httpNoStatus": "プロバイダーエラー。",
-  "provider.failure.schema": "プロバイダーから予期しない応答がありました。",
+  "error.upstreamTimeout.title": "AIプロバイダーのサーバーがタイムアウトしました",
+  "error.upstreamTimeout.description":
+    "通常はサーバー側の一時的な問題であり、設定の問題ではありません。Kilo はこのエラーを自動的に再試行しますが、繰り返し発生する場合はメッセージを再送信するか、プロバイダーのステータスページを確認してください。",
 
   "notification.permission.title": "権限が必要です",
   "notification.permission.titleSubagent": "権限が必要です（サブエージェント）",
