@@ -54,6 +54,7 @@ import { memoMap } from "@opencode-ai/core/effect/memo-map"
 import { BackgroundJob } from "@/background/job"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 // kilocode_change start
+import { Env } from "@/env"
 import { Notebook } from "@/kilocode/notebook/service"
 import { SessionDrain } from "@/kilocode/session/drain"
 import { AgentManager } from "@/kilocode/agent-manager/service"
@@ -73,6 +74,7 @@ import { Pty } from "@opencode-ai/core/pty" // kilocode_change
 // kilocode_change start - retain Kilo runtime services in the upstream node graph
 const memory = LayerNode.make({ service: MemoryService.Service, layer: MemoryService.layer, deps: [] })
 const kilo = LayerNode.group([
+  Env.node,
   Credential.node,
   ModelCache.node,
   AgentManager.node,

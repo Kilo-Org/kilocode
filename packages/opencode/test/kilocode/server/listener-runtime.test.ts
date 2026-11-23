@@ -28,6 +28,27 @@ afterEach(async () => {
   await resetDatabase()
 })
 
+test("listener serves provider routes with the application runtime", async () => {
+  Flag.KILO_SERVER_PASSWORD = undefined
+  delete process.env.KILO_SERVER_PASSWORD
+  await using tmp = await tmpdir({
+    git: true,
+    config: { formatter: false, lsp: false, enabled_providers: [] },
+  })
+  const listener = await Server.listen({ hostname: "127.0.0.1", port: 0 })
+  try {
+    const response = await fetch(new URL("/provider", listener.url), {
+      headers: { "x-kilo-directory": tmp.path },
+    })
+    expect(response.status).toBe(200)
+    const body = await response.json()
+    expect(body.all).toEqual([])
+    expect(body.connected).toEqual([])
+  } finally {
+    await withTimeout(listener.stop(true), 10_000, "timed out cleaning up provider listener")
+  }
+}, 20_000)
+
 test("listener aborts shared parent and subagent runners", async () => {
   Flag.KILO_SERVER_PASSWORD = undefined
   delete process.env.KILO_SERVER_PASSWORD
