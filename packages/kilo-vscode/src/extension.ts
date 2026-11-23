@@ -91,7 +91,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const connectionService = new KiloConnectionService(
     context,
     () => browserBroker.env(),
-    (dir): Promise<void> => browserAutomationService.ready(dir),
+    (dir, signal) => browserAutomationService.ready(dir, signal),
   )
 
   // One MCP OAuth sign-in service for the whole extension (sidebar, Kilo tabs, Settings, Marketplace).
