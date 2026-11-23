@@ -5,7 +5,7 @@
 // that hung the CLI (see script/kilocode/repro-run-stdin-hang.sh). The real
 // stdin behavior of the abort is covered by run-stdin.subprocess.test.ts.
 import { describe, expect, test } from "bun:test"
-import { readPipedStdin } from "@/cli/cmd/run-stdin"
+import { PipedStdinTimeout, readPipedStdin } from "@/cli/cmd/run-stdin"
 
 function neverRead(): Promise<string> {
   return new Promise<string>(() => {})
@@ -22,17 +22,37 @@ function capture(underlying: (signal: AbortSignal) => Promise<string | undefined
 }
 
 describe("readPipedStdin", () => {
-  test("bound read returns undefined when the silence timer wins", async () => {
+  test("zero timeout waits for a delayed EOF even with a prompt", async () => {
+    const value = await readPipedStdin({
+      bound: true,
+      timeoutMs: 0,
+      read: async () => {
+        await Bun.sleep(1100)
+        return "slow output"
+      },
+    })
+    expect(value).toBe("slow output")
+  })
+  test("invalid deadlines fail", async () => {
+    for (const timeoutMs of [-1, 0.5, NaN, Infinity, 2_147_483_648]) {
+      expect(await readPipedStdin({ bound: true, timeoutMs, read: neverRead }).catch((err) => err.message)).toContain(
+        "integer between",
+      )
+    }
+  })
+  test("bound read fails when the deadline expires", async () => {
     const start = Date.now()
-    const value = await readPipedStdin({ bound: true, timeoutMs: 50, read: neverRead })
-    expect(value).toBeUndefined()
+    expect(await readPipedStdin({ bound: true, timeoutMs: 50, read: neverRead }).catch((err) => err)).toBeInstanceOf(
+      PipedStdinTimeout,
+    )
     expect(Date.now() - start).toBeGreaterThanOrEqual(40)
   })
 
   test("the silence timer aborts the abandoned read", async () => {
     const { state, read } = capture(() => neverRead())
-    const value = await readPipedStdin({ bound: true, timeoutMs: 50, read })
-    expect(value).toBeUndefined()
+    expect(await readPipedStdin({ bound: true, timeoutMs: 50, read }).catch((err) => err)).toBeInstanceOf(
+      PipedStdinTimeout,
+    )
     expect(state.signal!.aborted).toBe(true)
   })
 
@@ -66,18 +86,21 @@ describe("readPipedStdin", () => {
 
   test("a rejecting read propagates to the caller in both modes", async () => {
     const reject = (): Promise<string> => Promise.reject(new Error("stdin read failed"))
-    await expect(readPipedStdin({ bound: true, timeoutMs: 1000, read: reject })).rejects.toThrow("stdin read failed")
-    await expect(readPipedStdin({ bound: false, read: reject })).rejects.toThrow("stdin read failed")
+    expect(await readPipedStdin({ bound: true, timeoutMs: 1000, read: reject }).catch((err) => err.message)).toBe(
+      "stdin read failed",
+    )
+    expect(await readPipedStdin({ bound: false, read: reject }).catch((err) => err.message)).toBe("stdin read failed")
   })
 
   test("a rejection after the timer won does not become an unhandled rejection", async () => {
     const { promise, reject } = Promise.withResolvers<string>()
-    const value = await readPipedStdin({
-      bound: true,
-      timeoutMs: 50,
-      read: () => promise,
-    })
-    expect(value).toBeUndefined()
+    expect(
+      await readPipedStdin({
+        bound: true,
+        timeoutMs: 50,
+        read: () => promise,
+      }).catch((err) => err),
+    ).toBeInstanceOf(PipedStdinTimeout)
     reject(new Error("late stdin failure"))
     await Bun.sleep(50)
   })

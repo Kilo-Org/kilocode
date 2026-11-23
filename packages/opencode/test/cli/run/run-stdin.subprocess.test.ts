@@ -24,7 +24,7 @@ afterAll(() => {
 
 const childScript = (modulePath: string) => `
 import { readPipedStdin } from ${JSON.stringify(modulePath)}
-const value = await readPipedStdin({ bound: true, timeoutMs: 200 })
+const value = await readPipedStdin({ bound: true, timeoutMs: 200 }).catch((err) => err.message)
 const atTimer = process.memoryUsage.rss()
 await Bun.sleep(2500)
 const after = process.memoryUsage.rss()
@@ -78,7 +78,7 @@ test(
     expect(written).toBe(64 * 1024 * 1024)
 
     const result: { value: string | undefined; atTimer: number; after: number } = JSON.parse(out)
-    expect(result.value).toBeUndefined()
+    expect(result.value).toContain("No prompt was sent")
     // The abandoned read grew RSS by more than the write volume; with the
     // cancel a flat RSS stays far below half of it.
     expect(result.after - result.atTimer).toBeLessThan(32 * 1024 * 1024)
