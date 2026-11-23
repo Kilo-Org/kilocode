@@ -1,5 +1,6 @@
 export * as PluginV2 from "./plugin"
 
+import type { Hooks } from "@kilocode/plugin"
 import { makeLocationNode } from "./effect/app-node"
 import { Context, Deferred, Effect, Exit, Layer, Scope } from "effect"
 import type { Plugin as PluginRuntime } from "@kilocode/plugin/v2/effect"
@@ -20,10 +21,23 @@ export const ID = Plugin.ID
 export type ID = typeof ID.Type
 export const Event = Plugin.Event
 
+type TriggerName = {
+  [K in keyof Hooks]-?: NonNullable<Hooks[K]> extends (input: any, output: any) => Promise<void> ? K : never
+}[keyof Hooks]
+
 export interface Interface {
   readonly add: (id: ID, effect: PluginRuntime["effect"]) => Effect.Effect<void>
   readonly remove: (id: ID) => Effect.Effect<void>
   readonly wait: (id: ID) => Effect.Effect<void>
+  readonly trigger: <
+    Name extends TriggerName,
+    Input = Parameters<Required<Hooks>[Name]>[0],
+    Output = Parameters<Required<Hooks>[Name]>[1],
+  >(
+    name: Name,
+    input: Input,
+    output: Output,
+  ) => Effect.Effect<Output>
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/v2/Plugin") {}
@@ -132,10 +146,21 @@ const layer = Layer.effect(
       }),
     )
 
+    const trigger = Effect.fn("Plugin.trigger")(function* <
+      Name extends TriggerName,
+      Input = Parameters<Required<Hooks>[Name]>[0],
+      Output = Parameters<Required<Hooks>[Name]>[1],
+    >(name: Name, input: Input, output: Output) {
+      void name
+      void input
+      return output
+    })
+
     const service = Service.of({
       add,
       remove,
       wait,
+      trigger,
     })
     host = yield* PluginHost.make(service)
     return service
