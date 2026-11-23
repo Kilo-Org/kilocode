@@ -9,12 +9,10 @@ sidebar_label: Ace Data Cloud
 [Ace Data Cloud](https://platform.acedata.cloud) provides an OpenAI-compatible API. This guide uses its Chat Completions endpoint with `gpt-4.1-mini`.
 
 {% callout type="note" %}
-This guide uses Kilo's custom provider configuration. Ace Data Cloud is not currently in Kilo's built-in provider catalog. Direct requests use your Ace Data Cloud balance, independently of Kilo Gateway credits.
+This guide uses Kilo's custom provider configuration. Direct requests use your Ace Data Cloud balance, independently of Kilo Gateway credits.
 {% /callout %}
 
-This is a single-model manual example. If you copy it unchanged, Kilo's model picker shows only `gpt-4.1-mini`. It does not import the [complete current Ace Data Cloud model catalog](https://platform.acedata.cloud/models). Check each additional model's API compatibility before adding its definition; do not copy this example's limits, tool flags, or cost estimates to other models.
-
-[Native automatic catalog discovery is proposed in PR #15208](https://github.com/Kilo-Org/kilocode/pull/15208). It is not included in the released Kilo v7.8.32 package. Selecting this custom provider does not enable that unreleased discovery feature.
+This manual example adds `gpt-4.1-mini` to Kilo's model picker. To expand the picker, choose models from the [current Ace Data Cloud model catalog](https://platform.acedata.cloud/models) and check each model's API compatibility before adding its definition. Set limits, tool flags, and cost estimates for each model individually.
 
 ## Before you begin
 
