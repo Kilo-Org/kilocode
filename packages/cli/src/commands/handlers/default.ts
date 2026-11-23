@@ -13,7 +13,7 @@ import { OPENCODE_ARTIFACT, OPENCODE_CHANNEL, OPENCODE_HIGHLIGHTS, OPENCODE_VERS
 import { Env } from "../../env"
 import { Service } from "@opencode/client/effect/service"
 import { OpenCode } from "@opencode/client/promise"
-import { findSession } from "../../session-target"
+import { findSession, pullSyncedSession } from "../../session-target" // kilocode_change(session-sync)
 import { errorMessage } from "../../util/error"
 
 export default Runtime.handler(Commands, (input) =>
@@ -52,7 +52,24 @@ export default Runtime.handler(Commands, (input) =>
         Effect.promise(() => preflight.fail("OpenCode update could not start the new background service")),
       ),
     )
-    const session = Option.getOrUndefined(input.session)
+    // kilocode_change(session-sync) start
+    let session = Option.getOrUndefined(input.session)
+    if (session !== undefined) {
+      const client = OpenCode.make({ baseUrl: server.endpoint.url, headers: Service.headers(server.endpoint) })
+      const pulled = yield* Effect.tryPromise({
+        try: () => pullSyncedSession({ client, sessionID: session!, directory: process.cwd(), asNew: input.asNew }),
+        catch: (cause) => new Error(errorMessage(cause)),
+      }).pipe(Effect.result)
+      if (pulled._tag === "Failure") {
+        yield* Effect.sync(() => {
+          process.stderr.write(pulled.failure.message + "\n")
+          process.exitCode = 1
+        })
+        return
+      }
+      if (pulled.success) session = pulled.success.sessionID
+    }
+    // kilocode_change(session-sync) end
     // A missing --session ID becomes the ID of the session the first prompt creates.
     const sessionExists =
       session !== undefined &&

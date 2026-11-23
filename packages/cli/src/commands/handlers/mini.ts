@@ -28,6 +28,7 @@ export default Runtime.handler(Commands.commands.mini, (input) =>
         continue: input.continue,
         session: Option.getOrUndefined(input.session),
         fork: input.fork,
+        asNew: input.asNew, // kilocode_change(session-sync)
         model: Option.getOrUndefined(input.model),
         agent: Option.getOrUndefined(input.agent),
         prompt: Option.getOrUndefined(input.prompt),

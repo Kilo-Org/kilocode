@@ -1,9 +1,34 @@
 import type { LocationGetOutput, ModelRef, OpenCodeClient, SessionInfo } from "@opencode/client/promise"
 import { Model } from "@opencode/schema/model"
+import { KiloSessionSyncRpc } from "@opencode/schema/kilocode/session-sync" // kilocode_change(session-sync)
 import path from "node:path"
 import { errorMessage } from "./util/error"
 
 const SESSION_PAGE_LIMIT = 50
+// kilocode_change(session-sync) start
+export const syncedDeletedMessage = "This session was deleted on another device; it is no longer synced."
+
+export async function pullSyncedSession(input: {
+  client: OpenCodeClient
+  sessionID: string
+  directory: string
+  asNew?: boolean
+  signal?: AbortSignal
+}): Promise<{ sessionID: string; outcome: string } | undefined> {
+  try {
+    const result = await input.client.rpc(KiloSessionSyncRpc.Definition).pull(
+      { directory: input.directory, sessionID: input.sessionID, replaceLocal: false, asNew: input.asNew ?? false },
+      { location: { directory: input.directory }, signal: input.signal },
+    )
+    return { sessionID: result.sessionID, outcome: result.outcome }
+  } catch (error) {
+    const text = `${errorMessage(error)} ${JSON.stringify(error ?? {})}`
+    if (text.includes("session_deleted") || text.includes(syncedDeletedMessage))
+      throw new Error(`${syncedDeletedMessage} Continue as a new session with --as-new.`)
+    return undefined
+  }
+}
+// kilocode_change(session-sync) end
 
 export type SessionTarget = {
   session: SessionInfo
@@ -36,6 +61,7 @@ export async function resolveSessionTarget(input: {
   continue?: boolean
   session?: string
   fork?: boolean
+  asNew?: boolean // kilocode_change(session-sync)
   model?: ModelRef
   agent?: string
   environment?: Readonly<Record<string, string>>
@@ -101,9 +127,36 @@ async function selectSession(input: {
   continue?: boolean
   session?: string
   fork?: boolean
+  asNew?: boolean
   signal?: AbortSignal
 }) {
-  const explicit = input.session ? await findSession(input.client, input.session, input.signal) : undefined
+  // kilocode_change(session-sync) start
+  if (input.session && input.asNew && !input.fork) {
+    const pulled = await pullSyncedSession({
+      client: input.client,
+      sessionID: input.session,
+      directory: input.location?.directory ?? process.cwd(),
+      asNew: true,
+      signal: input.signal,
+    })
+    if (pulled) {
+      const created = await findSession(input.client, pulled.sessionID, input.signal)
+      if (created) return { session: created }
+    }
+  }
+  // kilocode_change(session-sync) end
+  let explicit = input.session ? await findSession(input.client, input.session, input.signal) : undefined
+  // kilocode_change(session-sync) start
+  if (input.session && !input.fork && !input.asNew) {
+    const pulled = await pullSyncedSession({
+      client: input.client,
+      sessionID: input.session,
+      directory: explicit?.location.directory ?? input.location?.directory ?? process.cwd(),
+      signal: input.signal,
+    })
+    if (pulled) explicit = (await findSession(input.client, pulled.sessionID, input.signal)) ?? explicit
+  }
+  // kilocode_change(session-sync) end
   if (input.session && !explicit) {
     if (input.fork) throw new Error("Session not found")
     return { session: undefined }

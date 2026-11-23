@@ -122,7 +122,7 @@ const Handlers = Runtime.handlers(KiloCommands, {
   session: {
     // Kilo: the mirror adds the scheduled-wakeup status field. kilo_port(wakeup:9d6803e786ab)
     list: () => import("./commands/session-list"),
-    delete: () => import("@opencode/cli/commands/handlers/session/delete"),
+    delete: () => import("./commands/session-delete"),
     export: () => import("@opencode/cli/commands/handlers/session/export"),
     import: () => import("@opencode/cli/commands/handlers/session/import"),
   },
@@ -150,6 +150,8 @@ const Handlers = Runtime.handlers(KiloCommands, {
     disable: () => import("./sync/disable"),
     status: () => import("./sync/status"),
     flush: () => import("./sync/flush"),
+    pull: () => import("./sync/pull"),
+    delete: () => import("./sync/delete"),
   },
   // Kilo: manual import of an earlier Kilo installation.
   import: {

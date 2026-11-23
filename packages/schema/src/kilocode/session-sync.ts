@@ -26,6 +26,23 @@ export const Status = Schema.Struct({
 }).annotate({ identifier: "KiloSessionSync.Status" })
 export interface Status extends Schema.Schema.Type<typeof Status> {}
 
+export const PullResult = Schema.Struct({
+  sessionID: Schema.String,
+  directory: Schema.String,
+  outcome: Schema.Literals(["imported", "updated", "restored", "unchanged", "as-new"]),
+  message: Schema.String,
+  position: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+  messages: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+}).annotate({ identifier: "KiloSessionSync.PullResult" })
+export interface PullResult extends Schema.Schema.Type<typeof PullResult> {}
+
+export const DeleteResult = Schema.Struct({
+  sessionID: Schema.String,
+  deleted: Schema.Boolean,
+  message: Schema.String,
+}).annotate({ identifier: "KiloSessionSync.DeleteResult" })
+export interface DeleteResult extends Schema.Schema.Type<typeof DeleteResult> {}
+
 const Workspace = Schema.Struct({ directory: Schema.String })
 const errors = { failed: portable(Failure) }
 
@@ -46,6 +63,28 @@ export const Definition = Rpc.define({
     disable: { input: portable(Workspace), output: portable(Status), errors },
     status: { input: portable(Workspace), output: portable(Status), errors },
     flush: { input: portable(Workspace), output: portable(Status), errors },
+    pull: {
+      input: portable(
+        Schema.Struct({
+          directory: Schema.String,
+          sessionID: Schema.String,
+          replaceLocal: optional(Schema.Boolean),
+          asNew: optional(Schema.Boolean),
+        }),
+      ),
+      output: portable(PullResult),
+      errors,
+    },
+    deleteSession: {
+      input: portable(Schema.Struct({ directory: Schema.String, sessionID: Schema.String })),
+      output: portable(DeleteResult),
+      errors,
+    },
+    synced: {
+      input: portable(Schema.Struct({ directory: Schema.String, sessionID: Schema.String })),
+      output: portable(Schema.Struct({ sessionID: Schema.String, synced: Schema.Boolean })),
+      errors,
+    },
   },
   events: {},
 })

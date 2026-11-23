@@ -52,5 +52,39 @@ export const SyncCommand = Spec.make("sync", {
     }),
     Spec.make("status", { description: "Show workspace synchronization state and pending work", params }),
     Spec.make("flush", { description: "Attempt to upload pending workspace changes", params }),
+    Spec.make("pull", {
+      description:
+        "Pull a synced session into this workspace under the same session ID. " +
+        "A locally deleted session is restored from the synced copy. " +
+        "With --replace-local, discard unsynced local messages and load the latest synced copy. " +
+        "With --as-new, copy the local history of a session deleted on another device to a new session ID and upload it; the old ID stays deleted.",
+      params: {
+        standalone: params.standalone,
+        server: params.server,
+        json: params.json,
+        sessionID: Argument.String("sessionID").pipe(Argument.withDescription("Synced session ID to pull")),
+        directory: params.directory,
+        replaceLocal: Flag.Boolean("replace-local").pipe(
+          Flag.withDescription("Discard unsynced local messages and replace the local copy with the synced copy"),
+          Flag.withDefault(false),
+        ),
+        asNew: Flag.Boolean("as-new").pipe(
+          Flag.withDescription("Copy the local history to a new session ID, enroll and upload it"),
+          Flag.withDefault(false),
+        ),
+      },
+    }),
+    Spec.make("delete", {
+      description:
+        "Delete a synced session everywhere (the synced copy and every device copy stop syncing). " +
+        "This is separate from deleting a session locally, which keeps the synced copy.",
+      params: {
+        standalone: params.standalone,
+        server: params.server,
+        json: params.json,
+        sessionID: Argument.String("sessionID").pipe(Argument.withDescription("Synced session ID to delete everywhere")),
+        directory: params.directory,
+      },
+    }),
   ],
 })

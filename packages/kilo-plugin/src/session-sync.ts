@@ -36,6 +36,20 @@ interface Interface {
     directory: string
   }) => Effect.Effect<KiloSessionSyncRpc.Status, KiloSessionSyncRpc.Failure>
   readonly flush: (input: { directory: string }) => Effect.Effect<KiloSessionSyncRpc.Status, KiloSessionSyncRpc.Failure>
+  readonly pull: (input: {
+    directory: string
+    sessionID: string
+    replaceLocal?: boolean
+    asNew?: boolean
+  }) => Effect.Effect<KiloSessionSyncRpc.PullResult, KiloSessionSyncRpc.Failure>
+  readonly deleteSession: (input: {
+    directory: string
+    sessionID: string
+  }) => Effect.Effect<KiloSessionSyncRpc.DeleteResult, KiloSessionSyncRpc.Failure>
+  readonly synced: (input: {
+    directory: string
+    sessionID: string
+  }) => Effect.Effect<{ sessionID: string; synced: boolean }, KiloSessionSyncRpc.Failure>
 }
 
 export class Service extends Context.Service<Service, Interface>()("@kilocode/SessionSync") {}
@@ -73,6 +87,30 @@ export const plugin = define<Service | Scope.Scope>({
         flush: (input, context) =>
           sync
             .flush(input)
+            .pipe(
+              Effect.mapError((error) =>
+                context.error("failed", error.message, { code: error.code, message: error.message }),
+              ),
+            ),
+        pull: (input, context) =>
+          sync
+            .pull(input)
+            .pipe(
+              Effect.mapError((error) =>
+                context.error("failed", error.message, { code: error.code, message: error.message }),
+              ),
+            ),
+        deleteSession: (input, context) =>
+          sync
+            .deleteSession(input)
+            .pipe(
+              Effect.mapError((error) =>
+                context.error("failed", error.message, { code: error.code, message: error.message }),
+              ),
+            ),
+        synced: (input, context) =>
+          sync
+            .synced(input)
             .pipe(
               Effect.mapError((error) =>
                 context.error("failed", error.message, { code: error.code, message: error.message }),

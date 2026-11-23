@@ -16,6 +16,7 @@ export type MiniCommandInput = {
   continue?: boolean
   session?: string
   fork?: boolean
+  asNew?: boolean // kilocode_change(session-sync)
   model?: string
   agent?: string
   prompt?: string
@@ -56,6 +57,7 @@ export async function runMini(input: MiniCommandInput) {
               continue: input.continue,
               session: input.session,
               fork: input.fork,
+              asNew: input.asNew, // kilocode_change(session-sync)
               model: requested,
               agent: input.agent,
               environment,

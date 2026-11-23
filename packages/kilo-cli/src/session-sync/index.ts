@@ -15,17 +15,22 @@ import { Cause, Effect, Layer, Schedule, Schema, Semaphore } from "effect"
 import { sql } from "drizzle-orm"
 import path from "node:path"
 import { Store } from "./store"
+import { Pull } from "./pull"
 import { Assets } from "./assets"
 import { admitChange } from "./packet-admission"
 import { settings } from "./settings"
 import {
   Failure,
   Grant,
+  Page,
   Receipt,
   State,
   type Change,
   type BlobRef,
+  AssetMapping,
+  classifyConflict,
   decode,
+  deletedMessage,
   destination,
   digest,
   fail,
@@ -33,6 +38,7 @@ import {
   jsonNodes,
   sameTenant,
   request,
+  requestBytes,
   retryTime,
 } from "./protocol"
 
@@ -196,7 +202,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
         sql`UPDATE _kilo_sync_session SET server_retry_at=0,retry_at=0,retry_credential=NULL,
           error_code=NULL,error_message=NULL,attempts=0
         WHERE retry_credential IS NOT NULL AND retry_credential<>${current}
-          AND (error_code IS NULL OR error_code NOT IN ('unclassified_removal','identity_conflict'))`,
+          AND (error_code IS NULL OR error_code NOT IN ('unclassified_removal','identity_conflict','diverged'))`,
       )
       .pipe(Effect.orDie)
     for (const code of authenticationErrors)
@@ -420,6 +426,221 @@ export const make = Effect.fn("SessionSync.make")(function* (
     )
   })
 
+  const authenticatedBytes = Effect.fn("SessionSync.authenticatedBytes")(function* (c: Store.Consent, url: string) {
+    if (activeOrganization === undefined)
+      return yield* fail("scope_unavailable", "The Gateway is resolving the active organization; pending work is retained", true)
+    if (activeOrganization !== c.organization_id)
+      return yield* fail("account_changed", "Synchronization is paused: select the organization pinned at enrollment")
+    if (c.destination !== origin)
+      return yield* fail("consent_conflict", "Synchronization only supports the fixed Kilo destination")
+    const send = Effect.gen(function* () {
+      if (!(yield* Store.consent(db, c.directory))?.enabled)
+        return yield* fail("sync_disabled", "Synchronization was disabled; the pending packet is retained")
+      const grant = yield* exchange({ destination: c.destination, local: Boolean(c.local), organizationID: c.organization_id })
+      if (grant.userID !== c.user_id || !sameTenant(grant.tenant, { type: c.tenant_type, id: c.tenant_id }))
+        return yield* fail("account_changed", "Synchronization is paused: sign in to the account pinned when this workspace was enabled")
+      return yield* requestBytes(url, grant.token)
+    })
+    return yield* send.pipe(
+      Effect.catch((error) => {
+        if (error.code !== "invalid_grant") return Effect.fail(error)
+        grants.delete(`${c.destination}:${c.organization_id ?? "personal"}`)
+        verified.clear()
+        return send
+      }),
+    )
+  })
+
+  const sessionUrl = (c: Store.Consent, sessionID: string) =>
+    `${c.destination}/v1/sessions/${encodeURIComponent(sessionID)}`
+
+  const decodeText = (bytes: Uint8Array) =>
+    Effect.try({
+      try: () => JSON.parse(new TextDecoder().decode(bytes)) as unknown,
+      catch: () => fail("invalid_response", "The sync service returned an invalid response"),
+    })
+
+  const readState = Effect.fn("SessionSync.readState")(function* (c: Store.Consent, sessionID: string) {
+    const url = sessionUrl(c, sessionID)
+    let state = yield* authenticated(c, url).pipe(
+      Effect.flatMap((value) => decode(State, value)),
+      Effect.catch((error) =>
+        error.code === "session_deleted" ? Effect.fail(fail("session_deleted", deletedMessage)) : Effect.fail(error),
+      ),
+    )
+    if (state.sessionID !== sessionID)
+      return yield* fail("invalid_response", "The sync service returned another session")
+    if (state.deleted) return yield* fail("session_deleted", deletedMessage)
+    if (state.creatorID !== c.user_id || !sameTenant(state.tenant, { type: c.tenant_type, id: c.tenant_id }))
+      return yield* fail("source_conflict", "The cloud session belongs to another producer or account")
+    const joined =
+      state.sources === undefined ? state.sourceID === c.source_id : state.sources.some((source) => source.sourceID === c.source_id)
+    if (!joined) {
+      state = yield* authenticated(c, url, "PUT", JSON.stringify({ version: 1, sourceID: c.source_id, client: "cli" })).pipe(
+        Effect.flatMap((value) => decode(State, value)),
+        Effect.catch((error) =>
+          error.code === "session_deleted" ? Effect.fail(fail("session_deleted", deletedMessage)) : Effect.fail(error),
+        ),
+      )
+      if (state.deleted) return yield* fail("session_deleted", deletedMessage)
+    }
+    return state as Extract<State, { deleted: false }>
+  })
+
+  const downloadEntities = Effect.fn("SessionSync.downloadEntities")(function* (
+    c: Store.Consent,
+    sessionID: string,
+    state: Extract<State, { deleted: false }>,
+  ) {
+    const url = sessionUrl(c, sessionID)
+    const entities: Pull.ResolvedEntity[] = []
+    const blobs: { hash: string; bytes: number; data: Uint8Array; mime?: string; messageID?: string }[] = []
+    let cursor: string | null = null
+    let revision: number | undefined
+    let position = state.position
+    while (true) {
+      const query = new URLSearchParams({ limit: "100" })
+      if (cursor) query.set("cursor", cursor)
+      if (revision !== undefined) query.set("revision", String(revision))
+      const page = yield* authenticatedBytes(c, `${url}/entities?${query.toString()}`).pipe(
+        Effect.flatMap(decodeText),
+        Effect.flatMap((value) => decode(Page, value)),
+      )
+      if (page.sessionID !== sessionID)
+        return yield* fail("invalid_response", "The sync service returned another session")
+      if (revision === undefined) {
+        revision = page.revision
+        position = page.position
+      }
+      for (const entity of page.entities) {
+        if ("value" in entity) {
+          entities.push({ kind: entity.kind, id: entity.id, value: entity.value, sourceID: entity.sourceID })
+          continue
+        }
+        const bytes = yield* authenticatedBytes(c, `${url}/blobs/${entity.blob.hash}`)
+        if (bytes.byteLength !== entity.blob.bytes || digest(bytes) !== entity.blob.hash)
+          return yield* fail("asset_error", "A synced blob did not match its content hash")
+        const value = yield* decodeText(bytes)
+        const parsed = yield* decode(Schema.Json, value)
+        entities.push({ kind: entity.kind, id: entity.id, value: parsed, sourceID: entity.sourceID })
+      }
+      if (!page.next) break
+      cursor = page.next
+    }
+    for (const entity of entities) {
+      if (entity.kind !== "asset") continue
+      const mapping = Schema.decodeUnknownOption(AssetMapping)(entity.value)
+      if (mapping._tag === "None") continue
+      const data = yield* authenticatedBytes(c, `${url}/blobs/${mapping.value.blob.hash}`)
+      if (data.byteLength !== mapping.value.blob.bytes || digest(data) !== mapping.value.blob.hash)
+        return yield* fail("asset_error", "A synced asset blob did not match its content hash")
+      blobs.push({
+        hash: mapping.value.blob.hash,
+        bytes: mapping.value.blob.bytes,
+        data,
+        ...(mapping.value.mime === undefined ? {} : { mime: mapping.value.mime }),
+        ...(mapping.value.entity === undefined ? {} : { messageID: mapping.value.entity.id.split("/")[0]! }),
+      })
+    }
+    return { state, snapshot: Pull.buildSnapshot(entities, position), position, blobs }
+  })
+
+  const downloadSnapshot = Effect.fn("SessionSync.downloadSnapshot")(function* (c: Store.Consent, sessionID: string) {
+    const state = yield* readState(c, sessionID)
+    return yield* downloadEntities(c, sessionID, state)
+  })
+
+  const resolvers = Effect.fn("SessionSync.resolvers")(function* () {
+    const providers = new Set<string>(["kilo"])
+    const agents = new Set<string>(["build", "plan", "general", "explore", "code", "ask", "debug", "orchestrator"])
+    const rows = yield* db
+      .all<{ agent: string | null; model: string | null }>(sql`SELECT DISTINCT agent,model FROM session_v2`)
+      .pipe(Effect.orDie)
+    for (const row of rows) {
+      if (row.agent) agents.add(row.agent)
+      if (!row.model) continue
+      const parsed = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Struct({ providerID: Schema.String })))(row.model)
+      if (parsed._tag === "Some") providers.add(parsed.value.providerID)
+    }
+    return {
+      resolveModel: (model: { providerID: string }) => providers.has(model.providerID),
+      resolveAgent: (agent: string) => agents.has(agent),
+    }
+  })
+
+  const consentFor = Effect.fn("SessionSync.consentFor")(function* (directory: string) {
+    yield* ready(directory)
+    const canonical = yield* Store.canonical(directory)
+    const c = yield* Store.consent(db, canonical)
+    if (!c?.enabled) return yield* fail("sync_disabled", "Sign in and enable synchronization for this workspace before pulling a synced session")
+    return c
+  })
+
+  const pullSession = Effect.fn("SessionSync.pullSession")(function* (input: {
+    directory: string
+    sessionID: string
+    replaceLocal?: boolean
+    asNew?: boolean
+  }) {
+    const c = yield* consentFor(input.directory)
+    const directory = c.directory
+    if (input.asNew) {
+      const newID = yield* Pull.copyAsNew(db, input.sessionID)
+      yield* runPass(directory, true, Date.now() + 30_000).pipe(Effect.catch(() => Effect.void))
+      return KiloSessionSyncRpc.PullResult.make({
+        sessionID: newID,
+        directory,
+        outcome: "as-new",
+        message: `Continued as a new session ${newID}; the deleted session ${input.sessionID} stays deleted.`,
+        position: 0,
+        messages: 0,
+      })
+    }
+    const local = yield* db.get<Store.SessionRow>(sql`SELECT * FROM _kilo_sync_session WHERE id=${input.sessionID}`).pipe(Effect.orDie)
+    const downloaded = yield* downloadSnapshot(c, input.sessionID)
+    const { resolveModel, resolveAgent } = yield* resolvers()
+    const unacked = local && !input.replaceLocal ? yield* Store.unackedMessageSeqs(db, local) : []
+    const kind = classifyConflict(unacked, downloaded.snapshot.maxSeq)
+    if (unacked.length && kind === "diverged")
+      return yield* fail(
+        "diverged",
+        `This session has diverged from the synced copy. Run kilo2 sync pull ${input.sessionID} --replace-local to discard the unsynced local messages and load the latest.`,
+      )
+    const imported = yield* Pull.importSnapshot(db, downloaded.snapshot, {
+      sessionID: input.sessionID,
+      directory,
+      sourceID: c.source_id,
+      position: downloaded.position,
+      ackBatch: downloaded.state.deleted ? null : (downloaded.state.lastReceipt?.batchID ?? null),
+      ackDigest: downloaded.state.deleted ? null : (downloaded.state.lastReceipt?.digest ?? null),
+      replaceLocal: input.replaceLocal,
+      resolveModel,
+      resolveAgent,
+      blobs: downloaded.blobs,
+    })
+    if (unacked.length && kind === "fast-forward" && local)
+      yield* Store.rebatchAfter(db, local, {
+        position: downloaded.position,
+        ackBatch: downloaded.state.deleted ? null : (downloaded.state.lastReceipt?.batchID ?? null),
+        ackDigest: downloaded.state.deleted ? null : (downloaded.state.lastReceipt?.digest ?? null),
+      })
+    verified.delete(input.sessionID)
+    const message =
+      imported.outcome === "restored"
+        ? `Session ${input.sessionID} was restored from the synced copy.`
+        : imported.outcome === "unchanged"
+          ? `Session ${input.sessionID} is already up to date with the synced copy.`
+          : `Session ${input.sessionID} pulled from the synced copy.`
+    return KiloSessionSyncRpc.PullResult.make({
+      sessionID: input.sessionID,
+      directory,
+      outcome: imported.outcome,
+      message,
+      position: downloaded.position,
+      messages: imported.messages,
+    })
+  })
+
   const prepare = Effect.fn("SessionSync.prepare")(function* (session: Store.SessionRow, c: Store.Consent) {
     const existing = yield* Store.packet(db, session.id)
     if (existing) {
@@ -509,6 +730,12 @@ export const make = Effect.fn("SessionSync.make")(function* (
         "identity_conflict",
         "A locally deleted session identity was reimported; its cloud history cannot be implicitly replaced",
       )
+    if (session.error_code === "diverged")
+      return yield* fail(
+        "diverged",
+        `This session has diverged from the synced copy. Run kilo2 sync pull ${session.id} --replace-local to discard the unsynced local messages and load the latest.`,
+      )
+    if (session.error_code === "session_deleted") return yield* fail("session_deleted", deletedMessage)
     const native = yield* db
       .get<{
         directory: string
@@ -549,25 +776,40 @@ export const make = Effect.fn("SessionSync.make")(function* (
     const url = `${c.destination}/v1/sessions/${encodeURIComponent(session.id)}`
     const recover = Effect.fn("SessionSync.recover")(function* () {
       verified.delete(session.id)
-      const state = yield* authenticated(c, url).pipe(
+      let state = yield* authenticated(c, url).pipe(
         Effect.flatMap((value) => decode(State, value)),
         Effect.catch((error) =>
           error.code === "session_not_found"
-            ? authenticated(c, url, "PUT", JSON.stringify({ version: 1, sourceID: session.source_id })).pipe(
+            ? authenticated(c, url, "PUT", JSON.stringify({ version: 1, sourceID: session.source_id, client: "cli" })).pipe(
                 Effect.flatMap((value) => decode(State, value)),
               )
-            : Effect.fail(error),
+            : error.code === "session_deleted"
+              ? Effect.fail(fail("session_deleted", deletedMessage))
+              : Effect.fail(error),
         ),
       )
       if (state.sessionID !== session.id)
         return yield* fail("invalid_response", "The sync service returned another session")
-      if (state.deleted) return yield* fail("session_deleted", "The cloud session was deleted; synchronization is paused")
-      if (
-        state.sourceID !== session.source_id ||
-        state.creatorID !== c.user_id ||
-        !sameTenant(state.tenant, { type: c.tenant_type, id: c.tenant_id })
-      )
+      if (state.deleted) return yield* fail("session_deleted", deletedMessage)
+      if (state.creatorID !== c.user_id || !sameTenant(state.tenant, { type: c.tenant_type, id: c.tenant_id }))
         return yield* fail("source_conflict", "The cloud session belongs to another producer or account")
+      const joined =
+        state.sources === undefined
+          ? state.sourceID === session.source_id
+          : state.sources.some((source) => source.sourceID === session.source_id)
+      if (!joined) {
+        state = yield* authenticated(c, url, "PUT", JSON.stringify({ version: 1, sourceID: session.source_id, client: "cli" })).pipe(
+          Effect.flatMap((value) => decode(State, value)),
+          Effect.catch(() => Effect.succeed(state)),
+        )
+        const rejoined =
+          state.deleted === false &&
+          (state.sources === undefined
+            ? state.sourceID === session.source_id
+            : state.sources.some((source) => source.sourceID === session.source_id))
+        if (state.deleted) return yield* fail("session_deleted", deletedMessage)
+        if (!rejoined) return yield* fail("source_conflict", "The cloud session belongs to another producer or account")
+      }
       const last = state.lastReceipt
       if (
         state.position === pending.through &&
@@ -581,11 +823,38 @@ export const make = Effect.fn("SessionSync.make")(function* (
         (session.acknowledged === 0
           ? last !== null
           : last === null || last.batchID !== session.ack_batch || last.digest !== session.ack_digest)
-      )
-        return yield* fail(
-          "position_conflict",
-          "Cloud and local acknowledgement history disagree; synchronization is paused instead of overwriting cloud state",
-        )
+      ) {
+        const downloaded = yield* downloadEntities(c, session.id, state).pipe(Effect.option)
+        if (downloaded._tag === "None")
+          return yield* fail(
+            "position_conflict",
+            "Cloud and local acknowledgement history disagree; synchronization is paused instead of overwriting cloud state",
+          )
+        const unacked = yield* Store.unackedMessageSeqs(db, session)
+        if (classifyConflict(unacked, downloaded.value.snapshot.maxSeq) === "diverged")
+          return yield* fail(
+            "diverged",
+            `This session has diverged from the synced copy. Run kilo2 sync pull ${session.id} --replace-local to discard the unsynced local messages and load the latest.`,
+          )
+        const { resolveModel, resolveAgent } = yield* resolvers()
+        yield* Pull.importSnapshot(db, downloaded.value.snapshot, {
+          sessionID: session.id,
+          directory: session.directory,
+          sourceID: session.source_id,
+          position: downloaded.value.position,
+          ackBatch: downloaded.value.state.deleted ? null : (downloaded.value.state.lastReceipt?.batchID ?? null),
+          ackDigest: downloaded.value.state.deleted ? null : (downloaded.value.state.lastReceipt?.digest ?? null),
+          resolveModel,
+          resolveAgent,
+          blobs: downloaded.value.blobs,
+        })
+        yield* Store.rebatchAfter(db, session, {
+          position: downloaded.value.position,
+          ackBatch: downloaded.value.state.deleted ? null : (downloaded.value.state.lastReceipt?.batchID ?? null),
+          ackDigest: downloaded.value.state.deleted ? null : (downloaded.value.state.lastReceipt?.digest ?? null),
+        })
+        return yield* fail("capture_changed", "Pulled the synced copy and rebased the pending changes; prepare its current state", true)
+      }
     })
     const acknowledge = (receipt: Receipt) =>
       Store.acknowledge(db, pending, receipt).pipe(
@@ -758,7 +1027,10 @@ export const make = Effect.fn("SessionSync.make")(function* (
             progressed = result.success || progressed
             return
           }
-          const error = result.failure
+          const error =
+            result.failure instanceof Failure
+              ? result.failure
+              : fail("background_error", "The synchronization pass failed; pending work is retained", true)
           verified.delete(session.id)
           if (error.code === "capture_changed") {
             progressed = true
@@ -875,6 +1147,41 @@ export const make = Effect.fn("SessionSync.make")(function* (
     live,
     liveTicket,
     livePosition,
+    pull: (input) => lock.withPermit(pullSession(input)),
+    deleteSession: (input) =>
+      lock.withPermit(
+        Effect.gen(function* () {
+          const c = yield* consentFor(input.directory)
+          const deleted = yield* authenticated(c, sessionUrl(c, input.sessionID), "DELETE").pipe(
+            Effect.as(true),
+            Effect.catch((error) =>
+              error.code === "session_not_found" || error.code === "session_deleted"
+                ? Effect.succeed(false)
+                : Effect.fail(error),
+            ),
+          )
+          yield* db
+            .run(
+              sql`UPDATE _kilo_sync_session SET error_code='session_deleted',error_message=${deletedMessage},retry_at=9007199254740991 WHERE id=${input.sessionID}`,
+            )
+            .pipe(Effect.orDie)
+          verified.delete(input.sessionID)
+          return KiloSessionSyncRpc.DeleteResult.make({
+            sessionID: input.sessionID,
+            deleted,
+            message: deleted
+              ? `Session ${input.sessionID} deleted everywhere; the synced copy is gone.`
+              : `Session ${input.sessionID} has no synced copy to delete.`,
+          })
+        }),
+      ),
+    synced: (input) =>
+      Effect.gen(function* () {
+        const row = yield* db
+          .get<{ acknowledged: number }>(sql`SELECT acknowledged FROM _kilo_sync_session WHERE id=${input.sessionID}`)
+          .pipe(Effect.orDie)
+        return { sessionID: input.sessionID, synced: (row?.acknowledged ?? 0) > 0 }
+      }),
     organization: (input) => Effect.gen(function* () {
       activeOrganization = input.organizationID
       verified.clear()

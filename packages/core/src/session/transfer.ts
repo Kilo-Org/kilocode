@@ -200,6 +200,99 @@ export const node = makeGlobalNode({
   layer,
   deps: [App.node, Bus.node, Database.node, Instance.node, Project.node, Session.node],
 })
+// kilocode_change(session-sync) start
+
+const recordOf = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === "object" && !Array.isArray(value)
+
+function omitNulls(value: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(value).flatMap(([key, item]) => {
+      if (item === null || item === undefined) return []
+      if (key === "time" && recordOf(item)) return [[key, omitNulls(item)]]
+      return [[key, item]]
+    }),
+  )
+}
+
+export function syncedSessionInfo(
+  value: unknown,
+  input: {
+    sessionID: string
+    directory: string
+    projectID: string
+    resolveModel?: (model: { providerID: string; id: string; variant?: string }) => boolean
+    resolveAgent?: (agent: string) => boolean
+  },
+): Session.Info | undefined {
+  if (!recordOf(value)) return undefined
+  const portable = omitNulls(value)
+  delete portable.origin
+  const model = recordOf(portable.model) ? portable.model : undefined
+  if (
+    model &&
+    input.resolveModel &&
+    !input.resolveModel({
+      providerID: typeof model.providerID === "string" ? model.providerID : "",
+      id: typeof model.id === "string" ? model.id : "",
+      ...(typeof model.variant === "string" ? { variant: model.variant } : {}),
+    })
+  )
+    delete portable.model
+  if (typeof portable.agent === "string" && input.resolveAgent && !input.resolveAgent(portable.agent))
+    delete portable.agent
+  const time = recordOf(portable.time) ? portable.time : {}
+  const encoded = {
+    cost: 0,
+    tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+    ...portable,
+    id: input.sessionID,
+    projectID: input.projectID,
+    location: { directory: input.directory },
+    time: { created: typeof time.created === "number" ? time.created : Date.now(), updated: typeof time.updated === "number" ? time.updated : typeof time.created === "number" ? time.created : Date.now(), ...time },
+  }
+  const decoded = Schema.decodeUnknownOption(Session.Info)(encoded)
+  return decoded._tag === "Some" ? decoded.value : undefined
+}
+
+export function syncedMessage(value: unknown): SessionMessage.Info | undefined {
+  const decoded = Schema.decodeUnknownOption(SessionMessage.Info)(value)
+  return decoded._tag === "Some" ? decoded.value : undefined
+}
+
+export function assignImportSeqs(serverSeqs: readonly number[], busLatest: number): number[] {
+  let next = busLatest + 1
+  return serverSeqs.map((seq) => {
+    const assigned = Math.max(seq, next)
+    next = assigned + 1
+    return assigned
+  })
+}
+
+export const staleTailMs = 10 * 60_000
+
+export function normalizeSyncedTail(
+  messages: readonly SessionMessage.Info[],
+  nowMs: number,
+): SessionMessage.Info[] {
+  const last = messages[messages.length - 1]
+  if (!last || last.type !== "assistant" || last.time.completed !== undefined) return [...messages]
+  const created = DateTime.toEpochMillis(last.time.created)
+  if (nowMs - created < staleTailMs) return [...messages]
+  const completed = last.time.created
+  const normalized: SessionMessage.Info[] = [
+    ...messages.slice(0, -1),
+    { ...last, time: { ...last.time, completed } },
+    SessionMessage.Idle.make({
+      id: SessionMessage.ID.create(),
+      type: "idle",
+      outcome: "interrupted",
+      time: { created: completed },
+    }),
+  ]
+  return normalized
+}
+// kilocode_change(session-sync) end
 
 function isSettled(message: SessionMessage.Info) {
   if (message.type === "assistant") return message.time.completed !== undefined

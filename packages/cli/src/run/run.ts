@@ -20,6 +20,7 @@ export type RunCommandInput = {
   continue?: boolean
   session?: string
   fork?: boolean
+  asNew?: boolean // kilocode_change(session-sync)
   worktree?: string | true
   model?: string
   agent?: string
@@ -100,6 +101,7 @@ async function execute(input: RunCommandInput, prepared: Prepared, endpoint: End
     continue: input.continue,
     session: input.session,
     fork: input.fork,
+    asNew: input.asNew, // kilocode_change(session-sync)
     model: explicit
       ? { providerID: explicit.model.providerID, id: explicit.model.modelID, variant: explicit.variant }
       : undefined,

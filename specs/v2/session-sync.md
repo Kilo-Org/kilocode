@@ -59,6 +59,8 @@ Tests inject an isolated peer through the service constructor, not a CLI flag, c
 kilo2 sync enable /absolute/workspace
 kilo2 sync status --json /absolute/workspace
 kilo2 sync flush --json /absolute/workspace
+kilo2 sync pull <sessionID> [--replace-local] [--as-new]
+kilo2 sync delete <sessionID>
 kilo2 sync disable /absolute/workspace
 ```
 
@@ -175,9 +177,10 @@ Do not discard work after a fixed number of attempts.
 Refresh expired grants without changing packet identity.
 Surface invalid credentials, rejected ownership, deletion, and quota errors distinctly.
 
-A different source cannot silently take over an existing session.
-If local state rolls back behind a committed cloud position, park synchronization and report the conflict.
-Do not overwrite the cloud with an older snapshot.
+A source joins an existing session only by registering with its client kind (`cli` for this producer);
+an unregistered source cannot write. Registration never transfers ownership away from the creator.
+If local state rolls back behind a committed cloud position, pull first: fast-forward or park as
+`diverged` (see "Continuation on another device"). Do not overwrite the cloud with an older snapshot.
 
 ## Incremental content and assets
 
@@ -387,9 +390,62 @@ Cancel and approval replies bind to their exact run or request and runner incarn
 Permission replies use native once/always/reject policy; request and run validation precedes any reply.
 Do not replay uncertain external tool effects automatically.
 
-Default continuation elsewhere creates a fork from verified portable state.
-A same-identity move requires the old owner to stop and flush an agreed checkpoint.
+Continuation elsewhere keeps the same session ID (see "Continuation on another device" below and the
+cloud README's multi-source contract). It never forks by default.
 A disconnected old process can still execute tools; a cloud fence cannot stop it.
+
+## Continuation on another device
+
+One synced session has one server-side session ID forever. A mobile quick chat, this CLI, and a cloud
+agent that continue it all address the same ID; continuing never copies the session to a new ID.
+The only copy case is `--as-new` after a tombstone (below).
+
+The session's `message` entities (with `message-part` and `asset` entities) form one append-only log
+ordered by the envelope `seq`. A writer assigns each new message a `seq` greater than every `seq` in
+the log it has pulled. Each entity records the `source_id` that wrote it; each source registers once
+with its client kind (`cli`, `mobile`, or `cloud-agent`) and joins the session. A side uploads only
+entities it authored, plus the shared `session` entity. Imported foreign entities are recorded in
+`_kilo_sync_foreign`; capture skips them forever, so a pulled session is never re-uploaded by the
+pulling side, while semantic removals (revert) of pulled messages still propagate.
+
+The cloud `position` is the version of the whole session. Every batch names `after`, the position the
+writer last pulled or committed, and commits only when `after` still equals the cloud position.
+
+```sh
+kilo2 sync pull <sessionID> [--replace-local] [--as-new]
+kilo2 sync delete <sessionID>
+kilo2 --session <sessionID> [--as-new]
+```
+
+`sync pull` (and `--session <id>` for a session that is unknown locally or was written by another
+source) downloads the session state, entities, and blobs at one revision, then imports them under the
+same ID bound to the current workspace directory. Message parts fold into inline content. The local
+sequence of each imported message is at least its server `seq` and past the local bus sequence, and
+the bus sequence advances past it. A stale unfinished foreign assistant tail is normalized as
+interrupted. `session.model` is kept only when its provider resolves locally and `session.agent` only
+when that agent exists; otherwise the session falls back to local defaults. The import transaction
+seeds the sync acknowledgement at the pulled cloud position, so nothing imported is uploaded again,
+and this workspace's source joins the session for its own later appends.
+
+On `position_conflict`, the producer pulls before it retries. When every unacknowledged local message
+has a `seq` greater than the highest pulled `seq`, the pending work is rebatched after the pulled
+position (fast-forward) and uploaded. Otherwise the session is `diverged`: synchronization parks with
+a message naming `kilo2 sync pull <id> --replace-local`, which discards the unsynced local messages
+and loads the latest synced copy. Nothing is renumbered or merged silently.
+
+Delete has two distinct operations:
+
+- Deleting a session locally (`kilo2 session delete <id>`) removes only the local copy. The command
+  says the synced copy remains and names `kilo2 sync delete <id>`. The next `kilo2 sync pull <id>` or
+  `kilo2 --session <id>` restores the session from the synced copy and says so.
+- `kilo2 sync delete <id>` deletes the session everywhere (cloud tombstone). Later writes or resumes
+  against that ID fail; the ID is never revived.
+
+When a resume or push meets the tombstone (`410 session_deleted`), the CLI refuses with "This session
+was deleted on another device; it is no longer synced." The local copy stays as local-only history.
+`kilo2 --session <id> --as-new` (or `kilo2 sync pull <id> --as-new`) copies that local history to a
+new session ID, enrolls it, and uploads it; the old ID stays deleted. This is the only place a
+continuation creates a new session ID.
 
 ## Verification
 

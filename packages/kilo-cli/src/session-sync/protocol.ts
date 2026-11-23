@@ -47,6 +47,12 @@ export const Receipt = Schema.Struct({
   committedAt: Schema.Number,
 })
 export type Receipt = typeof Receipt.Type
+export const Source = Schema.Struct({
+  sourceID: Schema.String,
+  client: Schema.Literals(["cli", "mobile", "cloud-agent"]),
+  joinedAt: Schema.Number,
+})
+export type Source = typeof Source.Type
 export const State = Schema.Union([
   Schema.Struct({ version: Schema.Literal(1), sessionID: Schema.String, deleted: Schema.Literal(true) }),
   Schema.Struct({
@@ -56,11 +62,40 @@ export const State = Schema.Union([
     tenant: Tenant,
     creatorID: Schema.String,
     sourceID: Schema.String,
+    sources: Schema.optional(Schema.Array(Source)),
     position: Schema.Number,
+    revision: Schema.optional(Schema.Number),
     lastReceipt: Schema.NullOr(Receipt),
   }),
 ])
 export type State = typeof State.Type
+export type LiveState = Extract<State, { deleted: false }>
+export const Entity = Schema.Union([
+  Schema.Struct({
+    kind: Kind,
+    id: Schema.String,
+    revision: Schema.Number,
+    value: Schema.Json,
+    sourceID: Schema.optional(Schema.NullOr(Schema.String)),
+  }),
+  Schema.Struct({
+    kind: Kind,
+    id: Schema.String,
+    revision: Schema.Number,
+    blob: Schema.Struct({ hash: Schema.String, bytes: Schema.Number }),
+    sourceID: Schema.optional(Schema.NullOr(Schema.String)),
+  }),
+])
+export type Entity = typeof Entity.Type
+export const Page = Schema.Struct({
+  version: Schema.Literal(1),
+  sessionID: Schema.String,
+  revision: Schema.Number,
+  position: Schema.Number,
+  entities: Schema.Array(Entity),
+  next: Schema.NullOr(Schema.String),
+})
+export type Page = typeof Page.Type
 export type BlobRef = { hash: string; bytes: number }
 export type Change =
   | { op: "put"; kind: Kind; id: string; value: Schema.Json }
@@ -367,3 +402,65 @@ export const decode = <A, I>(schema: Schema.Codec<A, I>, value: unknown) =>
   Schema.decodeUnknownEffect(schema)(value).pipe(
     Effect.mapError(() => fail("invalid_response", "The sync service returned an invalid response")),
   )
+
+export const deletedMessage = "This session was deleted on another device; it is no longer synced."
+
+export const MessageEnvelope = Schema.Struct({ seq: Schema.Number, message: Schema.Json })
+export const AssetMapping = Schema.Struct({
+  blob: Schema.Struct({ hash: Schema.String, bytes: Schema.Number }),
+  entity: Schema.optional(Schema.Struct({ kind: Schema.String, id: Schema.String })),
+  mime: Schema.optional(Schema.String),
+})
+
+export const classifyConflict = (unackedSeqs: readonly number[], pulledMaxSeq: number) =>
+  unackedSeqs.every((seq) => seq > pulledMaxSeq) ? ("fast-forward" as const) : ("diverged" as const)
+
+export const requestBytes = Effect.fn("SessionSync.requestBytes")(function* (url: string, token: string) {
+  const timeout = 300_000
+  const response = yield* Effect.tryPromise({
+    try: async (signal) => {
+      const deadline = AbortSignal.any([signal, AbortSignal.timeout(timeout)])
+      const res = await fetch(url, {
+        method: "GET",
+        redirect: "error",
+        signal: deadline,
+        headers: { authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) {
+        const text = await res.text().catch(() => "")
+        let code = `http_${res.status}`
+        const parsed = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Unknown))(text)
+        if (parsed._tag === "Some") {
+          const error = decodeError(parsed.value)
+          if (error?._tag === "Some" && Object.hasOwn(errorCodes, error.value.error.code))
+            code = error.value.error.code
+        }
+        throw fail(code, `Sync service rejected the request (${code})`, res.status >= 500 || res.status === 429)
+      }
+      if (!res.body) return new Uint8Array()
+      const reader = res.body.getReader()
+      const chunks: Uint8Array[] = []
+      let length = 0
+      while (true) {
+        const chunk = await reader.read()
+        if (chunk.done) break
+        length += chunk.value.byteLength
+        if (length > limits.blob) {
+          await reader.cancel().catch(() => undefined)
+          throw fail("response_too_large", "The sync service returned an oversized blob")
+        }
+        chunks.push(chunk.value)
+      }
+      const bytes = new Uint8Array(length)
+      let offset = 0
+      for (const chunk of chunks) {
+        bytes.set(chunk, offset)
+        offset += chunk.byteLength
+      }
+      return bytes
+    },
+    catch: (cause) =>
+      cause instanceof Failure ? cause : fail("network_error", "The sync service is unreachable; pending changes are retained", true),
+  })
+  return response
+})

@@ -100,6 +100,9 @@ const tables = [
     session_id TEXT NOT NULL, kind TEXT NOT NULL, id TEXT NOT NULL, position INTEGER NOT NULL,
     op TEXT NOT NULL, value TEXT, cause TEXT, PRIMARY KEY(session_id,kind,id))`,
   `CREATE INDEX IF NOT EXISTS _kilo_sync_dirty_position ON _kilo_sync_dirty(session_id,position)`,
+  `CREATE TABLE IF NOT EXISTS _kilo_sync_foreign (
+    session_id TEXT NOT NULL, kind TEXT NOT NULL, id TEXT NOT NULL,
+    PRIMARY KEY(session_id,kind,id))`,
   `CREATE TABLE IF NOT EXISTS _kilo_sync_message (
     session_id TEXT NOT NULL, id TEXT NOT NULL, needs_snapshot INTEGER NOT NULL,
     PRIMARY KEY(session_id,id))`,
@@ -160,16 +163,21 @@ function capture(
   cause = "NULL",
   condition = "1",
 ) {
+  const foreign =
+    op === "'put'"
+      ? ` AND NOT EXISTS(SELECT 1 FROM _kilo_sync_foreign f WHERE f.session_id=${session} AND f.kind='${kind}' AND f.id=${id})`
+      : ""
+  const effective = `(${condition})${foreign}`
   return `INSERT OR IGNORE INTO _kilo_sync_session(id,directory,source_id)
     SELECT n.id,c.directory,c.source_id FROM session_v2 n
     JOIN _kilo_sync_directory d ON d.alias=n.directory
     JOIN _kilo_sync_consent c ON c.directory=d.directory AND c.enabled=1
-    WHERE n.id=${session} AND n.workspace_id IS NULL AND (${condition})
+    WHERE n.id=${session} AND n.workspace_id IS NULL AND (${effective})
       AND NOT EXISTS(SELECT 1 FROM _kilo_sync_session WHERE id=${session});
-    UPDATE _kilo_sync_session SET position=position+1 WHERE id=${session} AND ${active(session)} AND (${condition});
+    UPDATE _kilo_sync_session SET position=position+1 WHERE id=${session} AND ${active(session)} AND (${effective});
     INSERT INTO _kilo_sync_dirty(session_id,kind,id,position,op,value,cause)
     SELECT ${session},'${kind}',${id},s.position,${op},${value},${cause} FROM _kilo_sync_session s
-    WHERE s.id=${session} AND ${active(session)} AND (${condition})
+    WHERE s.id=${session} AND ${active(session)} AND (${effective})
     ON CONFLICT(session_id,kind,id) DO UPDATE SET position=excluded.position,op=excluded.op,value=excluded.value,cause=excluded.cause;`
 }
 
@@ -687,7 +695,7 @@ export const enable = Effect.fn("SessionSync.Store.enable")(function* (
         VALUES(${input.directory},${approval.path},${approval.hash},${approval.bytes})
         ON CONFLICT(directory,path) DO UPDATE SET hash=excluded.hash,bytes=excluded.bytes`)
         yield* tx.run(sql`UPDATE _kilo_sync_session SET retry_at=0,attempts=0,error_code=NULL,error_message=NULL
-      WHERE directory=${input.directory} AND error_code NOT IN ('unclassified_removal','identity_conflict')`)
+      WHERE directory=${input.directory} AND error_code NOT IN ('unclassified_removal','identity_conflict','diverged')`)
       }),
     )
     .pipe(Effect.catch((error) => (error instanceof Failure ? Effect.fail(error) : Effect.die(error))))
@@ -915,3 +923,106 @@ export function value(row: Dirty) {
     ),
   )
 }
+
+export type ForeignRef = { kind: Kind; id: string }
+
+export const seedImported = Effect.fn("SessionSync.Store.seedImported")(function* (
+  tx: SQL,
+  input: {
+    sessionID: string
+    directory: string
+    sourceID: string
+    position: number
+    ackBatch: string | null
+    ackDigest: string | null
+    foreign: readonly ForeignRef[]
+  },
+) {
+  for (const ref of input.foreign)
+    yield* tx
+      .run(
+        sql`INSERT OR IGNORE INTO _kilo_sync_foreign(session_id,kind,id) VALUES(${input.sessionID},${ref.kind},${ref.id})`,
+      )
+      .pipe(Effect.orDie)
+  yield* tx
+    .run(sql`DELETE FROM _kilo_sync_dirty WHERE session_id=${input.sessionID}
+      AND EXISTS(SELECT 1 FROM _kilo_sync_foreign f WHERE f.session_id=_kilo_sync_dirty.session_id AND f.kind=_kilo_sync_dirty.kind AND f.id=_kilo_sync_dirty.id)`)
+    .pipe(Effect.orDie)
+  yield* tx.run(sql`DELETE FROM _kilo_sync_dirty WHERE session_id=${input.sessionID} AND kind='session'`).pipe(Effect.orDie)
+  yield* tx.run(sql`DELETE FROM _kilo_sync_packet WHERE session_id=${input.sessionID}`).pipe(Effect.orDie)
+  yield* tx
+    .run(
+      sql`INSERT INTO _kilo_sync_session(id,directory,source_id,position,acknowledged,ack_batch,ack_digest,local_deleted,bootstrap_complete,error_code,error_message,retry_at,server_retry_at,attempts)
+      VALUES(${input.sessionID},${input.directory},${input.sourceID},${input.position},${input.position},${input.ackBatch},${input.ackDigest},0,1,NULL,NULL,0,0,0)
+      ON CONFLICT(id) DO UPDATE SET directory=excluded.directory,source_id=excluded.source_id,
+        position=max(position,excluded.position),acknowledged=excluded.acknowledged,ack_batch=excluded.ack_batch,ack_digest=excluded.ack_digest,
+        local_deleted=0,bootstrap_complete=1,error_code=NULL,error_message=NULL,retry_at=0,server_retry_at=0,attempts=0`,
+    )
+    .pipe(Effect.orDie)
+})
+
+export const foreign = (db: SQL, sessionID: string) =>
+  db
+    .all<ForeignRef>(sql`SELECT kind,id FROM _kilo_sync_foreign WHERE session_id=${sessionID} ORDER BY kind,id`)
+    .pipe(Effect.orDie)
+
+const DirtySeq = Schema.Struct({ seq: Schema.Number })
+const DirtyChange = Schema.Struct({
+  kind: Schema.String,
+  op: Schema.String,
+  value: Schema.optional(Schema.Json),
+})
+const PacketBody = Schema.Struct({ changes: Schema.Array(DirtyChange) })
+
+export const unackedMessageSeqs = Effect.fn("SessionSync.Store.unackedMessageSeqs")(function* (db: DB, session: SessionRow) {
+  const seqs: number[] = []
+  const rows = yield* dirty(db, session.id)
+  for (const row of rows) {
+    if (row.kind !== "message" || row.op !== "put" || row.position <= session.acknowledged || row.value === null) continue
+    const parsed = Schema.decodeUnknownOption(DirtySeq)(parse(row.value))
+    if (parsed._tag === "Some") seqs.push(parsed.value.seq)
+  }
+  const pending = yield* packet(db, session.id)
+  if (pending) {
+    const body = Schema.decodeUnknownOption(PacketBody)(parse(pending.body))
+    if (body._tag === "Some")
+      for (const change of body.value.changes) {
+        if (change.kind !== "message" || change.op !== "put" || change.value === undefined) continue
+        const value = Schema.decodeUnknownOption(DirtySeq)(change.value)
+        if (value._tag === "Some" && !seqs.includes(value.value.seq)) seqs.push(value.value.seq)
+      }
+  }
+  return seqs
+})
+
+export const rebatchAfter = Effect.fn("SessionSync.Store.rebatchAfter")(function* (
+  db: DB,
+  session: SessionRow,
+  input: { position: number; ackBatch: string | null; ackDigest: string | null },
+) {
+  yield* db
+    .transaction((tx) =>
+      Effect.gen(function* () {
+        const rows = yield* tx
+          .all<{ kind: string; id: string; position: number }>(
+            sql`SELECT kind,id,position FROM _kilo_sync_dirty WHERE session_id=${session.id} AND position>${session.acknowledged} ORDER BY position,kind,id`,
+          )
+          .pipe(Effect.orDie)
+        let next = input.position
+        for (const row of rows) {
+          next += 1
+          yield* tx
+            .run(sql`UPDATE _kilo_sync_dirty SET position=${next} WHERE session_id=${session.id} AND kind=${row.kind} AND id=${row.id} AND position=${row.position}`)
+            .pipe(Effect.orDie)
+        }
+        yield* tx.run(sql`DELETE FROM _kilo_sync_dirty WHERE session_id=${session.id} AND position<=${session.acknowledged}`).pipe(Effect.orDie)
+        yield* tx.run(sql`DELETE FROM _kilo_sync_packet WHERE session_id=${session.id}`).pipe(Effect.orDie)
+        yield* tx
+          .run(
+            sql`UPDATE _kilo_sync_session SET position=max(position,${next}),acknowledged=${input.position},ack_batch=${input.ackBatch},ack_digest=${input.ackDigest},bootstrap_complete=1,error_code=NULL,error_message=NULL,retry_at=0 WHERE id=${session.id}`,
+          )
+          .pipe(Effect.orDie)
+      }),
+    )
+    .pipe(Effect.orDie)
+})

@@ -65,6 +65,10 @@ const Root = Spec.make(typeof OPENCODE_CLI_NAME === "string" ? OPENCODE_CLI_NAME
       Flag.withDescription("Session ID to continue, or to create if it does not exist"),
       Flag.optional,
     ),
+    asNew: Flag.Boolean("as-new").pipe(
+      Flag.withDescription("Copy a session deleted on another device to a new synced session ID"), // kilocode_change(session-sync)
+      Flag.withDefault(false),
+    ),
     prompt: Flag.String("prompt").pipe(Flag.withDescription("Prompt to use"), Flag.optional),
     model: Flag.String("model").pipe(Flag.withAlias("m"), Flag.optional), // kilocode_change(gateway) seam - explicit TUI model.
   },
@@ -380,6 +384,10 @@ const Root = Spec.make(typeof OPENCODE_CLI_NAME === "string" ? OPENCODE_CLI_NAME
           Flag.withDescription("Fork the session when continuing"),
           Flag.withDefault(false),
         ),
+        asNew: Flag.Boolean("as-new").pipe(
+          Flag.withDescription("Copy a session deleted on another device to a new synced session ID"), // kilocode_change(session-sync)
+          Flag.withDefault(false),
+        ),
         replay: Flag.Boolean("replay").pipe(
           Flag.withDescription("Restore session history on resume and resize (disable with --no-replay)"),
           Flag.optional,
@@ -418,6 +426,10 @@ const Root = Spec.make(typeof OPENCODE_CLI_NAME === "string" ? OPENCODE_CLI_NAME
         ),
         fork: Flag.Boolean("fork").pipe(
           Flag.withDescription("Fork the session before continuing"),
+          Flag.withDefault(false),
+        ),
+        asNew: Flag.Boolean("as-new").pipe(
+          Flag.withDescription("Copy a session deleted on another device to a new synced session ID"), // kilocode_change(session-sync)
           Flag.withDefault(false),
         ),
         worktree: CliFlag.optionalValue("worktree", "name").pipe(

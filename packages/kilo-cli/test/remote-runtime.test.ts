@@ -178,6 +178,22 @@ test("remote hosts use the explicit workspace and restore ownership before any n
     enable: () => Effect.succeed(status),
     disable: () => Effect.succeed(status),
     flush: () => Effect.succeed(status),
+    pull: (input) =>
+      Effect.succeed(
+        KiloSessionSyncRpc.PullResult.make({
+          sessionID: input.sessionID,
+          directory: input.directory,
+          outcome: "unchanged",
+          message: "fixture pull",
+          position: 0,
+          messages: 0,
+        }),
+      ),
+    deleteSession: (input) =>
+      Effect.succeed(
+        KiloSessionSyncRpc.DeleteResult.make({ sessionID: input.sessionID, deleted: true, message: "fixture delete" }),
+      ),
+    synced: (input) => Effect.succeed({ sessionID: input.sessionID, synced: false }),
   })
   // Exercise transport/state orchestration without booting unrelated model catalogs,
   // filesystem watchers and workspace tools. The real-host E2E covers those services.
@@ -584,6 +600,22 @@ test("idle workspace eviction closes host scopes without evicting owned or in-fl
     enable: () => Effect.succeed(status),
     disable: () => Effect.succeed(status),
     flush: () => Effect.succeed(status),
+    pull: (input) =>
+      Effect.succeed(
+        KiloSessionSyncRpc.PullResult.make({
+          sessionID: input.sessionID,
+          directory: input.directory,
+          outcome: "unchanged",
+          message: "fixture pull",
+          position: 0,
+          messages: 0,
+        }),
+      ),
+    deleteSession: (input) =>
+      Effect.succeed(
+        KiloSessionSyncRpc.DeleteResult.make({ sessionID: input.sessionID, deleted: true, message: "fixture delete" }),
+      ),
+    synced: (input) => Effect.succeed({ sessionID: input.sessionID, synced: false }),
   })
   const replacements: LayerNode.Replacements = [
     Global.node.replace(
