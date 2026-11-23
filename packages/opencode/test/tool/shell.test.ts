@@ -1047,23 +1047,75 @@ describe("tool.shell permissions", () => {
   )
 
   const nest = (parent: string, child: string) => {
-    const left = path.resolve(parent)
-    const right = path.resolve(child)
+    const fold = (value: string) => {
+      const resolved = path.resolve(value)
+      if (process.platform !== "win32") return resolved
+      return resolved.toLowerCase()
+    }
+    const left = fold(parent)
+    const right = fold(child)
     return right === left || right.startsWith(left + path.sep)
   }
 
+  // Default Windows %TEMP% is under the profile. These stay outside that profile.
+  const hosts = (real: string) => {
+    const temp = os.tmpdir()
+    const win = process.env.SystemRoot
+    const list = [
+      nest(real, temp) ? undefined : temp,
+      process.env.PUBLIC,
+      win == null ? undefined : path.join(win, "Temp"),
+      process.env.ProgramData ?? process.env.ALLUSERSPROFILE,
+      process.platform === "win32" ? undefined : "/var/tmp",
+      process.platform === "win32" ? undefined : "/tmp",
+    ]
+    return list.flatMap((item) => (item != null && item.length > 0 && !nest(real, item) ? [item] : []))
+  }
+
+  const claim = (real: string, dirs: string[], id: string, seen: string[]): Effect.Effect<string> =>
+    Effect.gen(function* () {
+      const head = dirs.at(0)
+      if (head == null) {
+        const detail = seen.join("; ") || "none"
+        return yield* Effect.die(new Error(`no writable directory outside the real home: ${detail}`))
+      }
+      const base = path.join(head, id)
+      const err = yield* Effect.promise(() =>
+        fs.mkdir(base).then(
+          () => undefined,
+          (error: unknown) => error,
+        ),
+      )
+      if (err == null) {
+        const live = yield* Effect.promise(() => fs.realpath(base))
+        if (!nest(real, live)) return base
+        yield* Effect.promise(() => fs.rm(base, { recursive: true, force: true }))
+        return yield* claim(real, dirs.slice(1), id, [...seen, `${base}: resolves inside the real home`])
+      }
+      const message = err instanceof Error ? err.message : "mkdir failed"
+      return yield* claim(real, dirs.slice(1), id, [...seen, `${base}: ${message}`])
+    })
+
+  const park = (real: string) =>
+    Effect.gen(function* () {
+      const hint = process.env.KILO_TEST_HOME
+      if (hint != null && !nest(real, hint)) {
+        const live = yield* Effect.promise(() => fs.realpath(hint).then((value) => value, () => hint))
+        if (!nest(real, live)) return { base: hint, fresh: false }
+      }
+      const id = `oc-home-${Math.random().toString(36).slice(2)}`
+      const base = yield* claim(real, hosts(real), id, [])
+      return { base, fresh: true }
+    })
+
   // `~/` and `$HOME` use this directory. Bun caches `os.homedir()` and ignores later `HOME` changes,
   // so point both the function and the env at it. `~user` stays on the passwd home.
-  // The finalizer is registered before mkdir so an aborted setup still removes the fixture.
+  // The finalizer is registered before the link tree is created so an aborted setup still removes it.
   const trap = Effect.fn("ShellToolTest.trap")(function* () {
     const real = os.userInfo().homedir
-    const hint = process.env.KILO_TEST_HOME
-    const base =
-      hint != null && !nest(real, hint)
-        ? hint
-        : path.join(os.tmpdir(), `oc-home-${Math.random().toString(36).slice(2)}`)
-    const fresh = base !== hint
-    if (fresh) yield* Effect.promise(() => fs.mkdir(base, { recursive: true }))
+    const picked = yield* park(real)
+    const base = picked.base
+    const fresh = picked.fresh
     const root = path.join(base, `.oc-link-${Math.random().toString(36).slice(2)}`)
     const project = path.join(root, "project")
     const outside = path.join(root, "outside")
