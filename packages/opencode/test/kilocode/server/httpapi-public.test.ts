@@ -29,6 +29,7 @@ type Schema = {
   minimum?: number
   maximum?: number
   exclusiveMinimum?: number
+  maxItems?: number
   required?: string[]
 }
 
@@ -78,6 +79,11 @@ describe("Kilo PublicApi OpenAPI contract", () => {
       { method: "post" as const, path: SessionHostPaths.attach, id: "sessionHost.attach" },
       { method: "delete" as const, path: SessionHostPaths.attachment, id: "sessionHost.detach" },
       { method: "get" as const, path: SessionHostPaths.workspace, id: "sessionHost.listWorkspaces" },
+      {
+        method: "get" as const,
+        path: SessionHostPaths.workspaceRepositories,
+        id: "sessionHost.listWorkspaceRepositories",
+      },
       {
         method: "get" as const,
         path: SessionHostPaths.workspaceProfiles,
@@ -151,6 +157,64 @@ describe("Kilo PublicApi OpenAPI contract", () => {
       .map((operation) => operation.operationId)
       .sort()
     expect(hosted).toEqual(routes.map((route) => route.id).sort())
+  })
+
+  test("publishes only scoped repository catalog data and optional root-create selection fields", () => {
+    const spec = OpenApi.fromApi(PublicApi)
+    const schemas = (spec.components?.schemas ?? {}) as Record<string, Schema>
+    expect(SessionHostPaths.workspaceRepositories).toBe("/kilocode/session-host/workspace/repositories")
+    const route = spec.paths[SessionHostPaths.workspaceRepositories]?.get
+    const params = route?.parameters ?? []
+    expect(params.map((param) => param.in)).toEqual(["query", "query", "query", "query"])
+    expect(Object.fromEntries(params.map((param) => [param.name, param.required]))).toEqual({
+      integrationID: false,
+      organizationID: true,
+      page: false,
+      primaryRepo: true,
+    })
+    expect(route?.requestBody).toBeUndefined()
+    expect(route?.responses?.["403"]).toBeDefined()
+    expect(route?.responses?.["503"]).toBeDefined()
+    expect(route?.responses?.["200"]?.content?.["application/json"]?.schema).toEqual({
+      $ref: "#/components/schemas/SessionHostWorkspaceRepositoryPage",
+    })
+
+    const page = schemas.SessionHostWorkspaceRepositoryPage
+    expect(Object.keys(page?.properties ?? {}).toSorted()).toEqual([
+      "hostedAdditionalRepositoriesVersion",
+      "integrationID",
+      "nextPage",
+      "repositories",
+    ])
+    expect(page?.required?.toSorted()).toEqual(["hostedAdditionalRepositoriesVersion", "integrationID", "repositories"])
+    const item = page?.properties?.repositories?.items
+    expect(Object.keys(item?.properties ?? {}).toSorted()).toEqual(["fullName", "id", "private"])
+    expect(item?.required?.toSorted()).toEqual(["fullName", "id", "private"])
+    expect(item?.properties?.private).toEqual({ type: "boolean" })
+
+    const create = spec.paths[SessionHostPaths.workspace]?.post
+    for (const status of [400, 403, 404, 409, 503]) expect(create?.responses?.[status]).toBeDefined()
+    expect(create?.responses?.["409"]?.content?.["application/json"]?.schema).toMatchObject({
+      anyOf: expect.arrayContaining([
+        { $ref: "#/components/schemas/ConflictError" },
+        { $ref: "#/components/schemas/SessionHostCreateConflictError" },
+      ]),
+    })
+    const conflict = schemas.SessionHostCreateConflictError
+    expect(conflict?.required?.toSorted()).toEqual(["code", "message", "retryable"])
+    expect(conflict?.properties?.retryable).toEqual({ type: "boolean" })
+    const input = schemas.SessionHostCreateWorkspaceInput
+    expect(input?.required?.toSorted()).toEqual(["agent", "operationKey", "repository"])
+    expect(input?.properties?.integrationID).toMatchObject({ type: "string" })
+    expect(input?.properties?.additionalRepositoryIDs).toMatchObject({
+      type: "array",
+      maxItems: 5,
+      items: { type: "integer", minimum: 1, maximum: Number.MAX_SAFE_INTEGER },
+    })
+    const sibling = schemas.SessionHostWorkspaceSessionStartBody
+    expect(sibling?.properties).toBeDefined()
+    expect(sibling?.properties).not.toHaveProperty("integrationID")
+    expect(sibling?.properties).not.toHaveProperty("additionalRepositoryIDs")
   })
 
   test("keeps authorized workspace profile descriptions and defaults nullable", () => {

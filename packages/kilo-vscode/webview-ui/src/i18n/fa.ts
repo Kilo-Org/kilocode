@@ -312,6 +312,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "حذف از لیست مجاز",
   "ui.permission.rule.addToDenied": "افزودن به لیست مسدود",
   "ui.permission.rule.removeFromDenied": "حذف از لیست مسدود",
+  "ui.permission.rule.fromConfig": "توسط یک فایل پیکربندی مدیریت می‌شود",
   "ui.permission.toolLabel.read": "خواندن",
   "ui.permission.toolLabel.edit": "ویرایش",
   "ui.permission.toolLabel.write": "نوشتن",
@@ -1330,6 +1331,8 @@ export const dict = {
 
   "profile.personalAccount": "حساب شخصی",
   "profile.switchingAccount": "در حال تغییر حساب…",
+  "profile.unavailableAccount": "حساب در دسترس نیست",
+  "profile.switchFailed": "تغییر حساب تأیید نشد.",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/en.ts
 
@@ -1415,6 +1418,9 @@ export const dict = {
   "settings.saveBar.saveAnyway": "در هر صورت ذخیره کن",
   "settings.saveBar.cancel": "لغو",
   "settings.saveBar.saveFailed": "ذخیره تنظیمات ممکن نشد",
+  "settings.saveBar.dismissError": "رد کردن",
+  "settings.saveBar.unconfirmedWrite": "میزبان افزونه «{{name}}» را تأیید نکرد.",
+  "settings.saveBar.unconfirmedSave": "میزبان افزونه ذخیره کردن را تأیید نکرد. دوباره تلاش کنید.",
 
   "notifications.action.next": "بعدی",
   "notifications.action.close": "بستن",

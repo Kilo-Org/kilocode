@@ -420,6 +420,22 @@
     margin-left: -2px;
   }
 
+  /* A rule a config file this prompt cannot edit already manages: the row
+     replaces the approve/deny toggles with one non-interactive state icon.
+     Occupy the same 22px box as a small IconButton (kilo-ui icon-button.css,
+     [data-size="small"]) so the icon column stays aligned, and mute the icon
+     via --icon-base, which [data-component="icon"] colours itself with
+     rather than inheriting this element's color. */
+  [data-slot="permission-rule-source"] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    --icon-base: var(--text-weak, var(--vscode-descriptionForeground));
+  }
+
   [data-slot="permission-footer"] {
     flex-direction: column;
     align-items: stretch;
