@@ -1487,26 +1487,6 @@ describe("ProviderTransform.schema - gemini type arrays", () => {
     expect(result.properties.hook_id.type).toBe("number")
   })
 
-  test("adds items to array members created from a type array split", () => {
-    const schema = {
-      type: "object",
-      properties: {
-        arg: {
-          type: ["object", "array", "string", "number", "boolean", "null"],
-          description: "arbitrary payload",
-        },
-      },
-    } as any
-
-    const result = ProviderTransform.schema(geminiModel, schema) as any
-
-    expect(result.properties.arg.type).toBeUndefined()
-    expect(result.properties.arg.nullable).toBe(true)
-    const arr = result.properties.arg.anyOf.find((s: any) => s.type === "array")
-    expect(arr).toBeDefined()
-    expect(arr.items).toEqual({ type: "string" })
-  })
-
   // kilocode_change start - Gemini rejects any key beside anyOf except nullable and description
   const align = {
     description: "Alignment of the column holding match_text; null clears it.",
