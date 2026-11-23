@@ -12,6 +12,10 @@ sidebar_label: Ace Data Cloud
 This guide uses Kilo's custom provider configuration. Ace Data Cloud is not currently in Kilo's built-in provider catalog. Direct requests use your Ace Data Cloud balance, independently of Kilo Gateway credits.
 {% /callout %}
 
+This is a single-model manual example. If you copy it unchanged, Kilo's model picker shows only `gpt-4.1-mini`. It does not import the [complete current Ace Data Cloud model catalog](https://platform.acedata.cloud/models). Check each additional model's API compatibility before adding its definition; do not copy this example's limits, tool flags, or cost estimates to other models.
+
+[Native automatic catalog discovery is proposed in PR #15208](https://github.com/Kilo-Org/kilocode/pull/15208). It is not included in the released Kilo v7.8.32 package. Selecting this custom provider does not enable that unreleased discovery feature.
+
 ## Before you begin
 
 1. Sign in to the [Ace Data Cloud console](https://platform.acedata.cloud/console/applications) and create an API token that can call the OpenAI service.
@@ -48,6 +52,8 @@ export ACEDATACLOUD_API_KEY="your-api-token"
 ```
 
 Merge this configuration into your global `~/.config/kilo/kilo.json`. The `{env:ACEDATACLOUD_API_KEY}` reference requires global configuration; do not put this example in a project-level `kilo.json`.
+
+The `models` object below defines exactly one picker entry. It is an example, not a complete list of supported models.
 
 ```json
 {
