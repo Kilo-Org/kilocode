@@ -22,6 +22,7 @@ import KiloSidebarFooter from "../kilocode/plugins/sidebar-footer" // kilocode_c
 import KiloSidebarUsage from "../kilocode/plugins/sidebar-usage" // kilocode_change(plugin) - Kilo sidebar usage panel
 import KiloSession from "../kilocode/session" // kilocode_change - Kilo /copy-session and /sandbox commands
 import KiloTerminalActivity from "../kilocode/terminal-activity" // kilocode_change(terminal-activity) - Kilo terminal activity packets
+import KiloHerdrAgentState from "../kilocode/herdr-agent-state" // kilocode_change(herdr-agent-state) - Herdr pane agent reporting
 import KiloRemote from "../kilocode/remote" // kilocode_change(remote) - Kilo /remote command and header indicator
 import KiloPeriodic from "../kilocode/periodic" // kilocode_change(periodic) - Kilo /periodic command
 import KiloAutoApprove from "../kilocode/auto-approve" // kilocode_change(autoapprove) - Kilo /auto-approve toggle
@@ -53,6 +54,7 @@ export const builtins = [
   KiloSidebarUsage, // kilocode_change(plugin)
   KiloSession, // kilocode_change
   KiloTerminalActivity, // kilocode_change(terminal-activity)
+  KiloHerdrAgentState, // kilocode_change(herdr-agent-state)
   KiloPeriodic, // kilocode_change(periodic) - Kilo /periodic command
   KiloAutoApprove, // kilocode_change(autoapprove) - Kilo /auto-approve toggle
   ...(process.env.OPENCODE_APP_DIR_NAME === "kilo2" ? [KiloRemote] : []), // kilocode_change(remote)
