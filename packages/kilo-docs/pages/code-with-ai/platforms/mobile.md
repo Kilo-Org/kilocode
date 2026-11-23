@@ -152,6 +152,10 @@ A Cloud Agent session can also start from a saved cloud environment. The **Cloud
 
 Open an environment to see its build state. The build view shows the state, the failure reason when a build fails, the last published snapshot, and the build logs while a build runs. The available action matches the web: **Build**, **Refresh**, **Cancel**, or the reason it is blocked. Build logs and controls are manager-only, as on the web. This row is separate from the **Environment** row, which selects an agent environment profile.
 
+## Searching settings
+
+The **Profile** tab, where the app keeps its settings, has a search field. Results match setting labels and keywords in your current app language, ignoring case and accents, and the matching text is highlighted. An empty query shows the normal list. Selecting a result opens that setting's screen and locates the control without running it.
+
 ## Agent environment profiles
 
 The **Profile** tab lets you browse, create, edit, and delete [agent environment profiles](/docs/code-with-ai/platforms/cloud-agent#agent-environment-profiles) from your phone. Profiles are personal or organization-owned, and you can manage their repository bindings and reorder them with the up and down buttons. Each profile row shows its MCP server count.
