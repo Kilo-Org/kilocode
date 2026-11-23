@@ -2,7 +2,6 @@
 
 import { $ } from "bun"
 import fs from "fs"
-import os from "os" // kilocode_change
 import path from "path"
 import { fileURLToPath } from "url"
 import { createSolidTransformPlugin } from "@opentui/solid/bun-plugin"
@@ -21,6 +20,7 @@ import { Script } from "@opencode-ai/script"
 import pkg from "../package.json"
 // kilocode_change start
 import { stageBubblewrap } from "./kilocode/bubblewrap"
+import { smokeCli } from "./kilocode/smoke-cli"
 import { LanceDBRuntime } from "../src/kilocode/lancedb"
 import { KiloSandboxWorker } from "./kilocode/kilo-sandbox-worker"
 import { KiloSandboxNetwork } from "./kilocode/kilo-sandbox-network"
@@ -117,43 +117,6 @@ async function copyKiloConsole(input: string, outputDir: string) {
   await fs.promises.cp(input, target, { recursive: true })
   console.log(`copied Kilo Console assets to ${target}`)
 }
-
-function smokeEnv(root: string) {
-  const env = { ...process.env }
-  delete env.KILO_MODELS_PATH
-  delete env.KILO_MODELS_URL
-  delete env.KILO_CONFIG
-  delete env.KILO_CONFIG_DIR
-  return {
-    ...env,
-    XDG_DATA_HOME: path.join(root, "data"),
-    XDG_CACHE_HOME: path.join(root, "cache"),
-    XDG_CONFIG_HOME: path.join(root, "config"),
-    XDG_STATE_HOME: path.join(root, "state"),
-    KILO_DISABLE_MODELS_FETCH: "1",
-    KILO_DISABLE_PROJECT_CONFIG: "1",
-    KILO_CONFIG_CONTENT: JSON.stringify({ enabled_providers: ["anthropic"] }),
-    ANTHROPIC_API_KEY: "dummy",
-  }
-}
-
-// kilocode_change start
-async function smokeCli(binaryPath: string) {
-  const root = await fs.promises.mkdtemp(path.join(os.tmpdir(), "kilo-cli-"))
-  try {
-    const versionOutput = await $`${binaryPath} --version`.env(smokeEnv(root)).text()
-    console.log(`Smoke test passed: ${versionOutput.trim()}`)
-    console.log(`Running smoke test: ${binaryPath} --pure models anthropic`)
-    const out = await $`${binaryPath} --pure models anthropic`.env(smokeEnv(root)).text()
-    if (out.split(/\r?\n/).some((line) => line.startsWith("anthropic/"))) return
-    throw new Error("Compiled binary did not list Anthropic models from the embedded snapshot")
-  } finally {
-    await fs.promises
-      .rm(root, { recursive: true, force: true })
-      .catch((err) => console.warn(`Failed to remove smoke test directory ${root}`, err))
-  }
-}
-// kilocode_change end
 
 // Kilo dropped the packages/app web UI. Kept here as a commented reference so future upstream merges
 // can see the deliberate divergence rather than treating a re-add as a clean re-introduction.
