@@ -551,20 +551,24 @@ export const make = Effect.fn("SessionSync.make")(function* (
     return yield* downloadEntities(c, sessionID, state)
   })
 
-  const resolvers = Effect.fn("SessionSync.resolvers")(function* () {
-    const providers = new Set<string>(["kilo"])
+  const resolvers = Effect.fn("SessionSync.resolvers")(function* (
+    catalog?: readonly { providerID: string; id: string }[],
+  ) {
+    const key = (model: { providerID: string; id: string }) => `${model.providerID}\0${model.id}`
+    const models = new Set<string>(catalog?.map(key))
     const agents = new Set<string>(["build", "plan", "general", "explore", "code", "ask", "debug", "orchestrator"])
     const rows = yield* db
       .all<{ agent: string | null; model: string | null }>(sql`SELECT DISTINCT agent,model FROM session_v2`)
       .pipe(Effect.orDie)
+    const ModelRef = Schema.Struct({ providerID: Schema.String, id: Schema.String })
     for (const row of rows) {
       if (row.agent) agents.add(row.agent)
-      if (!row.model) continue
-      const parsed = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Struct({ providerID: Schema.String })))(row.model)
-      if (parsed._tag === "Some") providers.add(parsed.value.providerID)
+      if (!row.model || catalog !== undefined) continue
+      const parsed = Schema.decodeUnknownOption(Schema.fromJsonString(ModelRef))(row.model)
+      if (parsed._tag === "Some") models.add(key(parsed.value))
     }
     return {
-      resolveModel: (model: { providerID: string }) => providers.has(model.providerID),
+      resolveModel: (model: { providerID: string; id: string }) => models.has(key(model)),
       resolveAgent: (agent: string) => agents.has(agent),
     }
   })
@@ -582,6 +586,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
     sessionID: string
     replaceLocal?: boolean
     asNew?: boolean
+    models?: readonly { providerID: string; id: string }[]
   }) {
     const c = yield* consentFor(input.directory)
     const directory = c.directory
@@ -599,7 +604,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
     }
     const local = yield* db.get<Store.SessionRow>(sql`SELECT * FROM _kilo_sync_session WHERE id=${input.sessionID}`).pipe(Effect.orDie)
     const downloaded = yield* downloadSnapshot(c, input.sessionID)
-    const { resolveModel, resolveAgent } = yield* resolvers()
+    const { resolveModel, resolveAgent } = yield* resolvers(input.models)
     const unacked = local && !input.replaceLocal ? yield* Store.unackedMessageSeqs(db, local) : []
     const kind = classifyConflict(unacked, downloaded.snapshot.maxSeq)
     if (unacked.length && kind === "diverged")

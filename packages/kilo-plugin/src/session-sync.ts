@@ -41,6 +41,7 @@ interface Interface {
     sessionID: string
     replaceLocal?: boolean
     asNew?: boolean
+    models?: readonly { providerID: string; id: string }[]
   }) => Effect.Effect<KiloSessionSyncRpc.PullResult, KiloSessionSyncRpc.Failure>
   readonly deleteSession: (input: {
     directory: string
@@ -93,13 +94,17 @@ export const plugin = define<Service | Scope.Scope>({
               ),
             ),
         pull: (input, context) =>
-          sync
-            .pull(input)
-            .pipe(
-              Effect.mapError((error) =>
-                context.error("failed", error.message, { code: error.code, message: error.message }),
-              ),
+          Effect.gen(function* () {
+            const models = yield* ctx.model.list().pipe(
+              Effect.map((result) => result.data.map((model) => ({ providerID: model.providerID, id: model.id }))),
+              Effect.option,
+            )
+            return yield* sync.pull({ ...input, ...(models._tag === "Some" ? { models: models.value } : {}) })
+          }).pipe(
+            Effect.mapError((error) =>
+              context.error("failed", error.message, { code: error.code, message: error.message }),
             ),
+          ),
         deleteSession: (input, context) =>
           sync
             .deleteSession(input)

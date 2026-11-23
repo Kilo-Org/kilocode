@@ -110,8 +110,18 @@ async function execute(input: RunCommandInput, prepared: Prepared, endpoint: End
     prepare: async (next) => {
       if (explicit?.variant && !next.model)
         throw new RunTargetError("Cannot select a variant before selecting a model", next.session?.id)
-      if (process.env.OPENCODE_APP_DIR_NAME === "kilo2") await waitForRunCatalog(client, next.location.directory, next.model, signal, undefined, input.format) // kilocode_change(gateway) - before session creation or prompt admission
-      return { model: next.model, agent: next.agent }
+      let model = next.model
+      if (process.env.OPENCODE_APP_DIR_NAME === "kilo2") {
+        const resolved = await waitForRunCatalog(client, next.location.directory, next.model, signal, undefined, input.format, {
+          fallbackToDefault: !explicit && next.session !== undefined,
+        }) // kilocode_change(gateway) - before session creation or prompt admission
+        model = resolved.model
+        if (resolved.fallbackFrom && resolved.model)
+          UI.println(
+            `${UI.Style.TEXT_DIM}Model ${resolved.fallbackFrom.providerID}/${resolved.fallbackFrom.id} is not available; using default ${resolved.model.providerID}/${resolved.model.id}.${UI.Style.TEXT_NORMAL}`,
+          )
+      }
+      return { model, agent: next.agent }
     },
   }).catch((error) => {
     if (!(error instanceof RunTargetError)) throw error

@@ -5,7 +5,7 @@ const directory = "/workspace"
 
 // A cold Location lists no plugins and answers `rpc.unavailable` until its first activation. The pull must wait
 // for readiness first; otherwise it silently skips the import and the turn reuses the remote log's seq numbers.
-const client = (input: { pulls: unknown[] }) => {
+const client = (input: { pulls: unknown[]; synced?: boolean }) => {
   const order: string[] = []
   let pluginReads = 0
   let pullCalls = 0
@@ -34,6 +34,10 @@ const client = (input: { pulls: unknown[] }) => {
           if (next !== null && typeof next === "object" && !("sessionID" in next)) throw next
           return next
         },
+        synced: async () => {
+          order.push("synced")
+          return { sessionID: "ses_cold", synced: input.synced ?? false }
+        },
       }),
     } as never,
   }
@@ -48,13 +52,18 @@ test("the implicit pull waits for the cold Location's plugins before it runs", a
   expect(fake.order.indexOf("handshake")).toBeLessThan(fake.order.indexOf("pull"))
 })
 
-test("a transport failure is reported instead of continuing on a stale log", async () => {
-  const fake = client({ pulls: [{ type: "failed", message: "rpc.unavailable (400)" }] })
+test("a transport failure for a known synced session is reported instead of continuing on a stale log", async () => {
+  const fake = client({ pulls: [{ type: "failed", message: "rpc.unavailable (400)" }], synced: true })
   expect(await pullSyncedSession({ client: fake.client, sessionID: "ses_cold", directory })).toEqual({
     type: "failed",
     retryable: true,
     message: expect.stringContaining("not ready"),
   })
+})
+
+test("a transport failure for an unknown session stays a create-new path", async () => {
+  const fake = client({ pulls: [{ type: "failed", message: "rpc.unavailable (400)" }], synced: false })
+  expect(await pullSyncedSession({ client: fake.client, sessionID: "ses_cold", directory })).toEqual({ type: "absent" })
 })
 
 test("a rejected pull keeps its machine-readable code and does not claim to be retryable", async () => {

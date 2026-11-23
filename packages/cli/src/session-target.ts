@@ -60,6 +60,15 @@ export async function pullSyncedSession(input: {
         retryable: false,
         message: `The synced copy of this session could not be loaded (${code}).`,
       }
+    const known = await input.client
+      .rpc(KiloSessionSyncRpc.Definition)
+      .synced(
+        { directory: input.directory, sessionID: input.sessionID },
+        { location: { directory: input.directory }, signal: input.signal },
+      )
+      .then((result) => result.synced)
+      .catch(() => false)
+    if (!known) return { type: "absent" }
     return {
       type: "failed",
       retryable: true,

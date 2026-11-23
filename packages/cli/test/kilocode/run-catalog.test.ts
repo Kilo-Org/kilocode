@@ -55,3 +55,41 @@ test("a stalled catalog read respects the deadline and caller cancellation", asy
   cancel.abort(new Error("run interrupted"))
   await expect(waiting).rejects.toThrow("run interrupted")
 })
+
+test("a settled catalog without the session model falls back to the default model", async () => {
+  let reads = 0
+  const fallback = { providerID: "kilo", id: "default-model" }
+  const client = catalog((request) => {
+    const url = new URL(request.url)
+    if (url.pathname === "/api/model/default") return Response.json({ data: fallback })
+    reads++
+    return Response.json({ data: [{ providerID: "kilo", id: "other-model" }] })
+  })
+  await expect(
+    waitForRunCatalog(client, directory, target, signal, 5_000, "default", { fallbackToDefault: true }),
+  ).resolves.toEqual({ model: fallback, fallbackFrom: target })
+  expect(reads).toBe(3)
+})
+
+test("a missing session model falls back at the deadline even when its provider has not published", async () => {
+  const fallback = { providerID: "kilo", id: "default-model" }
+  const client = catalog((request) => {
+    const url = new URL(request.url)
+    if (url.pathname === "/api/model/default") return Response.json({ data: fallback })
+    return Response.json({ data: [] })
+  })
+  await expect(
+    waitForRunCatalog(client, directory, target, signal, 10, "default", { fallbackToDefault: true }),
+  ).resolves.toEqual({ model: fallback, fallbackFrom: target })
+})
+
+test("fallback does not hide a missing default model", async () => {
+  const client = catalog((request) => {
+    const url = new URL(request.url)
+    if (url.pathname === "/api/model/default") return Response.json({ data: null })
+    return Response.json({ data: [] })
+  })
+  await expect(
+    waitForRunCatalog(client, directory, target, signal, 10, "default", { fallbackToDefault: true }),
+  ).rejects.toThrow("No prompt was sent")
+})

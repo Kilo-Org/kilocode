@@ -935,6 +935,7 @@ it.live("pull drops an unknown model and agent and keeps a resolvable one", () =
     yield* signIn(s.credentials)
     yield* allow(s.db, f.directory, f.backend.url)
     const unknownID = Session.ID.make("ses_pull_unknown_model")
+    const providerOnlyID = Session.ID.make("ses_pull_provider_only_model")
     const knownID = Session.ID.make("ses_pull_known_model")
     yield* s.db
       .insert(ProjectTable)
@@ -943,6 +944,7 @@ it.live("pull drops an unknown model and agent and keeps a resolvable one", () =
       .run()
     for (const [sessionID, model, agent] of [
       [unknownID, { providerID: "kilo-mobile-local", id: "on-device", variant: "default" }, "mobile-agent"],
+      [providerOnlyID, { providerID: "kilo", id: "mobile-only-model", variant: "default" }, "build"],
       [knownID, { providerID: "kilo", id: "fixture-model", variant: "default" }, "build"],
     ] as const) {
       f.backend.sessions.set(sessionID, {
@@ -963,7 +965,7 @@ it.live("pull drops an unknown model and agent and keeps a resolvable one", () =
           value: sessionEntity({ id: sessionID, title: String(sessionID), created: 10, updated: 20, model, agent }),
         },
       ])
-      yield* s.sync.pull({ directory: f.directory, sessionID })
+      yield* s.sync.pull({ directory: f.directory, sessionID, models: [{ providerID: "kilo", id: "fixture-model" }] })
     }
     const unknown = yield* s.db
       .get<{ model: unknown; agent: string | null }>(
@@ -972,6 +974,11 @@ it.live("pull drops an unknown model and agent and keeps a resolvable one", () =
       .pipe(Effect.orDie)
     expect(unknown?.model).toBeNull()
     expect(unknown?.agent).toBeNull()
+    const providerOnly = yield* s.db
+      .get<{ model: unknown; agent: string | null }>(sql`SELECT model,agent FROM session_v2 WHERE id=${providerOnlyID}`)
+      .pipe(Effect.orDie)
+    expect(providerOnly?.model).toBeNull()
+    expect(providerOnly?.agent).toBe("build")
     const known = yield* s.db
       .get<{ model: unknown; agent: string | null }>(sql`SELECT model,agent FROM session_v2 WHERE id=${knownID}`)
       .pipe(Effect.orDie)
