@@ -13,7 +13,7 @@ import { OPENCODE_ARTIFACT, OPENCODE_CHANNEL, OPENCODE_HIGHLIGHTS, OPENCODE_VERS
 import { Env } from "../../env"
 import { Service } from "@opencode/client/effect/service"
 import { OpenCode } from "@opencode/client/promise"
-import { findSession, pullSyncedSession } from "../../session-target" // kilocode_change(session-sync)
+import { findSession, pullSyncedSession, syncedDeletedMessage } from "../../session-target" // kilocode_change(session-sync)
 import { errorMessage } from "../../util/error"
 
 export default Runtime.handler(Commands, (input) =>
@@ -67,7 +67,18 @@ export default Runtime.handler(Commands, (input) =>
         })
         return
       }
-      if (pulled.success) session = pulled.success.sessionID
+      if (pulled.success.type === "deleted" || pulled.success.type === "failed") {
+        const message =
+          pulled.success.type === "deleted"
+            ? `${syncedDeletedMessage} Continue as a new session with --as-new.`
+            : pulled.success.message
+        yield* Effect.sync(() => {
+          process.stderr.write(message + "\n")
+          process.exitCode = 1
+        })
+        return
+      }
+      if (pulled.success.type === "pulled") session = pulled.success.sessionID
     }
     // kilocode_change(session-sync) end
     // A missing --session ID becomes the ID of the session the first prompt creates.

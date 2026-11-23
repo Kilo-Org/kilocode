@@ -1,6 +1,9 @@
 import type { LocationGetOutput, ModelRef, OpenCodeClient, SessionInfo } from "@opencode/client/promise"
 import { Model } from "@opencode/schema/model"
+import { KiloHandshakeRpc } from "@opencode/schema/kilocode/handshake" // kilocode_change(session-sync)
 import { KiloSessionSyncRpc } from "@opencode/schema/kilocode/session-sync" // kilocode_change(session-sync)
+import { waitForPlugins } from "./services/plugin-startup" // kilocode_change(session-sync)
+import { Effect } from "effect" // kilocode_change(session-sync)
 import path from "node:path"
 import { errorMessage } from "./util/error"
 
@@ -8,24 +11,61 @@ const SESSION_PAGE_LIMIT = 50
 // kilocode_change(session-sync) start
 export const syncedDeletedMessage = "This session was deleted on another device; it is no longer synced."
 
+export type SyncedPull =
+  | { type: "pulled"; sessionID: string; outcome: string }
+  /** No synced copy is addressable here, so the caller keeps its existing "create new" behavior. */
+  | { type: "absent" }
+  /** The cloud session is tombstoned; the caller refuses and offers --as-new. */
+  | { type: "deleted" }
+  /** The pull could not be attempted or was rejected; continuing would run on a stale log. */
+  | { type: "failed"; retryable: boolean; message: string }
+
+const absentCodes: Record<string, true> = { session_not_found: true, sync_disabled: true }
+
+function rpcCode(error: unknown) {
+  if (typeof error !== "object" || error === null || !("data" in error)) return undefined
+  const data = error.data
+  if (typeof data !== "object" || data === null || !("code" in data) || typeof data.code !== "string") return undefined
+  return data.code
+}
+
 export async function pullSyncedSession(input: {
   client: OpenCodeClient
   sessionID: string
   directory: string
   asNew?: boolean
   signal?: AbortSignal
-}): Promise<{ sessionID: string; outcome: string } | undefined> {
+}): Promise<SyncedPull> {
+  // A cold Location answers `rpc.unavailable` until its plugins register. Pulling first silently skipped the
+  // import and let the turn reuse the remote log's sequence numbers, so readiness comes first, exactly as the
+  // `sync` commands do it.
+  await Effect.runPromise(waitForPlugins(input.client, input.directory))
+  await input.client
+    .rpc(KiloHandshakeRpc.Definition)
+    .get({}, { location: { directory: input.directory }, signal: input.signal })
+    .catch(() => undefined)
   try {
     const result = await input.client.rpc(KiloSessionSyncRpc.Definition).pull(
       { directory: input.directory, sessionID: input.sessionID, replaceLocal: false, asNew: input.asNew ?? false },
       { location: { directory: input.directory }, signal: input.signal },
     )
-    return { sessionID: result.sessionID, outcome: result.outcome }
+    return { type: "pulled", sessionID: result.sessionID, outcome: result.outcome }
   } catch (error) {
-    const text = `${errorMessage(error)} ${JSON.stringify(error ?? {})}`
-    if (text.includes("session_deleted") || text.includes(syncedDeletedMessage))
-      throw new Error(`${syncedDeletedMessage} Continue as a new session with --as-new.`)
-    return undefined
+    const code = rpcCode(error)
+    if (code === "session_deleted") return { type: "deleted" }
+    if (code !== undefined && absentCodes[code]) return { type: "absent" }
+    if (code !== undefined)
+      return {
+        type: "failed",
+        retryable: false,
+        message: `The synced copy of this session could not be loaded (${code}).`,
+      }
+    return {
+      type: "failed",
+      retryable: true,
+      message:
+        "The synced copy of this session could not be checked because the Kilo server is not ready; retry the command.",
+    }
   }
 }
 // kilocode_change(session-sync) end
@@ -139,7 +179,9 @@ async function selectSession(input: {
       asNew: true,
       signal: input.signal,
     })
-    if (pulled) {
+    if (pulled.type === "deleted") throw new Error(`${syncedDeletedMessage} Continue as a new session with --as-new.`)
+    if (pulled.type === "failed") throw new Error(pulled.message)
+    if (pulled.type === "pulled") {
       const created = await findSession(input.client, pulled.sessionID, input.signal)
       if (created) return { session: created }
     }
@@ -154,7 +196,9 @@ async function selectSession(input: {
       directory: explicit?.location.directory ?? input.location?.directory ?? process.cwd(),
       signal: input.signal,
     })
-    if (pulled) explicit = (await findSession(input.client, pulled.sessionID, input.signal)) ?? explicit
+    if (pulled.type === "deleted") throw new Error(`${syncedDeletedMessage} Continue as a new session with --as-new.`)
+    if (pulled.type === "failed") throw new Error(pulled.message)
+    if (pulled.type === "pulled") explicit = (await findSession(input.client, pulled.sessionID, input.signal)) ?? explicit
   }
   // kilocode_change(session-sync) end
   if (input.session && !explicit) {
