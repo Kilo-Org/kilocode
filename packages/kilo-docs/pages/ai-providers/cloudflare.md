@@ -120,6 +120,21 @@ If your organization provides a fully configured gateway URL, set `provider.<id>
 }
 ```
 
+The gateway credential from `CLOUDFLARE_API_TOKEN` or `CF_AIG_TOKEN` is sent when the request goes to the Cloudflare gateway host `gateway.ai.cloudflare.com`. For a gateway reached on another host, such as a Cloudflare custom domain, pass the credential in the provider headers:
+
+```jsonc
+{
+  "provider": {
+    "cloudflare-ai-gateway": {
+      "options": {
+        "baseURL": "https://ai.example.com/compat",
+        "headers": { "cf-aig-authorization": "Bearer <gateway-token>" }
+      }
+    }
+  }
+}
+```
+
 ## Troubleshooting
 
 - **`CLOUDFLARE_ACCOUNT_ID is missing`** — set `CLOUDFLARE_ACCOUNT_ID` or reconnect the provider with `/connect` so Kilo can store the account ID in auth metadata.

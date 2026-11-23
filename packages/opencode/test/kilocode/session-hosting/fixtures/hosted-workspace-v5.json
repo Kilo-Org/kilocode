@@ -1,0 +1,75 @@
+{
+  "contractVersion": 5,
+  "baseContractVersion": 4,
+  "procedures": {
+    "listHostedWorkspaceRepositories": "query"
+  },
+  "requests": [
+    {
+      "procedure": "listHostedWorkspaceRepositories",
+      "fields": ["integrationId", "organizationId", "page", "primaryRepo"],
+      "example": {
+        "organizationId": "11111111-1111-4111-8111-111111111111",
+        "integrationId": "22222222-2222-4222-8222-222222222222",
+        "primaryRepo": "example/primary",
+        "page": 1
+      }
+    },
+    {
+      "procedure": "createHostedWorkspace",
+      "fields": [
+        "additionalRepositoryIds",
+        "agent",
+        "clientProvenance",
+        "kiloSessionId",
+        "message",
+        "operationKey",
+        "options",
+        "profile",
+        "repository"
+      ],
+      "example": {
+        "operationKey": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "clientProvenance": "agent-manager",
+        "repository": {
+          "type": "github",
+          "repo": "example/primary",
+          "githubIntegrationId": "22222222-2222-4222-8222-222222222222",
+          "branch": "main"
+        },
+        "options": { "kilocodeOrganizationId": "11111111-1111-4111-8111-111111111111" },
+        "additionalRepositoryIds": [1002, 1003],
+        "agent": { "mode": "code", "model": "anthropic/claude-sonnet-4" }
+      }
+    }
+  ],
+  "responses": [
+    {
+      "procedure": "listHostedWorkspaceRepositories",
+      "fields": ["hostedAdditionalRepositoriesVersion", "nextPage", "repositories"],
+      "example": {
+        "hostedAdditionalRepositoriesVersion": 1,
+        "repositories": [{ "id": 1002, "fullName": "example/additional", "private": true }],
+        "nextPage": 2
+      }
+    },
+    {
+      "procedure": "createHostedWorkspace",
+      "fields": ["cloudAgentSessionId", "kiloSessionId", "messageId", "replayed", "workspaceId"],
+      "example": {
+        "workspaceId": "worktree_11111111-1111-4111-8111-111111111111",
+        "cloudAgentSessionId": "workspace_11111111-1111-4111-8111-111111111111",
+        "kiloSessionId": "ses_12345678901234567890123456"
+      }
+    }
+  ],
+  "errors": [
+    { "code": "BAD_REQUEST", "message": "hosted_workspace_repository_scope_required" },
+    { "code": "BAD_REQUEST", "message": "hosted_workspace_repository_duplicate" },
+    { "code": "BAD_REQUEST", "message": "hosted_workspace_repository_path_conflict" },
+    { "code": "FORBIDDEN", "message": "hosted_workspace_repository_access_denied" },
+    { "code": "NOT_FOUND", "message": "hosted_workspace_repository_unavailable" },
+    { "code": "SERVICE_UNAVAILABLE", "message": "hosted_workspace_repository_catalog_unavailable" },
+    { "code": "CONFLICT", "message": "session_create_intent_conflict" }
+  ]
+}

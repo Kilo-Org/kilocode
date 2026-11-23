@@ -308,6 +308,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "Remove from allowed list",
   "ui.permission.rule.addToDenied": "Add to denied list",
   "ui.permission.rule.removeFromDenied": "Remove from denied list",
+  "ui.permission.rule.fromConfig": "Managed by a config file",
   "ui.permission.toolLabel.read": "Read",
   "ui.permission.toolLabel.edit": "Edit",
   "ui.permission.toolLabel.write": "Write",
@@ -1331,6 +1332,8 @@ export const dict = {
 
   "profile.personalAccount": "Personal Account",
   "profile.switchingAccount": "Switching account…",
+  "profile.unavailableAccount": "Unavailable account",
+  "profile.switchFailed": "Could not confirm the account switch.",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/en.ts
 
@@ -1414,6 +1417,9 @@ export const dict = {
   "settings.saveBar.saveAnyway": "Save anyway",
   "settings.saveBar.cancel": "Cancel",
   "settings.saveBar.saveFailed": "Couldn't save settings",
+  "settings.saveBar.dismissError": "Dismiss",
+  "settings.saveBar.unconfirmedWrite": 'The change to "{{name}}" was not confirmed by the extension host.',
+  "settings.saveBar.unconfirmedSave": "The save was not confirmed by the extension host. Try again.",
 
   "notifications.action.next": "Next",
   "notifications.action.close": "Close",

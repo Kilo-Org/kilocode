@@ -1,5 +1,9 @@
+import path from "path"
+import os from "os"
+import fs from "fs/promises"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
+import { Global } from "@opencode-ai/core/global"
 import { describe, expect } from "bun:test"
 import { Effect } from "effect"
 import { ProviderV2 } from "@opencode-ai/core/provider"
@@ -95,12 +99,36 @@ const seed = Effect.fnUntraced(function* (input: {
   return { sessionID: session.id, userID: user.id, assistantID: assistant.id }
 })
 
+const dir = path.join(Global.Path.state, "session-turn")
+
+/** Writes a turn marker the way another live Kilo process does, and returns the file so a test can remove it. */
+const markForeign = Effect.fnUntraced(function* (sessionID: Session.Info["id"], pid: number) {
+  const file = path.join(dir, `${sessionID}.${pid}`)
+  yield* Effect.promise(async () => {
+    await fs.mkdir(dir, { recursive: true })
+    await fs.writeFile(file, os.hostname())
+  })
+  return file
+})
+
+const ids = Effect.fnUntraced(function* (sessionID: Session.Info["id"]) {
+  const sessions = yield* Session.Service
+  const msgs = yield* sessions.messages({ sessionID })
+  return msgs.map((m) => m.info.id)
+})
+
 const run = Effect.fnUntraced(function* (sessionID: Session.Info["id"]) {
   const sessions = yield* Session.Service
   const status = yield* SessionStatus.Service
   yield* KiloSessionPrompt.recoverFailedAssistant({ sessionID, status, sessions })
-  const msgs = yield* sessions.messages({ sessionID })
-  return msgs.map((m) => m.info.id)
+  return yield* ids(sessionID)
+})
+
+const runProviderFinish = Effect.fnUntraced(function* (sessionID: Session.Info["id"]) {
+  const sessions = yield* Session.Service
+  const status = yield* SessionStatus.Service
+  yield* KiloSessionPrompt.recoverProviderFinishError({ sessionID, status, sessions })
+  return yield* ids(sessionID)
 })
 
 const apiError = new MessageV2.APIError({ message: "provider overloaded", isRetryable: true }).toObject()
@@ -186,6 +214,66 @@ describe("KiloSessionPrompt.recoverFailedAssistant", () => {
       const remaining = yield* run(seeded.sessionID)
 
       expect(remaining).toEqual([seeded.userID, seeded.assistantID])
+    }),
+  )
+
+  it.instance("keeps an errored tail whose reply another process still owns", () =>
+    Effect.gen(function* () {
+      const seeded = yield* seed({ error: apiError, parts: ["step-start", "step-finish"] })
+      const marker = yield* markForeign(seeded.sessionID, process.ppid)
+
+      const remaining = yield* run(seeded.sessionID).pipe(Effect.ensuring(Effect.promise(() => fs.rm(marker))))
+
+      expect(remaining).toEqual([seeded.userID, seeded.assistantID])
+    }),
+  )
+
+  it.instance("removes an errored tail when the turn marker belongs to this process", () =>
+    Effect.gen(function* () {
+      const seeded = yield* seed({ error: apiError, parts: ["step-start", "step-finish"] })
+      const marker = yield* markForeign(seeded.sessionID, process.pid)
+
+      const remaining = yield* run(seeded.sessionID).pipe(Effect.ensuring(Effect.promise(() => fs.rm(marker))))
+
+      expect(remaining).toEqual([seeded.userID])
+    }),
+  )
+})
+
+describe("KiloSessionPrompt.recoverProviderFinishError", () => {
+  it.instance("removes an error-finished tail that no other process owns", () =>
+    Effect.gen(function* () {
+      const seeded = yield* seed({ finish: "error", parts: ["step-start", "step-finish"] })
+
+      const remaining = yield* runProviderFinish(seeded.sessionID)
+
+      expect(remaining).toEqual([seeded.userID])
+    }),
+  )
+
+  it.instance("keeps an error-finished tail whose reply another process still owns", () =>
+    Effect.gen(function* () {
+      const seeded = yield* seed({ finish: "error", parts: ["step-start", "step-finish"] })
+      const marker = yield* markForeign(seeded.sessionID, process.ppid)
+
+      const remaining = yield* runProviderFinish(seeded.sessionID).pipe(
+        Effect.ensuring(Effect.promise(() => fs.rm(marker))),
+      )
+
+      expect(remaining).toEqual([seeded.userID, seeded.assistantID])
+    }),
+  )
+
+  it.instance("removes an error-finished tail when the turn marker belongs to this process", () =>
+    Effect.gen(function* () {
+      const seeded = yield* seed({ finish: "error", parts: ["step-start", "step-finish"] })
+      const marker = yield* markForeign(seeded.sessionID, process.pid)
+
+      const remaining = yield* runProviderFinish(seeded.sessionID).pipe(
+        Effect.ensuring(Effect.promise(() => fs.rm(marker))),
+      )
+
+      expect(remaining).toEqual([seeded.userID])
     }),
   )
 })

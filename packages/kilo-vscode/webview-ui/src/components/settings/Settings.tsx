@@ -7,7 +7,7 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
-import { useConfig } from "../../context/config"
+import { useConfig, saveErrorDetails, saveErrorText } from "../../context/config"
 import { useSession } from "../../context/session"
 import ModelsTab from "./ModelsTab"
 import * as Sandboxing from "./sandboxing"
@@ -194,7 +194,14 @@ const AgentManagerTab: Component<{ projectId?: string }> = (props) => {
           >
             <Switch
               checked={(settings()["agentManager.worktreePool"] as boolean | undefined) ?? true}
-              onChange={(value) => applySetting("agentManager.worktreePool", value)}
+              onChange={(value) =>
+                applySetting(
+                  "agentManager.worktreePool",
+                  value,
+                  undefined,
+                  language.t("agentManager.settings.worktreePool.title"),
+                )
+              }
               hideLabel
             >
               {language.t("agentManager.settings.worktreePool.title")}
@@ -268,7 +275,7 @@ const Settings: Component<SettingsProps> = (props) => {
   const server = useServer()
   const language = useLanguage()
   const vscode = useVSCode()
-  const { loading, isDirty, saving, saveError, saveConfig, discardConfig, features } = useConfig()
+  const { loading, isDirty, saving, saveError, saveConfig, discardConfig, clearSaveError, features } = useConfig()
   const session = useSession()
   const [active, setActive] = createSignal(props.tab ?? "models")
   const [errorExpanded, setErrorExpanded] = createSignal(false)
@@ -579,9 +586,9 @@ const Settings: Component<SettingsProps> = (props) => {
         </Show>
       </Tabs>
 
-      {/* Save bar — slides in when there are unsaved config changes */}
-      <Show when={isDirty()}>
-        <div class="settings-save-bar-wrap">
+      {/* Save bar — the error stays visible even when nothing is dirty */}
+      <Show when={saveError() || isDirty()}>
+        <div class={`settings-save-bar-wrap${isDirty() ? "" : " settings-save-bar-wrap-error-only"}`}>
           <Show when={saveError()}>
             {(err) => (
               <div class="settings-save-bar-error">
@@ -600,24 +607,33 @@ const Settings: Component<SettingsProps> = (props) => {
                   </span>
                   <span class="settings-save-bar-error-title">
                     {language.t("settings.saveBar.saveFailed")}:{" "}
-                    <span class="settings-save-bar-error-firstline">{err().message}</span>
+                    <span class="settings-save-bar-error-firstline">{saveErrorText(err(), language.t)}</span>
                   </span>
                 </div>
+                {/* Outside the expander: a button inside `role="button"` is presentational to AT.
+                    Always rendered: a staged edit must not hide the only way to clear the error. */}
+                <div class="settings-save-bar-error-actions">
+                  <Button variant="ghost" size="small" onClick={() => clearSaveError()}>
+                    {language.t("settings.saveBar.dismissError")}
+                  </Button>
+                </div>
                 <Show when={errorExpanded()}>
-                  <pre class="settings-save-bar-error-details">{err().details ?? err().message}</pre>
+                  <pre class="settings-save-bar-error-details">{saveErrorDetails(err(), language.t)}</pre>
                 </Show>
               </div>
             )}
           </Show>
-          <div class="settings-save-bar">
-            <span class="settings-save-bar-label">{language.t("settings.saveBar.unsavedChanges")}</span>
-            <Button variant="ghost" size="small" onClick={discardConfig} disabled={saving()}>
-              {language.t("settings.saveBar.discard")}
-            </Button>
-            <Button variant="primary" size="small" onClick={handleSave} disabled={saving()}>
-              {saving() ? language.t("settings.saveBar.saving") : language.t("settings.saveBar.save")}
-            </Button>
-          </div>
+          <Show when={isDirty()}>
+            <div class="settings-save-bar">
+              <span class="settings-save-bar-label">{language.t("settings.saveBar.unsavedChanges")}</span>
+              <Button variant="ghost" size="small" onClick={discardConfig} disabled={saving()}>
+                {language.t("settings.saveBar.discard")}
+              </Button>
+              <Button variant="primary" size="small" onClick={handleSave} disabled={saving()}>
+                {saving() ? language.t("settings.saveBar.saving") : language.t("settings.saveBar.save")}
+              </Button>
+            </div>
+          </Show>
         </div>
       </Show>
     </div>

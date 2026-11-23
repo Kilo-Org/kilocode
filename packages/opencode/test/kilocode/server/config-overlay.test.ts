@@ -146,6 +146,26 @@ describe("config overlay routes", () => {
     }
   })
 
+  test("clears a scalar permission entry that a delete sentinel fully covers", async () => {
+    await using project = await tmpdir()
+    const file = path.join(project.path, "kilo.json")
+    await Bun.write(file, JSON.stringify({ permission: { edit: "allow", read: "allow" } }))
+    const target = await KilocodeConfigOverlay.target({ scope: "project", directory: project.path })
+
+    const result = await KilocodeConfigWriter.write({
+      scope: "project",
+      directory: project.path,
+      expected: target,
+      set: { permission: { edit: { "*": null } } },
+    })
+
+    expect(result.ok).toBe(true)
+    const written = JSON.parse(await Bun.file(file).text())
+    // The cleared entry is gone rather than left as an object of sentinels, and the
+    // sibling permission keeps its value.
+    expect(written.permission).toEqual({ read: "allow" })
+  })
+
   test("writes a missing project target atomically", async () => {
     await using project = await tmpdir()
     const target = await KilocodeConfigOverlay.target({ scope: "project", directory: project.path })

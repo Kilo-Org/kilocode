@@ -314,6 +314,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "許可リストから削除",
   "ui.permission.rule.addToDenied": "拒否リストに追加",
   "ui.permission.rule.removeFromDenied": "拒否リストから削除",
+  "ui.permission.rule.fromConfig": "構成ファイルで管理されています",
   "ui.permission.toolLabel.read": "読み取り",
   "ui.permission.toolLabel.edit": "編集",
   "ui.permission.toolLabel.write": "書き込み",
@@ -1329,6 +1330,8 @@ export const dict = {
   "dialog.model.notSet": "未設定",
   "profile.personalAccount": "個人アカウント",
   "profile.switchingAccount": "アカウントを切り替え中…",
+  "profile.unavailableAccount": "利用できないアカウント",
+  "profile.switchFailed": "アカウントの切り替えを確認できませんでした。",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/ja.ts
 
   "question.summary": "{{total}} 問中 {{n}} 問目",
@@ -1413,6 +1416,9 @@ export const dict = {
   "settings.saveBar.cancel": "キャンセル",
   "settings.saveBar.saving": "保存中…",
   "settings.saveBar.saveFailed": "設定を保存できませんでした",
+  "settings.saveBar.dismissError": "閉じる",
+  "settings.saveBar.unconfirmedWrite": "「{{name}}」 は拡張機能ホストによって確認されませんでした。",
+  "settings.saveBar.unconfirmedSave": "保存は拡張機能ホストによって確認されませんでした。もう一度お試しください。",
   "notifications.action.next": "次へ",
   "notifications.action.close": "閉じる",
   "notifications.action.tryModel": "{{model}}を試す",

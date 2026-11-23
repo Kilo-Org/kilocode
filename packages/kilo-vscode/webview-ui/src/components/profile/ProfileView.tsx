@@ -1,4 +1,4 @@
-import { Component, Show, createSignal, createMemo, createEffect, onMount } from "solid-js"
+import { Component, Show, createSignal, createMemo, onMount, onCleanup } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -35,10 +35,29 @@ interface OrgOption {
   description?: string
 }
 
+/**
+ * The account the selector shows, and the one its options are compared against:
+ * the explicit organization, else personal when the profile has one, else the
+ * first organization the selector lists (and personal when it lists none).
+ * Both the displayed value and a switch attempt's recorded origin come from
+ * here, so the panel never compares one derivation against another.
+ */
+const shownAccount = (profile: ProfileData | null | undefined): string => {
+  if (profile?.currentOrgId) return profile.currentOrgId
+  if (profile?.profile.hasPersonalAccount !== false) return PERSONAL
+  return profile?.profile.organizations?.[0]?.id ?? PERSONAL
+}
+
+/** One switch attempt: awaiting its correlated result, or failed with its message and target kept for retry. */
+type Attempt =
+  | { kind: "idle" }
+  | { kind: "pending"; requestID: string; target: string; origin: string }
+  | { kind: "failed"; message: string; target: string; origin: string }
+
 const ProfileView: Component<ProfileViewProps> = (props) => {
   const vscode = useVSCode()
   const language = useLanguage()
-  const [target, setTarget] = createSignal<string | null>(null)
+  const [attempt, setAttempt] = createSignal<Attempt>({ kind: "idle" })
 
   const personal = createMemo(() => props.profileData?.profile.hasPersonalAccount !== false)
 
@@ -48,11 +67,36 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
     props.onRequestProviderUsage?.()
   })
 
-  // Reset pending target whenever profileData changes (success or failure both send a fresh profile)
-  createEffect(() => {
-    props.profileData // track
-    setTarget(null)
+  // The correlated result owns termination: only the reply to this component's
+  // request may clear the pending state, so a late reply is ignored. A null
+  // profile means the session ended, so no attempt may outlive it either. A
+  // failed attempt also ends once a later profile read makes the selector show
+  // an account other than the one it started from: a push that still resolves to
+  // the origin leaves it unconfirmed, while any other account means the applied
+  // context moved on (here or in the other surface), so a stale alert and a
+  // Retry for an applied switch cannot survive. Both sides go through
+  // `shownAccount`, so the comparison matches what the selector displays.
+  const unsubscribe = vscode.onMessage((message) => {
+    const state = attempt()
+    if (message.type === "profileData") {
+      if (message.data === null) {
+        setAttempt({ kind: "idle" })
+        return
+      }
+      if (state.kind === "failed" && shownAccount(message.data) !== state.origin) {
+        setAttempt({ kind: "idle" })
+      }
+      return
+    }
+    if (message.type !== "organizationSwitchResult") return
+    if (state.kind !== "pending" || state.requestID !== message.requestID) return
+    if (message.ok) {
+      setAttempt({ kind: "idle" })
+      return
+    }
+    setAttempt({ kind: "failed", message: message.error ?? "", target: state.target, origin: state.origin })
   })
+  onCleanup(unsubscribe)
 
   const orgOptions = createMemo<OrgOption[]>(() => {
     const orgs = props.profileData?.profile.organizations ?? []
@@ -63,28 +107,44 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
     ]
   })
 
-  const currentId = createMemo(() => {
-    return props.profileData?.currentOrgId ?? (personal() ? PERSONAL : orgOptions()[0]?.value)
-  })
+  const currentId = createMemo(() => shownAccount(props.profileData))
 
-  const switching = createMemo(() => {
-    const t = target()
-    if (t === null) return false
-    return currentId() !== t
+  // The selector is locked for the whole attempt, not just until the refreshed
+  // profile arrives: the host pushes that profile before the result, and an
+  // early second pick would replace the attempt and discard the first reply.
+  const switching = createMemo(() => attempt().kind === "pending")
+
+  const failure = createMemo(() => {
+    const state = attempt()
+    if (state.kind !== "failed") return undefined
+    const message = state.message.trim()
+    return message || language.t("profile.switchFailed")
   })
 
   const currentOrg = createMemo(() => {
     return orgOptions().find((o) => o.value === currentId())
   })
 
+  const submit = (target: string) => {
+    const requestID = crypto.randomUUID()
+    setAttempt({ kind: "pending", requestID, target, origin: shownAccount(props.profileData) })
+    vscode.postMessage({
+      type: "setOrganization",
+      organizationId: target === PERSONAL ? null : target,
+      requestID,
+    })
+  }
+
   const selectOrg = (option: OrgOption | undefined) => {
     if (!option) return
     if (option.value === currentId()) return
-    setTarget(option.value)
-    vscode.postMessage({
-      type: "setOrganization",
-      organizationId: option.value === PERSONAL ? null : option.value,
-    })
+    submit(option.value)
+  }
+
+  const retry = () => {
+    const state = attempt()
+    if (state.kind !== "failed") return
+    submit(state.target)
   }
 
   const handleLogin = () => {
@@ -251,6 +311,32 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
                     triggerVariant="settings"
                     disabled={switching()}
                   />
+                  <Show when={failure()}>
+                    {(message) => (
+                      <div
+                        role="alert"
+                        style={{
+                          display: "flex",
+                          "align-items": "center",
+                          gap: "8px",
+                          margin: "8px 0 0 0",
+                        }}
+                      >
+                        <p
+                          style={{
+                            "font-size": "var(--kilo-font-size-12)",
+                            color: "var(--vscode-errorForeground)",
+                            margin: 0,
+                          }}
+                        >
+                          {message()}
+                        </p>
+                        <Button class="profile-switch-retry" variant="ghost" size="small" onClick={retry}>
+                          {language.t("common.retry")}
+                        </Button>
+                      </div>
+                    )}
+                  </Show>
                 </Card>
               </Show>
 
