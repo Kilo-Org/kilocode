@@ -173,6 +173,8 @@ permission:
 
 This allows delegation only to `code-reviewer` and `docs-writer`.
 
+When you name a subagent yourself in a message — for example with an `@code-reviewer` mention — Kilo treats that as your decision to run it and skips the `task` permission check for that subagent during the turn. The `task` rules still apply to every subagent the agent picks on its own, so a subagent you did not name is approved, prompted, or denied by the matching rule. See [Manual Invocation via @ Mentions](/docs/customize/custom-subagents#manual-invocation-via-mentions).
+
 ## Troubleshooting
 
 - If a specific rule appears to be ignored, check whether a later catch-all also matches.
