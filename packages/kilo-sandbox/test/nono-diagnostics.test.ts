@@ -91,6 +91,42 @@ describe("nono diagnostics", () => {
     expect(classify({ code: 0, stderr: "hello" })).toBeUndefined()
   })
 
+  test("reads a path denial when only a data-access violation is recorded", () => {
+    const stderr = JSON.stringify({
+      session: {
+        exit_code: 1,
+        denials: [],
+        violations: [{ operation: "file-read-data", target: "/tmp/kilo-fixture/secret" }],
+        diagnostics: [{ code: "command_failed_likely_sandbox" }],
+      },
+    })
+    expect(classify({ code: 1, stderr })).toMatchObject({ kind: "denied-path", exit: 1 })
+  })
+
+  test("upgrades an incomplete session from the raw errno", () => {
+    const stderr = `cat: /tmp/x: Operation not permitted\n${JSON.stringify({
+      session: { exit_code: 1, denials: [], violations: [], diagnostics: [] },
+    })}`
+    expect(classify({ code: 1, stderr })).toMatchObject({ kind: "denied-path", exit: 1 })
+  })
+
+  test("ignores an incidental metadata violation", () => {
+    const stderr = JSON.stringify({
+      session: {
+        exit_code: 1,
+        denials: [],
+        violations: [{ operation: "file-read-metadata", target: "/tmp/x" }],
+      },
+    })
+    expect(classify({ code: 1, stderr })).toMatchObject({ kind: "unknown" })
+  })
+
+  test("keeps a successful run successful even when stderr looks like a denial", () => {
+    expect(classify({ code: 0, stderr: "x: Permission denied" })).toBeUndefined()
+    const stderr = `x: Permission denied\n${JSON.stringify({ session: { exit_code: 0, diagnostics: [] } })}`
+    expect(classify({ code: 0, stderr })).toBeUndefined()
+  })
+
   test("never carries a caller secret into the result", () => {
     const stderr = ["cat: /tmp/x: Operation not permitted token-123", fixture("diagnostics-denied-read.txt")].join("\n")
     const result = classify({ code: 1, stderr, secrets: ["token-123"] })
