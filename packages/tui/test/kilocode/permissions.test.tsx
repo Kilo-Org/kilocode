@@ -48,6 +48,8 @@ type State = {
   readonly delayApply?: Promise<void>
   readonly delaySkip?: Promise<void>
   readonly delayList?: Promise<void>
+  /** List calls that fail before one succeeds, as while the permissions plugin is still activating. */
+  listFailures?: number
   /** The sets that match the project now; every set by default. */
   readonly presets?: readonly (typeof presets)[number][]
   readonly unidentified?: boolean
@@ -133,6 +135,10 @@ function fixtureFetch(
       if (url.pathname.endsWith("/list")) {
         current.listLocations.push(decodeURIComponent(url.search))
         if (current.delayList) await current.delayList
+        if (current.listFailures) {
+          current.listFailures -= 1
+          return new Response("not found", { status: 404 })
+        }
         return json({
           output: {
             enabled: true,
@@ -333,6 +339,29 @@ test("skip, Escape, duplicate input, and late request removal release the normal
   await until(app, "normal prompt", (frame) => frame.includes("Permission required"))
   expect(current.skipped).toBe(1)
   expect(current.replyCalls).toBe(0)
+})
+
+test("a check that fails while plugins activate shows the normal prompt, then offers after plugin.updated", async () => {
+  const current = state({ listFailures: 1 })
+  await using app = await createAppFixture({
+    width: 100,
+    height: 34,
+    args: { sessionID },
+    config: { animations: false, tabs: { mode: "off" } },
+    fetch: fixtureFetch(current),
+  })
+  await app.ready
+  await until(app, "normal prompt on cold start", (frame) => frame.includes("Permission required"))
+  expect(app.captureCharFrame()).not.toContain("Could not")
+  app.events.emit({
+    id: "evt_plugin_updated",
+    created: Date.now(),
+    type: "plugin.updated",
+    location: { directory },
+    data: {},
+  })
+  await until(app, "offer after plugin activation", (frame) => frame.includes("Set up project permissions"))
+  expect(current.listLocations.length).toBe(2)
 })
 
 test("accepted projects bypass the automatic offer, while /permissions reopens the chooser", async () => {

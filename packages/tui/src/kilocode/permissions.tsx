@@ -52,6 +52,7 @@ type Controller = {
   readonly decide: (decision: Decision, change?: Change) => void
   readonly dismiss: () => void
   readonly settled: () => Promise<void>
+  readonly dispose: () => void
 }
 
 type ControllerLease = {
@@ -198,7 +199,9 @@ function createControllers(context: Plugin.Context, applied: Applied) {
         if (entry.users > 0) return
         // A replacement prompt can rejoin a submission; otherwise release its state after the RPC finishes.
         void entry.controller.settled().then(() => {
-          if (entry.users === 0 && controllers.get(key) === entry) controllers.delete(key)
+          if (entry.users > 0 || controllers.get(key) !== entry) return
+          controllers.delete(key)
+          entry.controller.dispose()
         })
       },
     }
@@ -231,6 +234,20 @@ function createController(context: Plugin.Context, applied: Applied): Controller
   let operation: Promise<void> | undefined
   // Each load takes a number; a newer load (a request from another location) makes the older one's answer stale.
   let loads = 0
+  // Plugins activate asynchronously, so the permissions RPC can be missing when the first request of a cold start
+  // arrives. The automatic check then falls back to the normal prompt and runs again once the plugins change.
+  let retry: (() => void) | undefined
+  const stopRetry = () => {
+    retry?.()
+    retry = undefined
+  }
+  const retryOnPluginUpdate = (request: PermissionRequest, generation: number) => {
+    stopRetry()
+    retry = context.data.on("plugin.updated", () => {
+      stopRetry()
+      if (generation === loads && state().status === "normal") api.ensure(request)
+    })
+  }
 
   // Applying a set settles the waiting requests it covers on the server; refresh the session's pending list.
   const sync = async (sessionID?: string) => {
@@ -284,8 +301,9 @@ function createController(context: Plugin.Context, applied: Applied): Controller
       return offer
     } catch {
       if (generation !== loads) return undefined
-      fail("tui.permissions.loadFailed")
-      return manual ? "failed" : undefined
+      if (manual) fail("tui.permissions.loadFailed")
+      else setState({ status: "normal" })
+      return "failed"
     }
   }
 
@@ -320,6 +338,7 @@ function createController(context: Plugin.Context, applied: Applied): Controller
   const api: Controller = {
     state,
     ensure(request) {
+      stopRetry()
       const generation = ++loads
       const waiting = operation
       const started = (async () => {
@@ -333,7 +352,8 @@ function createController(context: Plugin.Context, applied: Applied): Controller
           fail("tui.permissions.loadFailed")
           return
         }
-        await load(location, request.id, request.sessionID, false, generation)
+        if ((await load(location, request.id, request.sessionID, false, generation)) === "failed")
+          retryOnPluginUpdate(request, generation)
       })().catch(() => {
         if (generation === loads) fail("tui.permissions.loadFailed")
       }).finally(() => {
@@ -379,6 +399,7 @@ function createController(context: Plugin.Context, applied: Applied): Controller
     async settled() {
       while (operation) await operation
     },
+    dispose: stopRetry,
   }
 
   const syncAfterFailure = async (offer: Offer) => {

