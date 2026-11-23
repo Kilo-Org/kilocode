@@ -67,6 +67,14 @@ export function host(
   }
 }
 
+export function native(
+  input: Target,
+  enabled: boolean,
+  current: { os: string; arch: string } = { os: process.platform, arch: process.arch },
+) {
+  return enabled && input.os === current.os && input.arch === current.arch && !input.abi && input.avx2 !== false
+}
+
 export async function stage(input: Target): Promise<string> {
   const item = target(input)
   const root = resolve(tmpdir())

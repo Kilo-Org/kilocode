@@ -11,7 +11,7 @@ import { basename, dirname, isAbsolute, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { promisify } from "node:util"
 import pkg from "../../package.json" with { type: "json" }
-import { host, pin, stage, target } from "./bun"
+import { host, native, pin, stage, target } from "./bun"
 
 const run = promisify(execFile)
 const cases: [Parameters<typeof stage>[0], keyof typeof pin.artifacts, string][] = [
@@ -56,6 +56,15 @@ test("host defaults to the running process", () => {
   expect(host().os).toBe(process.platform)
   expect(host().arch).toBe(process.arch)
   expect(target(host())).toBeDefined()
+})
+
+test("uses a provided host runtime only for its native default target", () => {
+  const current = { os: "linux", arch: "x64" }
+  expect(native({ os: "linux", arch: "x64" }, true, current)).toBe(true)
+  expect(native({ os: "linux", arch: "x64" }, false, current)).toBe(false)
+  expect(native({ os: "linux", arch: "arm64" }, true, current)).toBe(false)
+  expect(native({ os: "linux", arch: "x64", abi: "musl" }, true, current)).toBe(false)
+  expect(native({ os: "linux", arch: "x64", avx2: false }, true, current)).toBe(false)
 })
 
 test("Node bootstrap and Bun select the same native runtime artifact", async () => {
