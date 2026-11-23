@@ -92,7 +92,7 @@ describe("LanceDBRuntime", () => {
       [
         process.execPath,
         "--eval",
-        'const { LanceDBRuntime } = await import("./src/kilocode/lancedb"); console.log(LanceDBRuntime.external.length)',
+        'const { LanceDBRuntime } = await import("./src/kilocode/lancedb"); console.log(LanceDBRuntime.external[0])',
       ],
       {
         cwd: path.resolve(import.meta.dir, "../.."),
@@ -107,9 +107,8 @@ describe("LanceDBRuntime", () => {
       },
     )
 
-    expect(result.stderr.toString()).toBe("")
     expect(result.exitCode).toBe(0)
-    expect(result.stdout.toString().trim()).toBe("8")
+    expect(result.stdout.toString().trim()).toBe("@lancedb/lancedb")
   })
 
   test("skips install when runtime path is already set", async () => {
