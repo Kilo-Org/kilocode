@@ -1046,12 +1046,49 @@ describe("tool.shell permissions", () => {
     }),
   )
 
+  const nest = (parent: string, child: string) => {
+    const left = path.resolve(parent)
+    const right = path.resolve(child)
+    return right === left || right.startsWith(left + path.sep)
+  }
+
+  // `~/` and `$HOME` use this directory. Bun caches `os.homedir()` and ignores later `HOME` changes,
+  // so point both the function and the env at it. `~user` stays on the passwd home.
+  // The finalizer is registered before mkdir so an aborted setup still removes the fixture.
   const trap = Effect.fn("ShellToolTest.trap")(function* () {
-    const root = path.join(os.homedir(), `.oc-link-${Math.random().toString(36).slice(2)}`)
+    const real = os.userInfo().homedir
+    const hint = process.env.KILO_TEST_HOME
+    const base =
+      hint != null && !nest(real, hint)
+        ? hint
+        : path.join(os.tmpdir(), `oc-home-${Math.random().toString(36).slice(2)}`)
+    const fresh = base !== hint
+    if (fresh) yield* Effect.promise(() => fs.mkdir(base, { recursive: true }))
+    const root = path.join(base, `.oc-link-${Math.random().toString(36).slice(2)}`)
     const project = path.join(root, "project")
     const outside = path.join(root, "outside")
     const canary = path.join(outside, "canary.txt")
     const kind = process.platform === "win32" ? "junction" : undefined
+    const slot = os as { homedir: () => string }
+    const saved = slot.homedir
+    const prev = { home: process.env.HOME, profile: process.env.USERPROFILE }
+    process.env.HOME = base
+    process.env.USERPROFILE = base
+    slot.homedir = () => base
+    const restore = () => {
+      slot.homedir = saved
+      if (prev.home === undefined) delete process.env.HOME
+      if (prev.home !== undefined) process.env.HOME = prev.home
+      if (prev.profile === undefined) delete process.env.USERPROFILE
+      if (prev.profile !== undefined) process.env.USERPROFILE = prev.profile
+    }
+    yield* Effect.addFinalizer(() =>
+      Effect.gen(function* () {
+        yield* Effect.promise(() => fs.rm(root, { recursive: true, force: true }))
+        if (!fresh) return
+        yield* Effect.promise(() => fs.rm(base, { recursive: true, force: true }))
+      }).pipe(Effect.ensuring(Effect.sync(restore))),
+    )
     yield* Effect.promise(async () => {
       await fs.mkdir(path.join(project, "outside"), { recursive: true })
       await fs.mkdir(outside, { recursive: true })
@@ -1059,11 +1096,45 @@ describe("tool.shell permissions", () => {
       await fs.writeFile(path.join(project, "outside", "canary.txt"), "decoy-secret")
       await fs.symlink(path.join("..", "outside"), path.join(project, "linkdir"), kind)
     })
-    yield* Effect.addFinalizer(() => Effect.promise(() => fs.rm(root, { recursive: true, force: true })))
-    const real = yield* Effect.promise(() => fs.realpath(canary))
-    const home = path.relative(os.homedir(), root)
-    return { project, root, home, want: glob(path.join(path.dirname(real), "*")) }
+    const file = yield* Effect.promise(() => fs.realpath(canary))
+    const home = path.relative(base, root)
+    return { project, root, home, want: glob(path.join(path.dirname(file), "*")) }
   })
+
+  it.live("keeps symlink fixtures out of a read-only home", () =>
+    Effect.gen(function* () {
+      const real = os.userInfo().homedir
+      const ro = yield* tmpdirScoped()
+      yield* Effect.promise(() => fs.chmod(ro, 0o555))
+      yield* Effect.addFinalizer(() => Effect.promise(() => fs.chmod(ro, 0o755)))
+      const saved = process.env.HOME
+      process.env.HOME = ro
+      yield* Effect.addFinalizer(() =>
+        Effect.sync(() => {
+          if (saved === undefined) delete process.env.HOME
+          if (saved !== undefined) process.env.HOME = saved
+        }),
+      )
+      const seen = yield* Effect.promise(() => fs.readdir(real))
+      const dir = yield* Effect.scoped(
+        Effect.gen(function* () {
+          const made = yield* trap()
+          expect(nest(real, made.root)).toBe(false)
+          expect(nest(ro, made.root)).toBe(false)
+          expect(nest(os.homedir(), made.root)).toBe(true)
+          expect(process.env.HOME).toBe(os.homedir())
+          const stat = yield* Effect.promise(() => fs.lstat(path.join(made.project, "linkdir")))
+          expect(stat.isSymbolicLink()).toBe(true)
+          return made.root
+        }),
+      )
+      const gone = yield* Effect.promise(() => fs.stat(dir).then(() => true, () => false))
+      expect(gone).toBe(false)
+      expect(yield* Effect.promise(() => fs.readdir(ro))).toEqual([])
+      const after = yield* Effect.promise(() => fs.readdir(real))
+      expect(after.filter((name) => name.startsWith(".oc-link-") && !seen.includes(name))).toEqual([])
+    }),
+  )
 
   each("asks for external_directory when a static prefix keeps parent segments on a symlink", (item) =>
     Effect.gen(function* () {
@@ -1098,7 +1169,10 @@ describe("tool.shell permissions", () => {
               const asked = found?.patterns?.includes(dir.want) === true
               const secret = result.output.includes("canary-secret")
               const decoy = result.output.includes("decoy-secret")
-              if (asked && (!reads || (secret && !decoy))) return
+              // `~user` is the passwd home. The fixture never writes there, so only the permission check applies.
+              const named = file.startsWith(`~${user}/`) || file.startsWith(`~${user}\\`)
+              const live = reads && !named
+              if (asked && (!live || (secret && !decoy))) return
               return `${file} asked=${asked} secret=${secret} decoy=${decoy} exit=${String(result.metadata.exit)} patterns=${JSON.stringify(found?.patterns)}`
             }),
           )
