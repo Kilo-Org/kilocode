@@ -252,7 +252,7 @@ See [Sandboxing](/docs/getting-started/settings/sandboxing) for setup instructio
 
 Kilo Swarm lets a main session and its task descendants, including nested subagents, exchange messages on a shared board. It uses the existing Task tool, not a separate agent runtime. The board is not shared with unrelated sessions, even in the same repository or worktree.
 
-Kilo Swarm is on by default. Turn it off in the VS Code or JetBrains **Agent Behaviour** settings, or set `shared_agent_board` to `false` in `kilo.jsonc`.
+Kilo Swarm is on by default. Turn it off in the VS Code extension or JetBrains plugin **Agent Behaviour** settings. In the kilo CLI and Kilo Desktop, which have no toggle, set `shared_agent_board` to `false` in `kilo.jsonc`.
 
 Use it when agents can benefit from discoveries during work:
 
@@ -261,11 +261,20 @@ Use it when agents can benefit from discoveries during work:
 
 Straightforward tasks can stay solo. Enabling the board does not mean agents are always running or that every task needs a team.
 
-**Post message** (`board_post`) stores a message on the shared board. **Read messages** (`board_read`) retrieves messages from the board explicitly. Activity notices are best-effort: a stored message does not prove that a recipient was notified, read it, or acted on it. Posting does not start or resume an agent, and normal task completion still returns results to the parent.
+`board_post` stores an `INFO`, `ASK`, `RESULT`, `HOLD`, or `VETO` message for one participant or `ALL`. `board_read` retrieves messages explicitly. Activity notices are best-effort: a stored message does not prove that a recipient was notified, read it, or acted on it. Posting does not start or resume an agent, and normal task completion still returns results to the parent.
 
 All participants can read the board history, including messages addressed to others. Recipient selection is not a privacy boundary. Peer messages do not grant user approval or change permissions; `HOLD` and `VETO` are advisory, not controls that pause or cancel work.
 
-In VS Code, the **Board** control lives in the session dock above the prompt, next to the background-agent row when background agents exist. It appears when Kilo Swarm is enabled and the session has board messages, works with foreground and background task agents, and stays in place after background agents are cleared. It is no longer in the task header, and Kilo Swarm is configured under **Agent Behaviour**, not Experimental settings. In JetBrains, open the **Board** icon in the session header, which also offers a **View Kilo Swarm** session menu action. Use the control to read the board messages, refresh them, or reset the board. Only the owning top-level session can view or reset its board; child sessions and cloud sessions cannot. Reset clears visible messages only and does not stop agents or clear conversations. See [Kilo Swarm communication](/docs/automate/agent-manager#kilo-swarm-communication) for the board dialog, ownership rules, and recipient-state warnings.
+Each message must fit in 4 KiB. A board holds up to 1,000 messages or 2 MiB; after that, posts fail until the board is reset.
+
+| Client | Viewing the board |
+|---|---|
+| VS Code | Use the **Board** button in the session dock above the prompt. It appears once the session has board messages and opens the latest posts, with refresh, reset, and the full board. |
+| JetBrains | Use the **Board** icon in the session header or the **View Kilo Swarm** session menu action. |
+| CLI | No board view. Board posts and reads appear inline in the transcript. |
+| Kilo Desktop | No board view yet. Agents can use the board, and their posts and reads appear in the chat as **Message agents** and **Read agent messages**, but you cannot open or reset the board. |
+
+Only the owning top-level session can view or reset its board; child sessions and cloud sessions cannot. Reset clears messages only and does not stop agents or clear conversations. See [Kilo Swarm communication](/docs/automate/agent-manager#kilo-swarm-communication) for ownership rules and recipient-state warnings.
 
 ## Experimental Features
 
