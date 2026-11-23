@@ -1,4 +1,5 @@
 import * as vscode from "vscode"
+import { playwrightBrowsers, type PlaywrightBrowser } from "./settings"
 
 const INTEGRATED_BROWSER = "kilo-code.new.agentManager.browser"
 const BROWSER_AUTOMATION = "kilo-code.new.browserAutomation"
@@ -12,6 +13,20 @@ const BROWSER_AUTOMATION = "kilo-code.new.browserAutomation"
  */
 export function integratedBrowserUseSystemChrome(): boolean {
   return vscode.workspace.getConfiguration(INTEGRATED_BROWSER).get("useSystemChrome", true)
+}
+
+/**
+ * Browsers the agent may use for Playwright browser automation, in canonical
+ * order. While the list has no explicit value, the old Use System Chrome toggle
+ * decides between installed Chrome and Playwright Chromium.
+ */
+export function automationBrowsers(): PlaywrightBrowser[] {
+  const config = vscode.workspace.getConfiguration(BROWSER_AUTOMATION)
+  const set = config.inspect?.<unknown>("browsers")
+  return playwrightBrowsers(
+    set?.workspaceFolderValue ?? set?.workspaceValue ?? set?.globalValue,
+    config.get<boolean>("useSystemChrome", true),
+  )
 }
 
 export function integratedBrowserFallback(remote = vscode.env.remoteName): boolean {

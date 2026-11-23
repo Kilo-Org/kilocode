@@ -3,6 +3,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { Socket } from "node:net"
 import { URL } from "node:url"
 import { stripVTControlCharacters } from "node:util"
+import { setTimeout as wait } from "node:timers/promises"
 import {
   chromium,
   type BrowserContext,
@@ -87,6 +88,8 @@ export interface BrowserBrokerOptions {
   trusted?: () => boolean
   launch?: (options: LaunchOptions) => Promise<BrowserContextFactory>
   useSystemChrome?: () => boolean
+  /** Extra authenticated POST routes that other services expose to the CLI through this local bridge. */
+  extend?: (path: string, body: Record<string, unknown>) => Promise<unknown> | undefined
   fallback?: () => boolean
   network?: (
     page: Page,
@@ -160,8 +163,37 @@ type RequestBody = {
   projectID?: unknown
   directory?: unknown
   url?: unknown
+  viewport?: unknown
 }
 
+/** Whether to screenshot after navigation, optionally at an agent-requested viewport size. */
+type Capture = boolean | { width: number; height: number }
+
+const SIZE = { width: { min: 240, max: 1920 }, height: { min: 240, max: 1440 } }
+
+function size(value: unknown): Capture {
+  if (value === undefined) return true
+  const width = value && typeof value === "object" && "width" in value ? value.width : undefined
+  const height = value && typeof value === "object" && "height" in value ? value.height : undefined
+  if (
+    typeof width !== "number" ||
+    typeof height !== "number" ||
+    !Number.isInteger(width) ||
+    !Number.isInteger(height) ||
+    width < SIZE.width.min ||
+    width > SIZE.width.max ||
+    height < SIZE.height.min ||
+    height > SIZE.height.max
+  ) {
+    throw new Error(
+      `Browser viewport must be integers between ${SIZE.width.min}x${SIZE.height.min} and ${SIZE.width.max}x${SIZE.height.max}`,
+    )
+  }
+  return { width, height }
+}
+
+// Longest wait for a resized page to lay out before an agent-sized screenshot.
+const SETTLE = 250
 const MAX_BODY = 32 * 1024
 const MAX_SCREENSHOT = 2 * 1024 * 1024
 const TIMEOUT = /ERR_CONNECTION_TIMED_OUT|ETIMEDOUT|Timeout \d+ms exceeded/i
@@ -518,7 +550,7 @@ export class BrowserBroker {
     return false
   }
 
-  open(route: BrowserRoute, target: string, capture = true): Promise<BrowserState> {
+  open(route: BrowserRoute, target: string, capture: Capture = true): Promise<BrowserState> {
     const resolved = this.resolve(route)
     if (!resolved)
       return Promise.reject(new Error("Browser session does not belong to the requested project or directory"))
@@ -530,7 +562,7 @@ export class BrowserBroker {
   private async create(
     scope: BrowserRoute,
     target: string,
-    capture: boolean,
+    capture: Capture,
     owner?: BrowserOwner,
   ): Promise<BrowserState> {
     this.available()
@@ -968,7 +1000,7 @@ export class BrowserBroker {
     })
   }
 
-  private async goto(entry: Entry, url: URL, reload = false, capture = true): Promise<void> {
+  private async goto(entry: Entry, url: URL, reload = false, capture: Capture = true): Promise<void> {
     entry.navigating = true
     entry.origin = url.origin
     entry.response = undefined
@@ -991,11 +1023,11 @@ export class BrowserBroker {
       entry.response = response?.status() ?? entry.response
       if (entry.response !== undefined && entry.response >= 400) {
         await this.update(entry)
-        if (capture) await this.capture(entry)
+        if (capture) await this.capture(entry, capture)
         throw new BrowserNavigationError(`Local application returned HTTP ${entry.response}`, entry.response)
       }
       await this.update(entry)
-      if (capture) await this.capture(entry)
+      if (capture) await this.capture(entry, capture)
       entry.state.status = "ready"
       this.emit(entry.state)
     } catch (error) {
@@ -1066,10 +1098,34 @@ export class BrowserBroker {
     return { back: web(result.currentIndex - 1), forward: web(result.currentIndex + 1) }
   }
 
-  private async capture(entry: Entry): Promise<void> {
+  private async capture(entry: Entry, capture: Capture): Promise<void> {
     // Playwright restores its viewport after a screenshot. Run the screenshot in the stream queue, so it cannot
     // overwrite a concurrent stream resize and leave Chromium at a size that the stream rejects.
-    const data = await this.cast(entry).exclusive(() => entry.page.screenshot({ type: "jpeg", quality: 70 }))
+    const size = typeof capture === "object" ? capture : undefined
+    const data = await this.cast(entry).exclusive(async () => {
+      if (!size) return entry.page.screenshot({ type: "jpeg", quality: 70 })
+      // An agent-requested size applies only to this screenshot. Restore the previous size, so the user's live view
+      // keeps the panel size it published.
+      const prior = entry.page.viewportSize?.()
+      await entry.page.setViewportSize(size)
+      try {
+        // Let responsive layout and media queries settle at the new size before the screenshot. A busy renderer
+        // must not hold the stream queue, so the wait is bounded.
+        const abort = new AbortController()
+        await Promise.race([
+          entry.page
+            .evaluate(
+              () => new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done()))),
+            )
+            .catch((error: unknown) => this.opts.log("Browser resize wait failed", error)),
+          wait(SETTLE, undefined, { signal: abort.signal }).catch(() => undefined),
+        ])
+        abort.abort()
+        return await entry.page.screenshot({ type: "jpeg", quality: 70 })
+      } finally {
+        if (prior) await entry.page.setViewportSize(prior)
+      }
+    })
     if (data.byteLength > MAX_SCREENSHOT) throw new Error("Browser screenshot is too large")
     entry.state.screenshot = `data:image/jpeg;base64,${data.toString("base64")}`
     entry.state.mime = "image/jpeg"
@@ -1169,7 +1225,11 @@ export class BrowserBroker {
     const project = typeof body.projectID === "string" ? body.projectID : undefined
     if (path === "/browser/open") {
       if (typeof body.url !== "string") throw new Error("A local application URL is required")
-      return this.open({ projectId: project, sessionId: body.sessionID, directory: body.directory }, body.url)
+      return this.open(
+        { projectId: project, sessionId: body.sessionID, directory: body.directory },
+        body.url,
+        size(body.viewport),
+      )
     }
     if (!["/browser/refresh", "/browser/close"].includes(path)) return undefined
     const entry = this.require(body.sessionID, body.directory, project)
@@ -1204,11 +1264,12 @@ export class BrowserBroker {
       return
     }
     try {
-      const result = await this.operation(route.pathname, {
-        ...body,
-        sessionID: body.sessionID,
-        directory: body.directory,
-      })
+      const result =
+        (await this.operation(route.pathname, {
+          ...body,
+          sessionID: body.sessionID,
+          directory: body.directory,
+        })) ?? (await this.opts.extend?.(route.pathname, { ...body }))
       if (!result) {
         json(res, 404, { error: "Unknown browser operation" })
         return
