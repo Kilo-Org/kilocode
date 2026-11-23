@@ -3,6 +3,7 @@ import type { BackgroundJob } from "@/background/job"
 import type { SessionID } from "@/session/schema"
 import path from "path"
 import { Permission } from "@/permission"
+import { sanitize } from "@/kilocode/mcp/tool-id"
 import { PermissionAllowlist } from "../permission/allowlist"
 import { guarded } from "../agent"
 import { Flag } from "@opencode-ai/core/flag/flag"
@@ -133,7 +134,7 @@ export namespace KiloTask {
     const session = input.session.permission ?? []
     const rules = Permission.merge(input.caller.permission ?? [], session)
     const edit = input.caller.native === false ? session : rules
-    const prefixes = Object.keys(input.mcp ?? {}).map((k) => k.replace(/[^a-zA-Z0-9_-]/g, "_") + "_")
+    const prefixes = Object.keys(input.mcp ?? {}).map((k) => sanitize(k) + "_")
     const isMcp = (p: string) => prefixes.some((prefix) => p.startsWith(prefix))
     const mutation = mutations()
     // `guarded` covers the tools a read-only mode may never regain from config; keeping

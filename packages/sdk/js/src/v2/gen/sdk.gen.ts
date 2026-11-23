@@ -447,6 +447,8 @@ import type {
   SessionHostListResponses,
   SessionHostListWorkspaceProfilesErrors,
   SessionHostListWorkspaceProfilesResponses,
+  SessionHostListWorkspaceRepositoriesErrors,
+  SessionHostListWorkspaceRepositoriesResponses,
   SessionHostListWorkspacesErrors,
   SessionHostListWorkspaceSessionsErrors,
   SessionHostListWorkspaceSessionsResponses,
@@ -521,8 +523,12 @@ import type {
   SyncStealResponses,
   TelemetryCaptureErrors,
   TelemetryCaptureResponses,
+  TelemetryLevelErrors,
+  TelemetryLevelResponses,
   TelemetrySetEnabledErrors,
   TelemetrySetEnabledResponses,
+  TelemetrySetLevelErrors,
+  TelemetrySetLevelResponses,
   TextPartInput,
   ToolIdsErrors,
   ToolIdsResponses,
@@ -4046,7 +4052,7 @@ export class Permission extends HeyApiClient {
   /**
    * Save always-allow/deny permission rules
    *
-   * Save approved/denied always-rules for a pending permission request.
+   * Save approved/denied always-rules for a pending permission request, and delete the rules named in removedAlways.
    */
   public saveAlwaysRules<ThrowOnError extends boolean = false>(
     parameters: {
@@ -4055,6 +4061,7 @@ export class Permission extends HeyApiClient {
       workspace?: string
       approvedAlways?: Array<string>
       deniedAlways?: Array<string>
+      removedAlways?: Array<string>
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -4068,6 +4075,7 @@ export class Permission extends HeyApiClient {
             { in: "query", key: "workspace" },
             { in: "body", key: "approvedAlways" },
             { in: "body", key: "deniedAlways" },
+            { in: "body", key: "removedAlways" },
           ],
         },
       ],
@@ -9774,7 +9782,7 @@ export class SessionHost extends HeyApiClient {
   /**
    * Create a hosted workspace
    *
-   * Create a hosted workspace and, optionally, its root initial turn and explicit profile. Omit prompt and messageID to create an empty workspace; Cloud applies the effective default profile when profile is omitted. Reuse the same operation key and message ID to retry safely.
+   * Create a hosted workspace and, optionally, its initial turn, explicit profile, and additional repositories. For a nonempty selection, send the organization and integrationID from the repository catalog. Omit prompt and messageID to create an empty workspace. For a retryable create conflict, reuse the same operation key and unchanged intent.
    */
   public createWorkspace<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -9851,6 +9859,44 @@ export class SessionHost extends HeyApiClient {
       ThrowOnError
     >({
       url: "/kilocode/session-host/workspace/profiles",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * List eligible additional workspace repositories
+   *
+   * Passively list authorized repositories for a GitHub primary in the selected organization. Preserve the returned integrationID for subsequent pages and create. Only a successful supported catalog response enables additional repositories.
+   */
+  public listWorkspaceRepositories<ThrowOnError extends boolean = false>(
+    parameters: {
+      organizationID: string
+      primaryRepo: string
+      integrationID?: string
+      page?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "organizationID" },
+            { in: "query", key: "primaryRepo" },
+            { in: "query", key: "integrationID" },
+            { in: "query", key: "page" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      SessionHostListWorkspaceRepositoriesResponses,
+      SessionHostListWorkspaceRepositoriesErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/repositories",
       ...options,
       ...params,
     })
@@ -10523,9 +10569,9 @@ export class Telemetry extends HeyApiClient {
   }
 
   /**
-   * Set PostHog telemetry enabled state
+   * Set host telemetry permission
    *
-   * Update the PostHog client's opt-in/out state at runtime. The CLI reads KILO_TELEMETRY_LEVEL once at spawn — this route lets clients (e.g. the VS Code extension) propagate runtime telemetry consent changes.
+   * Apply the host editor's telemetry permission at runtime without changing config. This cannot override a config or environment opt-out. Use telemetry.setLevel for the Kilo preference.
    */
   public setEnabled<ThrowOnError extends boolean = false>(
     parameters: {
@@ -10559,6 +10605,73 @@ export class Telemetry extends HeyApiClient {
         },
       },
     )
+  }
+
+  /**
+   * Get effective telemetry level
+   *
+   * Read whether global Kilo config, the host editor, and the environment all allow telemetry.
+   */
+  public level<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<TelemetryLevelResponses, TelemetryLevelErrors, ThrowOnError>({
+      url: "/telemetry/level",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Save the Kilo telemetry preference
+   *
+   * Persist experimental.openTelemetry to the global Kilo config and apply it to the running telemetry client. Return the effective level, which can still be off due to a host or environment opt-out.
+   */
+  public setLevel<ThrowOnError extends boolean = false>(
+    parameters: {
+      directory?: string
+      workspace?: string
+      enabled: boolean
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "enabled" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<TelemetrySetLevelResponses, TelemetrySetLevelErrors, ThrowOnError>({
+      url: "/telemetry/level",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
   }
 }
 

@@ -16,6 +16,8 @@ data class Permission(
     val message: String? = null,
     val tool: ToolCallRef? = null,
     val state: PermissionRequestState = PermissionRequestState.PENDING,
+    // A hosted workspace stores no per-pattern always-rules, so its card offers none.
+    val hosted: Boolean = false,
 )
 
 data class PermissionMeta(

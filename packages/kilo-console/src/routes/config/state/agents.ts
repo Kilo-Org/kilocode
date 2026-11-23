@@ -4,6 +4,7 @@ import type { AgentBuilderPreviewResponse, Model, Provider } from "@kilocode/sdk
 import { previewAgent, saveAgent, type AgentPayload, type Scope, type Snapshot } from "../../../client"
 import { useConfig } from "../../../context/config"
 import { clean, friendly, sorted, toMode, toolCapabilities, toolName } from "../../../shared/utils"
+import { addRule, removeRule, split } from "./agent-permissions"
 import { available, choices } from "./models"
 import {
   defaults,
@@ -100,29 +101,6 @@ function source(item: AgentItem) {
   const value = item.options.source
   if (typeof value === "string") return value
   return undefined
-}
-
-function split(input: unknown) {
-  const entries = Object.entries(perms(input))
-  return {
-    tools: sorted(entries.filter(([, value]) => value === "allow").map(([key]) => key)),
-    permission: Object.fromEntries(entries.filter(([, value]) => value !== "allow")) as Permission,
-  }
-}
-
-function perms(input: unknown): Permission {
-  if (!Array.isArray(input)) return record(input) as Permission
-  return input.reduce((result, item) => {
-    const rule = record(item)
-    const tool = string(rule.permission)
-    const action = string(rule.action)
-    if (!tool || !action) return result
-    const pattern = string(rule.pattern) || "*"
-    if (pattern === "*") return { ...result, [tool]: action }
-    const cur = result[tool]
-    const map = cur && typeof cur === "object" && !Array.isArray(cur) ? cur : {}
-    return { ...result, [tool]: { ...map, [pattern]: action } }
-  }, {} as Permission)
 }
 
 export function agentMeta(data: Snapshot, id: string) {
@@ -408,36 +386,15 @@ export function useAgentBuilder(agent?: Accessor<string | undefined>) {
       return
     }
     const tool = permTool()
-    const next = { ...permission() }
-    const cur = next[tool]
-    const map: Record<string, unknown> = cur && typeof cur === "object" && !Array.isArray(cur) ? { ...cur } : {}
-    map[pattern] = permAction()
-    next[tool] = map
-    setPermission(next)
+    const base: PermissionAction | undefined = tools().includes(tool) ? "allow" : undefined
+    setTools(tools().filter((item) => item !== tool))
+    setPermission(addRule(permission(), tool, pattern, permAction(), base))
     close()
   }
 
   function removePermission(item: AgentPermissionRule) {
     if (!guard()) return
-    const next = { ...permission() }
-    if (item.pattern === "*") {
-      const map = { ...record(next[item.tool]) }
-      if (Object.keys(map).length) {
-        delete map["*"]
-        if (Object.keys(map).length) next[item.tool] = map
-        else delete next[item.tool]
-        setPermission(next)
-        return
-      }
-      delete next[item.tool]
-      setPermission(next)
-      return
-    }
-    const map = { ...record(next[item.tool]) }
-    delete map[item.pattern]
-    if (Object.keys(map).length) next[item.tool] = map
-    else delete next[item.tool]
-    setPermission(next)
+    setPermission(removeRule(permission(), item))
   }
 
   function insert(value: string) {

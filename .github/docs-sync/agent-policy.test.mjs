@@ -1,0 +1,416 @@
+// kilocode_change - new file
+
+/**
+ * Guards the declared scope of the headless Kilo CLI passes: the committed
+ * policy exists and is what the scripts and the workflow pass, the gateway
+ * credentials sit on the steps that call the CLI, and the checkout keeps no
+ * credential on disk.
+ *
+ * Run: node .github/docs-sync/agent-policy.test.mjs
+ */
+
+import assert from "node:assert/strict"
+import fs from "node:fs"
+import path from "node:path"
+import { fileURLToPath } from "node:url"
+
+const HERE = path.dirname(fileURLToPath(import.meta.url))
+const ROOT = path.resolve(HERE, "..", "..")
+const read = (p) => fs.readFileSync(path.join(ROOT, p), "utf8")
+
+const { MODE, configContent, env, policy, validateMode } = await import("./agent-policy.mjs")
+
+const workflow = read(".github/workflows/docs-sync.yml")
+
+const failures = []
+function check(label, fn) {
+  try {
+    fn()
+    console.log(`ok - ${label}`)
+  } catch (err) {
+    failures.push(`${label}: ${err.message}`)
+    console.error(`not ok - ${label}: ${err.message}`)
+  }
+}
+
+/** The `sync` job block only: the selftest job must stay out of these checks. */
+function syncJob() {
+  const start = workflow.indexOf("\n  sync:\n")
+  assert.ok(start >= 0, "sync job not found")
+  return workflow.slice(start)
+}
+
+/** One step block, from its `- name:` line to the next step. */
+function step(name) {
+  const blocks = syncJob().split("\n      - name: ")
+  const block = blocks.find((b) => b.startsWith(name))
+  assert.ok(block, `step "${name}" not found`)
+  return block.split("\n      - name: ")[0]
+}
+
+// 1. The policy is data a reviewer can read, with one mode per call site.
+check("agent-permissions.json declares both modes", () => {
+  const modes = policy().modes
+  assert.deepEqual(Object.keys(modes).sort(), ["docs-write", "tools-denied"])
+})
+
+check("tools-denied denies every tool except the attachment read", () => {
+  assert.deepEqual(policy().modes["tools-denied"].permission, { "*": "deny", read: "allow" })
+})
+
+check("docs-write confines edits to markdown docs, nav files and the agent summary file", () => {
+  const edit = policy().modes["docs-write"].permission.edit
+  const keys = Object.keys(edit)
+  assert.equal(keys[0], "*", "the catch-all must come first: permission evaluation takes the last matching rule")
+  assert.equal(edit["*"], "deny")
+  const allowed = keys.filter((k) => edit[k] === "allow")
+  // The exact list, so a new allow fails here. The page entry names `.md`
+  // because pages/ also holds the Next.js app modules and API routes.
+  assert.deepEqual(
+    allowed,
+    ["packages/kilo-docs/pages/*.md", "packages/kilo-docs/lib/nav/*", "docs-sync-out/edit-summary-*.json", "edit-summary-*.json"],
+    "only markdown docs, navigation files and the agent's own summary file may be written",
+  )
+})
+
+check("docs-write denies every tool it does not name", () => {
+  const permission = policy().modes["docs-write"].permission
+  assert.equal(Object.keys(permission)[0], "*", "the catch-all must come first")
+  assert.equal(permission["*"], "deny")
+})
+
+check("both modes allow read, which the CLI uses for a -f attachment", () => {
+  for (const mode of ["tools-denied", "docs-write"]) {
+    assert.equal(policy().modes[mode].permission.read, "allow", `${mode} must allow read`)
+  }
+})
+
+check("docs-write denies bash by default and allows no interpreter", () => {
+  const bash = policy().modes["docs-write"].permission.bash
+  assert.equal(Object.keys(bash)[0], "*", "the catch-all must come first")
+  assert.equal(bash["*"], "deny")
+  for (const cmd of ["python3", "python", "node", "bun", "sh", "bash", "env", "docker"]) {
+    const rule = Object.entries(bash).find(([pattern]) => pattern === `${cmd} *` || pattern === cmd)
+    assert.ok(!rule || rule[1] !== "allow", `${cmd} must not be allowed`)
+  }
+})
+
+check("docs-write denies git", () => {
+  const bash = policy().modes["docs-write"].permission.bash
+  assert.equal(bash["git *"], "deny", "git must be denied for the agent")
+})
+
+check("docs-write allows no command with a file-writing form it cannot bound", () => {
+  const bash = policy().modes["docs-write"].permission.bash
+  for (const cmd of ["sed", "uniq", "diff", "sort"]) {
+    assert.ok(!(`${cmd} *` in bash), `${cmd} must not be allowed: it can write a file or run a command`)
+  }
+})
+
+check("docs-write denies the operator blocklist after the allows", () => {
+  const bash = policy().modes["docs-write"].permission.bash
+  const keys = Object.keys(bash)
+  for (const operator of ["*>*", "*$(*", "*`*", "*<(*"]) {
+    assert.ok(keys.includes(operator), `operator rule ${operator} missing`)
+    assert.equal(bash[operator], "deny")
+    const firstAllow = keys.findIndex((k) => bash[k] === "allow")
+    assert.ok(keys.indexOf(operator) > firstAllow, `${operator} must come after the allows (last match wins)`)
+  }
+})
+
+check("docs-write denies every find form that runs a command", () => {
+  const bash = policy().modes["docs-write"].permission.bash
+  const keys = Object.keys(bash)
+  const allow = keys.indexOf("find *")
+  assert.ok(allow > -1, "the find * allow rule missing")
+  for (const rule of ["find *-delete*", "find *-exec*", "find *-execdir*", "find *-fprint*", "find *-fprintf*", "find *-fls*", "find *-ok*"]) {
+    assert.ok(keys.includes(rule), `${rule} missing`)
+    assert.equal(bash[rule], "deny", `${rule} must be deny`)
+    assert.ok(keys.indexOf(rule) > allow, `${rule} must come after the find * allow, because the last match wins`)
+  }
+})
+
+check("docs-write keeps the docs build and test commands", () => {
+  const bash = policy().modes["docs-write"].permission.bash
+  for (const cmd of [
+    "bun run --filter @kilocode/kilo-docs build",
+    "bun run --filter @kilocode/kilo-docs test",
+    "bun run --filter @kilocode/kilo-docs typecheck",
+  ]) {
+    assert.equal(bash[cmd], "allow", `${cmd} must be allowed`)
+  }
+})
+
+// 2. The exported config is what the CLI reads, and it preserves a caller's
+//    provider settings instead of replacing them.
+// The second argument must be an explicit empty string: the default parameter
+// would read the ambient KILO_CONFIG_CONTENT, and this check must not depend on
+// the environment it runs in.
+check("configContent returns the mode's permission map as JSON", () => {
+  const cfg = JSON.parse(configContent(MODE.docsWrite, ""))
+  assert.deepEqual(cfg.permission, policy().modes["docs-write"].permission)
+})
+
+check("env withholds credentials and the git credential helper", () => {
+  // The filter is by name shape, so this pins both the fixed key of a step's own
+  // git call and a credential-shaped key from a step that does not exist yet.
+  const base = {
+    GH_TOKEN: "gh-token-value",
+    GITHUB_TOKEN: "github-token-value",
+    CROSS_REPO_ACCESS_TOKEN: "cross-value",
+    CLOUD_REPO_TOKEN: "cloud-value",
+    SOME_BUILD_TOKEN: "build-token-value",
+    AWS_SECRET_ACCESS_KEY: "aws-value",
+    NPM_TOKEN: "npm-value",
+    DEPLOY_PASSWORD: "deploy-value",
+    GIT_CONFIG_COUNT: "1",
+    GIT_CONFIG_KEY_0: "credential.helper",
+    GIT_CONFIG_VALUE_0: "/tmp/helper.sh",
+    KILO_API_KEY: "kilo-key-value",
+    KILO_ORG_ID: "org-value",
+    PATH: "/usr/bin:/bin",
+    UNRELATED: "keep-me",
+  }
+  const child = env(MODE.toolsDenied, base)
+  const withheld = [
+    "GH_TOKEN",
+    "GITHUB_TOKEN",
+    "CROSS_REPO_ACCESS_TOKEN",
+    "CLOUD_REPO_TOKEN",
+    "SOME_BUILD_TOKEN",
+    "AWS_SECRET_ACCESS_KEY",
+    "NPM_TOKEN",
+    "DEPLOY_PASSWORD",
+    "GIT_CONFIG_COUNT",
+    "GIT_CONFIG_KEY_0",
+    "GIT_CONFIG_VALUE_0",
+  ]
+  for (const name of withheld) assert.equal(child[name], undefined, `${name} must not reach the child`)
+  assert.equal(child.KILO_API_KEY, "kilo-key-value", "the CLI authenticates with the gateway key")
+  assert.equal(child.KILO_ORG_ID, "org-value")
+  assert.equal(child.PATH, "/usr/bin:/bin", "a non-credential name must survive the filter")
+  assert.equal(child.UNRELATED, "keep-me")
+  assert.ok(child.KILO_CONFIG_CONTENT, "the child needs the mode's config")
+  assert.deepEqual(JSON.parse(child.KILO_CONFIG_CONTENT).permission, policy().modes["tools-denied"].permission)
+})
+
+check("configContent merges over an existing KILO_CONFIG_CONTENT", () => {
+  const base = JSON.stringify({ provider: { test: { npm: "@ai-sdk/openai-compatible" } } })
+  const cfg = JSON.parse(configContent(MODE.toolsDenied, base))
+  assert.ok(cfg.provider.test, "existing provider config must survive")
+  assert.deepEqual(cfg.permission, { "*": "deny", read: "allow" })
+})
+
+// A base may carry provider settings, and the mode still owns every rule: a
+// base rule would land before the catch-all, where evaluation never reaches it,
+// and a base value the CLI rejects would drop the whole config.
+check("the emitted permission map is the mode's, whatever the base holds", () => {
+  const base = JSON.stringify({
+    provider: { test: { npm: "@ai-sdk/openai-compatible" } },
+    permission: { read: "deny", webfetch: 5, bash: { "*": "allow" } },
+  })
+  for (const mode of [MODE.docsWrite, MODE.toolsDenied]) {
+    const cfg = JSON.parse(configContent(mode, base))
+    assert.deepEqual(cfg.permission, policy().modes[mode].permission, `${mode} must own its permission map`)
+    assert.equal(Object.keys(cfg.permission)[0], "*", `${mode} must keep the catch-all first`)
+    assert.ok(cfg.provider.test, `${mode} must keep the caller's provider settings`)
+    validateMode(mode, { permission: cfg.permission })
+  }
+})
+
+check("configContent rejects an unknown mode", () => {
+  assert.throws(() => configContent("nope"), /unknown agent policy mode/)
+})
+
+// 2b. Each mode must state a usable rule map, so a run always carries the
+//     scope its mode declares.
+check("validateMode accepts both committed modes", () => {
+  for (const mode of [MODE.toolsDenied, MODE.docsWrite]) {
+    validateMode(mode, policy().modes[mode])
+  }
+})
+
+check("validateMode rejects a mode without the leading catch-all deny", () => {
+  assert.throws(() => validateMode("x", { permission: { read: "allow" } }), /first rule must be "\*": "deny"/)
+  assert.throws(
+    () => validateMode("x", { permission: { "*": "allow", read: "allow" } }),
+    /first rule must be "\*": "deny"/,
+  )
+})
+
+check("validateMode rejects an invalid action value", () => {
+  assert.throws(() => validateMode("x", { permission: { "*": "deny", edit: "permit" } }), /rule "edit" must be/)
+  assert.throws(
+    () => validateMode("x", { permission: { "*": "deny", edit: { "*": "deny", "docs/*.md": "write" } } }),
+    /rule "edit" pattern "docs\/\*\.md" must be/,
+  )
+  assert.throws(() => validateMode("x", { permission: { "*": "deny", read: 5 } }), /rule "read" must be/)
+})
+
+// A headless run has no one to answer an ask, so a mode that leaves one would
+// fail at that tool call instead of before the model starts. The validator is
+// where that guarantee is kept, for a whole rule and for one pattern.
+check("validateMode rejects an ask, at a rule and at a pattern", () => {
+  assert.throws(
+    () => validateMode("x", { permission: { "*": "deny", bash: "ask" } }),
+    /rule "bash" must be allow, deny, null/,
+  )
+  assert.throws(
+    () => validateMode("x", { permission: { "*": "deny", bash: { "*": "deny", "ls *": "ask" } } }),
+    /rule "bash" pattern "ls \*" must be allow, deny or null/,
+  )
+})
+
+check("validateMode rejects a non-object permission map", () => {
+  assert.throws(() => validateMode("x", {}), /permission must be an object/)
+  assert.throws(() => validateMode("x", { permission: "deny" }), /permission must be an object/)
+  assert.throws(() => validateMode("x", { permission: [] }), /permission must be an object/)
+  assert.throws(() => validateMode("x", undefined), /no mode entry/)
+})
+
+check("configContent validates the mode before it merges", () => {
+  const src = read(".github/docs-sync/agent-policy.mjs")
+  const call = src.lastIndexOf("validateMode(mode, entry)")
+  assert.ok(call >= 0, "configContent must call validateMode, so env and the CLI entry point fail too")
+  assert.ok(call > src.indexOf("unknown agent policy mode"), "the unknown-mode error must stay the first rejection")
+  assert.ok(call < src.indexOf("merged.permission"), "validation must run before the merge")
+})
+
+// 3. Every kilo call site names a mode, and none passes --auto.
+check("runKilo requires a mode", () => {
+  assert.match(read(".github/docs-sync/lib.mjs"), /if \(!mode\) throw new Error\(`runKilo: mode is required/)
+})
+
+for (const file of ["triage.mjs", "edit.mjs", "learn.mjs"]) {
+  check(`${file} names its policy mode`, () => {
+    assert.match(read(`.github/docs-sync/${file}`), /mode: MODE\.(docsWrite|toolsDenied)/)
+  })
+  check(`${file} never passes --auto`, () => {
+    const src = read(`.github/docs-sync/${file}`)
+    assert.ok(!/"--auto"/.test(src), `${file} must not pass --auto`)
+  })
+}
+
+check("the fix step runs kilo without --auto and with the policy", () => {
+  const block = step("Fix verify failures")
+  assert.ok(block.includes("agent-policy.mjs docs-write"), "fix step must export the docs-write policy")
+  assert.ok(!/\s--auto\b/.test(block), "fix step must not pass --auto")
+})
+
+check("the fix step requires a built policy before it runs", () => {
+  const block = step("Fix verify failures")
+  // Build the policy into a variable of its own, so its result is visible
+  // before `kilo run` starts.
+  assert.match(
+    block,
+    /if ! \w+="\$\(node \.github\/docs-sync\/agent-policy\.mjs docs-write\)" \|\| \[ -z "\$\w+" \]; then/,
+    "the fix step must assign the policy to a variable and check the assignment",
+  )
+  assert.match(block, /^\s+exit 1$/m, "the check must stop the step")
+  const guard = block.search(/if ! \w+="\$\(node \.github\/docs-sync\/agent-policy\.mjs docs-write\)"/)
+  const kilo = block.indexOf("kilo run")
+  assert.ok(
+    guard >= 0 && kilo > guard,
+    "`kilo run` must come after the check, so the pass always carries its policy",
+  )
+  // The policy variable, not a second inline substitution, is what the CLI gets.
+  assert.match(
+    block,
+    /KILO_CONFIG_CONTENT="\$\w+" \\\n\s+kilo run/,
+    "kilo run must read KILO_CONFIG_CONTENT from the guarded variable",
+  )
+  assert.ok(
+    block.includes('--variant "$DOCS_SYNC_VARIANT"') && block.includes("-f docs-sync-out/verify.log"),
+    "the step keeps --variant and the verify.log attachment",
+  )
+  assert.match(block, /\| node \.github\/docs-sync\/redact-stream\.mjs/, "the step keeps the redaction filter")
+  assert.match(
+    block,
+    /tee -a docs-sync-out\/edit-log\.txt[\s\S]*\|\| echo "::warning::/,
+    "the redaction + tee pipeline keeps its || echo warning guard",
+  )
+})
+
+check("the re-verify step is bounded", () => {
+  assert.match(
+    step("Re-verify docs after the fix pass"),
+    /^        timeout-minutes: 10$/m,
+    "the rebuild must not run to the job timeout",
+  )
+})
+
+check("the edit pass pipes the CLI stream through the redaction filter", () => {
+  assert.match(
+    step("Update docs"),
+    /node \.github\/docs-sync\/edit\.mjs \| node \.github\/docs-sync\/redact-stream\.mjs/,
+    "the streamed CLI output must pass the same filter the fix step uses",
+  )
+})
+
+// 4. Gateway credentials live on the steps that call the CLI, nowhere else.
+const agentSteps = ["Learn from maintainer corrections", "Triage merged PRs", "Update docs", "Fix verify failures"]
+const agentKeys = ["KILO_API_KEY", "KILO_ORG_ID"]
+
+check("no gateway secret sits at job level", () => {
+  const job = syncJob()
+  const header = job.slice(0, job.indexOf("\n    steps:"))
+  for (const key of agentKeys) assert.ok(!new RegExp(`^\\s+${key}:`, "m").test(header), `${key} must not be job-level`)
+})
+
+for (const name of agentSteps) {
+  check(`step "${name}" carries the gateway credentials it calls with`, () => {
+    const block = step(name)
+    for (const key of agentKeys) assert.ok(block.includes(key + ": ${{ secrets." + key + " }}"), `${name} must set ${key}`)
+  })
+}
+
+check("no non-agent step carries a gateway credential", () => {
+  const blocks = syncJob().split("\n      - name: ")
+  for (const block of blocks) {
+    const name = block.split("\n")[0]
+    if (!name || agentSteps.some((n) => name.startsWith(n))) continue
+    for (const key of agentKeys) assert.ok(!block.includes(key), `step "${name}" must not carry ${key}`)
+  }
+})
+
+check("the docs build secret stays out of the agent step", () => {
+  const block = step("Fix verify failures")
+  assert.ok(!block.includes("POSTHOG_API_KEY"), "the agent step must not hold the docs build secret")
+  assert.ok(step("Re-verify docs after the fix pass").includes("POSTHOG_API_KEY"), "the rebuild step keeps it")
+})
+
+// 5. No git credential is left in the worktree, and the steps that push carry
+//    the token only in their own environment.
+check("the checkout does not persist credentials", () => {
+  const block = step("Checkout repository")
+  assert.match(block, /persist-credentials: false/, "checkout must not persist the token")
+})
+
+for (const name of ["Learn from maintainer corrections", "Prepare rolling branch", "Upsert rolling PR"]) {
+  check(`step "${name}" authenticates git from its own environment`, () => {
+    const block = step(name)
+    assert.ok(block.includes("GH_TOKEN: ${{ github.token }}"), `${name} needs the token for its git calls`)
+    assert.ok(
+      block.includes("GIT_CONFIG_VALUE_0: ${{ runner.temp }}/docs-sync-credential.sh"),
+      `${name} must use the env credential helper`,
+    )
+  })
+}
+
+check("the helper step writes the credential helper outside the worktree", () => {
+  const block = step("Install git credential helper")
+  assert.ok(block.includes('"$RUNNER_TEMP/docs-sync-credential.sh"'), "helper must live in RUNNER_TEMP")
+  assert.ok(!/git config/.test(block), "helper install must not touch git config")
+})
+
+check("the helper reads the token from the calling step's environment", () => {
+  const block = step("Install git credential helper")
+  assert.match(block, /test -n "\$GH_TOKEN" \|\| exit 0/, "the helper must fail closed without a token")
+  assert.match(block, /printf 'username=x-access-token\\npassword=%s\\n' "\$GH_TOKEN"/, "the helper must supply the token")
+})
+
+if (failures.length > 0) {
+  console.error(`\n${failures.length} check(s) failed`)
+  process.exit(1)
+}
+console.log("\nagent-policy: all checks passed")

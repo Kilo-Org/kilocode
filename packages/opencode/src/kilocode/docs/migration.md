@@ -62,10 +62,18 @@ Kilocode uses "groups" to define what tools a mode can access. These are convert
 | `read` | `read: "allow"` | File reading |
 | `edit` | `edit: "allow"` | File editing |
 | `command` | `bash: "allow"` | Shell commands |
-| `browser` | `bash: "allow"` | Browser actions (via bash) |
-| `mcp` | `mcp: "allow"` | MCP server access |
+| `browser` | `browser_open: "allow"` | Integrated Browser navigation |
+| `mcp` | `<server>_*: "allow"` per migrated server | One key per MCP server the same migration writes |
 
-**Important:** Permissions that are NOT in the groups list are explicitly set to `"deny"`. This ensures that a mode with only `read` and `edit` groups cannot run shell commands or access MCP servers.
+There is no `mcp` permission key: an `mcp` group grants the tools of each migrated server through a `<server name>_*` key, with characters outside `[a-zA-Z0-9_-]` replaced by `_`. That replacement is the CLI's own MCP tool-id naming: one leaf module ([`tool-id.ts`](../../kilocode/mcp/tool-id.ts)) defines it, and every path that names an MCP server in this migration reuses that definition instead of repeating the rule, so a migrated grant always names the tools the CLI registers. One character outside that class becomes one `_` per code point, matching the plugin, so a name containing a character outside the Basic Multilingual Plane produces the same key in both languages. Two legacy server names that differ only outside that class, such as `a.b` and `a_b`, produce the same `<server>_*` key and therefore share one rule. A mode without an `mcp` group denies those keys.
+
+An `mcp` group grants the tools of every server the loader that ran the migration converted, with no per-server narrowing by where the entry came from: a converted global-store server counts the same as a project one, because the legacy group meant all MCP tools. Which stores are read is a separate, existing decision of each loader. The loader that runs for the CLI reads project stores only unless its platform is the VS Code extension or a Console daemon, so the terminal, the JetBrains plugin and the CLI under other clients grant the project servers; a loader asked to include global paths grants the global-store servers as well. A mode whose `mcp` group lost a server reports that through a distinct migration message: a skipped store is opened only to answer what it declared, and a server it declared is a loss when the migration can grant it and no converted server's `<server>_*` key covers it, because the group can grant only the servers that were converted. The migration can grant an entry that is not marked `disabled` and that has a `command`, or a `url` for a remote entry; an entry it cannot grant is silent. A server the project store names as well is covered, provided that project entry itself converts, so a skipped store whose every server the project store also names and converts loses nothing and reports nothing. Two independent conditions produce that group's message, and both appear when both hold: the group lost a server of a skipped store, and the group granted nothing while a store this load read declared a server.
+
+**Important:** Permissions that are NOT in the groups list are explicitly set to `"deny"` (`read`, `edit`, `bash`, `browser_open`, and the per-server keys). This ensures that a mode with only `read` and `edit` groups cannot run shell commands or access MCP servers.
+
+A group option outside `fileRegex` and `description` means the group was not read fully, so its permission is set to `"ask"` rather than granted.
+
+An entry that holds only options, as in the YAML shape `groups: ["edit", { fileRegex: "^docs/" }]` or `groups: [edit, fileRegex: "^docs/"]`, is not a group of its own. The migration reads it as the options of the plain group name just before it, so that group is set to `"ask"` with a warning instead of granted. An options entry with no plain group name before it grants nothing.
 
 ### File Restrictions
 
@@ -86,16 +94,25 @@ This converts to:
   "permission": {
     "read": "allow",
     "edit": {
-      "\\.md$": "allow",
-      "*": "deny"
+      "*": "deny",
+      "*.md": "allow"
     },
     "bash": "deny",
-    "mcp": "deny"
+    "browser_open": "deny"
   }
 }
 ```
 
-Note: `bash` and `mcp` are explicitly denied because they weren't in the original groups list.
+The `fileRegex` is translated into permission wildcard globs, with the catch-all `"*": "deny"` written first because the CLI resolves the last matching rule. The supported subset is the same one the JetBrains plugin migrator uses ([`permission-glob.ts`](../permission-glob.ts)): anchors, literal characters, `\`-escaped ASCII punctuation, `.` and `.*`, `(...)` alternation, alternation at the top level, and an optional `?` after any of the supported atoms. A top-level `|` splits the pattern into alternatives that each carry their own anchors, so `^src/.*|^test/.*` grants the same files as `^(src/.*|test/.*)$`. A backslash may escape only an ASCII punctuation character that the glob carries literally: backslash, `*` and `?` are excluded because the glob syntax cannot express them. A pattern outside that subset (a character class, `+`, a `\d`-style escape, nested groups, an arm of only digits, an arm the CLI would expand to an absolute home path, one alternative the translator cannot express while other alternatives can) sets that permission to `"ask"` and reports a migration warning, so the mode asks instead of silently losing the restriction. One untranslatable alternative rejects the whole pattern, because a rule that kept only the other alternatives would refuse files the legacy pattern allowed. An arm of only digits is outside the subset because JavaScript enumerates such a key before `"*"`, which would make the catch-all deny win. An empty alternative matches the empty string. A pattern whose empty alternative is its whole body matches every path; when the alternative sits inside a longer pattern, it matches that pattern's surrounding characters instead. With both anchors the empty alternative is dropped so the alternatives that name a path survive, and a pattern whose every alternative is empty is reported and asks.
+
+`bash` and `browser_open` are explicitly denied because they weren't in the original groups list. A migrated mode carries no `skill` rule, so it keeps the CLI default and its skill access is unchanged; the JetBrains plugin migration records its own `skill` denial in the migration report it prints.
+
+| Channel | What it carries |
+|---|---|
+| Migration warning | A condition the user has to resolve: an `mcp` group that lost a server of a skipped store this load did not cover, an `mcp` group that granted nothing while a store this load read declared a server, a group option that was not read, a file restriction that could not be translated, a repeated group that resolves to a different rule |
+| Migration note | An expected outcome worth explaining: an organization mode's `mcp` group, which attaches no MCP server at config load |
+
+When one mode lists the same group more than once, the migration keeps the narrower rule: `ask` over a file restriction over a plain grant. Two different file restrictions for the same group are not combined, so that group asks. A repeat that resolves to a different rule is reported as a migration warning that names the permission key; a repeat of the same rule produces no message.
 
 ## Default Modes
 
@@ -142,9 +159,11 @@ customModes:
       "permission": {
         "read": "allow",
         "edit": {
-          "src/i18n/.*\\.json$": "allow",
-          "*": "deny"
-        }
+          "*": "deny",
+          "*src/i18n/*.json": "allow"
+        },
+        "bash": "deny",
+        "browser_open": "deny"
       }
     }
   }
@@ -159,7 +178,6 @@ The following Kilocode features are not yet migrated:
 |---|---|---|
 | Rules (`.kilocode/rules/`) | Phase 2 | Will map to `instructions` array |
 | Workflows (`.kilocode/workflows/`) | Phase 2 | Will map to custom commands |
-| MCP Servers (`mcp_settings.json`) | Phase 2 | Will map to `mcp` config |
 | Provider Settings | Phase 2 | Will map to `provider` config |
 | Mode-specific API configs | Phase 2 | Different models per mode |
 | Organization modes | Not planned | `source: organization` not preserved |

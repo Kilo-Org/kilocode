@@ -285,7 +285,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
   const hasGit = () => server.gitInstalled()
   const modelKeys = createMemo(() => new Set(provider.models().map((model) => `${model.providerID}/${model.id}`)))
-  const mention = useFileMention(vscode, sid, hasGit, props.worktrees, modelKeys)
+  const mention = useFileMention(vscode, () => server.workspaceDirectory(), sid, hasGit, props.worktrees, modelKeys)
   // Picking the `@` model entry reuses the shared model selector: it is
   // mounted hidden and opened through its programmatic-open event. The mention
   // latch resets immediately because the selector owns its own open state, so
@@ -307,7 +307,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const result = insertPathMentions(ref.value, ref.selectionStart ?? ref.value.length, resolved)
     ref.value = result.text
     setText(result.text)
-    mention.addPaths(resolved, cwd)
+    mention.addPaths(resolved)
     ref.setSelectionRange(result.pos, result.pos)
     ref.focus()
     adjustHeight()

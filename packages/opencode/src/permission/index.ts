@@ -9,6 +9,7 @@ import os from "os"
 import z from "zod" // kilocode_change
 import { zod } from "@opencode-ai/core/effect-zod" // kilocode_change
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
+import { PermissionV2 } from "@opencode-ai/core/permission" // kilocode_change - shared file-path case rule
 import { Database } from "@opencode-ai/core/database/database" // kilocode_change
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { SessionID } from "@/session/schema" // kilocode_change - used by AllowEverythingInput
@@ -54,6 +55,8 @@ export const SaveAlwaysRulesInput = z.object({
   requestID: zod(PermissionV1.ID),
   approvedAlways: z.string().array().optional(),
   deniedAlways: z.string().array().optional(),
+  // Patterns whose saved rule the user cleared, so their config entry is deleted.
+  removedAlways: z.string().array().optional(),
 })
 
 export const AllowEverythingInput = z.object({
@@ -100,15 +103,20 @@ interface State {
 }
 
 export function evaluate(permission: string, pattern: string, ...rulesets: PermissionV1.Ruleset[]): PermissionV1.Rule {
+  // kilocode_change start - file-path rules follow the volume's case rules on macOS
+  const fold = PermissionV2.ignoresCase(permission)
   return (
     rulesets
       .flat()
-      .findLast((rule) => Wildcard.match(permission, rule.permission) && Wildcard.match(pattern, rule.pattern)) ?? {
+      .findLast(
+        (rule) => Wildcard.match(permission, rule.permission) && Wildcard.match(pattern, rule.pattern, fold),
+      ) ?? {
       action: "ask",
       permission,
       pattern: "*",
     }
   )
+  // kilocode_change end
 }
 
 // kilocode_change start
@@ -127,7 +135,9 @@ export function resolve(permission: string, pattern: string, ruleset: Ruleset, .
   if (base.action === "deny") return base
   if (saved.action === "deny") return saved
   if (base.action === "ask") {
-    if (saved.action === "allow" && Wildcard.match(saved.pattern, base.pattern)) return saved
+    // kilocode_change - compare saved coverage the way the rules matched this request
+    if (saved.action === "allow" && Wildcard.match(saved.pattern, base.pattern, PermissionV2.ignoresCase(permission)))
+      return saved
     return base
   }
   if (saved.action === "allow") return saved
@@ -390,16 +400,57 @@ const layer = Layer.effect(
 
       const approvedSet = new Set(input.approvedAlways ?? [])
       const deniedSet = new Set(input.deniedAlways ?? [])
+      const removedSet = new Set(input.removedAlways ?? [])
       const newRules: Rule[] = []
       for (const pattern of validRules) {
         if (approvedSet.has(pattern)) newRules.push({ permission, pattern, action: "allow" })
         if (deniedSet.has(pattern)) newRules.push({ permission, pattern, action: "deny" })
       }
+      // A cleared pattern deletes its config entry. An explicit approval or denial
+      // for the same pattern in this response always wins over the deletion.
+      const removed = [...removedSet].filter(
+        (pattern) =>
+          validRules.has(pattern) &&
+          !approvedSet.has(pattern) &&
+          !deniedSet.has(pattern) &&
+          (!SCALAR_ONLY_PERMISSIONS.has(permission) || pattern === "*"),
+      )
       s.approved.push(...newRules)
       existing.saved = true
 
-      if (newRules.length > 0) {
-        yield* config.updateGlobal({ permission: toConfig(newRules) }, { dispose: false })
+      if (removed.length > 0) {
+        // The running instance resolves against its in-memory approvals as well as
+        // config, so drop the removed rules here and the next matching call is
+        // evaluated against the new state.
+        const drop = new Set(removed)
+        s.approved.splice(
+          0,
+          s.approved.length,
+          ...s.approved.filter((rule) => !(rule.permission === permission && drop.has(rule.pattern))),
+        )
+      }
+
+      if (newRules.length > 0 || removed.length > 0) {
+        // Start from what the additions can express, so a rule `toConfig` leaves out (a
+        // scalar-only permission with a concrete pattern) writes no entry, as before.
+        // Removals then add their delete sentinels.
+        const patch = toConfig(newRules)
+        if (removed.length > 0) {
+          if (SCALAR_ONLY_PERMISSIONS.has(permission)) patch[permission] = null
+          else {
+            const current = patch[permission]
+            const base: Record<string, ConfigPermissionV1.Action> =
+              current === undefined ? {} : typeof current === "string" ? { "*": current } : { ...current }
+            for (const pattern of removed) base[pattern] = null
+            // The patch only names the rows this prompt can change. Leaving the tool
+            // entry in place keeps every other saved pattern, and an entry that ends
+            // up holding only sentinels is inert: rule resolution ignores them.
+            patch[permission] = base
+          }
+        }
+        if (Object.keys(patch).length > 0) {
+          yield* config.updateGlobal({ permission: patch }, { dispose: false })
+        }
       }
 
       // kilocode_change - drain publishes replies through the same EventV2Bridge channel (was DeniedError)
@@ -502,12 +553,27 @@ export function merge(...rulesets: PermissionV1.Ruleset[]): PermissionV1.Rule[] 
   return rulesets.flat()
 }
 
+// kilocode_change start - the one map from a tool name to the permission that governs it
+// A Map keeps the lookup to entries this file defines, so a name inherited from
+// Object.prototype resolves to itself instead of to a built-in member.
+const ALIASES = new Map<string, string>([
+  ["edit", "edit"],
+  ["write", "edit"],
+  ["apply_patch", "edit"],
+  ["list_mcp_resources", "read"],
+  ["list_mcp_resource_templates", "read"],
+  ["read_mcp_resource", "read"],
+])
+
+export function permissionFor(tool: string): string {
+  return ALIASES.get(tool) ?? tool
+}
+// kilocode_change end
+
 export function disabled(tools: string[], ruleset: PermissionV1.Ruleset): Set<string> {
-  const edits = ["edit", "write", "apply_patch"]
-  const reads = ["list_mcp_resources", "list_mcp_resource_templates", "read_mcp_resource"]
   return new Set(
     tools.filter((tool) => {
-      const permission = edits.includes(tool) ? "edit" : reads.includes(tool) ? "read" : tool
+      const permission = permissionFor(tool) // kilocode_change - shared tool-to-permission map
       const rule = ruleset.findLast((rule) => Wildcard.match(permission, rule.permission))
       return rule?.pattern === "*" && rule.action === "deny"
     }),

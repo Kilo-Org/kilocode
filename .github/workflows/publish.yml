@@ -422,6 +422,12 @@ jobs:
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           zstd -d --stdout "$env:RUNNER_TEMP\kilo-cli.tar.zst" | tar -xf - -C dist
 
+      - name: Install AzureSignTool
+        shell: pwsh
+        run: |
+          dotnet tool install --global AzureSignTool --version 8.0.0
+          "$env:USERPROFILE\.dotnet\tools" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
       - name: Az login
         uses: azure/login@v2
         with:
@@ -432,8 +438,6 @@ jobs:
       - name: Sign Windows binaries with EV certificate
         shell: bash
         run: |
-          dotnet tool install --global AzureSignTool
-          export PATH="$USERPROFILE/.dotnet/tools:$PATH"
           # AzureSignTool requires an explicit auth option (-kva/-kvi/-kvm; there is no
           # DefaultAzureCredential fallback). Mint a Key Vault token from the azure/login
           # OIDC session and pass it via -kva.
@@ -560,7 +564,7 @@ jobs:
           registry-url: "https://registry.npmjs.org"
 
       - name: Install @vscode/vsce
-        run: bun install -g @vscode/vsce
+        run: bun install -g @vscode/vsce@4.1.1 # kilocode_change
 
       # kilocode_change start - download into /tmp and extract the tar.zst packed by build-cli,
       # then apply changesets so the packaged VSIX ships the current changelog
@@ -653,7 +657,7 @@ jobs:
           package-manager-cache: false # kilocode_change
 
       - name: Install @vscode/vsce
-        run: bun install -g @vscode/vsce
+        run: bun install -g @vscode/vsce@4.1.1 # kilocode_change
 
       - name: Setup Git Committer
         id: committer

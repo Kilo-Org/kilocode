@@ -70,6 +70,7 @@ const layer = Layer.effectDiscard(
                   callID: context.toolCallID,
                 }
                 const target = yield* mutation.resolve({ path: input.path, kind: "file" })
+                const approved = yield* files.inspect(target) // kilocode_change - retain the approved filesystem identity
                 const external = target.externalDirectory
                 if (external)
                   yield* permission.assert({
@@ -86,8 +87,22 @@ const layer = Layer.effectDiscard(
                   agent: context.agent,
                   source,
                 })
-                return yield* files.writeTextPreservingBom({ target, content: input.content })
-              }).pipe(Effect.mapError(() => new ToolFailure({ message: `Unable to write ${input.path}` }))),
+                return yield* files.writeTextPreservingBom({ target, content: input.content, approved }) // kilocode_change - approved identity
+                // kilocode_change start - report a changed target distinctly from other write failures
+              }).pipe(
+                Effect.mapError((error) => {
+                  if (error instanceof FileMutation.TargetChangedError)
+                    return new ToolFailure({
+                      message: `Unable to write ${input.path}: file changed after permission approval. Read it again before writing.`,
+                    })
+                  if (error instanceof FileMutation.TargetKindError)
+                    return new ToolFailure({
+                      message: `Unable to write ${input.path}: the target is not a regular file, or the filesystem does not report a usable identity.`,
+                    })
+                  return new ToolFailure({ message: `Unable to write ${input.path}` })
+                }),
+              ),
+              // kilocode_change end
           }),
           "edit",
         ),

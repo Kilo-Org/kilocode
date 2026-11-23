@@ -223,6 +223,8 @@ export interface PermissionErrorMessage {
   type: "permissionError"
   permissionID: string
   stale?: boolean
+  /** User-facing reason, shown in place of the generic toast title. */
+  message?: string
 }
 
 export interface TodoUpdatedMessage {
@@ -453,6 +455,19 @@ export interface ProfileDataMessage {
   data: ProfileData | null
 }
 
+/**
+ * Outcome of one `setOrganization` request, correlated by `requestID`.
+ * `data` is the profile read after the attempt, when that read succeeded.
+ */
+export interface OrganizationSwitchResultMessage {
+  type: "organizationSwitchResult"
+  requestID: string
+  organizationId: string | null
+  ok: boolean
+  data: ProfileData | null
+  error?: string
+}
+
 export interface DeviceAuthStartedMessage {
   type: "deviceAuthStarted"
   code?: string
@@ -571,6 +586,8 @@ export interface ProvidersLoadedMessage {
   kiloUnavailable?: boolean
   /** Typed reasons providers failed to load, so the UI can explain why instead of hiding them. */
   failures?: ProviderFailure[]
+  /** The provider read for this project failed, so the payload carries no provider data. */
+  loadFailed?: boolean
 }
 
 export interface AgentsLoadedMessage {
@@ -781,8 +798,15 @@ export interface SettingsConfigBinding {
 export interface ConfigLoadedMessage {
   type: "configLoaded"
   config: Config
+  /** Raw primary global config file — the file a settings write targets. */
   globalConfig?: Config
+  /** Merged global scope: every global config file combined. */
+  mergedGlobalConfig?: Config
+  /** Home directory of the machine that runs the rules; a config entry may start with ~ or $HOME. */
+  homeDir?: string
   projectConfig?: Config
+  /** Merged workspace scope from the overlay, every project file combined. */
+  workspaceConfig?: Config
   bindings?: { global?: SettingsConfigBinding; project?: SettingsConfigBinding }
   collections?: ConfigCollections
   settings?: ExtensionSettings
@@ -792,12 +816,21 @@ export interface ConfigLoadedMessage {
 export interface ConfigUpdatedMessage {
   type: "configUpdated"
   config: Config
+  /** Raw primary global config file — the file a settings write targets. */
   globalConfig?: Config
+  /** Merged global scope: every global config file combined. */
+  mergedGlobalConfig?: Config
+  /** Home directory of the machine that runs the rules; a config entry may start with ~ or $HOME. */
+  homeDir?: string
   projectConfig?: Config
+  /** Merged workspace scope from the overlay, every project file combined. */
+  workspaceConfig?: Config
   bindings?: { global?: SettingsConfigBinding; project?: SettingsConfigBinding }
   collections?: ConfigCollections
   settings?: ExtensionSettings
   features: FeatureFlags
+  /** The `requestId` of the request this answers, when the request carried one. */
+  requestId?: string
 }
 
 export interface ConfigUpdateFailedMessage {
@@ -806,9 +839,16 @@ export interface ConfigUpdateFailedMessage {
   details?: string
   completedScopes?: Array<"global" | "project">
   config?: Config
+  /** Raw primary global config file — the file a settings write targets. */
   globalConfig?: Config
+  /** Merged global scope: every global config file combined. */
+  mergedGlobalConfig?: Config
+  /** Home directory of the machine that runs the rules; a config entry may start with ~ or $HOME. */
+  homeDir?: string
   projectConfig?: Config
   bindings?: { global?: SettingsConfigBinding; project?: SettingsConfigBinding }
+  /** The `requestId` of the request this answers, when the request carried one. */
+  requestId?: string
 }
 
 export interface ConfigBindingExpiredMessage {
@@ -912,6 +952,25 @@ export interface WorkStyleApplyFailedMessage {
   type: "workStyleApplyFailed"
   message: string
   rollbackFailed: boolean
+}
+
+/** The host stored a setting written with `updateSetting`. `key` is the write key as sent. */
+export interface SettingUpdatedMessage {
+  type: "settingUpdated"
+  key: string
+  value: unknown
+  /** The `writeId` of the request this answers, when the request carried one. */
+  writeId?: string
+}
+
+/** The host rejected a setting written with `updateSetting`. `key` is the write key as sent. */
+export interface SettingUpdateFailedMessage {
+  type: "settingUpdateFailed"
+  key: string
+  message: string
+  details?: string
+  /** The `writeId` of the request this answers, when the request carried one. */
+  writeId?: string
 }
 
 export interface NotificationsLoadedMessage {
@@ -1525,6 +1584,12 @@ export interface TelemetryStateMessage {
   enabled: boolean
 }
 
+export interface TelemetryLevelResultMessage {
+  type: "telemetryLevelResult"
+  ok: boolean
+  enabled?: boolean
+}
+
 // ============================================
 // Marketplace Messages
 // ============================================
@@ -1855,6 +1920,7 @@ export type ExtensionMessage =
   | GitRemoteUrlLoadedMessage
   | ActionMessage
   | ProfileDataMessage
+  | OrganizationSwitchResultMessage
   | ProviderUsageLoadedMessage
   | DeviceAuthStartedMessage
   | DeviceAuthCompleteMessage
@@ -1871,6 +1937,7 @@ export type ExtensionMessage =
   | SpeechToTextModelsLoadedMessage
   | ProvidersLoadedMessage
   | { type: "providersLoading" }
+  | { type: "providersReset" }
   | AgentsLoadedMessage
   | SkillsLoadedMessage
   | CommandsLoadedMessage
@@ -1914,6 +1981,8 @@ export type ExtensionMessage =
   | WorkStyleLoadedMessage
   | WorkStyleAppliedMessage
   | WorkStyleApplyFailedMessage
+  | SettingUpdatedMessage
+  | SettingUpdateFailedMessage
   | NotificationsLoadedMessage
   | AgentManagerRepoInfoMessage
   | AgentManagerWorktreeSetupMessage
@@ -2028,6 +2097,7 @@ export type ExtensionMessage =
   | ClearPendingPromptsMessage
   | ExtensionDataReadyMessage
   | TelemetryStateMessage
+  | TelemetryLevelResultMessage
   | RemoteStatusMessage
   | ValidateFilesResultMessage
   | ClipboardWriteResultMessage

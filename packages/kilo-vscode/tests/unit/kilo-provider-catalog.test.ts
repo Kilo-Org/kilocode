@@ -259,8 +259,12 @@ describe("KiloProvider catalog refresh", () => {
     fail = true
     await internal.fetchAndSendProviders()
 
-    expect(messages.at(-1)).toEqual({ type: "providersLoading" })
-    expect(messages.filter((message) => message.type === "providersLoaded")).toHaveLength(1)
+    const loads = messages.filter((message) => message.type === "providersLoaded")
+    expect(
+      loads.filter((message) => message.providers && Object.keys(message.providers as object).length > 0),
+    ).toHaveLength(1)
+    expect(messages.at(-1)).toMatchObject({ type: "providersLoaded", providers: {} })
+    expect(messages.at(-1)).toMatchObject({ type: "providersLoaded", providers: {}, loadFailed: true })
     expect(internal.cachedProvidersMessage).toBeNull()
   })
 

@@ -36,7 +36,7 @@ Conda environments and notebooks require a Kilo account. When the agent needs on
 
 ## A local model isn't listed in a chat
 
-Local models appear in the model picker only after you're signed in to your [Kilo account](/docs/desktop/settings/ai#ai-providers), the **Local Model Server** is enabled, and you've imported a model. Check the [Local Model Server](/docs/desktop/settings/ai#local-model-server) settings.
+Local models appear in the model picker only after the **Local Model Server** is enabled and you've added a model. Check the [Local Model Server](/docs/desktop/settings/ai#local-model-server) settings.
 
 ## The agent can't find a file in a gitignored folder
 

@@ -1,9 +1,16 @@
-import { describe, expect, it } from "bun:test"
+import { describe, expect, it, spyOn } from "bun:test"
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
 import * as vscode from "vscode"
 import { registerToggleAutoApprove, type AutoApproveController } from "../../src/commands/toggle-auto-approve"
 import { createAutoApproveBridge } from "../../src/kilo-provider/auto-approve"
 import type { Event, KiloClient } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "../../src/services/cli-backend/connection-service"
+
+const ROOT = join(import.meta.dir, "..", "..")
+const PACKAGE = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as {
+  contributes: { configuration: { properties: Record<string, { type: string; default?: unknown; scope?: string }> } }
+}
 
 type ConfigEvent = { affectsConfiguration(key: string): boolean }
 type Permission = { id: string }
@@ -17,31 +24,64 @@ function defer<T>() {
   return { promise, resolve: state.resolve, reject: state.reject }
 }
 
-function config(initial: boolean, info: Record<string, unknown> = {}) {
+type Layers = { globalValue?: boolean; workspaceValue?: boolean; workspaceFolderValue?: boolean }
+type Configure = Layers & { fail?: boolean; hold?: (value: unknown) => Promise<void> | undefined }
+
+/** Runs a case with `console.error` muted, for the writes a case rejects on purpose. */
+async function quiet<T>(run: () => Promise<T>): Promise<T> {
+  const log = spyOn(console, "error").mockImplementation(() => {})
+  try {
+    return await run()
+  } finally {
+    log.mockRestore()
+  }
+}
+
+function config(options: Configure = {}) {
+  const { fail = false, hold, ...layers } = options
   const handlers: Array<(event: ConfigEvent) => void> = []
   const updates: Array<{ key: string; value: unknown; target: unknown }> = []
   const messages: string[] = []
+  const errors: string[] = []
   const commands = new Map<string, (...args: unknown[]) => unknown>()
-  const state = { active: initial }
+  const state: Layers = { ...layers }
   const api = vscode as unknown as {
     workspace: {
       getConfiguration: (section?: string) => {
-        get: <T>(key: string, fallback?: T) => T | boolean
-        inspect: <T>(key: string) => Record<string, unknown> | undefined
+        get: (key: string, fallback?: unknown) => unknown
+        inspect: (key: string) => Record<string, unknown> | undefined
         update: (key: string, value: unknown, target: unknown) => Promise<void>
       }
       onDidChangeConfiguration: (listener: (event: ConfigEvent) => void) => { dispose(): void }
     }
-    window: { showInformationMessage: (message: string) => Promise<undefined> }
+    window: {
+      showInformationMessage: (message: string) => Promise<undefined>
+      showErrorMessage: (message: string) => Promise<undefined>
+    }
     commands: { registerCommand: (command: string, callback: (...args: unknown[]) => unknown) => { dispose(): void } }
   }
 
+  const slot = (target: unknown) => {
+    if (target === vscode.ConfigurationTarget.Workspace) return "workspaceValue"
+    if (target === vscode.ConfigurationTarget.WorkspaceFolder) return "workspaceFolderValue"
+    return "globalValue"
+  }
+
   api.workspace.getConfiguration = () => ({
-    get: (_key, fallback) => state.active ?? fallback,
-    inspect: () => info,
+    get: (_key, fallback) => state.workspaceFolderValue ?? state.workspaceValue ?? state.globalValue ?? fallback,
+    inspect: () => {
+      const info: Record<string, unknown> = {}
+      if (state.globalValue !== undefined) info.globalValue = state.globalValue
+      if (state.workspaceValue !== undefined) info.workspaceValue = state.workspaceValue
+      if (state.workspaceFolderValue !== undefined) info.workspaceFolderValue = state.workspaceFolderValue
+      return info
+    },
     update: async (key, value, target) => {
       updates.push({ key, value, target })
-      state.active = Boolean(value)
+      const waiting = hold?.(value)
+      if (waiting) await waiting
+      if (fail) throw new Error("settings write rejected")
+      state[slot(target)] = Boolean(value)
     },
   })
   api.workspace.onDidChangeConfiguration = (listener) => {
@@ -57,18 +97,21 @@ function config(initial: boolean, info: Record<string, unknown> = {}) {
     messages.push(message)
     return undefined
   }
+  api.window.showErrorMessage = async (message) => {
+    errors.push(message)
+    return undefined
+  }
   api.commands.registerCommand = (command, callback) => {
     commands.set(command, callback)
     return { dispose: () => undefined }
   }
 
   return {
+    layers: state,
     updates,
     messages,
+    errors,
     commands,
-    set active(value: boolean) {
-      state.active = value
-    },
     emit(key = "kilo-code.new.autoApprove.enabled") {
       for (const handler of handlers) handler({ affectsConfiguration: (name) => name === key })
     },
@@ -114,8 +157,8 @@ function asked(id: string, sessionID = "ses_1") {
 }
 
 describe("registerToggleAutoApprove", () => {
-  it("restores persisted state, follows config changes, and persists toggles to the closest configured scope", async () => {
-    const env = config(true, { workspaceValue: false })
+  it("restores the user setting, follows config changes, and writes toggles to the user setting", async () => {
+    const env = config({ globalValue: true, workspaceValue: false })
     const replies: unknown[] = []
     const conn = connection(client({ reply: async (args) => replies.push(args) }))
     const ctrl = registerToggleAutoApprove(
@@ -131,7 +174,7 @@ describe("registerToggleAutoApprove", () => {
     expect(await ctrl.approve(asked("perm_1"))).toBe(true)
     expect(replies).toEqual([{ requestID: "perm_1", directory: "/repo/ses_1", reply: "once" }])
 
-    env.active = false
+    env.layers.globalValue = false
     env.emit()
     expect(ctrl.active()).toBe(false)
     expect(changes).toEqual([false])
@@ -142,12 +185,92 @@ describe("registerToggleAutoApprove", () => {
     await ctrl.toggle()
     expect(ctrl.active()).toBe(true)
     expect(changes).toEqual([false, true])
-    expect(env.updates).toEqual([{ key: "enabled", value: true, target: vscode.ConfigurationTarget.Workspace }])
+    expect(env.updates).toEqual([{ key: "enabled", value: true, target: vscode.ConfigurationTarget.Global }])
     expect(env.messages).toContain("Auto-approve enabled. Sandbox escalation prompts are excluded.")
   })
 
+  it("reads the user layer only, with no user value", async () => {
+    config({ workspaceValue: true })
+    const replies: unknown[] = []
+    const conn = connection(client({ reply: async (args) => replies.push(args) }))
+    const ctrl = registerToggleAutoApprove(
+      context(),
+      conn.svc,
+      () => "/workspace",
+      () => ["/workspace"],
+    )
+
+    expect(ctrl.active()).toBe(false)
+    expect(await ctrl.approve(asked("perm_1"))).toBe(false)
+    expect(replies).toEqual([])
+  })
+
+  it("reads the user layer only, with a folder value present", async () => {
+    config({ workspaceFolderValue: true })
+    const replies: unknown[] = []
+    const conn = connection(client({ reply: async (args) => replies.push(args) }))
+    const ctrl = registerToggleAutoApprove(
+      context(),
+      conn.svc,
+      () => "/workspace",
+      () => ["/workspace"],
+    )
+
+    expect(ctrl.active()).toBe(false)
+    expect(await ctrl.approve(asked("perm_1"))).toBe(false)
+    expect(replies).toEqual([])
+  })
+
+  it("replies once when the user setting enables it", async () => {
+    config({ globalValue: true })
+    const replies: unknown[] = []
+    const conn = connection(client({ reply: async (args) => replies.push(args) }))
+    const ctrl = registerToggleAutoApprove(
+      context(),
+      conn.svc,
+      () => "/workspace",
+      () => ["/workspace"],
+    )
+
+    expect(ctrl.active()).toBe(true)
+    expect(await ctrl.approve(asked("perm_1"))).toBe(true)
+    expect(replies).toEqual([{ requestID: "perm_1", directory: "/workspace", reply: "once" }])
+  })
+
+  it("turns on through the user setting while another layer holds a value", async () => {
+    const env = config({ workspaceValue: true, globalValue: false })
+    const conn = connection(client({}))
+    const ctrl = registerToggleAutoApprove(
+      context(),
+      conn.svc,
+      () => "/workspace",
+      () => ["/workspace"],
+    )
+
+    expect(ctrl.active()).toBe(false)
+    await ctrl.toggle()
+    expect(ctrl.active()).toBe(true)
+    expect(env.updates).toEqual([{ key: "enabled", value: true, target: vscode.ConfigurationTarget.Global }])
+  })
+
+  it("keeps following the user layer after a configuration change", async () => {
+    const env = config({ globalValue: false })
+    const conn = connection(client({}))
+    const ctrl = registerToggleAutoApprove(
+      context(),
+      conn.svc,
+      () => "/workspace",
+      () => ["/workspace"],
+    )
+
+    expect(ctrl.active()).toBe(false)
+    env.layers.workspaceValue = true
+    env.emit()
+    expect(ctrl.active()).toBe(false)
+  })
+
   it("uses the SSE directory for worktree permissions before session mappings are available", async () => {
-    config(true)
+    config({ globalValue: true })
     const replies: unknown[] = []
     const conn = connection(client({ reply: async (args) => replies.push(args) }))
     const ctrl = registerToggleAutoApprove(
@@ -167,7 +290,7 @@ describe("registerToggleAutoApprove", () => {
   })
 
   it("uses the shared permission directory before falling back to session mappings", async () => {
-    config(true)
+    config({ globalValue: true })
     const replies: unknown[] = []
     const conn = connection(
       client({ reply: async (args) => replies.push(args) }),
@@ -187,12 +310,18 @@ describe("registerToggleAutoApprove", () => {
     ])
   })
 
-  it("returns unhandled when an automatic reply fails", async () => {
-    config(true)
+  it("returns unhandled when an automatic reply fails and the request stays pending", async () => {
+    config({ globalValue: true })
+    const options: unknown[] = []
+    const lists: string[] = []
     const conn = connection(
       client({
-        reply: async (_args, options) => {
-          expect(options).toEqual({ throwOnError: true })
+        list: async (dir) => {
+          lists.push(dir)
+          return { data: [{ id: "perm_1" }] }
+        },
+        reply: async (_args, opts) => {
+          options.push(opts)
           throw new Error("offline")
         },
       }),
@@ -204,11 +333,13 @@ describe("registerToggleAutoApprove", () => {
       () => ["/workspace"],
     )
 
-    expect(await ctrl.approve(asked("perm_1"))).toBe(false)
+    expect(await quiet(() => ctrl.approve(asked("perm_1")))).toBe(false)
+    expect(options).toEqual([{ throwOnError: true }])
+    expect(lists).toEqual(["/workspace"])
   })
 
   it("cancels pending permission drains when disabled during an enable generation", async () => {
-    config(false)
+    config({ globalValue: false })
     const gate = defer<{ data: Permission[] }>()
     const started = defer<void>()
     const dirs: string[] = []
@@ -242,6 +373,180 @@ describe("registerToggleAutoApprove", () => {
     expect(ctrl.active()).toBe(false)
     expect(dirs).toEqual(["/one"])
     expect(replies).toEqual([])
+  })
+
+  it("cancels a pending automatic reply when auto-approve is turned off", async () => {
+    const env = config({ globalValue: true })
+    const first = defer<void>()
+    const later: unknown[] = []
+    let calls = 0
+    const conn = connection(
+      client({
+        list: async (dir) => (dir === "/workspace" ? { data: [{ id: "perm_retry" }] } : { data: [] }),
+        reply: async (args) => {
+          calls++
+          if (calls === 1) {
+            first.resolve()
+            throw new Error("fetch failed")
+          }
+          later.push(args)
+        },
+      }),
+    )
+    const ctrl = registerToggleAutoApprove(
+      context(),
+      conn.svc,
+      () => "/workspace",
+      () => ["/workspace"],
+    )
+
+    const pending = ctrl.approve(asked("perm_retry"))
+    await first.promise
+    env.layers.globalValue = false
+    env.emit()
+
+    expect(await pending).toBe(false)
+    expect(calls).toBe(1)
+    expect(later).toEqual([])
+  })
+
+  it("leaves auto-approve off when the setting cannot be saved", async () => {
+    const env = config({ globalValue: false, fail: true })
+    const replies: unknown[] = []
+    const conn = connection(client({ reply: async (args) => replies.push(args) }))
+    const ctrl = registerToggleAutoApprove(
+      context(),
+      conn.svc,
+      () => "/workspace",
+      () => ["/workspace"],
+    )
+    const changes: boolean[] = []
+    ctrl.onChange((active) => changes.push(active))
+
+    expect(await quiet(() => ctrl.toggle())).toBe(false)
+    expect(ctrl.active()).toBe(false)
+    expect(changes).toEqual([false])
+    expect(env.errors).toEqual(["Kilo Code could not save the auto-approve setting, so auto-approve stays off."])
+    expect(env.messages).toEqual([])
+
+    expect(await ctrl.approve(asked("perm_1"), "/workspace")).toBe(false)
+    expect(replies).toEqual([])
+  })
+
+  it("restates the off state when a rejected enable write follows an off state", async () => {
+    const env = config({ fail: true })
+    const conn = connection(client({}))
+    const ctrl = registerToggleAutoApprove(
+      context(),
+      conn.svc,
+      () => "/workspace",
+      () => ["/workspace"],
+    )
+    const changes: boolean[] = []
+    ctrl.onChange((active) => changes.push(active))
+
+    await quiet(() => ctrl.toggle())
+
+    expect(changes).toEqual([false])
+    expect(ctrl.active()).toBe(false)
+  })
+
+  it("takes effect at once and reports a rejected off write", async () => {
+    const env = config({ globalValue: true, fail: true })
+    const replies: unknown[] = []
+    const conn = connection(client({ reply: async (args) => replies.push(args) }))
+    const ctrl = registerToggleAutoApprove(
+      context(),
+      conn.svc,
+      () => "/workspace",
+      () => ["/workspace"],
+    )
+
+    expect(await quiet(() => ctrl.toggle())).toBe(false)
+    expect(ctrl.active()).toBe(false)
+    expect(env.errors).toEqual([
+      "Kilo Code could not save the auto-approve setting. Auto-approve is off now and turns on again after a restart until that setting is saved.",
+    ])
+
+    expect(await ctrl.approve(asked("perm_1"), "/workspace")).toBe(false)
+    expect(replies).toEqual([])
+  })
+
+  it("refuses a request whose directory is unknown", async () => {
+    config({ globalValue: true })
+    const replies: unknown[] = []
+    const conn = connection(client({ reply: async (args) => replies.push(args) }))
+    const ctrl = registerToggleAutoApprove(
+      context(),
+      conn.svc,
+      () => undefined,
+      () => ["/workspace"],
+    )
+
+    expect(await ctrl.approve(asked("perm_unknown", "ses_unknown"))).toBe(false)
+    expect(replies).toEqual([])
+  })
+
+  it("refuses a request the directory still holds", async () => {
+    config({ globalValue: true })
+    const replies: unknown[] = []
+    const conn = connection(
+      client({ list: async () => ({ data: [{ id: "perm_1" }] }), reply: async (args) => replies.push(args) }),
+    )
+    const ctrl = registerToggleAutoApprove(
+      context(),
+      conn.svc,
+      () => "/workspace",
+      () => ["/workspace"],
+    )
+
+    expect(await ctrl.approve(asked("perm_1"), "/workspace")).toBe(false)
+    expect(replies).toHaveLength(1)
+  })
+
+  it("serialises two quick toggles so the later intent wins", async () => {
+    const gate = defer<void>()
+    const started = defer<void>()
+    const env = config({
+      globalValue: false,
+      hold: (value) => {
+        if (value !== true) return undefined
+        started.resolve()
+        return gate.promise
+      },
+    })
+    const conn = connection(client({}))
+    const ctrl = registerToggleAutoApprove(
+      context(),
+      conn.svc,
+      () => "/workspace",
+      () => ["/workspace"],
+    )
+
+    const enable = ctrl.toggle()
+    await started.promise
+    expect(env.updates).toHaveLength(1)
+
+    const disable = ctrl.toggle()
+    gate.resolve()
+    await Promise.all([enable, disable])
+
+    // Serialised, the second click reads the state the first write left and asks for
+    // off again, so the stored value matches the later intent.
+    expect(env.updates.map((entry) => entry.value)).toEqual([true, false])
+    expect(env.layers.globalValue).toBe(false)
+    expect(ctrl.active()).toBe(false)
+  })
+})
+
+describe("auto-approve setting contribution", () => {
+  it("declares a user-scoped boolean that starts disabled", () => {
+    expect(PACKAGE.contributes.configuration.properties["kilo-code.new.autoApprove.enabled"]).toEqual({
+      type: "boolean",
+      default: false,
+      scope: "application",
+      description: expect.any(String),
+    })
   })
 })
 

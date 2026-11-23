@@ -308,6 +308,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "Remove from allowed list",
   "ui.permission.rule.addToDenied": "Add to denied list",
   "ui.permission.rule.removeFromDenied": "Remove from denied list",
+  "ui.permission.rule.fromConfig": "Managed by a config file",
   "ui.permission.toolLabel.read": "Read",
   "ui.permission.toolLabel.edit": "Edit",
   "ui.permission.toolLabel.write": "Write",
@@ -792,6 +793,7 @@ export const dict = {
 
   "dialog.model.noProviders": "No providers",
   "dialog.model.unavailable": "Kilo models unavailable",
+  "dialog.model.loadFailed": "Could not load providers for this project.",
 
   "prompt.placeholder.connecting": "Connecting to server...",
   "prompt.placeholder.default": "Type a message, @ to mention files... (Enter to send, Shift+Enter for new line)",
@@ -840,8 +842,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "Telemetry",
   "settings.aboutKiloCode.telemetry.description":
-    'Telemetry is controlled by VS Code\'s built-in telemetry setting. To disable it, go to Settings > Telemetry > Telemetry Level and set it to "off". Restart VS Code to apply the change.',
-  "settings.aboutKiloCode.telemetry.openSettings": "Open Telemetry Settings",
+    "Use this switch to change your Kilo telemetry preference. Telemetry stays off if VS Code or the environment disables it.",
+  "settings.aboutKiloCode.telemetry.toggle": "Enable telemetry",
+  "settings.aboutKiloCode.telemetry.saveFailed": "Could not update telemetry setting",
 
   "settings.agentBehaviour.subtab.agents": "Agents",
   "settings.agentBehaviour.subtab.mcpServers": "MCP Servers",
@@ -1329,6 +1332,8 @@ export const dict = {
 
   "profile.personalAccount": "Personal Account",
   "profile.switchingAccount": "Switching account…",
+  "profile.unavailableAccount": "Unavailable account",
+  "profile.switchFailed": "Could not confirm the account switch.",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/en.ts
 
@@ -1412,6 +1417,9 @@ export const dict = {
   "settings.saveBar.saveAnyway": "Save anyway",
   "settings.saveBar.cancel": "Cancel",
   "settings.saveBar.saveFailed": "Couldn't save settings",
+  "settings.saveBar.dismissError": "Dismiss",
+  "settings.saveBar.unconfirmedWrite": 'The change to "{{name}}" was not confirmed by the extension host.',
+  "settings.saveBar.unconfirmedSave": "The save was not confirmed by the extension host. Try again.",
 
   "notifications.action.next": "Next",
   "notifications.action.close": "Close",

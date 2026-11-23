@@ -19,6 +19,7 @@
 import fs from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
+import { MODE } from "./agent-policy.mjs"
 import { backoffMsForAttempt, deadline, remainingMs, REASONING_VARIANT, runKilo, sleepSync } from "./lib.mjs"
 import { readLearningsBlock } from "./learn.mjs"
 
@@ -77,15 +78,13 @@ Batch specifics for this run: the PRs to handle are in the attached ${batchFile}
       break
     }
 
-    // Headless `kilo run` auto-rejects every permission ask; without --auto the
-    // agent cannot run shell commands. SECURITY: --auto grants unrestricted bash
-    // to an agent steered by external PR content. Hardening deferred: a scoped
-    // permission.bash map via KILO_CONFIG_CONTENT should replace --auto once the
-    // required shell patterns are stable (see PR #12605 review thread).
+    // The run's tool and path scope comes from agent-permissions.json (mode
+    // docs-write), passed as KILO_CONFIG_CONTENT: writes under packages/kilo-docs,
+    // read-only inspection and the docs build and tests, everything else denied.
     const result = runKilo({
+      mode: MODE.docsWrite,
       args: [
         "run",
-        "--auto",
         prompt,
         "-m",
         model,

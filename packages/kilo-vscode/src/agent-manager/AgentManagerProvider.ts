@@ -1565,6 +1565,9 @@ export class AgentManagerProvider implements Disposable {
     this.busySessions.clear()
     this.cachedWorktreeStats = this.cachedLocalStats = undefined
     void this.sendRepoInfo()
+    // The active project's root is what the prompt's mention search resolves
+    // against, and the panel keeps the previous project's root until told.
+    this.panel?.postMessage({ type: "workspaceDirectoryChanged", directory: this.getRoot() ?? "" })
     if (!reactivateProject(ctx, this.panel?.sessions, (c) => this.pushState(c)))
       this.stateReady = this.initializeState()
     else {

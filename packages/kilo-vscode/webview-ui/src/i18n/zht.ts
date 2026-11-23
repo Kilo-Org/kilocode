@@ -296,6 +296,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "從允許清單移除",
   "ui.permission.rule.addToDenied": "加入拒絕清單",
   "ui.permission.rule.removeFromDenied": "從拒絕清單移除",
+  "ui.permission.rule.fromConfig": "由設定檔管理",
   "ui.permission.toolLabel.read": "讀取",
   "ui.permission.toolLabel.edit": "編輯",
   "ui.permission.toolLabel.write": "寫入",
@@ -745,6 +746,7 @@ export const dict = {
 
   "dialog.model.noProviders": "沒有供應商",
   "dialog.model.unavailable": "Kilo 模型無法使用",
+  "dialog.model.loadFailed": "無法載入此專案的供應商。",
 
   "prompt.placeholder.connecting": "正在連線至伺服器...",
   "prompt.placeholder.error": "連線失敗。請檢查輸出面板或重新啟動擴充功能。",
@@ -791,8 +793,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "遙測",
   "settings.aboutKiloCode.telemetry.description":
-    '遙測由 VS Code 內建的遙測設定控制。若要停用，請前往「設定」>「遙測」>「遙測層級」並將其設為 "off"。重新啟動 VS Code 以套用變更。',
-  "settings.aboutKiloCode.telemetry.openSettings": "開啟遙測設定",
+    "使用此開關變更 Kilo 的遙測設定。如果 VS Code 或執行環境停用了遙測，遙測將維持關閉。",
+  "settings.aboutKiloCode.telemetry.toggle": "啟用遙測",
+  "settings.aboutKiloCode.telemetry.saveFailed": "無法更新遙測設定",
 
   "settings.agentBehaviour.subtab.agents": "代理程式",
   "settings.agentBehaviour.subtab.mcpServers": "MCP 伺服器",
@@ -1219,6 +1222,8 @@ export const dict = {
   "dialog.model.notSet": "未設定",
   "profile.personalAccount": "個人帳戶",
   "profile.switchingAccount": "正在切換帳戶…",
+  "profile.unavailableAccount": "無法使用的帳戶",
+  "profile.switchFailed": "無法確認帳戶切換。",
 
   "prompt.action.indexing": "索引設定",
 
@@ -1343,6 +1348,9 @@ export const dict = {
   "settings.saveBar.cancel": "取消",
   "settings.saveBar.saving": "儲存中…",
   "settings.saveBar.saveFailed": "無法儲存設定",
+  "settings.saveBar.dismissError": "忽略",
+  "settings.saveBar.unconfirmedWrite": "擴充功能主機未確認「{{name}}」。",
+  "settings.saveBar.unconfirmedSave": "擴充功能主機未確認儲存。請重試。",
   "notifications.action.next": "下一個",
   "notifications.action.close": "關閉",
   "notifications.action.tryModel": "嘗試 {{model}}",

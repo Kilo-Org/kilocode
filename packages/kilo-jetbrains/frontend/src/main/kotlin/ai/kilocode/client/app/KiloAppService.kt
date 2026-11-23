@@ -16,6 +16,7 @@ import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
 import ai.kilocode.rpc.dto.ModelStateDto
 import ai.kilocode.rpc.dto.ModelVariantUpdateDto
 import ai.kilocode.rpc.dto.ProfileDto
+import ai.kilocode.rpc.dto.ProfileSyncDto
 import ai.kilocode.rpc.dto.RetentionStatusDto
 import ai.kilocode.rpc.dto.RetentionPatchDto
 import ai.kilocode.rpc.dto.SpeechModelDto
@@ -31,6 +32,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -55,6 +57,8 @@ class KiloAppService internal constructor(
         private val LOG = KiloLog.create(KiloAppService::class.java)
         private val init = KiloAppStateDto(KiloAppStatusDto.DISCONNECTED)
         private const val DEFAULT_SPEECH_MODEL = "openai/whisper-1"
+        private const val RESTORE_ATTEMPTS = 3
+        private const val RESTORE_RETRY_MS = 200L
     }
 
     private val started = AtomicBoolean(false)
@@ -355,6 +359,9 @@ class KiloAppService internal constructor(
         }
     }
 
+    /** Effective telemetry level reported by the connected CLI. */
+    fun telemetryConfig(): Boolean? = _state.value.config?.telemetry
+
     suspend fun updateConfig(patch: ConfigPatchDto): KiloAppStateDto? = try {
         LOG.info("config update: sending RPC ${summary(patch)}")
         val next = call { updateConfig(patch) }
@@ -364,6 +371,17 @@ class KiloAppService internal constructor(
     } catch (e: Exception) {
         LOG.warn("config update failed ${summary(patch)}", e)
         null
+    }
+
+    private suspend fun setTelemetryLevel(enabled: Boolean): Boolean = try {
+        val next = call { setTelemetryLevel(enabled) }
+        _state.value = next
+        true
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        LOG.warn("telemetry level update failed", e)
+        false
     }
 
     fun updateConfigAsync(
@@ -396,25 +414,72 @@ class KiloAppService internal constructor(
         done(runRetention(force))
     }
 
-    /** Run cleanup once without leaving automatic retention enabled when the saved policy is off. */
-    suspend fun runManualRetention(policy: RetentionPatchDto): RetentionStatusDto? {
-        if (policy.enabled == true) return runRetention(true)
-        val enabled = policy.copy(enabled = true)
-        if (updateConfig(ConfigPatchDto(retention = enabled)) == null) return null
-        return try {
-            runRetention(true)
-        } finally {
-            withContext(NonCancellable) {
-                updateConfig(ConfigPatchDto(retention = policy.copy(enabled = false)))
-            }
+    /**
+     * Run cleanup once, then restore the saved retention policy so a disabled policy stays disabled.
+     * Reports when the cleanup did not run or did not report a result, and when the saved policy
+     * could not be confirmed back in place.
+     */
+    internal suspend fun runManualRetention(policy: RetentionPatchDto): ManualRetentionResult {
+        if (policy.enabled == true) {
+            val status = runRetention(true) ?: return ManualRetentionResult.RunFailed
+            return ManualRetentionResult.Complete(status)
         }
+        if (updateConfig(ConfigPatchDto(retention = policy.copy(enabled = true))) == null) {
+            // The write may have landed even though the call reported nothing, so put the saved
+            // policy back before reporting that the cleanup never started.
+            val restored = withContext(NonCancellable) { restoreRetention(policy) }
+            return if (restored) ManualRetentionResult.NotStarted else ManualRetentionResult.NotStartedWithPolicyOn
+        }
+        var status: RetentionStatusDto? = null
+        var cancelled: CancellationException? = null
+        var restored = false
+        try {
+            status = runRetention(true)
+        } catch (e: CancellationException) {
+            cancelled = e
+        } catch (e: Exception) {
+            LOG.warn("manual cleanup: run failed", e)
+        } finally {
+            restored = withContext(NonCancellable) { restoreRetention(policy) }
+        }
+        val failure = cancelled
+        if (!restored) return ManualRetentionResult.PolicyNotRestored
+        if (failure != null) throw failure
+        if (status == null) return ManualRetentionResult.RunFailed
+        return ManualRetentionResult.Complete(status)
     }
 
-    fun runManualRetentionAsync(
+    /**
+     * Write a saved cleanup policy back with `enabled = false`, retrying a bounded number of times.
+     * Returns whether the write landed.
+     */
+    internal suspend fun restoreRetention(policy: RetentionPatchDto): Boolean {
+        val patch = ConfigPatchDto(retention = policy.copy(enabled = false))
+        repeat(RESTORE_ATTEMPTS) { attempt ->
+            if (attempt > 0) delay(RESTORE_RETRY_MS)
+            try {
+                if (updateConfig(patch) != null) return true
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                LOG.warn("manual cleanup: retention restore attempt failed", e)
+                return@repeat
+            }
+            LOG.warn("manual cleanup: retention restore attempt reported no result")
+        }
+        return false
+    }
+
+    internal fun runManualRetentionAsync(
         policy: RetentionPatchDto,
-        done: (RetentionStatusDto?) -> Unit,
+        done: (ManualRetentionResult) -> Unit,
     ): Job = cs.launch {
         done(runManualRetention(policy))
+    }
+
+    /** Run the saved-policy write-back on the app-lifetime scope, so it survives a closed page. */
+    internal fun restoreRetentionAsync(policy: RetentionPatchDto, done: (Boolean) -> Unit): Job = cs.launch {
+        done(restoreRetention(policy))
     }
 
     fun applyLogConfigAsync(config: LogConfigDto): Job = cs.launch {
@@ -431,6 +496,14 @@ class KiloAppService internal constructor(
     } catch (e: Exception) {
         LOG.warn("index worktrees read failed", e)
         false
+    }
+
+    /** Persist telemetry consent through the CLI on the app scope, even if settings closes. */
+    fun setTelemetryLevelAsync(
+        enabled: Boolean,
+        done: (Boolean) -> Unit,
+    ): Job = cs.launch {
+        done(setTelemetryLevel(enabled))
     }
 
     /**
@@ -458,6 +531,16 @@ class KiloAppService internal constructor(
         null
     }
 
+    /**
+     * Re-read the account and report the outcome, for an action whose result must tell a failed
+     * read apart from a signed-out answer. A failed read leaves the published account alone.
+     */
+    suspend fun refreshAccount(): ProfileSyncDto {
+        val result = call { refreshAccount() }
+        publish(result)
+        return result
+    }
+
     /** Refresh profile in fire-and-forget fashion from non-suspend context. */
     fun refreshProfileAsync() {
         cs.launch { refreshProfile() }
@@ -472,13 +555,14 @@ class KiloAppService internal constructor(
 
     /**
      * Complete the login flow. Blocks until authentication finishes.
-     * Returns the user profile, or null if unavailable.
+     *
+     * The result carries the account, a definitive signed-out answer, or the reason the follow-up
+     * profile read did not complete. A thrown failure is the account step itself failing.
      */
-    suspend fun completeLogin(directory: String? = null): ProfileDto? = try {
-        call { completeLogin(directory) }.also { setProfile(it) }
-    } catch (e: Exception) {
-        LOG.warn("login completion failed", e)
-        null
+    suspend fun completeLogin(directory: String? = null): ProfileSyncDto {
+        val result = call { completeLogin(directory) }
+        publish(result)
+        return result
     }
 
     /** Log out and clear the user profile. */
@@ -494,13 +578,25 @@ class KiloAppService internal constructor(
     /**
      * Switch active account context.
      * Pass null for personal account, organization ID for org context.
-     * Returns the updated profile, or null if not logged in.
+     *
+     * The result carries the account, a definitive signed-out answer, or the reason the follow-up
+     * profile read did not complete. A thrown failure is the account step itself failing.
      */
-    suspend fun setOrganization(organizationId: String?): ProfileDto? = try {
-        call { setOrganization(organizationId) }.also { setProfile(it) }
-    } catch (e: Exception) {
-        LOG.warn("organization switch failed", e)
-        null
+    suspend fun setOrganization(organizationId: String?): ProfileSyncDto {
+        val result = call { setOrganization(organizationId) }
+        publish(result)
+        return result
+    }
+
+    /**
+     * Publish the account a completed account step reports.
+     *
+     * A result without an [ProfileSyncDto.error] is the account the backend now holds. A result
+     * with an error means only the follow-up profile read failed, so the published account stays
+     * as it was.
+     */
+    private fun publish(result: ProfileSyncDto) {
+        if (result.error == null) setProfile(result.profile)
     }
 
     /**

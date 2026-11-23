@@ -243,7 +243,7 @@ class ActiveTreeColorTest : BasePlatformTestCase() {
                     view.collapsePath(TreePath(view.hierarchy.entries.getValue("section").path))
                     val collapsed = paint(view)
                     solid(collapsed, Rectangle(frame.x, frame.y + frame.height - gap, frame.width, gap), view.background)
-                    solid(collapsed, rail(view, "section"), color)
+                    solid(collapsed, rail(view, "section").apply { height-- }, color)
                     assertEquals(frame.height, row(view, "section").height)
                 }
             }
@@ -289,20 +289,22 @@ class ActiveTreeColorTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test always selected rows keep the selection background and ignore hover`() {
+    fun `test fixed colored section ignores hover and selection underlines its full width`() {
         val keys = listOf("Tree.selectionBackground", "Tree.selectionInactiveBackground")
         val previous = keys.associateWith(UIManager::get)
         try {
             UIManager.put(keys.first(), Color(0x2857A5))
             UIManager.put(keys.last(), Color(0x626262))
             val tree = ActiveTree("")
+            val color = requireNotNull(ActiveTreeColors.color("red"))
             tree.update(listOf(
-                ActiveTreeNode(Row("section", alwaysSelected = true), listOf(ActiveTreeNode(Row("child")))),
+                ActiveTreeNode(Row("section", alwaysSelected = true), listOf(ActiveTreeNode(Row("child"))), color),
                 ActiveTreeNode(Row("plain")),
             ))
             val view = attach(tree)
             val inactive = UIUtil.getTreeBackground(true, false)
             val header = view.hierarchy.entries.getValue("section")
+            view.collapsePath(TreePath(header.path))
             val plain = view.hierarchy.entries.getValue("plain")
             val initial = view.state(header, false, false)
             assertFalse(initial.selected)
@@ -318,6 +320,19 @@ class ActiveTreeColorTest : BasePlatformTestCase() {
             assertEquals(inactive, hovered.selectionColor)
             assertEquals(inactive, hovered.backdrop)
             assertEquals(inactive, hovered.pillBackground)
+            unchanged(before, paint(view))
+
+            tree.select(header.key)
+            val frame = requireNotNull(view.regions.frame(header))
+            val y = frame.y + frame.height - UiStyle.Gap.xs() - 1
+            val line = Rectangle(frame.x, y, frame.width, 1)
+            val selected = paint(view)
+            val gap = UiStyle.Gap.xs()
+            solid(before, Rectangle(frame.x, y, gap, 1), color)
+            solid(before, Rectangle(frame.x + gap, y, frame.width - gap, 1), inactive)
+            solid(selected, line, UIUtil.getTreeBackground(true, true))
+            unchanged(before, selected, listOf(line))
+            tree.clearSelection()
             unchanged(before, paint(view))
 
             move(view, plain)
