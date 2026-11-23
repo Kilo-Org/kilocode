@@ -28,6 +28,7 @@ Major AI companies offering powerful models via API:
 - **[Cloudflare](/docs/ai-providers/cloudflare)** - Workers AI and Cloudflare AI Gateway
 - **[GMI Cloud](/docs/ai-providers/gmicloud)** - OpenAI-compatible inference for open and frontier models
 - **[DeepSeek](/docs/ai-providers/deepseek)** - DeepSeek V3., R1
+- **[EmpirioLabs AI](/docs/ai-providers/empiriolabs)** - Specialized AI model hosting for open, proprietary, and custom stacks
 - **[Mistral](/docs/ai-providers/mistral)** - Mistral Large, Codestral
 - **[Nebius Token Factory](/docs/ai-providers/nebius)** - Model inference on Nebius infrastructure
 - **[Poolside](/docs/ai-providers/poolside)** - Laguna models
