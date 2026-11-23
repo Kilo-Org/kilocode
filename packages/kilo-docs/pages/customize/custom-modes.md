@@ -97,8 +97,8 @@ mode: primary
 color: "#10B981"
 permission:
   edit:
-    "*.md": "allow"
     "*": "deny"
+    "*.md": "allow"
   bash: deny
 ---
 
@@ -125,8 +125,8 @@ Define agents under the `agent` key in your project's `kilo.jsonc`:
       "prompt": "You are a technical documentation specialist...",
       "permission": {
         "edit": {
-          "*.md": "allow",
           "*": "deny",
+          "*.md": "allow",
         },
         "bash": "deny",
       },
@@ -159,8 +159,8 @@ An ordered set of rules controlling tool access. Permissions support three actio
 ```yaml
 permission:
   edit:
-    "*.md": "allow"
     "*": "deny"
+    "*.md": "allow"
   bash: deny
   read: allow
 ```
@@ -210,8 +210,8 @@ Override any built-in agent (**code**, **plan**, **debug**, **ask**, **orchestra
       "temperature": 0.2,
       "permission": {
         "edit": {
-          "*.py": "allow",
           "*": "deny",
+          "*.py": "allow",
         },
       },
     },
@@ -227,8 +227,8 @@ model: openai/gpt-4o
 temperature: 0.2
 permission:
   edit:
-    "*.py": "allow"
     "*": "deny"
+    "*.py": "allow"
 ---
 
 You are a Python specialist. Only edit Python files.
@@ -334,8 +334,8 @@ mode: primary
 color: "#10B981"
 permission:
   edit:
-    "*.md": "allow"
     "*": "deny"
+    "*.md": "allow"
   bash: deny
 ---
 
@@ -362,8 +362,8 @@ Define agents under the `agent` key in your project's `kilo.jsonc`:
       "prompt": "You are a technical documentation specialist...",
       "permission": {
         "edit": {
-          "*.md": "allow",
           "*": "deny",
+          "*.md": "allow",
         },
         "bash": "deny",
       },
@@ -396,8 +396,8 @@ An ordered set of rules controlling tool access. Permissions support three actio
 ```yaml
 permission:
   edit:
-    "*.md": "allow"
     "*": "deny"
+    "*.md": "allow"
   bash: deny
   read: allow
 ```
@@ -447,8 +447,8 @@ Override any built-in agent (**code**, **plan**, **debug**, **ask**, **orchestra
       "temperature": 0.2,
       "permission": {
         "edit": {
-          "*.py": "allow",
           "*": "deny",
+          "*.py": "allow",
         },
       },
     },
@@ -464,8 +464,8 @@ model: openai/gpt-4o
 temperature: 0.2
 permission:
   edit:
-    "*.py": "allow"
     "*": "deny"
+    "*.py": "allow"
 ---
 
 You are a Python specialist. Only edit Python files.
@@ -537,8 +537,8 @@ mode: primary
 color: "#10B981"
 permission:
   edit:
-    "*.md": "allow"
     "*": "deny"
+    "*.md": "allow"
   bash: deny
 ---
 
@@ -555,8 +555,8 @@ mode: primary
 color: "#F59E0B"
 permission:
   edit:
-    "*.{test,spec}.{js,ts}": "allow"
     "*": "deny"
+    "*.{test,spec}.{js,ts}": "allow"
 ---
 
 You are a test engineer focused on code quality.
@@ -596,7 +596,7 @@ Focus on:
       "color": "#10B981",
       "prompt": "You are a technical writer specializing in clear documentation.",
       "permission": {
-        "edit": { "*.md": "allow", "*": "deny" },
+        "edit": { "*": "deny", "*.md": "allow" },
         "bash": "deny",
       },
     },
@@ -605,7 +605,7 @@ Focus on:
       "mode": "primary",
       "prompt": "You are a test engineer focused on code quality.",
       "permission": {
-        "edit": { "*.{test,spec}.{js,ts}": "allow", "*": "deny" },
+        "edit": { "*": "deny", "*.{test,spec}.{js,ts}": "allow" },
       },
     },
   },
@@ -624,8 +624,8 @@ mode: primary
 color: "#10B981"
 permission:
   edit:
-    "*.md": "allow"
     "*": "deny"
+    "*.md": "allow"
   bash: deny
 ---
 
@@ -642,8 +642,8 @@ mode: primary
 color: "#F59E0B"
 permission:
   edit:
-    "*.{test,spec}.{js,ts}": "allow"
     "*": "deny"
+    "*.{test,spec}.{js,ts}": "allow"
 ---
 
 You are a test engineer focused on code quality.
@@ -683,7 +683,7 @@ Focus on:
       "color": "#10B981",
       "prompt": "You are a technical writer specializing in clear documentation.",
       "permission": {
-        "edit": { "*.md": "allow", "*": "deny" },
+        "edit": { "*": "deny", "*.md": "allow" },
         "bash": "deny",
       },
     },
@@ -692,7 +692,7 @@ Focus on:
       "mode": "primary",
       "prompt": "You are a test engineer focused on code quality.",
       "permission": {
-        "edit": { "*.{test,spec}.{js,ts}": "allow", "*": "deny" },
+        "edit": { "*": "deny", "*.{test,spec}.{js,ts}": "allow" },
       },
     },
   },
