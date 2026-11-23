@@ -142,7 +142,7 @@ export function buildRequest(input: { method: HerdrMethod; paneID: string; seq: 
 export function createReporter(input: {
   data: Plugin.Context["data"]
   session: () => string | undefined
-  send: (method: HerdrMethod, seq: number, report?: HerdrReport) => void
+  send: (method: HerdrMethod, seq: number, report?: HerdrReport) => Promise<void>
   now?: () => number
   translate?: HerdrTranslator
 }) {
@@ -161,7 +161,7 @@ export function createReporter(input: {
   const stop = () => {
     lastKey = undefined
     seq += 1
-    input.send("pane.release_agent", seq)
+    return input.send("pane.release_agent", seq)
   }
 
   return { tick, stop }
@@ -198,31 +198,28 @@ export function createSender(input: {
   timeoutMs?: number
 }) {
   const timeoutMs = input.timeoutMs ?? SOCKET_TIMEOUT
-  let inFlight = false
   let pending: string | undefined
+  let draining: Promise<void> | undefined
 
-  const flush = () => {
-    if (inFlight || pending === undefined) return
-    const payload = pending
-    pending = undefined
-    inFlight = true
-
-    let timer: ReturnType<typeof setTimeout> | undefined
-    const timeout = new Promise<void>((resolve) => {
-      timer = setTimeout(resolve, timeoutMs)
-      timer.unref?.()
-    })
-
-    Promise.race([input.transport(payload).catch(() => {}), timeout]).finally(() => {
-      if (timer) clearTimeout(timer)
-      inFlight = false
-      flush()
-    })
+  const drain = async () => {
+    while (pending !== undefined) {
+      const payload = pending
+      pending = undefined
+      const timeout = Promise.withResolvers<void>()
+      const timer = setTimeout(timeout.resolve, timeoutMs)
+      await Promise.race([Promise.resolve().then(() => input.transport(payload)).catch(() => {}), timeout.promise])
+      clearTimeout(timer)
+    }
   }
 
   return (method: HerdrMethod, seq: number, report?: HerdrReport) => {
     pending = JSON.stringify(buildRequest({ method, paneID: input.paneID, seq, report }))
-    flush()
+    if (draining) return draining
+    const current = drain().finally(() => {
+      draining = undefined
+    })
+    draining = current
+    return current
   }
 }
 
@@ -259,7 +256,7 @@ export default Plugin.define({
 
     return () => {
       clearInterval(timer)
-      reporter.stop()
+      return reporter.stop()
     }
   },
 })

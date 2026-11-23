@@ -44,7 +44,7 @@ Messages use the runtime locale reported by `Intl.DateTimeFormat`, with English 
 
 Blocked state takes precedence over working state. Synthetic pending items alone do not indicate work. Identical reports are deduplicated; this is change reporting, not a heartbeat.
 
-Requests are newline-delimited JSON using `pane.report_agent`, source and agent `kilo2`, and increasing sequence numbers. A newer pending report replaces stale pending reports while a send is in flight. Socket errors and timeouts do not interrupt the TUI. Normal plugin cleanup sends `pane.release_agent`; abrupt process termination cannot guarantee delivery.
+Requests are newline-delimited JSON using `pane.report_agent`, source and agent `kilo2`, and increasing sequence numbers. A newer pending report replaces stale pending reports while a send is in flight. Socket errors and timeouts do not interrupt the TUI. Normal plugin cleanup awaits `pane.release_agent`, including any in-flight send ahead of it. Each send is bounded to 500 ms, so cleanup waits at most two send intervals (one second); abrupt process termination cannot guarantee delivery.
 
 ## Verification
 
