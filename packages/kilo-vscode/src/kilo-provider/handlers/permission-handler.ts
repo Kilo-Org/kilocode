@@ -9,6 +9,7 @@ import type { KiloClient, PermissionRequest } from "@kilocode/sdk/v2/client"
 import { permissionSettled, respondToPermission } from "@kilocode/sdk/permission"
 import { retry } from "../../services/cli-backend/retry"
 import { isNotFoundError } from "./not-found"
+import { SESSION_ROUTE_UNRESOLVED } from "../../shared/session-route-error"
 
 export type RecoverablePermission = PermissionRequest
 export type PermissionResponse = "once" | "always" | "reject"
@@ -40,6 +41,8 @@ export interface PermissionContext {
   ) => Promise<PermissionResponseResult>
   isPermissionResponseClaimed?: (requestID: string) => boolean
   clearPermissionResponse?: (requestID: string) => void
+  /** Whether a raw session id has no single project directory (Agent Manager). */
+  isSessionAmbiguous?(sessionId: string): boolean
 }
 
 export function recoveryDirs(workspace: string, dirs: ReadonlyMap<string, string>, extra: string[] = []) {
@@ -52,6 +55,13 @@ export function recoveryDirs(workspace: string, dirs: ReadonlyMap<string, string
  * When shouldContinue returns false the reply stops before the next attempt, so
  * disabling auto-approve cancels an in-flight retry. Its message is not
  * transient on purpose, so the retry helper stops instead of looping.
+ *
+ * Returns true only when the directory's instance no longer holds the request.
+ * A successful reply call is not itself the answer: one bounded `permission.list`
+ * on the same directory confirms it, so the prompt still reaches the user whenever
+ * the reply did not take effect. A not-found reply reports false for the same reason:
+ * a directory without that request answers with the same empty list a settled
+ * request produces, so it cannot confirm one.
  */
 export async function replyOnce(
   client: KiloClient,
@@ -64,11 +74,15 @@ export async function replyOnce(
       if (shouldContinue && !shouldContinue()) throw new Error(CANCELLED)
       return client.permission.reply({ requestID, directory, reply: "once" }, { throwOnError: true })
     })
-    return true
   } catch (error) {
-    if (!(error instanceof Error && error.message === CANCELLED)) {
-      console.error("[Kilo New] permission-handler: failed to reply once:", error)
-    }
+    if (error instanceof Error && error.message === CANCELLED) return false
+    if (isNotFoundError(error)) return false
+    console.error("[Kilo New] permission-handler: failed to reply once:", error)
+  }
+  try {
+    return await permissionSettled(client, directory, requestID)
+  } catch (error) {
+    console.error("[Kilo New] permission-handler: failed to confirm the reply:", error)
     return false
   }
 }
@@ -88,6 +102,39 @@ export function recoverablePermissions(
 }
 
 /**
+ * Resolve the session and directory a permission response must target, or
+ * undefined when the route is unknown and the response must be refused.
+ *
+ * A recorded directory came from a directory-scoped permission.list, so it is
+ * exact and stays authoritative. Without one, an id that maps to more than one
+ * project has no single directory, so the response is reported back instead.
+ * That includes an already claimed response: its recorded directory may have
+ * been pruned or the route may have changed since, so claim state does not
+ * change this decision.
+ */
+function permissionRoute(
+  ctx: PermissionContext,
+  permissionId: string,
+  sessionID: string,
+): { target: string; dir: string | undefined } | undefined {
+  const owner = ctx.getPermissionSession?.(permissionId)
+  const target = owner ?? sessionID
+  const recorded = ctx.getPermissionDirectory(permissionId)
+  if (!recorded && target && ctx.isSessionAmbiguous?.(target)) {
+    console.error("[Kilo New] KiloProvider: Permission route has no single owning project:", target)
+    ctx.postMessage({ type: "permissionError", permissionID: permissionId, message: SESSION_ROUTE_UNRESOLVED })
+    return
+  }
+  const dir = recorded ?? (target ? ctx.getWorkspaceDirectory(target) : undefined)
+  if (!target || !dir || (owner && target !== sessionID)) {
+    console.error("[Kilo New] KiloProvider: Unknown permission route")
+    ctx.postMessage({ type: "permissionError", permissionID: permissionId })
+    return
+  }
+  return { target, dir }
+}
+
+/**
  * Handle permission response from the webview.
  * Calls saveAlwaysRules first (if any), then reply — sequentially to avoid races.
  */
@@ -98,6 +145,7 @@ export async function handlePermissionResponse(
   response: PermissionResponse,
   approvedAlways: string[],
   deniedAlways: string[],
+  removedAlways: string[] = [],
   feedback?: string,
 ): Promise<void> {
   const client = ctx.client
@@ -106,14 +154,9 @@ export async function handlePermissionResponse(
     return
   }
 
-  const dir = ctx.getPermissionDirectory(permissionId)
-  const target = ctx.getPermissionSession?.(permissionId) ?? sessionID
-  const claimed = ctx.isPermissionResponseClaimed?.(permissionId) ?? false
-  if (!target || (!dir && !claimed) || (ctx.getPermissionSession?.(permissionId) && target !== sessionID)) {
-    console.error("[Kilo New] KiloProvider: Unknown permission route")
-    ctx.postMessage({ type: "permissionError", permissionID: permissionId })
-    return
-  }
+  const route = permissionRoute(ctx, permissionId, sessionID)
+  if (!route) return
+  const { target, dir } = route
 
   const run =
     ctx.runPermissionResponse ??
@@ -127,6 +170,7 @@ export async function handlePermissionResponse(
       reply: response,
       approvedAlways,
       deniedAlways,
+      removedAlways,
       message: feedback,
     })
     if (error) {

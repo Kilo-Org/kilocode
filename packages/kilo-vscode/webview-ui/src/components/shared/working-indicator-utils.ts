@@ -5,8 +5,9 @@ export function tracksElapsed(
   status: SessionStatus,
   submitting: boolean,
   timing: Timing | undefined,
+  goal = false,
 ): timing is Timing {
-  return timing !== undefined && (status !== "idle" || submitting)
+  return timing !== undefined && (status !== "idle" || submitting || goal)
 }
 
 /**
@@ -18,7 +19,7 @@ export function tracksElapsed(
  * unconditionally, so the two states can never both claim the row (or both
  * stay empty) and change the dock's height.
  */
-export function showsWorking(status: SessionStatus, submitting: boolean, blocked: boolean): boolean {
+export function showsWorking(status: SessionStatus, submitting: boolean, blocked: boolean, goal = false): boolean {
   if (blocked) return false
-  return submitting || status !== "idle"
+  return submitting || status !== "idle" || goal
 }

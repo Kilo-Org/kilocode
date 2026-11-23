@@ -5,6 +5,7 @@ import com.intellij.openapi.components.Service
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.IOException
 import java.nio.file.DirectoryNotEmptyException
@@ -164,12 +165,14 @@ class WorktreeTrash(private val cs: CoroutineScope) {
     /** Awaits every reap/sweep still running. Test-only: production code never blocks on this. */
     internal suspend fun drain() {
         // Loops rather than joining a single snapshot so a job started by one already being awaited is
-        // still covered. Filtering on `isActive` is what makes this terminate: a job removes itself
-        // from `jobs` in a completion handler, and there is no ordering guarantee that the handler has
-        // run by the time `join` resumes, so an emptiness check alone could spin on completed jobs.
+        // still covered. A job stops being `isActive` before its completion handler removes it from
+        // `jobs`, so once nothing is active this keeps waiting briefly for those handlers too; otherwise
+        // [pending] could still count a job that has already finished.
         while (true) {
-            val active = jobs.toList().filter { it.isActive }
-            if (active.isEmpty()) return
+            val tracked = jobs.toList()
+            if (tracked.isEmpty()) return
+            val active = tracked.filter { it.isActive }
+            if (active.isEmpty()) delay(1)
             active.forEach { it.join() }
         }
     }

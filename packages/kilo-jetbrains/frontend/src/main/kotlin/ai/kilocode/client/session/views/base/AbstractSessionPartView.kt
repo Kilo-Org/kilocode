@@ -111,12 +111,17 @@ abstract class AbstractSessionPartView(
      */
     protected fun expandedGap(): Int = if (isExpanded()) SessionUiStyle.View.contentGap() else 0
 
+    /** Once true, transcript appearance changes must not override this card's user-chosen state. */
+    protected var touched = false
+        private set
+
     fun isExpanded(): Boolean = body?.parent === this
 
     fun toggle() {
         if (!expandable || !arrow.isVisible) return
         val changed = toggleLocal()
         if (!changed) return
+        touched = true
         userToggled()
         syncArrow()
         refresh()
@@ -136,6 +141,18 @@ abstract class AbstractSessionPartView(
         if (item.parent !== this) return false
         remove(item)
         footer?.takeIf { it.parent === this }?.let(::remove)
+        return true
+    }
+
+    /**
+     * Expands a collapsed card for a programmatic reveal, which does not go through [toggle]. The header
+     * has to be refreshed too: [expand] only attaches the body, so the chevron would still show the
+     * collapsed arrow.
+     */
+    fun open(): Boolean {
+        if (!expand()) return false
+        syncExpandable(true)
+        refresh()
         return true
     }
 
@@ -172,11 +189,22 @@ abstract class AbstractSessionPartView(
     fun syncExpandable(expandable: Boolean): Boolean {
         val active = this.expandable && expandable
         val changed = setVisible(arrow, active)
+        syncArrowSlot(active)
         val detached = if (active) false else collapse()
         val cursor = if (active) Cursor.getPredefinedCursor(Cursor.HAND_CURSOR) else Cursor.getDefaultCursor()
         val moved = syncCursor(cursor)
         val icon = syncArrow()
         return changed || detached || moved || icon
+    }
+
+    /**
+     * Keeps the arrow in the header row only while the card can toggle. A hidden component is still walked by
+     * every tree traversal (graphics-configuration updates on tab switch, component searches during painting),
+     * and most transcript cards never become expandable, so the arrow stays out of the tree until needed.
+     */
+    private fun syncArrowSlot(active: Boolean) {
+        if (active == (arrow.parent === row)) return
+        if (active) row.add(arrow, BorderLayout.EAST) else row.remove(arrow)
     }
 
     protected fun refresh() {

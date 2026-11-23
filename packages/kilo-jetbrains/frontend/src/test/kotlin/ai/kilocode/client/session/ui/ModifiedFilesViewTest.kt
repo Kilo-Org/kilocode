@@ -2,6 +2,7 @@ package ai.kilocode.client.session.ui
 
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
+import ai.kilocode.client.session.views.tool.FileLinkLabel
 import ai.kilocode.client.ui.DiffStatBadge
 import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.openapi.editor.EditorFactory
@@ -67,7 +68,7 @@ class ModifiedFilesViewTest : BasePlatformTestCase() {
         assertTrue(view.bodyCreated())
         assertEquals(2, components(view).filterIsInstance<DiffStatBadge>().size)
 
-        val links = components(view).filterIsInstance<JBLabel>().filter { it.text?.contains("<u>") == true }
+        val links = components(view).filterIsInstance<JBLabel>().filter { it.isFileLink() }
         assertTrue(links.any { it.text!!.contains("A.kt") && it.toolTipText == "src/A.kt" })
         assertTrue(links.any { it.text!!.contains("B.kt") && it.toolTipText == "pkg/B.kt" })
         assertFileHeadersHaveNoSeparators(view)
@@ -106,7 +107,7 @@ class ModifiedFilesViewTest : BasePlatformTestCase() {
 
         assertTrue(view.bodyCreated())
         assertEquals(1, diffScrolls(view).size)
-        val links = components(view).filterIsInstance<JBLabel>().filter { it.text?.contains("<u>") == true }
+        val links = components(view).filterIsInstance<JBLabel>().filter { it.isFileLink() }
         assertTrue("single-file changes should not render a file header", links.isEmpty())
     }
 
@@ -164,6 +165,8 @@ class ModifiedFilesViewTest : BasePlatformTestCase() {
         assertEquals(base, EditorFactory.getInstance().allEditors.size)
     }
 
+    private fun JBLabel.isFileLink() = this is FileLinkLabel && !text.isNullOrEmpty()
+
     private fun components(root: Component): List<Component> {
         val out = mutableListOf<Component>()
         fun visit(node: Component) {
@@ -200,7 +203,7 @@ class ModifiedFilesViewTest : BasePlatformTestCase() {
     }
 
     private fun assertFileHeadersHaveNoSeparators(root: Component) {
-        val links = components(root).filterIsInstance<JBLabel>().filter { it.text?.contains("<u>") == true }
+        val links = components(root).filterIsInstance<JBLabel>().filter { it.isFileLink() }
         assertTrue("expected file link headers", links.isNotEmpty())
         links.forEach { link ->
             val header = link.parent?.parent as? JComponent

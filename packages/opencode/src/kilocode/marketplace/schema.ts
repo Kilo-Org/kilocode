@@ -3,7 +3,7 @@ import { Schema } from "effect"
 export const Scope = Schema.Literals(["project", "global"])
 export type Scope = typeof Scope.Type
 
-export const Kind = Schema.Literals(["mcp", "agent", "skill"])
+export const Kind = Schema.Literals(["mcp", "agent", "skill", "plugin"])
 export type Kind = typeof Kind.Type
 
 export const McpParameter = Schema.Struct({
@@ -14,13 +14,31 @@ export const McpParameter = Schema.Struct({
 }).annotate({ identifier: "McpParameter" })
 export type McpParameter = typeof McpParameter.Type
 
+// Reviewed auth metadata published by the marketplace catalog. Values stay plain strings so a
+// catalog value this build does not know yet never rejects the whole listing.
+// oauthRequirement: required | optional | conditional | not_required | unknown
+// authHandler: kilo | server_process | external_setup | unknown
+const AuthMetadata = {
+  oauthRequirement: Schema.optional(Schema.String),
+  authHandler: Schema.optional(Schema.String),
+}
+
 export const McpInstallationMethod = Schema.Struct({
+  /** Stable method identifier; `name` is a display label and may change. */
+  id: Schema.optional(Schema.String),
   name: Schema.String,
   content: Schema.String,
   parameters: Schema.optional(Schema.Array(McpParameter)),
   prerequisites: Schema.optional(Schema.Array(Schema.String)),
+  ...AuthMetadata,
 }).annotate({ identifier: "McpInstallationMethod" })
 export type McpInstallationMethod = typeof McpInstallationMethod.Type
+
+export const McpSkill = Schema.Struct({
+  id: Schema.String,
+  content: Schema.String,
+}).annotate({ identifier: "McpSkill" })
+export type McpSkill = typeof McpSkill.Type
 
 // The live catalog ships vscode_extension either as a bare extension id string or
 // as a { name, id } object, so accept both to avoid rejecting valid catalog data.
@@ -53,6 +71,9 @@ export const McpMarketplaceItem = Schema.Struct({
   url: Schema.String,
   content: Schema.Union([Schema.String, Schema.Array(McpInstallationMethod)]),
   parameters: Schema.optional(Schema.Array(McpParameter)),
+  skills: Schema.optional(Schema.Array(McpSkill)),
+  // Auth metadata for a single-string `content`, which is the implicit `default` method.
+  ...AuthMetadata,
 }).annotate({ identifier: "McpMarketplaceItem" })
 export type McpMarketplaceItem = typeof McpMarketplaceItem.Type
 
@@ -106,10 +127,20 @@ export const SkillMarketplaceItem = Schema.Struct({
 }).annotate({ identifier: "SkillMarketplaceItem" })
 export type SkillMarketplaceItem = typeof SkillMarketplaceItem.Type
 
+export const PluginMarketplaceItem = Schema.Struct({
+  ...Base,
+  type: Schema.Literal("plugin"),
+  // content is the npm spec to install (for example "opencode-models-discovery" or "pkg@1.2.3").
+  content: Schema.String,
+  url: Schema.optional(Schema.String),
+}).annotate({ identifier: "PluginMarketplaceItem" })
+export type PluginMarketplaceItem = typeof PluginMarketplaceItem.Type
+
 export const MarketplaceItem = Schema.Union([
   McpMarketplaceItem,
   AgentMarketplaceItem,
   SkillMarketplaceItem,
+  PluginMarketplaceItem,
 ]).annotate({ identifier: "MarketplaceItem" })
 export type MarketplaceItem = typeof MarketplaceItem.Type
 
@@ -128,6 +159,8 @@ export type MarketplaceInstalledMetadata = typeof MarketplaceInstalledMetadata.T
 export const MarketplaceListResult = Schema.Struct({
   items: Schema.Array(MarketplaceItem),
   installed: MarketplaceInstalledMetadata,
+  /** `suggest_for.filename` patterns that match a file in the routed workspace. */
+  filenames: Schema.optional(Schema.Array(Schema.String)),
   errors: Schema.optional(Schema.Array(Schema.String)),
 }).annotate({ identifier: "MarketplaceListResult" })
 export type MarketplaceListResult = typeof MarketplaceListResult.Type
@@ -140,6 +173,7 @@ export const McpInstallItem = Schema.Struct({
   type: Schema.Literal("mcp"),
   id: Schema.String,
   content: Schema.Union([Schema.String, Schema.Array(McpInstallationMethod)]),
+  skills: Schema.optional(Schema.Array(McpSkill)),
 }).annotate({ identifier: "McpInstallItem" })
 export type McpInstallItem = typeof McpInstallItem.Type
 
@@ -157,10 +191,18 @@ export const SkillInstallItem = Schema.Struct({
 }).annotate({ identifier: "SkillInstallItem" })
 export type SkillInstallItem = typeof SkillInstallItem.Type
 
+export const PluginInstallItem = Schema.Struct({
+  type: Schema.Literal("plugin"),
+  id: Schema.String,
+  content: Schema.String,
+}).annotate({ identifier: "PluginInstallItem" })
+export type PluginInstallItem = typeof PluginInstallItem.Type
+
 export const MarketplaceInstallItem = Schema.Union([
   McpInstallItem,
   AgentInstallItem,
   SkillInstallItem,
+  PluginInstallItem,
 ]).annotate({ identifier: "MarketplaceInstallItem" })
 export type MarketplaceInstallItem = typeof MarketplaceInstallItem.Type
 
@@ -182,6 +224,7 @@ export const MarketplaceInstallResult = Schema.Struct({
   slug: Schema.String,
   error: Schema.optional(Schema.String),
   filePath: Schema.optional(Schema.String),
+  filePaths: Schema.optional(Schema.Array(Schema.String)),
   // Int keeps the generated clients on a plain integer; Schema.Number would emit a
   // number | "NaN" | "Infinity" union that Kotlin/Java codegen models awkwardly.
   line: Schema.optional(Schema.Int),

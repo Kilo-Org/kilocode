@@ -108,3 +108,23 @@ test("still rejects dollar-prefixed env references in untrusted config", async (
     data: { message: expect.stringContaining("environment references are not allowed") },
   })
 })
+
+test("parses frontmatter that needs sanitization on every read of the same content", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      const name = `colon-${path.basename(dir)}`
+      const text = `---\nname: ${name}\ndescription: Use when: deploying\n---\n\nBody\n`
+      const first = path.join(dir, "first", "SKILL.md")
+      const second = path.join(dir, "second", "SKILL.md")
+      await Bun.write(first, text)
+      await Bun.write(second, text)
+      return { name, first, second }
+    },
+  })
+
+  for (const item of [tmp.extra.first, tmp.extra.second, tmp.extra.first]) {
+    const parsed = await ConfigMarkdown.parse(item, { trusted: true })
+    expect(parsed.data.name).toBe(tmp.extra.name)
+    expect(parsed.data.description).toBe("Use when: deploying")
+  }
+})

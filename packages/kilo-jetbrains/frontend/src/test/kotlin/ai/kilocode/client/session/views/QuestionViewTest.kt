@@ -3,6 +3,7 @@ package ai.kilocode.client.session.views
 import ai.kilocode.client.session.model.Question
 import ai.kilocode.client.session.model.QuestionItem
 import ai.kilocode.client.session.model.QuestionOption
+import ai.kilocode.client.session.model.QuestionRequestState
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
@@ -998,6 +999,86 @@ class QuestionViewTest : BasePlatformTestCase() {
         assertEquals("Custom editor should have preserved text", "preserved text", editorAfterBack!!.text)
     }
 
+    // ------ re-show while already visible (hidden-session reveal resync) ------
+
+    fun `test re-showing same question preserves custom text and page position`() {
+        view.show(
+            Question(
+                id = "q_reveal_same",
+                items = listOf(
+                    QuestionItem(
+                        question = "How?",
+                        header = "H",
+                        options = listOf(QuestionOption("X", "")),
+                        multiple = false,
+                        custom = true,
+                    ),
+                    QuestionItem(
+                        question = "What?",
+                        header = "W",
+                        options = listOf(QuestionOption("Y", "")),
+                        multiple = false,
+                        custom = false,
+                    ),
+                ),
+            )
+        )
+        findAll<JBRadioButton>(view).first { it.actionCommand == "" }.doClick()
+        findAll<EditorTextField>(view).first().text = "typed answer"
+        button(view, "Next").doClick()
+
+        val before = scrolls
+        // Same question object arrives again — e.g. the containing session UI was hidden while the
+        // question was active and is now revealed.
+        view.show(
+            Question(
+                id = "q_reveal_same",
+                items = listOf(
+                    QuestionItem(
+                        question = "How?",
+                        header = "H",
+                        options = listOf(QuestionOption("X", "")),
+                        multiple = false,
+                        custom = true,
+                    ),
+                    QuestionItem(
+                        question = "What?",
+                        header = "W",
+                        options = listOf(QuestionOption("Y", "")),
+                        multiple = false,
+                        custom = false,
+                    ),
+                ),
+            )
+        )
+
+        assertTrue(view.isVisible)
+        assertTrue("Re-showing the same question should still request a scroll", scrolls > before)
+        assertLabelsContain(view, "What?")
+        navButton(view, "Back").doClick()
+        val editor = findAll<EditorTextField>(view).firstOrNull()
+        assertNotNull("Custom editor should still be present after reveal", editor)
+        assertEquals("Custom text should survive a same-question reveal", "typed answer", editor!!.text)
+    }
+
+    fun `test showing a different question after reveal resets state`() {
+        view.show(customSingleQuestion("q_reveal_a"))
+        findAll<JBRadioButton>(view).first { it.actionCommand == "" }.doClick()
+        findAll<EditorTextField>(view).first().text = "stale"
+
+        view.show(customSingleQuestion("q_reveal_b"))
+
+        assertTrue(view.isVisible)
+        assertFalse(
+            "A new request id must reset the custom radio selection",
+            findAll<JBRadioButton>(view).first { it.actionCommand == "" }.isSelected,
+        )
+        assertNull(
+            "A new request id must not retain the previous custom editor",
+            findAll<EditorTextField>(view).firstOrNull { it.text == "stale" },
+        )
+    }
+
     fun `test optionless custom question is answerable`() {
         view.show(
             Question(
@@ -1031,6 +1112,80 @@ class QuestionViewTest : BasePlatformTestCase() {
 
         assertFalse(view.isVisible)
         assertEquals(listOf(listOf("my answer")), replies.single().second.answers)
+    }
+
+    // ------ refused decision ------
+
+    fun `test state-only show keeps the selection and shows the failure`() {
+        val q = singleSelectQuestion("q_refused")
+        view.show(q)
+        option<JBRadioButton>(view, "Minimal").doClick()
+
+        view.show(q.copy(state = QuestionRequestState.ERROR, message = "boom"))
+
+        assertTrue(view.isVisible)
+        assertTrue(
+            "A state-only show must keep the answer the user picked",
+            option<JBRadioButton>(view, "Minimal").isSelected,
+        )
+        val failure = findAll<JBLabel>(view).first { it.text == "boom" }
+        assertTrue("The refusal should be shown", failure.isVisible)
+    }
+
+    fun `test state-only show clears a previous failure`() {
+        val q = singleSelectQuestion("q_recovered")
+        view.show(q)
+        view.show(q.copy(state = QuestionRequestState.ERROR, message = "boom"))
+
+        view.show(q.copy(state = QuestionRequestState.PENDING, message = null))
+
+        assertTrue(
+            "A recovered question must not keep showing the refusal",
+            findAll<JBLabel>(view).none { it.text == "boom" && it.isVisible },
+        )
+    }
+
+    fun `test refused reply restores the answers after the card hides`() {
+        val q = singleSelectQuestion("q_restore")
+        view.show(q)
+        option<JBRadioButton>(view, "Minimal").doClick()
+        button(view, "Submit").doClick()
+
+        assertFalse("Submitting hides the card until the outcome is known", view.isVisible)
+
+        view.show(q.copy(state = QuestionRequestState.ERROR, message = "boom"))
+
+        assertTrue(view.isVisible)
+        assertTrue(
+            "A refused reply must restore the answer the user gave",
+            option<JBRadioButton>(view, "Minimal").isSelected,
+        )
+        assertTrue(
+            "The refusal should be shown",
+            findAll<JBLabel>(view).any { it.text == "boom" && it.isVisible },
+        )
+    }
+
+    fun `test submitted question is not shown again while it waits`() {
+        val q = singleSelectQuestion("q_waiting")
+        view.show(q)
+        option<JBRadioButton>(view, "Minimal").doClick()
+        button(view, "Submit").doClick()
+
+        view.show(q.copy(state = QuestionRequestState.RESPONDING))
+
+        assertFalse("A request already sent stays off screen", view.isVisible)
+    }
+
+    fun `test submitted question disables its actions`() {
+        val q = singleSelectQuestion("q_inflight")
+        view.show(q)
+        option<JBRadioButton>(view, "Minimal").doClick()
+
+        view.show(q.copy(state = QuestionRequestState.RESPONDING))
+
+        assertFalse("A request already sent cannot be sent again", button(view, "Submit").isEnabled)
+        assertFalse("A request already sent cannot be dismissed again", button(view, "Dismiss").isEnabled)
     }
 
     // ------ helpers ------

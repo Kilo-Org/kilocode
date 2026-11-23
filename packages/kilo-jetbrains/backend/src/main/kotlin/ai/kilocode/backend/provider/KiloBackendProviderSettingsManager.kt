@@ -37,6 +37,7 @@ internal class KiloBackendProviderSettingsManager(
         private val FETCH by lazy { KiloBackendHttpClients.modelFetch() }
         private const val CALL_TIMEOUT_SECONDS = 15L
         private const val OAUTH_CALL_TIMEOUT_SECONDS = 60L
+        private const val GATEWAY_PROVIDER_ID = "kilo"
     }
 
     suspend fun state(directory: String): ProviderSettingsDto {
@@ -54,14 +55,23 @@ internal class KiloBackendProviderSettingsManager(
         val global = load("global_config", errors) {
             parsed(get("/global/config"))
         } ?: empty
-        val local = load("workspace_config", errors) {
+        // The resolved `/config` body carries every global value the project file does not override
+        // and includes other config sources, so it is the only body that describes the effective
+        // provider settings (npm, baseURL, env) the UI and `disconnect` rely on.
+        val resolved = load("workspace_config", errors) {
             parsed(get("/config?directory=${enc(directory)}"))
         } ?: empty
-        val cfg = scopedConfig(global.config, local.config)
-        val disabled = (global.disabled + local.disabled).distinct().sorted()
-        val enabled = (global.enabled + local.enabled).distinct().sorted()
-        val disabledScopes = scopedIds(global.disabled, local.disabled)
-        val enabledScopes = scopedIds(global.enabled, local.enabled)
+        // The resolved body also repeats every global list entry, so it cannot tell a workspace-scope
+        // entry from an inherited one. The overlay reports each file's raw content; it is used only
+        // for the scope maps, never for the config or the merged id lists.
+        val project = load("config_overlay", errors) {
+            KiloCliDataParser.parseConfigOverlayProject(get("/config/overlay?directory=${enc(directory)}&scope=project"))?.let { parsed(it) }
+        }
+        val cfg = scopedConfig(global.config, resolved.config)
+        val disabled = (global.disabled + resolved.disabled).distinct().sorted()
+        val enabled = (global.enabled + resolved.enabled).distinct().sorted()
+        val disabledScopes = scopedIds(global.disabled, project?.disabled ?: resolved.disabled, merged = project == null)
+        val enabledScopes = scopedIds(global.enabled, project?.enabled ?: resolved.enabled, merged = project == null)
         val result = ProviderSettingsDto(
             providers = providers?.first ?: emptyList(),
             connected = providers?.second ?: emptyList(),
@@ -85,6 +95,9 @@ internal class KiloBackendProviderSettingsManager(
     }
 
     suspend fun connect(input: ProviderConnectDto): ProviderActionResultDto {
+        if (input.providerId == GATEWAY_PROVIDER_ID) {
+            return ProviderActionResultDto(state(input.directory), error = "Kilo Gateway cannot be connected from provider settings.")
+        }
         val body = KiloCliDataParser.buildProviderAuthJson(input.key, input.metadata)
         put("/auth/${enc(input.providerId)}", body)
         dispose()
@@ -109,7 +122,7 @@ internal class KiloBackendProviderSettingsManager(
         val current = state(input.directory)
         val provider = current.providers.firstOrNull { it.id == input.providerId }
         val cfg = current.config[input.providerId]
-        if (input.providerId == "kilo") {
+        if (input.providerId == GATEWAY_PROVIDER_ID) {
             return ProviderActionResultDto(current, error = "Kilo Gateway cannot be disconnected from provider settings.")
         }
         if (provider?.source == "env" && cfg == null) {
@@ -144,25 +157,65 @@ internal class KiloBackendProviderSettingsManager(
             patch(input.directory, scope, KiloCliDataParser.buildDisabledProviderPatch(disabledFor(current, scope).filter { it != input.providerId }))
         }
         dispose()
-        return ProviderActionResultDto(state(input.directory))
+        // Clearing every scope the manager knows about can still leave the id disabled in a source
+        // it cannot edit (managed or org config), so report that instead of claiming success.
+        val next = state(input.directory)
+        if (input.providerId in next.disabled) {
+            return ProviderActionResultDto(next, error = "Provider is still disabled in another configuration source.")
+        }
+        return ProviderActionResultDto(next)
     }
 
     suspend fun saveCustom(input: CustomProviderSaveDto): ProviderActionResultDto {
         val err = validate(input)
         if (err != null) return ProviderActionResultDto(state(input.directory), error = err)
+        // Read the provider's raw entry from both scopes directly, rather than the single merged
+        // "scope" exposed on ProviderSettingsDto, because a provider id can have an independent,
+        // hand-authored entry in both the global and workspace config files at once. The primary
+        // patch below only targets the scope the dialog is effectively editing; a model removed
+        // from it must also be nulled out of any other scope that independently lists it, or that
+        // scope's stale copy resurrects the model in the merged config next time settings load.
+        val globalCfg = parsed(get("/global/config")).config[input.id]
+        val localCfg = parsed(get("/config?directory=${enc(input.directory)}")).config[input.id]
+        val existing = scopedConfig(
+            globalCfg?.let { mapOf(input.id to it) } ?: emptyMap(),
+            localCfg?.let { mapOf(input.id to it) } ?: emptyMap(),
+        )[input.id]
+        val scope = existing?.scope ?: "global"
         // The config schema only allows nulling a whole provider entry (to delete it), not an
-        // individual field inside one, so a previously-set env var can only be cleared by deleting
+        // individual field inside one (except for "models", which is deletion-aware — see
+        // buildCustomProviderPatch), so a previously-set env var can only be cleared by deleting
         // the entry before the patch below recreates it. Only do this when there is an existing env
         // var to clear: deleting drops any fields the recreate patch doesn't set (e.g. a
         // hand-authored whitelist/blacklist), and a failure between the two patches would otherwise
         // leave the entry missing until the next successful save.
-        val cfg = if (input.envVar.isNullOrBlank()) state(input.directory).config[input.id] else null
-        val stale = cfg?.takeIf { it.env.isNotEmpty() }
-        if (stale != null) patch(KiloCliDataParser.buildCustomProviderDeletePatch(input.id))
+        val stale = existing?.takeIf { input.envVar.isNullOrBlank() && it.env.isNotEmpty() }
+        if (stale != null) patch(input.directory, scope, KiloCliDataParser.buildCustomProviderDeletePatch(input.id))
         // The dialog never edits headers, so the delete above would otherwise drop hand-authored
         // ones: carry them into the recreate patch when the save itself doesn't set any.
         val save = if (stale != null && input.headers.isEmpty()) input.copy(headers = stale.headers) else input
-        patch(KiloCliDataParser.buildCustomProviderPatch(save))
+        // Diff the submitted models against the persisted ones regardless of `stale`: this set
+        // also drives the other-scope cleanup below, which must still run even when the primary
+        // scope took the delete-then-recreate path (that recreate only touches the *edited*
+        // scope; an independent duplicate in the other scope is untouched by it either way).
+        val kept = input.models.mapTo(mutableSetOf()) { it.id }
+        val removedModelIds: Set<String> = (existing?.models?.keys ?: emptySet()) - kept
+        // A delete-then-recreate patch already drops every existing model, so no removal
+        // sentinels are needed on top of it for the primary scope. Otherwise, the sentinels are
+        // what explicitly null the deselected IDs instead of letting them silently survive the
+        // deep-merge PATCH (and reappear after a restart).
+        val primaryRemovedModelIds = if (stale != null) emptySet() else removedModelIds
+        patch(input.directory, scope, KiloCliDataParser.buildCustomProviderPatch(save, primaryRemovedModelIds))
+        // The provider id also has a raw entry in the other scope: null out any of the removed
+        // models it still lists so it can't resurrect them once it's no longer the effective copy.
+        if (removedModelIds.isNotEmpty()) {
+            val otherScope = if (scope == "workspace") "global" else "workspace"
+            val otherCfg = if (scope == "workspace") globalCfg else localCfg
+            val otherRemoved: Set<String> = otherCfg?.models?.keys?.intersect(removedModelIds) ?: emptySet()
+            if (otherRemoved.isNotEmpty()) {
+                patch(input.directory, otherScope, KiloCliDataParser.buildCustomProviderModelRemovalPatch(input.id, otherRemoved))
+            }
+        }
         if (input.envVar.isNullOrBlank()) {
             val key = input.apiKey?.takeIf { it.isNotBlank() }
             if (key != null) put("/auth/${enc(input.id)}", KiloCliDataParser.buildProviderAuthJson(key, emptyMap()))
@@ -222,7 +275,6 @@ internal class KiloBackendProviderSettingsManager(
     private suspend fun get(path: String) = request(Request.Builder().url(url(path)).get().build())
     private suspend fun post(path: String, body: String, timeoutSeconds: Long = CALL_TIMEOUT_SECONDS) = request(Request.Builder().url(url(path)).post(body.toRequestBody(JSON)).build(), timeoutSeconds)
     private suspend fun put(path: String, body: String) = request(Request.Builder().url(url(path)).put(body.toRequestBody(JSON)).build())
-    private suspend fun patch(body: String) = request(Request.Builder().url(url("/global/config")).patch(body.toRequestBody(JSON)).build())
     private suspend fun patch(directory: String, scope: String, body: String) {
         val path = if (scope == "workspace") "/config?directory=${enc(directory)}" else "/global/config"
         request(Request.Builder().url(url(path)).patch(body.toRequestBody(JSON)).build())
@@ -244,12 +296,21 @@ internal class KiloBackendProviderSettingsManager(
         }.toMap()
     }
 
-    private fun scopedIds(global: List<String>, local: List<String>): Map<String, List<String>> {
+    /**
+     * Maps every listed id to the scopes whose config file lists it.
+     *
+     * `merged` says that [local] is not the project file's own list but the resolved config,
+     * which repeats whatever the global file sets. In that case an id that is already global
+     * must not also be attributed to the workspace, or the UI would claim a workspace override
+     * that does not exist and `enable` would rewrite the workspace file for nothing.
+     */
+    private fun scopedIds(global: List<String>, local: List<String>, merged: Boolean = false): Map<String, List<String>> {
         val globals = global.toSet()
+        val locals = local.toSet()
         return (global + local).distinct().associateWith { id ->
             buildList {
                 if (id in globals) add("global")
-                if (id in local && id !in globals) add("workspace")
+                if (id in locals && (!merged || id !in globals)) add("workspace")
             }
         }
     }
@@ -294,6 +355,7 @@ internal class KiloBackendProviderSettingsManager(
     private fun enc(value: String) = URLEncoder.encode(value, StandardCharsets.UTF_8)
 
     private fun validate(input: CustomProviderSaveDto): String? {
+        if (input.id.trim() == GATEWAY_PROVIDER_ID) return "Kilo Gateway cannot be saved as a custom provider."
         val env = input.envVar
         if (!Regex("^[a-zA-Z0-9_-]+$").matches(input.id.trim())) return "Provider ID can only contain letters, numbers, underscores, and hyphens."
         if (!input.baseUrl.startsWith("http://") && !input.baseUrl.startsWith("https://")) return "Base URL must start with http:// or https://."

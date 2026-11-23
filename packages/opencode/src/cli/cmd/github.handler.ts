@@ -7,7 +7,6 @@ import { Octokit } from "@octokit/rest"
 import { graphql } from "@octokit/graphql"
 import * as core from "@actions/core"
 import * as github from "@actions/github"
-import type { Context } from "@actions/github/lib/context"
 import type {
   IssueCommentEvent,
   IssuesEvent,
@@ -35,6 +34,8 @@ import { parseGitHubRemote } from "@/util/repository"
 import { Effect } from "effect"
 import { GitHubSecurity } from "@/kilocode/security/github" // kilocode_change
 import { extractResponseText, formatPromptTooLargeError } from "./github.shared"
+
+type Context = typeof github.context // kilocode_change - @actions/github 9 no longer exports lib/context
 
 type GitHubAuthor = {
   login: string
@@ -449,6 +450,7 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
     let session: { id: SessionID; title: string; version: string }
     let shareId: string | undefined
     let exitCode = 0
+    let githubClientReady = false
     type PromptFiles = Awaited<ReturnType<typeof getUserPrompt>>["promptFiles"]
     const triggerCommentId = isCommentEvent
       ? (payload as IssueCommentEvent | PullRequestReviewCommentEvent).comment.id
@@ -497,6 +499,7 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
       octoGraph = graphql.defaults({
         headers: { authorization: `token ${appToken}` },
       })
+      githubClientReady = true
 
       const { userPrompt, promptFiles } = await getUserPrompt()
       if (!useGithubToken) {
@@ -658,9 +661,13 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
       } else if (e instanceof Error) {
         msg = e.message
       }
-      if (isUserEvent) {
-        await createComment(`${msg}${footer()}`)
-        await removeReaction(commentType)
+      if (isUserEvent && githubClientReady) {
+        try {
+          await createComment(`${msg}${footer()}`)
+          await removeReaction(commentType)
+        } catch (error) {
+          console.error("Failed to report error on GitHub:", error)
+        }
       }
       core.setFailed(msg)
       // Also output the clean error message for the action to capture
@@ -1029,8 +1036,9 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
       // kilocode_change end
 
       if (!response.ok) {
-        const responseJson = (await response.json()) as { error?: string }
-        throw new Error(`App token exchange failed: ${response.status} ${response.statusText} - ${responseJson.error}`)
+        throw new Error(
+          `App token exchange failed: ${response.status} ${response.statusText} - ${await response.text()}`,
+        )
       }
 
       const responseJson = (await response.json()) as { token: string }

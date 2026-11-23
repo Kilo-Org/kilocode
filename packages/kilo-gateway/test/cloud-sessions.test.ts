@@ -52,6 +52,90 @@ describe("cloud session export requests", () => {
   })
 })
 
+describe("cloud session import cut", () => {
+  function exported() {
+    const msg = (id: string, role: "user" | "assistant", file: string) => ({
+      info: {
+        id,
+        sessionID: "ses_cloud",
+        role,
+        time: { created: 1 },
+        summary: { diffs: [{ file, after: id }] },
+      },
+      parts: [{ id: `prt_${id}`, messageID: id, sessionID: "ses_cloud", type: "text", text: id }],
+    })
+    return {
+      info: { id: "ses_cloud" },
+      messages: [
+        msg("msg_001", "user", "a.txt"),
+        msg("msg_002", "assistant", "a.txt"),
+        msg("msg_003", "user", "b.txt"),
+      ],
+      sessionDiff: [{ file: "b.txt", after: "post-cut" }],
+      session_diff: [{ file: "b.txt", after: "post-cut" }],
+    }
+  }
+
+  async function serve(response: Response, run: () => Promise<unknown>) {
+    const fetch = globalThis.fetch
+    const urls: string[] = []
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      urls.push(String(input))
+      return response
+    }) as typeof globalThis.fetch
+    try {
+      return { result: await run(), urls }
+    } finally {
+      globalThis.fetch = fetch
+    }
+  }
+
+  test("without a cut, requests no query and returns the export unchanged", async () => {
+    const body = exported()
+    const { result, urls } = await serve(Response.json(body), () => fetchCloudSessionForImport("token", "ses_cloud"))
+    expect(urls).toEqual(["https://ingest.kilosessions.ai/api/session/ses_cloud/export"])
+    expect(result).toEqual({ ok: true, data: body })
+  })
+
+  test("sends upToMessageId and keeps messages up to and including the cut", async () => {
+    const { result, urls } = await serve(Response.json(exported()), () =>
+      fetchCloudSessionForImport("token", "ses_cloud", { upToMessageId: "msg_002" }),
+    )
+    expect(urls).toEqual(["https://ingest.kilosessions.ai/api/session/ses_cloud/export?upToMessageId=msg_002"])
+    const body = exported()
+    expect(result).toEqual({ ok: true, data: { info: body.info, messages: body.messages.slice(0, 2) } })
+  })
+
+  test("a cut at the first message keeps only that message and its parts", async () => {
+    const { result } = await serve(Response.json(exported()), () =>
+      fetchCloudSessionForImport("token", "ses_cloud", { upToMessageId: "msg_001" }),
+    )
+    expect(result).toEqual({ ok: true, data: { info: { id: "ses_cloud" }, messages: exported().messages.slice(0, 1) } })
+  })
+
+  test("fails with clone_cut_not_found when the cut message is not in the export", async () => {
+    const { result } = await serve(Response.json(exported()), () =>
+      fetchCloudSessionForImport("token", "ses_cloud", { upToMessageId: "msg_0025" }),
+    )
+    expect(result).toMatchObject({ ok: false, status: 404, code: "clone_cut_not_found" })
+  })
+
+  test("maps the server clone_cut_not_found 404 to the cut code", async () => {
+    const { result } = await serve(
+      Response.json({ success: false, error: "clone_cut_not_found" }, { status: 404 }),
+      () => fetchCloudSessionForImport("token", "ses_cloud", { upToMessageId: "msg_009" }),
+    )
+    expect(result).toMatchObject({ ok: false, status: 404, code: "clone_cut_not_found" })
+  })
+
+  test("keeps a plain session 404 distinct from a missing cut", async () => {
+    const { result } = await serve(Response.json({ success: false, error: "session_not_found" }, { status: 404 }), () =>
+      fetchCloudSessionForImport("token", "ses_cloud", { upToMessageId: "msg_002" }),
+    )
+    expect(result).toEqual({ ok: false, status: 404, error: "Session not found in cloud" })
+  })
+})
+
 describe("cloud session import preparation", () => {
   function sample() {
     return {
@@ -225,6 +309,36 @@ describe("cloud session import preparation", () => {
     const detached = prepareSessionImport(sample(), deps(undefined, {}))
     expect(detached.info).not.toHaveProperty("workspaceID")
     expect(detached.info).not.toHaveProperty("path")
+  })
+
+  test("issues fresh IDs in source-ID order when the export lists items in ingest order", () => {
+    const base = sample()
+    const part = (id: string, messageID: string, text: string) => ({
+      id,
+      messageID,
+      sessionID: "ses_cloud",
+      type: "text",
+      text,
+    })
+    const user = { info: { ...base.messages[1]!.info, id: "msg_1" }, parts: [part("prt_1", "msg_1", "ask")] }
+    const reply = {
+      info: { ...base.messages[0]!.info, id: "msg_2", parentID: "msg_1" },
+      parts: [part("prt_3", "msg_2", "second"), part("prt_2", "msg_2", "first")],
+    }
+    const result = prepareSessionImport(
+      { info: base.info, messages: [reply, user] },
+      deps(["msg_local_1", "prt_local_1", "msg_local_2", "prt_local_2", "prt_local_3"]),
+    )
+
+    expect(result.messages.map((row) => [row.id, row.data.role, row.data.parentID])).toEqual([
+      ["msg_local_1", "user", undefined],
+      ["msg_local_2", "assistant", "msg_local_1"],
+    ])
+    expect(result.parts.map((row) => [row.id, row.data.text])).toEqual([
+      ["prt_local_1", "ask"],
+      ["prt_local_2", "first"],
+      ["prt_local_3", "second"],
+    ])
   })
 
   test("rejects malformed, duplicate, and dangling transcript data", () => {

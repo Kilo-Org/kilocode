@@ -200,6 +200,25 @@ describe("buildSidebarOrder", () => {
     ])
   })
 
+  it("puts pinned worktrees first, even from a collapsed section", () => {
+    const s1 = sec("s1", 0, { collapsed: true })
+    const w1 = wt("w1", { sectionId: "s1", pinned: true })
+    const w2 = wt("w2", { sectionId: "s1" })
+    const w3 = wt("w3")
+    const w4 = wt("w4", { pinned: true })
+    const sorted = [w1, w4, w2, w3]
+    const items = buildTopLevelItems([s1], [w4, w3], sorted, ["w1", "w4", "w3", "s1", "w2"])
+    const members = (id: string) => (id === "s1" ? [w1, w2] : [])
+    expect(items.map((item) => (item.kind === "worktree" ? item.wt.id : item.section.id))).toEqual(["w3", "s1"])
+    expect(buildSidebarOrder(items, sorted, [s1], members).map((item) => item.id)).toEqual(["local", "w1", "w4", "w3"])
+  })
+
+  it("puts pinned worktrees first when no sections exist", () => {
+    const sorted = [wt("a"), wt("b", { pinned: true }), wt("c")]
+    const items = buildTopLevelItems([], [], sorted, [])
+    expect(buildSidebarOrder(items, sorted, [], () => []).map((item) => item.id)).toEqual(["local", "b", "a", "c"])
+  })
+
   it("skips worktrees in collapsed sections", () => {
     const s1 = sec("s1", 0, { collapsed: true })
     const w1 = wt("w1", { sectionId: "s1" })

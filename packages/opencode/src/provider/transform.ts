@@ -7,6 +7,8 @@ import { iife } from "@/util/iife"
 import { kiloProviderOptions } from "@/kilocode/provider-options"
 import { isLing } from "@/kilocode/model-match" // kilocode_change
 import { reasoningSummary } from "@/kilocode/provider/reasoning-summary" // kilocode_change
+import { imageModalities } from "@/kilocode/provider/image-output" // kilocode_change
+import { lowerTypeArrays } from "@/kilocode/provider/gemini-schema" // kilocode_change
 
 type Modality = NonNullable<ModelsDev.Model["modalities"]>["input"][number]
 
@@ -216,11 +218,10 @@ function normalizeMessages(
             return part.text !== ""
           }
           if (part.type === "reasoning") {
-            return (
-              part.text.trim().length > 0 ||
-              part.providerOptions?.bedrock?.signature != null ||
-              part.providerOptions?.bedrock?.redactedData != null
-            )
+            // Match what the SDK can replay before assigning cache points. Otherwise
+            // unsigned reasoning can leave an empty or cache-point-only message.
+            const metadata = part.providerOptions?.[model.providerID] ?? part.providerOptions?.bedrock
+            return metadata?.signature != null || metadata?.redactedContent != null || metadata?.redactedData != null
           }
           return true
         })
@@ -369,8 +370,33 @@ function isLikelyChatGPTSubscription(model: Provider.Model): boolean {
   return model.providerID === "openai" && model.cost?.input === 0 && model.cost?.output === 0
 }
 
-function supportsPromptCacheBreakpoint(model: Provider.Model): boolean {
+// Endpoint overrides (options.endpoint / options.baseURL) reroute a first-party
+// provider ID through a proxy that may reject prompt_cache_breakpoint (#13285).
+function isFirstPartyBreakpointEndpoint(model: Provider.Model, options: Record<string, unknown>): boolean {
+  const override = options["providerEndpointOverride"] ?? options["endpoint"] ?? options["baseURL"]
+  if (typeof override !== "string" || override.length === 0) return true
+  let host: string
+  try {
+    host = new URL(override).hostname.toLowerCase()
+  } catch {
+    // Config placeholders ({env:...}, {file:...}) and SDK-style ${...} variables
+    // are expanded before the request is sent, so an unexpanded first-party
+    // base URL must not be rejected as unparseable.
+    return /\{(?:env|file):[^}]+\}|\$\{[^}]+\}/.test(override)
+  }
+  if (model.providerID === "openai") return host === "openai.com" || host.endsWith(".openai.com")
+  if (model.providerID === "azure" || model.providerID === "azure-cognitive-services")
+    return [".azure.com", ".azure.us", ".azure.cn", ".azure-api.net"].some((s) => host.endsWith(s))
+  if (model.providerID === "kilo") return host === "api.kilo.ai" || host.endsWith(".kilo.ai")
+  return false
+}
+
+function supportsPromptCacheBreakpoint(model: Provider.Model, options: Record<string, unknown> = {}): boolean {
   if (isLikelyChatGPTSubscription(model)) return false
+  // Only first-party OpenAI-family deployments support explicit breakpoints;
+  // custom @ai-sdk/openai endpoints reject prompt_cache_breakpoint (#13285).
+  if (!["openai", "azure", "azure-cognitive-services", "kilo"].includes(model.providerID)) return false
+  if (!isFirstPartyBreakpointEndpoint(model, options)) return false
   const match = model.api.id.match(/gpt-(\d+)\.(\d+)/)
   if (match) {
     const major = Number(match[1])
@@ -383,7 +409,7 @@ function supportsPromptCacheBreakpoint(model: Provider.Model): boolean {
 }
 // kilocode_change end
 
-function applyCaching(msgs: ModelMessage[], model: Provider.Model): ModelMessage[] {
+function applyCaching(msgs: ModelMessage[], model: Provider.Model, options: Record<string, unknown> = {}): ModelMessage[] { // kilocode_change
   const system = msgs.filter((msg) => msg.role === "system").slice(0, 2)
   const final = msgs.filter((msg) => msg.role !== "system").slice(-2)
 
@@ -407,7 +433,7 @@ function applyCaching(msgs: ModelMessage[], model: Provider.Model): ModelMessage
       cacheControl: { type: "ephemeral" },
     },
     // kilocode_change start
-    ...(supportsPromptCacheBreakpoint(model)
+    ...(supportsPromptCacheBreakpoint(model, options)
       ? {
           openai: {
             promptCacheBreakpoint: { mode: "explicit" },
@@ -538,11 +564,11 @@ export function message(msgs: ModelMessage[], model: Provider.Model, options: Re
       ((model.api.npm === "@ai-sdk/openai" ||
         model.api.npm === "@ai-sdk/azure" ||
         model.api.npm === "@kilocode/kilo-gateway") &&
-        supportsPromptCacheBreakpoint(model))) &&
+        supportsPromptCacheBreakpoint(model, options))) &&
     model.api.npm !== "@ai-sdk/gateway" &&
     !usesAnthropicAutomaticCaching
   ) {
-    msgs = applyCaching(msgs, model)
+    msgs = applyCaching(msgs, model, options)
   }
   // kilocode_change end
 
@@ -590,7 +616,6 @@ const GEMINI_MODELS_WITH_SAMPLING_DEFAULTS = [
 export function temperature(model: Provider.Model) {
   const id = model.api.id.toLowerCase()
   if (id.includes("north-mini-code")) return 1.0
-  if (id.includes("qwen")) return 0.55
   if (id.includes("claude")) return undefined
   if (id.includes("gemini"))
     return GEMINI_MODELS_WITH_SAMPLING_DEFAULTS.some((model) => model.test(id)) ? 1.0 : undefined
@@ -610,7 +635,6 @@ export function temperature(model: Provider.Model) {
 
 export function topP(model: Provider.Model) {
   const id = model.api.id.toLowerCase()
-  if (id.includes("qwen")) return 1
   if (id.includes("gemini"))
     return GEMINI_MODELS_WITH_SAMPLING_DEFAULTS.some((model) => model.test(id)) ? 0.95 : undefined
   if (["minimax-m2", "kimi-k2.5", "kimi-k2p5", "kimi-k2-5"].some((s) => id.includes(s))) {
@@ -751,6 +775,41 @@ function anthropicAdaptiveEfforts(apiId: string): string[] | null {
 
 function anthropicOmitsThinking(apiId: string) {
   return anthropicUsesModernAdaptiveThinking(apiId)
+}
+
+// Opus 5, Sonnet 5, Fable 5.x, and Mythos 5.x think without a `thinking` parameter.
+function anthropicThinksByDefault(apiId: string) {
+  const version = /claude-(?:[a-z]+-)?(\d+)(?:[.-](\d{1,2}))?(?:[.@-]|$)/i.exec(apiId)
+  if (!version) return false
+  return Number(version[1]) >= 5
+}
+
+// Fable 5.1 binds each thinking signature to the system prompt, tool list, and
+// messages above it, and rejects the request when any of that changes. opencode
+// re-renders parts of that prefix between turns (system prompt, tools, compaction),
+// so ask the API to drop the affected blocks instead of failing the request.
+// Models that do not run the check accept the field, so it is safe on every Claude.
+// The patched AI SDK adds the thinking-binding-controls beta whenever it is set.
+const ANTHROPIC_BLOCK_BINDING = { prefixMismatchBehavior: "drop_block" }
+
+function anthropicBlockBinding(model: Provider.Model, options: { [x: string]: any }) {
+  if (!model.api.id.toLowerCase().includes("claude")) return options
+  const byDefault = anthropicThinksByDefault(model.api.id)
+  switch (model.api.npm) {
+    case "@ai-sdk/anthropic":
+    case "@ai-sdk/google-vertex/anthropic": {
+      const thinking = options.thinking ?? (byDefault ? { type: "adaptive" } : undefined)
+      if (!thinking || (thinking.type !== "adaptive" && thinking.type !== "enabled")) return options
+      return { ...options, thinking: { ...thinking, blockBinding: ANTHROPIC_BLOCK_BINDING } }
+    }
+    case "@ai-sdk/amazon-bedrock": {
+      const reasoningConfig = options.reasoningConfig ?? (byDefault ? { type: "adaptive" } : undefined)
+      if (!reasoningConfig || (reasoningConfig.type !== "adaptive" && reasoningConfig.type !== "enabled"))
+        return options
+      return { ...options, reasoningConfig: { ...reasoningConfig, blockBinding: ANTHROPIC_BLOCK_BINDING } }
+    }
+  }
+  return options
 }
 
 function googleThinkingLevelEfforts(apiId: string) {
@@ -1484,6 +1543,10 @@ export function options(input: {
     if (input.model.api.id.includes("gemini-3")) {
       result["reasoning"] = { effort: "high" }
     }
+    // kilocode_change start - image models only return images when the image modality is requested
+    const modalities = imageModalities(input.model)
+    if (modalities) result["modalities"] = modalities
+    // kilocode_change end
   }
 
   if (
@@ -1494,7 +1557,7 @@ export function options(input: {
   }
 
   if (
-    ["zai", "zhipuai"].some((id) => input.model.providerID.includes(id)) &&
+    ["zai", "zai-coding-plan", "zhipuai", "zhipuai-coding-plan"].includes(input.model.providerID) && // kilocode_change - keep vendor defaults out of custom providers
     input.model.api.npm === "@ai-sdk/openai-compatible"
   ) {
     result["thinking"] = {
@@ -1608,11 +1671,11 @@ export function options(input: {
         input.model.api.npm === "@ai-sdk/github-copilot" ||
         input.model.api.npm === "@openrouter/ai-sdk-provider" ||
         input.model.api.npm === "@kilocode/kilo-gateway") &&
-      // kilocode_change end
       input.model.api.id.includes("gpt-5.") &&
       !input.model.api.id.includes("codex") &&
       !input.model.api.id.includes("-chat") &&
       input.model.providerID !== "azure"
+      // kilocode_change end
     ) {
       result["textVerbosity"] = "low"
     }
@@ -1672,7 +1735,7 @@ export function providerOptions(model: Provider.Model, options: { [x: string]: a
     usesOpenAIReasoningGate &&
     (model.capabilities.reasoning || options.reasoningEffort !== undefined || options.reasoningSummary !== undefined)
       ? { ...options, forceReasoning: true }
-      : options
+      : anthropicBlockBinding(model, options)
 
   if (model.api.npm === "@ai-sdk/gateway") {
     // Gateway providerOptions are split across two namespaces:
@@ -1979,7 +2042,7 @@ export function schema(model: Provider.Model, schema: JSONSchema7): JSONSchema7 
       return result
     }
 
-    schema = sanitizeGemini(schema)
+    schema = sanitizeGemini(lowerTypeArrays(schema, model.api.npm)) // kilocode_change
   }
 
   return schema

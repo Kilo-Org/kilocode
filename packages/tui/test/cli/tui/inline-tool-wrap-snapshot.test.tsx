@@ -228,6 +228,7 @@ describe("TUI inline tool wrapping", () => {
     // kilocode_change start - Kilo tools keep their dedicated renderers
     expect(toolDisplay("background_process")).toBe("background_process")
     expect(toolDisplay("semantic_search")).toBe("semantic_search")
+    expect(toolDisplay("suggest")).toBe("suggest")
     // kilocode_change end
     expect(toolDisplay("plugin_tool")).toBe("generic")
   })

@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test"
+import { describe, it, expect, spyOn } from "bun:test"
 import {
   loadSessions,
   loadMoreSessions,
@@ -6,6 +6,7 @@ import {
   type SessionRefreshContext,
 } from "../../src/kilo-provider-utils"
 import { createSessionPageState } from "../../src/kilo-provider/session-page"
+import { TelemetryProxy } from "../../src/services/telemetry"
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
 const { KiloProvider } = await import("../../src/KiloProvider")
@@ -168,6 +169,33 @@ describe("KiloProvider pending session refresh", () => {
     }
   })
 
+  it("posts ready and finishes syncing while telemetry consent is still loading", async () => {
+    const connection = createConnection(createClient())
+    const provider = new KiloProvider({} as never, connection as never)
+    const internal = provider as unknown as ProviderInternals
+    const sent: unknown[] = []
+    const pending = Promise.withResolvers<boolean>()
+    const received = Promise.withResolvers<unknown>()
+    const spy = spyOn(TelemetryProxy.getInstance(), "level").mockReturnValue(pending.promise)
+    internal.isWebviewReady = true
+    internal.webview = {
+      postMessage: async (message) => {
+        sent.push(message)
+        if ((message as { type: string }).type === "telemetryState") received.resolve(message)
+      },
+    }
+
+    try {
+      await internal.syncWebviewState("webviewReady")
+      expect(sent).toContainEqual(expect.objectContaining({ type: "ready" }))
+      expect(sent).not.toContainEqual(expect.objectContaining({ type: "telemetryState" }))
+      pending.resolve(true)
+      expect(await received.promise).toEqual({ type: "telemetryState", enabled: true })
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
   it("does not let a late listing restore the previous project's identity", async () => {
     const client = createClient()
     const pending = new Map<string, ReturnType<typeof deferred<{ data: unknown[]; response: { headers: Headers } }>>>()
@@ -202,6 +230,41 @@ describe("KiloProvider pending session refresh", () => {
     await first
 
     expect(internal.projectID).toBe("backend-b")
+  })
+
+  it("qualifies a session list with the project captured before the request", async () => {
+    const client = createClient()
+    const pending = Promise.withResolvers<{ data: unknown[]; response: { headers: Headers } }>()
+    client.experimental.session.list = async () => pending.promise as never
+    const connection = createConnection(client)
+    await connection.connect()
+    let active = "a"
+    const provider = new KiloProvider({} as never, connection as never, undefined, {
+      rootDirectory: () => `/repo/${active}`,
+      projectQualifier: () => ({ projectId: active }),
+    })
+    const internal = provider as unknown as ProviderInternals
+    const sent: unknown[] = []
+    internal.connectionState = "connected"
+    internal.isWebviewReady = true
+    internal.webview = { postMessage: async (message) => sent.push(message) }
+
+    const request = internal.handleLoadSessions()
+    active = "b"
+    pending.resolve({
+      data: [{ id: "ses-a", projectID: "backend-a", time: { created: 1, updated: 1 } }],
+      response: { headers: new Headers() },
+    })
+    await request
+
+    expect(sent).toContainEqual(
+      expect.objectContaining({
+        type: "sessionsLoaded",
+        projectId: "a",
+        sessions: [expect.objectContaining({ id: "ses-a" })],
+      }),
+    )
+    expect(internal.projectID).toBeUndefined()
   })
 
   it("keeps worktree sessions with legacy project ids", async () => {

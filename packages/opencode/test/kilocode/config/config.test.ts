@@ -1,6 +1,6 @@
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { $ } from "bun"
-import { afterEach, describe, expect, test } from "bun:test"
+import { afterEach, describe, expect, spyOn, test } from "bun:test"
 import { Effect, Fiber, Layer, Logger, Option, Schema } from "effect"
 import { NodeFileSystem, NodePath } from "@effect/platform-node"
 import path from "path"
@@ -20,9 +20,12 @@ import { Env } from "../../../src/env"
 import { Git } from "../../../src/git"
 import { KiloIndexing } from "../../../src/kilocode/indexing"
 import { KilocodeConfig } from "../../../src/kilocode/config/config"
+import { Permission } from "../../../src/permission"
 import { provideTestInstance } from "../../fixture/fixture"
 import { Filesystem } from "../../../src/util/filesystem"
 import { disposeAllInstances, tmpdir } from "../../fixture/fixture"
+import { KilocodePaths } from "../../../src/kilocode/paths"
+import os from "os"
 import { LayerNodePlatform } from "@opencode-ai/core/effect/app-node-platform"
 
 const infra = AppNodeBuilder.build(CrossSpawnSpawner.node).pipe(
@@ -135,6 +138,95 @@ describe("global config updates", () => {
           expect(
             warnings.some((warning) => warning.path.endsWith("kilo.json") && warning.message.includes("unknownField")),
           ).toBe(true)
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("does not warn for supported V2 keys", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir({ git: true })
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await writeConfig(globalTmp.path, {
+        model: "test/model",
+        snapshots: false,
+        agents: { reviewer: { description: "Review changes" } },
+      })
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          const config = await load()
+          const warnings = await Effect.runPromise(
+            Config.Service.use((svc) => svc.warnings()).pipe(Effect.scoped, Effect.provide(layer)),
+          )
+
+          expect(config.model).toBe("test/model")
+          expect(warnings.filter((warning) => warning.message.includes("Unrecognized keys"))).toEqual([])
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("warns for a V2 key the lowering does not support", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir({ git: true })
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await writeConfig(globalTmp.path, { model: "test/model", attachments: {} })
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          await load()
+          const warnings = await Effect.runPromise(
+            Config.Service.use((svc) => svc.warnings()).pipe(Effect.scoped, Effect.provide(layer)),
+          )
+
+          expect(warnings.some((warning) => warning.message.includes("attachments"))).toBe(true)
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("does not warn for a V2 key that duplicates its legacy key", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir({ git: true })
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await writeConfig(globalTmp.path, { model: "test/model", snapshot: false, snapshots: false })
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          await load()
+          const warnings = await Effect.runPromise(
+            Config.Service.use((svc) => svc.warnings()).pipe(Effect.scoped, Effect.provide(layer)),
+          )
+
+          expect(warnings.filter((warning) => warning.message.includes("Unrecognized keys"))).toEqual([])
         },
       })
     } finally {
@@ -880,6 +972,69 @@ describe("subagent variant overrides", () => {
 describe("unset propagation across layered config files", () => {
   const getGlobal = () =>
     Effect.runPromise(Config.Service.use((svc) => svc.getGlobal()).pipe(Effect.scoped, Effect.provide(layer)))
+
+  test("deletes a scalar permission entry cleared by a delete sentinel", async () => {
+    await using globalTmp = await tmpdir()
+    const jsonc = path.join(globalTmp.path, "kilo.jsonc")
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      // A settings save can write a permission as a bare scalar. Clearing its only
+      // pattern must remove the key instead of leaving an object of sentinels.
+      await writeConfig(globalTmp.path, { permission: { read: "allow" } }, "kilo.jsonc")
+
+      await saveGlobal(decode({ permission: { read: { "*": null } } }))
+
+      const written = JSON.parse(await Bun.file(jsonc).text())
+      // The cleared entry is gone; an empty container may remain, but no sentinel
+      // object is written in its place.
+      expect(written.permission ?? {}).not.toHaveProperty("read")
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("keeps only the valued entries of a promoted scalar permission", async () => {
+    await using globalTmp = await tmpdir()
+    const jsonc = path.join(globalTmp.path, "kilo.jsonc")
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      // A permission entry is stored as a bare scalar, then an update adds a pattern
+      // the scalar does not carry.
+      await writeConfig(globalTmp.path, { permission: { bash: "allow" } }, "kilo.jsonc")
+
+      await saveGlobal(decode({ permission: { bash: { "npm install": null } } }))
+
+      const text = await Bun.file(jsonc).text()
+      // The file holds only entries that carry a value.
+      expect(text).not.toContain("null")
+      expect(text).not.toContain("npm install")
+
+      const written = JSON.parse(text)
+      // The scalar survives the promotion as the wildcard default.
+      expect(written.permission.bash).toEqual({ "*": "allow" })
+
+      await clear()
+      const permission = (await getGlobal()).permission
+      expect(permission?.bash).toEqual({ "*": "allow" })
+      // The surviving entry still allows every bash command, including the named pattern.
+      const rules = Permission.fromConfig(permission ?? {})
+      expect(Permission.evaluate("bash", "npm install", rules).action).toBe("allow")
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
 
   test("removes subagent_model from every global config file when unset", async () => {
     await using globalTmp = await tmpdir()
@@ -1742,5 +1897,155 @@ describe("bash permission migration", () => {
       await clear()
       await disposeAllInstances()
     }
+  })
+})
+
+describe("legacy MCP group reporting", () => {
+  // The production caller passes `mergeConfigConcatArrays`, a module-private helper of
+  // src/config/config.ts. Mirror it: KilocodeConfig.mergeConfig is its trusted deep merge.
+  const merge = (target: Config.Info, source: Config.Info): Config.Info => {
+    const merged = KilocodeConfig.mergeConfig(target, source)
+    if (target.instructions && source.instructions) {
+      merged.instructions = Array.from(new Set([...target.instructions, ...source.instructions]))
+    }
+    return merged
+  }
+
+  const modes = `customModes:
+  - slug: helper
+    name: Helper
+    roleDefinition: Helper mode
+    groups:
+      - read
+      - mcp
+`
+
+  async function withHome<T>(platform: string | undefined, fn: (home: string) => Promise<T>): Promise<T> {
+    await using home = await tmpdir()
+    const homedir = spyOn(os, "homedir").mockReturnValue(home.path)
+    // KilocodePaths resolves the VSCode global storage path from APPDATA first on Windows.
+    const env = {
+      APPDATA: process.env.APPDATA,
+      HOME: process.env.HOME,
+      KILO_TEST_HOME: process.env.KILO_TEST_HOME,
+      KILO_PLATFORM: process.env.KILO_PLATFORM,
+      KILOCODE_FEATURE: process.env.KILOCODE_FEATURE,
+    }
+    process.env.APPDATA = home.path
+    process.env.HOME = home.path
+    process.env.KILO_TEST_HOME = home.path
+    delete process.env.KILOCODE_FEATURE
+    if (platform === undefined) delete process.env.KILO_PLATFORM
+    else process.env.KILO_PLATFORM = platform
+    try {
+      const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings")
+      await Filesystem.write(path.join(settings, "custom_modes.yaml"), modes)
+      return await fn(home.path)
+    } finally {
+      homedir.mockRestore()
+      for (const [key, value] of Object.entries(env)) {
+        if (value === undefined) delete process.env[key]
+        else process.env[key] = value
+      }
+    }
+  }
+
+  const mcpWarnings = (warnings: Config.Warning[]) =>
+    warnings.filter((warning) => /MCP access (not migrated|incomplete)/.test(warning.message))
+
+  const serverKeys = (permission: Record<string, unknown> | undefined) =>
+    Object.keys(permission ?? {}).filter((key) => key.endsWith("_*"))
+
+  test("reports an mcp group from a skipped global store instead of dropping it", async () => {
+    await withHome("cli", async (home) => {
+      const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings")
+      await Filesystem.write(
+        path.join(settings, "mcp_settings.json"),
+        JSON.stringify({ mcpServers: { github: { command: "npx" } } }),
+      )
+
+      const result = await KilocodeConfig.loadLegacyConfigs({ projectDir: home, merge })
+
+      const mcp = mcpWarnings(result.warnings)
+      expect(mcp).toHaveLength(1)
+      expect(mcp[0].path).toBe(path.join(settings, "custom_modes.yaml"))
+      expect(mcp[0].message).toContain("MCP access incomplete: a global store this load skipped declared MCP servers")
+      expect(Object.keys(result.config.mcp ?? {})).toHaveLength(0)
+      // The mode itself still migrated from the global file, it just cannot honour the group.
+      expect(result.config.agent?.helper?.permission?.read).toBe("allow")
+      expect(serverKeys(result.config.agent?.helper?.permission)).toEqual([])
+    })
+  })
+
+  test("reports the skipped store even when a project server was granted", async () => {
+    await withHome("cli", async (home) => {
+      const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings")
+      await Filesystem.write(
+        path.join(settings, "mcp_settings.json"),
+        JSON.stringify({ mcpServers: { globalserver: { command: "npx" } } }),
+      )
+      // The project store is read on this platform, so its server is migrated and granted.
+      await Filesystem.write(
+        path.join(home, ".kilo", "mcp.json"),
+        JSON.stringify({ mcpServers: { projectserver: { command: "npx" } } }),
+      )
+
+      const result = await KilocodeConfig.loadLegacyConfigs({ projectDir: home, merge })
+
+      const mcp = mcpWarnings(result.warnings)
+      expect(mcp).toHaveLength(1)
+      expect(mcp[0].message).toContain("MCP access incomplete: a global store this load skipped declared MCP servers")
+      // The group grants what this load migrated; the skipped store's key is neither granted nor denied.
+      expect(serverKeys(result.config.agent?.helper?.permission)).toEqual(["projectserver_*"])
+      expect(result.config.agent?.helper?.permission?.["projectserver_*"]).toBe("allow")
+      expect(result.config.agent?.helper?.permission?.["globalserver_*"]).toBeUndefined()
+    })
+  })
+
+  // The project store wins the dedup for the same name, so the skipped store's server is the one
+  // this load converted: nothing was lost, and the group has nothing to report.
+  test("stays silent when the project store also names the skipped store's server", async () => {
+    await withHome("cli", async (home) => {
+      const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings")
+      await Filesystem.write(
+        path.join(settings, "mcp_settings.json"),
+        JSON.stringify({ mcpServers: { sharedserver: { command: "npx" } } }),
+      )
+      await Filesystem.write(
+        path.join(home, ".kilo", "mcp.json"),
+        JSON.stringify({ mcpServers: { sharedserver: { command: "bunx" } } }),
+      )
+
+      const result = await KilocodeConfig.loadLegacyConfigs({ projectDir: home, merge })
+
+      expect(mcpWarnings(result.warnings)).toHaveLength(0)
+      expect(result.config.mcp?.sharedserver).toMatchObject({ command: ["bunx"] })
+      expect(result.config.agent?.helper?.permission?.["sharedserver_*"]).toBe("allow")
+    })
+  })
+
+  test("stays silent when no global MCP store declared a server", async () => {
+    await withHome("cli", async (home) => {
+      const result = await KilocodeConfig.loadLegacyConfigs({ projectDir: home, merge })
+
+      expect(mcpWarnings(result.warnings)).toHaveLength(0)
+      expect(result.config.agent?.helper?.permission?.read).toBe("allow")
+      expect(serverKeys(result.config.agent?.helper?.permission)).toEqual([])
+    })
+  })
+
+  test("grants the global server without a warning when the loader reads global paths", async () => {
+    await withHome("vscode", async (home) => {
+      const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings")
+      await Filesystem.write(
+        path.join(settings, "mcp_settings.json"),
+        JSON.stringify({ mcpServers: { github: { command: "npx" } } }),
+      )
+
+      const result = await KilocodeConfig.loadLegacyConfigs({ projectDir: home, merge })
+
+      expect(mcpWarnings(result.warnings)).toHaveLength(0)
+      expect(serverKeys(result.config.agent?.helper?.permission)).toEqual(["github_*"])
+    })
   })
 })

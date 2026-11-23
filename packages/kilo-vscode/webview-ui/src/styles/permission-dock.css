@@ -58,6 +58,7 @@
      their own clipped or hidden-scrollbar boxes, so shrinking them would cut text
      off instead of letting the scroll area scroll. */
   [data-slot="permission-command"],
+  [data-slot="permission-input"],
   [data-slot="permission-patterns"] {
     flex: 0 0 auto;
     overflow: visible;
@@ -109,6 +110,37 @@
 
   [data-slot="permission-command"]:hover [data-slot="permission-command-copy"] {
     opacity: 0.5;
+  }
+
+  [data-slot="permission-input"] {
+    min-width: 0;
+    margin: 4px 0;
+  }
+
+  [data-slot="permission-input-label"] {
+    font-size: var(--kilo-font-size-12);
+    color: var(--text-weak, var(--vscode-descriptionForeground));
+    margin-bottom: 4px;
+  }
+
+  [data-slot="permission-input-code"] {
+    margin: 0;
+    padding: 8px 10px;
+    max-height: 150px;
+    overflow: auto;
+    border: 1px solid var(--vscode-editorWidget-border, var(--vscode-panel-border, transparent));
+    border-radius: 4px;
+    background: var(--vscode-textCodeBlock-background, var(--vscode-editor-background));
+
+    code {
+      font-size: var(--kilo-font-size-12);
+      font-family: var(--vscode-editor-font-family, monospace);
+      color: var(--vscode-editor-foreground, var(--vscode-foreground));
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      line-height: 1.5;
+      background: transparent;
+    }
   }
 
   [data-slot="permission-hint"] {
@@ -386,6 +418,22 @@
     /* Pull 2px left to align the 16px icon inside the 20px toggle button
        with the chevron icon in the "Permission rules" header above. */
     margin-left: -2px;
+  }
+
+  /* A rule a config file this prompt cannot edit already manages: the row
+     replaces the approve/deny toggles with one non-interactive state icon.
+     Occupy the same 22px box as a small IconButton (kilo-ui icon-button.css,
+     [data-size="small"]) so the icon column stays aligned, and mute the icon
+     via --icon-base, which [data-component="icon"] colours itself with
+     rather than inheriting this element's color. */
+  [data-slot="permission-rule-source"] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    --icon-base: var(--text-weak, var(--vscode-descriptionForeground));
   }
 
   [data-slot="permission-footer"] {

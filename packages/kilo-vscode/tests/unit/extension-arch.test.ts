@@ -198,6 +198,41 @@ describe("Extension — package.json command sync", () => {
       ]),
     )
   })
+
+  it("routes task-close commands to the focused Kilo surface", () => {
+    const commands = pkg.contributes?.commands ?? []
+    expect(commands).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ command: "kilo-code.new.closeTask", title: "Close Task", category: "Kilo Code" }),
+        expect.objectContaining({
+          command: "kilo-code.new.closeAllTasks",
+          title: "Close All Tasks",
+          category: "Kilo Code",
+        }),
+      ]),
+    )
+
+    const source = fs.readFileSync(EXTENSION_FILE, "utf-8")
+    const closeTask = sliceBlock(source, source.indexOf('vscode.commands.registerCommand("kilo-code.new.closeTask"'))
+    const closeAll = sliceBlock(source, source.indexOf('vscode.commands.registerCommand("kilo-code.new.closeAllTasks"'))
+    expect(closeTask).toContain('taskTarget().postMessage({ type: "action", action: "closeTask" })')
+    expect(closeAll).toContain('taskTarget().postMessage({ type: "action", action: "closeAllTasks" })')
+
+    // A panel can stay "active" while the user is in the sidebar, and on Agent
+    // Manager these commands stop sessions, so the remembered surface decides.
+    // It must be the tracked one, never focus sampled when the command runs:
+    // the Command Palette blurs the webview before it executes.
+    const target = sliceBlock(source, source.indexOf("const taskTarget = () =>"))
+    expect(target).toContain("focused: focus.current()")
+    expect(target).toContain("agentManager: agentManagerProvider.isActive() ? agentManagerProvider : undefined")
+
+    // Every surface has to report focus, or the remembered one goes stale and
+    // commands keep targeting a surface the user has already left.
+    for (const surface of ["sidebar", "tab", "agentManager"]) {
+      expect(source, `${surface} should report focus gains`).toContain(`focus.gained("${surface}")`)
+      expect(source, `${surface} should be forgotten when it goes away`).toContain(`focus.lost("${surface}")`)
+    }
+  })
 })
 
 // ---------------------------------------------------------------------------

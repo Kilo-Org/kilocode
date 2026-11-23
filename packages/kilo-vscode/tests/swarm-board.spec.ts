@@ -64,6 +64,11 @@ async function setup(page: Page, initial = board) {
     "/iframe.html?id=chat--board-closed&viewMode=story&manual=1&globals=colorScheme:dark;theme:kilo-vscode;vscodeTheme:dark-modern",
   )
   const toggle = page.getByRole("button", { name: "Board", exact: true })
+  // The dock button shows recent posts. The full board opens from its panel.
+  const open = async () => {
+    await toggle.click()
+    await page.getByRole("button", { name: "Open board", exact: true }).click()
+  }
   const current = async (count: number) => {
     await expect.poll(() => calls.length).toBe(count)
     return calls.at(-1)!
@@ -73,7 +78,7 @@ async function setup(page: Page, initial = board) {
   await expect(toggle).toHaveCount(0)
   await result(page, peek, { ...initial, messages: initial.messages.slice(-1), hasMore: initial.messages.length > 1 })
   if (initial.messages.length) await expect(toggle).toBeVisible()
-  return { calls, toggle, current, peek }
+  return { calls, toggle, open, current, peek }
 }
 
 test("hides empty boards and discovers the first async message without polling idle sessions", async ({ page }) => {
@@ -95,10 +100,10 @@ test("hides empty boards and discovers the first async message without polling i
 
 test("uses a distinct icon and fills short histories without manual paging", async ({ page }) => {
   const scene = await setup(page)
-  await expect(page.locator('[data-slot="task-header-stats"] [aria-label="Board"]')).toBeVisible()
+  await expect(page.locator('.session-dock-state[data-active] [data-component="board-trigger"]')).toBeVisible()
   await expect(page.locator(".task-board")).toHaveCount(0)
   const icon = await scene.toggle.locator("svg").innerHTML()
-  await scene.toggle.click()
+  await scene.open()
   const request = await scene.current(2)
   expect(request).toMatchObject({ limit: 50 })
   await expect(page.getByRole("dialog", { name: "Board", exact: true })).toBeVisible()
@@ -144,7 +149,7 @@ test("reads long messages in a large view and preserves position when history ar
     })
   const recent = { ...board, revision: 30, messages: messages(11, 15), cursor: "message-11", hasMore: true }
   const scene = await setup(page, recent)
-  await scene.toggle.click()
+  await scene.open()
   await result(page, await scene.current(2), recent)
   const reader = page.getByRole("dialog", { name: "Board", exact: true })
   const viewport = page.locator(".task-board-scroll")
@@ -206,7 +211,7 @@ for (const width of [420, 200]) {
 
 test("keeps useful errors private and removes the popup when refresh finds an empty board", async ({ page }) => {
   const scene = await setup(page)
-  await scene.toggle.click()
+  await scene.open()
   await result(page, await scene.current(2))
   await page.getByRole("button", { name: "Refresh", exact: true }).click()
   await result(page, await scene.current(3), board, "Unknown session ses_internal in prj_internal.")
@@ -222,7 +227,7 @@ test("keeps useful errors private and removes the popup when refresh finds an em
 
 test("shows a failed reset and requires refresh before another confirmation", async ({ page }) => {
   const scene = await setup(page)
-  await scene.toggle.click()
+  await scene.open()
   await result(page, await scene.current(2))
   await page.getByRole("button", { name: "Reset board", exact: true }).click()
   const dialog = page.getByRole("dialog", { name: "Reset this board?" })
@@ -246,7 +251,7 @@ test("shows a failed reset and requires refresh before another confirmation", as
 
 test("reset stays confirmed and removes the button instead of opening an empty board", async ({ page }) => {
   const scene = await setup(page)
-  await scene.toggle.click()
+  await scene.open()
   const first = await scene.current(2)
   await result(page, first)
   await page.getByRole("button", { name: "Reset board", exact: true }).click()
@@ -254,7 +259,7 @@ test("reset stays confirmed and removes the button instead of opening an empty b
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click()
   await expect(dialog).toBeHidden()
   expect(scene.calls).toHaveLength(2)
-  await scene.toggle.click()
+  await scene.open()
   await result(page, await scene.current(3))
   await page.getByRole("button", { name: "Reset board", exact: true }).click()
   await dialog.getByRole("button", { name: "Reset board", exact: true }).click()
@@ -290,7 +295,7 @@ test("rejects stale scopes and never shows board controls for child or read-only
   await expect(scene.toggle).toHaveCount(0)
   await result(page, current)
   await expect(scene.toggle).toBeVisible()
-  await scene.toggle.click()
+  await scene.open()
   await result(page, await scene.current(4))
   await page.getByRole("button", { name: "Reset board", exact: true }).click()
   await change(page, { sessionID: "another-session" })
@@ -303,6 +308,28 @@ test("rejects stale scopes and never shows board controls for child or read-only
   await change(page, { readonly: false, parentID: board.ownerSessionID })
   await expect(scene.toggle).toHaveCount(0)
   expect(scene.calls).toHaveLength(5)
+})
+
+test("shows recent posts in the dock and marks new posts until the panel opens", async ({ page }) => {
+  const scene = await setup(page)
+  await expect(scene.toggle).not.toHaveAttribute("data-unread", "")
+  await jobs(page, "running")
+  const peek = await scene.current(2)
+  expect(peek).toMatchObject({ limit: 1 })
+  const post = { ...board.messages.at(-1)!, id: "newest", body: "A newer post." }
+  await result(page, peek, { ...board, revision: 3, messages: [post], hasMore: true })
+  await expect(scene.toggle).toHaveAttribute("data-unread", "")
+  await scene.toggle.click()
+  const request = await scene.current(3)
+  expect(request).toMatchObject({ limit: 50 })
+  await result(page, request, { ...board, revision: 3, messages: [...board.messages, post] })
+  const panel = page.locator('[data-slot="board-panel-list"] [data-slot="board-message"]')
+  await expect(panel).toHaveCount(3)
+  await expect(panel.last()).toContainText("A newer post.")
+  await expect(scene.toggle).not.toHaveAttribute("data-unread", "")
+  await page.getByRole("button", { name: "Open board", exact: true }).click()
+  await expect(page.locator(".task-board")).toBeVisible()
+  await expect(page.locator('[data-slot="board-panel"]')).toHaveCount(0)
 })
 
 test("does not check hidden views and rechecks availability when the view returns", async ({ page }) => {
@@ -318,7 +345,7 @@ test("does not check hidden views and rechecks availability when the view return
 test("cleans up the reader when it closes repeatedly", async ({ page }) => {
   const scene = await setup(page)
   for (const count of [2, 3, 4]) {
-    await scene.toggle.click()
+    await scene.open()
     await result(page, await scene.current(count))
     await page.keyboard.press("Escape")
     await expect(page.getByRole("dialog")).toHaveCount(0)

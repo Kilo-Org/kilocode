@@ -143,7 +143,11 @@ export const mutate: Runner = (profile, request) =>
   Effect.scoped(
     Effect.gen(function* () {
       const child = worker()
-      const launch = yield* confine(profile, {
+      // The worker only changes files and does not need network access. Without network access it also
+      // does not go through the Linux network relay. The relay removes BUN_BE_BUN, so the binary would
+      // start the CLI instead of the worker.
+      const offline: Profile = { ...profile, network: { mode: "deny", allowedHosts: [] } }
+      const launch = yield* confine(offline, {
         command: process.execPath,
         args: [child.path],
         cwd: process.cwd(),

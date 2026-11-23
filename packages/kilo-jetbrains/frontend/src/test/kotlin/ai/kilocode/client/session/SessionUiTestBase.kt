@@ -132,6 +132,12 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
         pumpEdt()
     }
 
+    /**
+     * Drains coroutines and the EDT until [cond] holds, instead of waiting a fixed [settleShort]
+     * budget that can expire under full-suite load. Returns whether [cond] became true.
+     */
+    protected fun pumpUntil(cond: () -> Boolean): Boolean = coroutines.pumpUntil(cond = cond)
+
     protected fun showMessages() {
         controller().prompt("hello")
         settle()

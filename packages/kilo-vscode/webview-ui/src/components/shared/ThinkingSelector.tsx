@@ -50,6 +50,8 @@ export interface ThinkingSelectorBaseProps {
   label?: string
   /** Disable this prompt-scoped selector while a permission owns the prompt. */
   blocked?: boolean
+  /** Short title shown above the options, so the list explains itself. */
+  heading?: string
 }
 
 export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props) => {
@@ -80,7 +82,13 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
   const typeahead = createTypeahead(() => rows().map(display))
 
   function refocus() {
-    requestAnimationFrame(() => window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } })))
+    requestAnimationFrame(() => {
+      // Another picker took focus (for example the prompt pill switched to the
+      // agent or model popover on hover). Do not pull focus back to the prompt.
+      const el = document.activeElement
+      if (el?.closest("[data-component='popover-content']") && !listRef?.contains(el)) return
+      window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } }))
+    })
   }
 
   function onOpen(val: boolean) {
@@ -179,7 +187,7 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
       <Tooltip
         value={
           <div data-slot="tooltip-keybind">
-            <span>{language.t("prompt.thinking.tooltip")}</span>
+            <span>{`${language.t("prompt.thinking.tooltip")}: ${display(props.value)}`}</span>
             <Show when={props.cycleHint}>
               <span data-slot="tooltip-keybind-key">Shift+Tab</span>
             </Show>
@@ -201,8 +209,22 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
           triggerProps={{ variant: "ghost", size: "small", "aria-label": props.label, disabled: props.blocked }}
           trigger={
             <>
-              <span class="thinking-selector-trigger-label">{display(props.value)}</span>
-              <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" style={{ "flex-shrink": "0" }}>
+              {/* Keyed so the label remounts on change and the prompt pill can animate it. */}
+              <Show when={display(props.value)} keyed>
+                {(label) => (
+                  <span class="thinking-selector-trigger-label" data-unset={props.value ? undefined : ""}>
+                    {label}
+                  </span>
+                )}
+              </Show>
+              <svg
+                class="selector-trigger-chevron"
+                width="10"
+                height="10"
+                viewBox="0 0 16 16"
+                fill="currentColor"
+                style={{ "flex-shrink": "0" }}
+              >
                 <path d="M8 4l4 5H4l4-5z" />
               </svg>
             </>
@@ -212,10 +234,16 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
             <div
               class="thinking-selector-list"
               role="listbox"
+              aria-label={props.heading}
               ref={listRef}
               onKeyDown={onKeyDown}
               style={bodyH() !== undefined ? { "max-height": `${bodyH()}px` } : {}}
             >
+              <Show when={props.heading}>
+                <div class="thinking-selector-heading" aria-hidden="true">
+                  {props.heading}
+                </div>
+              </Show>
               <For each={rows()}>
                 {(v, i) => (
                   <div
@@ -263,6 +291,7 @@ export const ThinkingSelector: Component<ThinkingSelectorProps> = (props) => {
       onClear={() => session.selectVariant(undefined, id())}
       allowClear
       clearLabel={language.t("common.default")}
+      heading={language.t("prompt.thinking.tooltip")}
       cycleHint={settings()["chat.shiftTabCyclesVariant"] !== false}
     />
   )

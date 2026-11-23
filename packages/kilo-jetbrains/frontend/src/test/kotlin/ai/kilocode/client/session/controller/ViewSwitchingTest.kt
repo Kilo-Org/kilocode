@@ -1,14 +1,19 @@
 package ai.kilocode.client.session.controller
 
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
+import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
+import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
+import ai.kilocode.rpc.dto.LoadErrorDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ProfileBalanceDto
 import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.ProfileOrganizationDto
+import ai.kilocode.rpc.dto.ProfileSyncDto
 import ai.kilocode.rpc.dto.SessionChangeKindDto
 import kotlinx.coroutines.CompletableDeferred
 
@@ -79,6 +84,7 @@ class ViewSwitchingTest : SessionControllerTestBase() {
             AppChanged
             WorkspaceChanged
             WorkspaceReady
+            RecentsChanged
             ViewChanged empty
         """, events)
         assertEquals(1, m.recents().size)
@@ -99,6 +105,7 @@ class ViewSwitchingTest : SessionControllerTestBase() {
             AppChanged
             WorkspaceChanged
             WorkspaceReady
+            RecentsChanged
             ViewChanged empty
         """, events)
         assertTrue(m.recents().isEmpty())
@@ -353,6 +360,51 @@ class ViewSwitchingTest : SessionControllerTestBase() {
         assertTrue(m.recents().isEmpty())
     }
 
+    fun `test recents retried after reconnect when the first load failed`() {
+        projectRpc.state.value = workspaceReady()
+        rpc.recent.add(session("ses_1"))
+        rpc.recentFailures = 1
+        val m = controller(displayMs = 1_000)
+        val events = collect(m)
+
+        flush()
+
+        // The first load failed, so the empty view was published and the list is empty.
+        assertEquals(1, rpc.recentCalls.size)
+        assertTrue(m.recents().isEmpty())
+
+        // The CLI drops, then comes back.
+        projectRpc.state.value = KiloWorkspaceStateDto(KiloWorkspaceStatusDto.PENDING)
+        flush()
+        projectRpc.state.value = workspaceReady()
+        flush()
+
+        // The reconnect forced a retry that succeeded.
+        assertEquals(2, rpc.recentCalls.size)
+        assertEquals(1, m.recents().size)
+        assertTrue(events.count { it is SessionControllerEvent.RecentsChanged } >= 2)
+    }
+
+    fun `test recents refreshed after reconnect when already loaded`() {
+        projectRpc.state.value = workspaceReady()
+        rpc.recent.add(session("ses_1"))
+        val m = controller(displayMs = 1_000)
+        collect(m)
+        flush()
+        assertEquals(1, m.recents().size)
+
+        // A session created while connected, then a reconnect. The already-Loaded recents must still
+        // be refetched, not short-circuited.
+        rpc.recent.add(session("ses_2"))
+        projectRpc.state.value = KiloWorkspaceStateDto(KiloWorkspaceStatusDto.PENDING)
+        flush()
+        projectRpc.state.value = workspaceReady()
+        flush()
+
+        assertEquals(2, rpc.recentCalls.size)
+        assertEquals(2, m.recents().size)
+    }
+
     fun `test recents progress is canceled when messages view appears`() {
         projectRpc.state.value = workspaceReady()
         rpc.recent.add(session("ses_1"))
@@ -547,6 +599,44 @@ class ViewSwitchingTest : SessionControllerTestBase() {
         assertTrue(show.account.switching)
         assertNull(show.account.targetOrgId)
         assertEquals(null, appRpc.orgSelections.last())
+    }
+
+    fun `test failed organization switch clears the switching overlay and offers the account settings`() {
+        projectRpc.state.value = workspaceReady()
+        rpc.recent.add(session("ses_1"))
+        appRpc.state.value = KiloAppStateDto(
+            KiloAppStatusDto.READY,
+            profile = ProfileDto(
+                email = "user@example.com",
+                organizations = listOf(ProfileOrganizationDto("org_1", "Kilo", "OWNER")),
+            ),
+        )
+        val m = controller()
+        val events = collect(m)
+        flush()
+        events.clear()
+
+        appRpc.organizationResult = ProfileSyncDto(error = LoadErrorDto(resource = "profile", status = 500))
+        edt { m.selectOrganization("org_1") }
+        flush()
+
+        val shows = events.filterIsInstance<SessionControllerEvent.AccountOverlayChanged.Show>()
+        assertTrue(shows.isNotEmpty())
+        assertEquals(false, shows.last().account.switching)
+        assertNull(shows.last().account.targetOrgId)
+        assertEquals(listOf<String?>("org_1"), appRpc.orgSelections)
+
+        // The picker reverted, so the overlay says why and points at the page that can retry.
+        val note = actionNotifications.single().first
+        assertEquals(KiloBundle.message("profile.notice.switchUnavailable"), note.first)
+        assertNull(note.second)
+        assertEquals(KiloBundle.message("profile.action.accountSettings"), note.third)
+        assertTrue("the switch must not raise an error balloon", notifications.isEmpty())
+        edt { actionNotifications.single().second() }
+        assertTrue(
+            "the action must open the profile settings",
+            appRpc.telemetry.any { it.event == "Profile Settings Opened" && it.properties["surface"] == "session_overlay" },
+        )
     }
 
     fun `test replay includes current overlay event`() {

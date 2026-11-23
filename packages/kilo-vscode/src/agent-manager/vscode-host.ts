@@ -17,20 +17,25 @@ import { samePath } from "./project/paths"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { KiloProvider } from "../KiloProvider"
 import { PLATFORM, SNAPSHOT_INITIALIZATION } from "./constants"
+import { keybindings, watchKeybindings } from "../kilo-provider/shortcut-context"
+import { buildChatSettingsMessage } from "../kilo-provider/chat-settings"
 import { DiffVirtualProvider } from "../DiffVirtualProvider"
 import { buildWebviewHtml } from "../utils"
 import { openFileInEditor, getWorkspaceRoot } from "../review-utils"
+import { isWebLink } from "../browser-links"
 import { TelemetryProxy, type TelemetryEventName } from "../services/telemetry"
 import type { AutoApproveController } from "../commands/toggle-auto-approve"
 import type { RemoteStatusService } from "../services/RemoteStatusService"
 import type { CaffeinationService } from "../services/caffeination"
 
 const INTRO_KEY = "kilo.agentManager.introDismissed"
+const SPLASH_KEY = "kilo.agentManager.splashFolded"
 const PR_MERGE_METHODS_KEY = "agentManager.prMergeMethod"
 
 export class VscodeHost implements Host {
   private diffVirtual: DiffVirtualProvider | undefined
   private autoApprove: AutoApproveController | undefined
+  private focus: { gained: () => void; lost: () => void } | undefined
   /**
    * Shared project route registry for every Agent Manager panel opened by
    * this host. One service keeps raw session id ambiguity consistent across
@@ -52,6 +57,11 @@ export class VscodeHost implements Host {
 
   setAutoApproveController(ctrl: AutoApproveController): void {
     this.autoApprove = ctrl
+  }
+
+  /** Report Agent Manager panel focus so commands can find the user's surface. */
+  setFocusListener(listener: { gained: () => void; lost: () => void }): void {
+    this.focus = listener
   }
 
   openPanel(opts: {
@@ -80,6 +90,7 @@ export class VscodeHost implements Host {
       worktreeDirectories?: () => string[]
       workspaceRoot?: () => string | undefined
       projectId?: () => string | undefined
+      sessionProject?: () => string | undefined
     },
   ): PanelContext {
     return this.wirePanel(panel, opts)
@@ -92,6 +103,7 @@ export class VscodeHost implements Host {
       worktreeDirectories?: () => string[]
       workspaceRoot?: () => string | undefined
       projectId?: () => string | undefined
+      sessionProject?: () => string | undefined
     },
   ): PanelContext {
     panel.webview.options = {
@@ -114,7 +126,9 @@ export class VscodeHost implements Host {
       title: "Agent Manager",
       port,
       browserAutomation: this.browserAutomation(),
+      agentManagerSplash: buildChatSettingsMessage().settings.agentManagerSplash,
       introDismissed: this.context.globalState.get<boolean>(INTRO_KEY) === true,
+      splashFolded: this.context.globalState.get<boolean>(SPLASH_KEY),
       frameSrc: ["localhost", "127.0.0.1"].map((host) => `http://${host}:*`).join(" "),
     })
 
@@ -135,6 +149,7 @@ export class VscodeHost implements Host {
         mainTerminal: "kilo-code.new.agentManagerMainTerminalFocused",
         sideTerminal: "kilo-code.new.agentManagerSideTerminalFocused",
       },
+      onFocused: () => this.focus?.gained(),
       routeService: this.routes,
       projectQualifier: () => {
         const projectId = opts.projectId?.()
@@ -151,7 +166,10 @@ export class VscodeHost implements Host {
       }
     }
     const unsubscribe = this.caffeination?.onChange(snapshot)
-    panel.onDidDispose(() => unsubscribe?.())
+    panel.onDidDispose(() => {
+      unsubscribe?.()
+      this.focus?.lost()
+    })
     provider.attachToWebview(panel.webview, {
       onBeforeMessage: async (msg) => {
         if (msg.type === "agentManager.setCaffeination") {
@@ -160,6 +178,10 @@ export class VscodeHost implements Host {
         }
         if (msg.type === "agentManager.requestCaffeination") {
           snapshot()
+          return null
+        }
+        if (msg.type === "agentManager.setSplashFolded") {
+          if (typeof msg.folded === "boolean") await this.context.globalState.update(SPLASH_KEY, msg.folded)
           return null
         }
         if (msg.type !== "agentManager.setIntroDismissed") return opts.onBeforeMessage(msg)
@@ -181,7 +203,7 @@ export class VscodeHost implements Host {
       listSessions: (dir) => this.listProjectSessions(dir),
       trackSession: (id) => provider.trackSession(id),
       refreshSessions: () => provider.refreshSessions(),
-      registerSession: (s) => provider.registerSession(s),
+      registerSession: (s) => provider.registerSession(s, false, opts.sessionProject?.()),
       recoverPendingPrompts: () => provider.recoverPendingPrompts(),
       onFollowupAdopted: (cb) => provider.onFollowupAdopted(cb),
       acknowledgeDraft: (draftID, sessionID) => provider.acknowledgeDraft(draftID, sessionID),
@@ -196,6 +218,7 @@ export class VscodeHost implements Host {
       isSessionRouteAmbiguous: (sessionId) => provider.isSessionRouteAmbiguous(sessionId),
       routeSessionDirectoryFor: (ref) => provider.routeSessionDirectoryFor(ref),
       refreshGitStatus: () => void provider.refreshGitStatus(),
+      retryInitialization: () => void provider.retryInitialization(),
       dispose: () => provider.dispose(),
     }
 
@@ -339,13 +362,6 @@ export class VscodeHost implements Host {
     if (invalid) throw new Error(vscode.l10n.t(invalid))
     const git = await this.git()
     const selected = await this.directory(parent, vscode.l10n.t("Select a parent folder for the cloned repository."))
-    if (!this.multiProject() || !vscode.workspace.isTrusted) {
-      throw new Error(
-        vscode.l10n.t(
-          "Cloning was cancelled because multi-project Agent Manager is disabled or the window is not trusted.",
-        ),
-      )
-    }
     // Opening an existing checkout beats failing a clone into an occupied folder.
     const name = repoName(url)
     const existing = await this.existingCheckout(name, selected)
@@ -399,12 +415,17 @@ export class VscodeHost implements Host {
     return root
   }
 
-  multiProject(): boolean {
-    return vscode.workspace.getConfiguration("kilo-code.new.experimental").get("multiProject", false)
-  }
-
   browserAutomation(): boolean {
     return vscode.workspace.getConfiguration("kilo-code.new.experimental").get("browserAutomation", false)
+  }
+
+  async approveBrowserNavigation(origin: string): Promise<boolean> {
+    const answer = await vscode.window.showWarningMessage(
+      `Allow the Agent Manager browser to navigate to ${origin}?`,
+      { modal: true },
+      "Allow",
+    )
+    return answer === "Allow"
   }
 
   worktreePool(): boolean {
@@ -439,12 +460,6 @@ export class VscodeHost implements Host {
     return vscode.workspace.onDidChangeWorkspaceFolders(() => cb())
   }
 
-  onDidChangeMultiProject(cb: (enabled: boolean) => void): Disposable {
-    return vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration("kilo-code.new.experimental.multiProject")) cb(this.multiProject())
-    })
-  }
-
   onDidChangeWorktreePool(cb: (enabled: boolean) => void): Disposable {
     return vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration("kilo-code.new.agentManager.worktreePool")) cb(this.worktreePool())
@@ -473,19 +488,33 @@ export class VscodeHost implements Host {
     else void vscode.window.showErrorMessage(msg)
   }
 
+  async choose(kind: "info" | "error", message: string, actions: readonly string[]): Promise<string | undefined> {
+    return kind === "info"
+      ? await vscode.window.showInformationMessage(message, ...actions)
+      : await vscode.window.showErrorMessage(message, ...actions)
+  }
+
+  async withProgress<T>(
+    title: string,
+    task: (cancelled: () => boolean, report: (message: string) => void) => Promise<T>,
+    opts?: { cancellable?: boolean },
+  ): Promise<T> {
+    return await vscode.window.withProgress(
+      { location: vscode.ProgressLocation.Notification, title, cancellable: opts?.cancellable ?? true },
+      (progress, token) =>
+        task(
+          () => token.isCancellationRequested,
+          (message) => progress.report({ message }),
+        ),
+    )
+  }
+
   revealInOS(path: string): void {
     if (vscode.env.remoteName) {
       console.warn(`[Kilo New] Cannot reveal ${path} in the OS file manager on a remote workspace`)
       return
     }
     void vscode.commands.executeCommand("revealFileInOS", vscode.Uri.file(path))
-  }
-
-  async withProgress<T>(title: string, task: (cancelled: () => boolean) => Promise<T>): Promise<T> {
-    return await vscode.window.withProgress(
-      { location: vscode.ProgressLocation.Notification, title, cancellable: true },
-      (_progress, token) => task(() => token.isCancellationRequested),
-    )
   }
 
   async openDocument(path: string): Promise<void> {
@@ -516,12 +545,19 @@ export class VscodeHost implements Host {
   }
 
   extensionKeybindings(): Array<{ command: string; key?: string; mac?: string; when?: string }> {
-    const ext = vscode.extensions.getExtension("kilocode.kilo-code")
-    return ext?.packageJSON?.contributes?.keybindings ?? []
+    return keybindings(this.context)
   }
 
-  copyToClipboard(text: string): void {
-    void vscode.env.clipboard.writeText(text)
+  onDidChangeKeybindings(cb: () => void): Disposable {
+    return watchKeybindings(this.context, cb)
+  }
+
+  async copyToClipboard(text: string): Promise<void> {
+    await vscode.env.clipboard.writeText(text)
+  }
+
+  async readClipboard(): Promise<string> {
+    return vscode.env.clipboard.readText()
   }
 
   capture(event: string, properties?: Record<string, unknown>): void {
@@ -529,6 +565,7 @@ export class VscodeHost implements Host {
   }
 
   openExternal(url: string): void {
+    if (!isWebLink(url)) return
     void vscode.env.openExternal(vscode.Uri.parse(url))
   }
 

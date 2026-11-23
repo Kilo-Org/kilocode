@@ -10,16 +10,9 @@ import { samePath } from "../../src/agent-manager/project/paths"
 
 // Compile the actual adapter methods without loading its unrelated panel/provider imports.
 const source = new Project().addSourceFileAtPath(path.join(import.meta.dir, "../../src/agent-manager/vscode-host.ts"))
-const methods = [
-  "pickFolder",
-  "input",
-  "confirm",
-  "git",
-  "multiProject",
-  "existingCheckout",
-  "directory",
-  "cloneRepository",
-].map((name) => source.getClassOrThrow("VscodeHost").getMethodOrThrow(name).getText())
+const methods = ["pickFolder", "input", "confirm", "git", "existingCheckout", "directory", "cloneRepository"].map(
+  (name) => source.getClassOrThrow("VscodeHost").getMethodOrThrow(name).getText(),
+)
 const code = new Bun.Transpiler({ loader: "ts" }).transformSync(`class Native { ${methods.join("\n")} }`)
 const adapter = new Function(
   "vscode",

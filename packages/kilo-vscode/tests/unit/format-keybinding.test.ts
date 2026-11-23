@@ -83,6 +83,15 @@ describe("buildKeybindingMap", () => {
     expect(buildKeybindingMap(bindings, false).search).toBe("Ctrl+F")
   })
 
+  it("maps the shared session tab shortcuts", () => {
+    const bindings = [
+      { command: "kilo-code.new.agentManager.previousTab", key: "ctrl+alt+left", mac: "cmd+alt+left" },
+      { command: "kilo-code.new.agentManager.nextTab", key: "ctrl+alt+right", mac: "cmd+alt+right" },
+    ]
+    expect(buildKeybindingMap(bindings, true)).toMatchObject({ previousTab: "⌘⌥←", nextTab: "⌘⌥→" })
+    expect(buildKeybindingMap(bindings, false)).toMatchObject({ previousTab: "Ctrl+Alt+←", nextTab: "Ctrl+Alt+→" })
+  })
+
   it("provides terminal navigation fallbacks", () => {
     expect(buildKeybindingMap([], true).previousTerminal).toBe("⌘⇧[")
     expect(buildKeybindingMap([], true).nextTerminal).toBe("⌘⇧]")

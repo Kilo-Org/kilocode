@@ -1,4 +1,4 @@
-import { Component, createSignal, createEffect, createMemo, on, Show, onCleanup } from "solid-js"
+import { Component, createSignal, createEffect, createMemo, lazy, on, onCleanup, Show } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tabs } from "@kilocode/kilo-ui/tabs"
 import { Button } from "@kilocode/kilo-ui/button"
@@ -7,25 +7,9 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
-import { useConfig } from "../../context/config"
+import { useConfig, saveErrorDetails, saveErrorText } from "../../context/config"
 import { useSession } from "../../context/session"
 import ModelsTab from "./ModelsTab"
-import ProvidersTab from "./ProvidersTab"
-import AgentBehaviourTab from "./AgentBehaviourTab"
-import AutoApproveTab from "./AutoApproveTab"
-import BrowserTab from "./BrowserTab"
-import CheckpointsTab from "./CheckpointsTab"
-import DisplayTab from "./DisplayTab"
-import AutocompleteTab from "./AutocompleteTab"
-import NotificationsTab from "./NotificationsTab"
-import ContextTab from "./ContextTab"
-
-import CommitMessageTab from "./CommitMessageTab"
-import ExperimentalTab from "./ExperimentalTab"
-import LanguageTab from "./LanguageTab"
-import AboutKiloCodeTab from "./AboutKiloCodeTab"
-import IndexingTab from "./IndexingTab"
-import SandboxingTab from "./SandboxingTab"
 import * as Sandboxing from "./sandboxing"
 import { useServer } from "../../context/server"
 import type { MigrationSource } from "../../types/messages"
@@ -42,14 +26,39 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Switch } from "@kilocode/kilo-ui/switch"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import SettingsRow from "./SettingsRow"
+import SettingsSearch from "./SettingsSearch"
+import SettingsSearchResults from "./SettingsSearchResults"
+import { SETTINGS_TABS, type SettingsTab } from "./settings-search"
+import { useSettingsSearch } from "./useSettingsSearch"
 import { ProjectBranchDialog } from "../../../agent-manager/ProjectBranchDialog"
+
+const DisplayTab = lazy(() => import("./DisplayTab"))
+const ProvidersTab = lazy(() => import("./ProvidersTab"))
+const AgentBehaviourTab = lazy(() => import("./AgentBehaviourTab"))
+const AutoApproveTab = lazy(() => import("./AutoApproveTab"))
+const BrowserTab = lazy(() => import("./BrowserTab"))
+const CheckpointsTab = lazy(() => import("./CheckpointsTab"))
+const AutocompleteTab = lazy(() => import("./AutocompleteTab"))
+const NotificationsTab = lazy(() => import("./NotificationsTab"))
+const ContextTab = lazy(() => import("./ContextTab"))
+const CommitMessageTab = lazy(() => import("./CommitMessageTab"))
+const ExperimentalTab = lazy(() => import("./ExperimentalTab"))
+const LanguageTab = lazy(() => import("./LanguageTab"))
+const AboutKiloCodeTab = lazy(() => import("./AboutKiloCodeTab"))
+const IndexingTab = lazy(() => import("./IndexingTab"))
+const SandboxingTab = lazy(() => import("./SandboxingTab"))
 
 export interface SettingsProps {
   tab?: string
+  subtab?: string
+  focus?: { token: number; value: string }
   agentManagerProjectId?: string
   agentManagerSettings?: boolean
   onTabChange?: (tab: string) => void
+  onAgentBehaviourNavigationConsumed?: () => void
   onMigrationClick?: (source: MigrationSource) => void
+  /** Increments when the host asks to open the settings search. */
+  searchRequest?: number
 }
 
 const AgentManagerTab: Component<{ projectId?: string }> = (props) => {
@@ -185,7 +194,14 @@ const AgentManagerTab: Component<{ projectId?: string }> = (props) => {
           >
             <Switch
               checked={(settings()["agentManager.worktreePool"] as boolean | undefined) ?? true}
-              onChange={(value) => applySetting("agentManager.worktreePool", value)}
+              onChange={(value) =>
+                applySetting(
+                  "agentManager.worktreePool",
+                  value,
+                  undefined,
+                  language.t("agentManager.settings.worktreePool.title"),
+                )
+              }
               hideLabel
             >
               {language.t("agentManager.settings.worktreePool.title")}
@@ -259,11 +275,17 @@ const Settings: Component<SettingsProps> = (props) => {
   const server = useServer()
   const language = useLanguage()
   const vscode = useVSCode()
-  const { loading, isDirty, saving, saveError, saveConfig, discardConfig, features } = useConfig()
+  const { loading, isDirty, saving, saveError, saveConfig, discardConfig, clearSaveError, features } = useConfig()
   const session = useSession()
   const [active, setActive] = createSignal(props.tab ?? "models")
   const [errorExpanded, setErrorExpanded] = createSignal(false)
-  const sandboxing = createMemo(() => Sandboxing.visible(features()))
+  // Keep requested tabs registered while config loads so Tabs does not reset them to Models.
+  const indexing = createMemo(
+    () => features().indexing || (loading() && (active() === "indexing" || props.tab === "indexing")),
+  )
+  const sandboxing = createMemo(
+    () => Sandboxing.visible(features()) || (loading() && (active() === "sandboxing" || props.tab === "sandboxing")),
+  )
 
   const busyCount = () => Object.values(session.allStatusMap()).filter((s) => s.type === "busy").length
 
@@ -300,7 +322,7 @@ const Settings: Component<SettingsProps> = (props) => {
   )
 
   createEffect(() => {
-    if (features().indexing || active() !== "indexing") return
+    if (loading() || features().indexing || active() !== "indexing") return
     onTabChange("providers")
   })
 
@@ -315,8 +337,27 @@ const Settings: Component<SettingsProps> = (props) => {
     vscode.postMessage({ type: "settingsTabChanged", tab })
   }
 
+  const searchTabs = createMemo<SettingsTab[]>(() =>
+    SETTINGS_TABS.filter((tab) => {
+      if (tab.id === "indexing") return features().indexing
+      if (tab.id === "sandboxing") return sandboxing()
+      if (tab.id === "agentManager") return props.agentManagerSettings === true
+      return true
+    }),
+  )
+
+  const search = useSettingsSearch({
+    tabs: searchTabs,
+    translate: (key) => language.t(key),
+    onSelectTab: onTabChange,
+    searchRequest: () => props.searchRequest,
+  })
+
   return (
-    <div style={{ display: "flex", "flex-direction": "column", height: "100%", "min-height": 0 }}>
+    <div
+      data-searching={search.searching() ? "true" : undefined}
+      style={{ display: "flex", "flex-direction": "column", height: "100%", "min-height": 0 }}
+    >
       {/* Header */}
       <div
         style={{
@@ -350,10 +391,26 @@ const Settings: Component<SettingsProps> = (props) => {
         orientation="vertical"
         variant="settings"
         value={active()}
-        onChange={onTabChange}
+        onChange={(tab) => {
+          if (search.searching()) search.clear()
+          onTabChange(tab)
+        }}
         style={{ flex: 1, overflow: "hidden" }}
       >
         <Tabs.List>
+          <div data-slot="settings-search-slot">
+            <SettingsSearch
+              query={search.query()}
+              focusRequest={search.focusTick()}
+              listId={search.listId}
+              activeId={search.activeId()}
+              onInput={search.input}
+              onClear={search.clear}
+              onMove={search.move}
+              onChoose={search.choose}
+              onDismiss={search.clear}
+            />
+          </div>
           <Tabs.Trigger value="models" aria-label={language.t("settings.models.title")}>
             <Icon name="models" />
             <span class="label">{language.t("settings.models.title")}</span>
@@ -405,7 +462,7 @@ const Settings: Component<SettingsProps> = (props) => {
             <Icon name="edit" />
             <span class="label">{language.t("settings.commitMessage.title")}</span>
           </Tabs.Trigger>
-          <Show when={features().indexing}>
+          <Show when={indexing()}>
             <Tabs.Trigger value="indexing" aria-label={language.t("settings.indexing.title")}>
               <Icon name="database" />
               <span class="label">{language.t("settings.indexing.title")}</span>
@@ -441,7 +498,11 @@ const Settings: Component<SettingsProps> = (props) => {
         </Tabs.Content>
         <Tabs.Content value="agentBehaviour">
           <h3>{language.t("settings.agentBehaviour.title")}</h3>
-          <AgentBehaviourTab />
+          <AgentBehaviourTab
+            subtab={props.subtab}
+            focus={props.focus}
+            onNavigationConsumed={props.onAgentBehaviourNavigationConsumed}
+          />
         </Tabs.Content>
         <Tabs.Content value="autoApprove">
           <h3>{language.t("settings.autoApprove.title")}</h3>
@@ -482,7 +543,7 @@ const Settings: Component<SettingsProps> = (props) => {
           <h3>{language.t("settings.commitMessage.title")}</h3>
           <CommitMessageTab />
         </Tabs.Content>
-        <Show when={features().indexing}>
+        <Show when={indexing()}>
           <Tabs.Content value="indexing">
             <h3>{language.t("settings.indexing.title")}</h3>
             <IndexingTab />
@@ -511,11 +572,23 @@ const Settings: Component<SettingsProps> = (props) => {
             onMigrationClick={props.onMigrationClick}
           />
         </Tabs.Content>
+
+        <Show when={search.searching()}>
+          <SettingsSearchResults
+            query={search.query()}
+            results={search.results()}
+            active={search.active()}
+            listId={search.listId}
+            tabs={searchTabs()}
+            onHover={search.setActive}
+            onSelect={search.select}
+          />
+        </Show>
       </Tabs>
 
-      {/* Save bar — slides in when there are unsaved config changes */}
-      <Show when={isDirty()}>
-        <div class="settings-save-bar-wrap">
+      {/* Save bar — the error stays visible even when nothing is dirty */}
+      <Show when={saveError() || isDirty()}>
+        <div class={`settings-save-bar-wrap${isDirty() ? "" : " settings-save-bar-wrap-error-only"}`}>
           <Show when={saveError()}>
             {(err) => (
               <div class="settings-save-bar-error">
@@ -534,24 +607,33 @@ const Settings: Component<SettingsProps> = (props) => {
                   </span>
                   <span class="settings-save-bar-error-title">
                     {language.t("settings.saveBar.saveFailed")}:{" "}
-                    <span class="settings-save-bar-error-firstline">{err().message}</span>
+                    <span class="settings-save-bar-error-firstline">{saveErrorText(err(), language.t)}</span>
                   </span>
                 </div>
+                {/* Outside the expander: a button inside `role="button"` is presentational to AT.
+                    Always rendered: a staged edit must not hide the only way to clear the error. */}
+                <div class="settings-save-bar-error-actions">
+                  <Button variant="ghost" size="small" onClick={() => clearSaveError()}>
+                    {language.t("settings.saveBar.dismissError")}
+                  </Button>
+                </div>
                 <Show when={errorExpanded()}>
-                  <pre class="settings-save-bar-error-details">{err().details ?? err().message}</pre>
+                  <pre class="settings-save-bar-error-details">{saveErrorDetails(err(), language.t)}</pre>
                 </Show>
               </div>
             )}
           </Show>
-          <div class="settings-save-bar">
-            <span class="settings-save-bar-label">{language.t("settings.saveBar.unsavedChanges")}</span>
-            <Button variant="ghost" size="small" onClick={discardConfig} disabled={saving()}>
-              {language.t("settings.saveBar.discard")}
-            </Button>
-            <Button variant="primary" size="small" onClick={handleSave} disabled={saving()}>
-              {saving() ? language.t("settings.saveBar.saving") : language.t("settings.saveBar.save")}
-            </Button>
-          </div>
+          <Show when={isDirty()}>
+            <div class="settings-save-bar">
+              <span class="settings-save-bar-label">{language.t("settings.saveBar.unsavedChanges")}</span>
+              <Button variant="ghost" size="small" onClick={discardConfig} disabled={saving()}>
+                {language.t("settings.saveBar.discard")}
+              </Button>
+              <Button variant="primary" size="small" onClick={handleSave} disabled={saving()}>
+                {saving() ? language.t("settings.saveBar.saving") : language.t("settings.saveBar.save")}
+              </Button>
+            </div>
+          </Show>
         </div>
       </Show>
     </div>

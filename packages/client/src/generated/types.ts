@@ -74,6 +74,14 @@ export type ProviderNotFoundError = {
 export const isProviderNotFoundError = (value: unknown): value is ProviderNotFoundError =>
   typeof value === "object" && value !== null && "_tag" in value && value["_tag"] === "ProviderNotFoundError"
 
+export type AttemptNotFoundError = {
+  readonly _tag: "AttemptNotFoundError"
+  readonly attemptID: string
+  readonly message: string
+}
+export const isAttemptNotFoundError = (value: unknown): value is AttemptNotFoundError =>
+  typeof value === "object" && value !== null && "_tag" in value && value["_tag"] === "AttemptNotFoundError"
+
 export type PermissionNotFoundError = {
   readonly _tag: "PermissionNotFoundError"
   readonly requestID: string
@@ -261,7 +269,7 @@ export type SessionsListOutput = {
         readonly deletions: number
         readonly patch: string
       }>
-      readonly workspace?: "restored" | "snapshots-disabled" | "unavailable"
+      readonly workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
     }
   }>
   readonly cursor: { readonly previous?: string | null; readonly next?: string | null }
@@ -324,7 +332,7 @@ export type SessionsCreateOutput = {
         readonly deletions: number
         readonly patch: string
       }>
-      readonly workspace?: "restored" | "snapshots-disabled" | "unavailable"
+      readonly workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
     }
   }
 }["data"]
@@ -363,7 +371,7 @@ export type SessionsGetOutput = {
         readonly deletions: number
         readonly patch: string
       }>
-      readonly workspace?: "restored" | "snapshots-disabled" | "unavailable"
+      readonly workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
     }
   }
 }["data"]
@@ -512,7 +520,7 @@ export type SessionsStageOutput = {
       readonly deletions: number
       readonly patch: string
     }>
-    readonly workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    readonly workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }["data"]
 
@@ -1118,7 +1126,7 @@ export type SessionsHistoryOutput = {
               readonly deletions: number
               readonly patch: string
             }>
-            readonly workspace?: "restored" | "snapshots-disabled" | "unavailable"
+            readonly workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
           }
         }
       }
@@ -1605,7 +1613,7 @@ export type SessionsEventsOutput =
             readonly deletions: number
             readonly patch: string
           }>
-          readonly workspace?: "restored" | "snapshots-disabled" | "unavailable"
+          readonly workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
         }
       }
     }
@@ -2310,6 +2318,14 @@ export type IntegrationsAttemptStatusOutput = {
           readonly expires: number | "Infinity" | "-Infinity" | "NaN"
         }
       }
+    | {
+        readonly status: "cancelled"
+        readonly time: {
+          readonly created: number | "Infinity" | "-Infinity" | "NaN"
+          readonly expires: number | "Infinity" | "-Infinity" | "NaN"
+        }
+      }
+    | { readonly status: "unknown" }
 }
 
 export type IntegrationsAttemptCompleteInput = {

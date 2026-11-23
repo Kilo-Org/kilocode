@@ -9,6 +9,7 @@ import {
   type PermissionContext,
 } from "../../src/kilo-provider/handlers/permission-handler"
 import { KiloConnectionService } from "../../src/services/cli-backend/connection-service"
+import { SESSION_ROUTE_UNRESOLVED } from "../../src/shared/session-route-error"
 
 /** Transient transport failures carry no HTTP status and are safe to retry. */
 function terminated() {
@@ -65,6 +66,7 @@ function ctx(opts: {
   workspace?: string
   errors?: { list?: Record<string, unknown>; save?: unknown; reply?: unknown }
   extra?: string[]
+  ambiguous?: boolean
 }) {
   const messages: unknown[] = []
   const queries: string[] = []
@@ -90,6 +92,7 @@ function ctx(opts: {
       revision += 1
     },
     getPermissionRevision: () => revision,
+    isSessionAmbiguous: () => opts.ambiguous ?? false,
     prunePermissionDirectories: (active, dirs) => {
       for (const [key, dir] of permDirs) {
         if (active.has(key)) {
@@ -135,15 +138,21 @@ describe("recoveryDirs", () => {
 })
 
 describe("handlePermissionResponse", () => {
-  it("rejects an unknown route without using a workspace fallback", async () => {
-    const { fake, messages, replies } = ctx({ tracked: ["s1"] })
-    const log = spyOn(console, "error").mockImplementation(() => {})
+  it("falls back to the session directory when no permission directory is recorded", async () => {
+    const { fake, messages, replies } = ctx({ tracked: ["child"] })
+    const routed: PermissionContext = {
+      ...fake,
+      getWorkspaceDirectory: (id) => (id === "child" ? "/workspace/.kilo/worktrees/feature" : "/workspace"),
+    }
 
-    await handlePermissionResponse(fake, "missing", "s1", "once", [], [])
-    log.mockRestore()
+    await handlePermissionResponse(routed, "missing", "child", "once", [], [])
 
-    expect(replies).toEqual([])
-    expect(messages).toEqual([{ type: "permissionError", permissionID: "missing" }])
+    expect(replies).toEqual([
+      { requestID: "missing", reply: "once", directory: "/workspace/.kilo/worktrees/feature", interactive: true },
+    ])
+    expect(messages).toEqual([
+      { type: "permissionResolved", permissionID: "missing", sessionID: "child", response: "once" },
+    ])
   })
 
   it("shares one save/reply sequence across concurrent callers", async () => {
@@ -235,7 +244,7 @@ describe("handlePermissionResponse", () => {
     const { fake, replies, permDirs } = ctx({ tracked: ["s1"] })
     permDirs.set("p1", "/workspace/.kilo/worktrees/feature")
 
-    await handlePermissionResponse(fake, "p1", "s1", "reject", [], [], "use tabs, not spaces")
+    await handlePermissionResponse(fake, "p1", "s1", "reject", [], [], [], "use tabs, not spaces")
 
     expect(replies).toEqual([
       {
@@ -245,6 +254,26 @@ describe("handlePermissionResponse", () => {
         interactive: true,
         message: "use tabs, not spaces",
       },
+    ])
+  })
+
+  it("sends the cleared patterns with the save", async () => {
+    const { fake, saves, replies, permDirs } = ctx({ tracked: ["s1"] })
+    permDirs.set("p1", "/workspace/.kilo/worktrees/feature")
+
+    await handlePermissionResponse(fake, "p1", "s1", "once", [], [], ["bun *"])
+
+    expect(saves).toEqual([
+      {
+        requestID: "p1",
+        directory: "/workspace/.kilo/worktrees/feature",
+        approvedAlways: [],
+        deniedAlways: [],
+        removedAlways: ["bun *"],
+      },
+    ])
+    expect(replies).toEqual([
+      { requestID: "p1", reply: "once", directory: "/workspace/.kilo/worktrees/feature", interactive: true },
     ])
   })
 
@@ -332,65 +361,147 @@ describe("handlePermissionResponse", () => {
     expect(permDirs.has("p1")).toBe(true)
     expect(messages).toEqual([{ type: "permissionError", permissionID: "p1" }])
   })
+
+  it("reports a permission reply when the session maps to more than one project and no directory is recorded", async () => {
+    const { fake, messages, replies, saves } = ctx({ tracked: ["same"], ambiguous: true })
+    const spy = spyOn(console, "error").mockImplementation(() => {})
+
+    await handlePermissionResponse(fake, "p1", "same", "once", ["bun *"], [])
+    spy.mockRestore()
+
+    expect(saves).toEqual([])
+    expect(replies).toEqual([])
+    expect(messages).toEqual([{ type: "permissionError", permissionID: "p1", message: SESSION_ROUTE_UNRESOLVED }])
+  })
+
+  it("keeps a recorded permission directory authoritative when the session maps to more than one project", async () => {
+    const dir = "/workspace/.kilo/worktrees/feature"
+    const { fake, messages, replies, permDirs } = ctx({
+      tracked: ["same"],
+      ambiguous: true,
+      permsPerDir: { [dir]: [pending("p1", "same")] },
+    })
+    permDirs.set("p1", dir)
+
+    await handlePermissionResponse(fake, "p1", "same", "once", [], [])
+
+    expect(replies).toEqual([{ requestID: "p1", reply: "once", directory: dir, interactive: true }])
+    expect(messages).toEqual([{ type: "permissionResolved", permissionID: "p1", sessionID: "same", response: "once" }])
+  })
+
+  it("refuses an already claimed permission replay with no recorded directory on an ambiguous session", async () => {
+    const { fake, messages, replies, saves } = ctx({ tracked: ["same"], ambiguous: true })
+    const spy = spyOn(console, "error").mockImplementation(() => {})
+    const claimed: PermissionContext = {
+      ...fake,
+      isPermissionResponseClaimed: (id) => id === "p1",
+    }
+
+    await handlePermissionResponse(claimed, "p1", "same", "once", [], [])
+    spy.mockRestore()
+
+    expect(saves).toEqual([])
+    expect(replies).toEqual([])
+    expect(messages).toEqual([{ type: "permissionError", permissionID: "p1", message: SESSION_ROUTE_UNRESOLVED }])
+  })
+
+  it("replies for an already claimed permission that still has a recorded directory", async () => {
+    const dir = "/workspace/.kilo/worktrees/feature"
+    const { fake, messages, replies, permDirs } = ctx({
+      tracked: ["same"],
+      ambiguous: true,
+      permsPerDir: { [dir]: [pending("p1", "same")] },
+    })
+    permDirs.set("p1", dir)
+    const claimed: PermissionContext = {
+      ...fake,
+      isPermissionResponseClaimed: (id) => id === "p1",
+    }
+
+    await handlePermissionResponse(claimed, "p1", "same", "once", [], [])
+
+    expect(replies).toEqual([{ requestID: "p1", reply: "once", directory: dir, interactive: true }])
+    expect(messages).toEqual([{ type: "permissionResolved", permissionID: "p1", sessionID: "same", response: "once" }])
+  })
 })
 
 describe("replyOnce", () => {
-  it("retries a transient transport drop", async () => {
-    let calls = 0
-    const client = {
-      permission: {
-        reply: async () => {
-          calls += 1
-          if (calls === 1) throw terminated()
-          return { data: true }
+  /**
+   * Reply plus pending-list fakes. The list records each directory it was asked about,
+   * so a case can prove a refused reply never listed.
+   */
+  function fake(opts: {
+    reply?: (attempt: number) => Promise<unknown>
+    pending?: () => RecoverablePermission[]
+    listError?: unknown
+  }) {
+    let attempts = 0
+    const lists: string[] = []
+    return {
+      lists,
+      attempts: () => attempts,
+      client: {
+        permission: {
+          reply: async () => {
+            attempts += 1
+            return opts.reply ? opts.reply(attempts) : { data: true }
+          },
+          list: async (args: { directory: string }) => {
+            lists.push(args.directory)
+            if (opts.listError) throw opts.listError
+            return { data: opts.pending ? opts.pending() : [] }
+          },
         },
-      },
+      } as never,
     }
+  }
+
+  it("retries a transient transport drop", async () => {
+    const { client, attempts, lists } = fake({
+      reply: async (attempt) => {
+        if (attempt === 1) throw terminated()
+        return { data: true }
+      },
+    })
     const log = spyOn(console, "error").mockImplementation(() => {})
     try {
-      expect(await replyOnce(client as never, "p1", "/workspace")).toBe(true)
+      expect(await replyOnce(client, "p1", "/workspace")).toBe(true)
     } finally {
       log.mockRestore()
     }
-    expect(calls).toBe(2)
+    expect(attempts()).toBe(2)
+    expect(lists).toEqual(["/workspace"])
   })
 
-  it("does not retry a decisive not-found reply", async () => {
-    let calls = 0
-    const client = {
-      permission: {
-        reply: async () => {
-          calls += 1
-          throw new Error("Permission request not found: p1", { cause: { status: 404 } })
-        },
+  it("does not retry a decisive not-found reply and stays unconfirmed", async () => {
+    const { client, attempts, lists } = fake({
+      reply: async () => {
+        throw new Error("Permission request not found: p1", { cause: { status: 404 } })
       },
-    }
+    })
     const log = spyOn(console, "error").mockImplementation(() => {})
     try {
-      expect(await replyOnce(client as never, "p1", "/workspace")).toBe(false)
+      expect(await replyOnce(client, "p1", "/workspace")).toBe(false)
     } finally {
       log.mockRestore()
     }
-    expect(calls).toBe(1)
+    expect(attempts()).toBe(1)
+    expect(lists).toEqual([])
   })
 
   it("stops retrying when the caller cancels", async () => {
-    let calls = 0
     let checks = 0
     let allowed = true
-    const client = {
-      permission: {
-        reply: async () => {
-          calls += 1
-          allowed = false
-          throw terminated()
-        },
+    const { client, attempts, lists } = fake({
+      reply: async () => {
+        allowed = false
+        throw terminated()
       },
-    }
+    })
     const log = spyOn(console, "error").mockImplementation(() => {})
     try {
       expect(
-        await replyOnce(client as never, "p1", "/workspace", () => {
+        await replyOnce(client, "p1", "/workspace", () => {
           checks += 1
           return allowed
         }),
@@ -398,8 +509,78 @@ describe("replyOnce", () => {
     } finally {
       log.mockRestore()
     }
-    expect(calls).toBe(1)
+    expect(attempts()).toBe(1)
     expect(checks).toBe(2)
+    expect(lists).toEqual([])
+  })
+
+  it("confirms a reply the directory no longer holds", async () => {
+    const { client, lists } = fake({})
+    expect(await replyOnce(client, "p1", "/workspace")).toBe(true)
+    expect(lists).toEqual(["/workspace"])
+  })
+
+  it("reports an unanswered reply the directory still holds", async () => {
+    const { client } = fake({ pending: () => [pending("p1", "s1")] })
+    expect(await replyOnce(client, "p1", "/workspace")).toBe(false)
+  })
+
+  it("confirms a request that settled after a transport error", async () => {
+    const { client, attempts, lists } = fake({
+      reply: async (attempt) => {
+        if (attempt < 3) throw terminated()
+        return { data: true }
+      },
+    })
+    const log = spyOn(console, "error").mockImplementation(() => {})
+    try {
+      expect(await replyOnce(client, "p1", "/workspace")).toBe(true)
+    } finally {
+      log.mockRestore()
+    }
+    expect(attempts()).toBe(3)
+    expect(lists).toEqual(["/workspace"])
+  })
+
+  it("confirms a request the directory dropped after a failed reply", async () => {
+    const { client, lists } = fake({
+      reply: async () => {
+        throw new Error("boom")
+      },
+    })
+    const log = spyOn(console, "error").mockImplementation(() => {})
+    try {
+      expect(await replyOnce(client, "p1", "/workspace")).toBe(true)
+    } finally {
+      log.mockRestore()
+    }
+    expect(lists).toEqual(["/workspace"])
+  })
+
+  it("confirms a request that settled after the retry budget ran out", async () => {
+    const { client, attempts, lists } = fake({
+      reply: async () => {
+        throw terminated()
+      },
+    })
+    const log = spyOn(console, "error").mockImplementation(() => {})
+    try {
+      expect(await replyOnce(client, "p1", "/workspace")).toBe(true)
+    } finally {
+      log.mockRestore()
+    }
+    expect(attempts()).toBe(3)
+    expect(lists).toEqual(["/workspace"])
+  })
+
+  it("reports unconfirmed when the pending list cannot be read", async () => {
+    const { client } = fake({ listError: new Error("offline") })
+    const log = spyOn(console, "error").mockImplementation(() => {})
+    try {
+      expect(await replyOnce(client, "p1", "/workspace")).toBe(false)
+    } finally {
+      log.mockRestore()
+    }
   })
 })
 

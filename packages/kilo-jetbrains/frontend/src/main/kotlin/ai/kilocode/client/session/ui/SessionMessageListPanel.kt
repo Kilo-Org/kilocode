@@ -2,16 +2,21 @@ package ai.kilocode.client.session.ui
 
 import ai.kilocode.client.session.SessionDiffOpener
 import ai.kilocode.client.session.SessionFileOpener
+import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.rpc.dto.MessageErrorDto
 import ai.kilocode.client.session.model.Outcome
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.session.model.FileAttachment
 import ai.kilocode.client.session.model.ToolCallRef
+import ai.kilocode.client.session.settings.TranscriptDisplay
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.ui.search.TranscriptSearchBody
 import ai.kilocode.client.session.views.BackgroundPromote
 import ai.kilocode.client.session.views.LoginRequiredView
 import ai.kilocode.client.session.views.MessageView
@@ -19,8 +24,13 @@ import ai.kilocode.client.session.views.SessionOutcomeView
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.session.views.TurnView
+import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.session.views.failureText
+import ai.kilocode.rpc.dto.HostedSystemEventDto
+import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.client.util.EdtDrain
+import ai.kilocode.client.util.edtLater
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
@@ -41,7 +51,7 @@ import javax.swing.JComponent
  * [TurnRemoved] for structural changes, and to [ContentAdded], [ContentUpdated],
  * [ContentRemoved], [ContentDelta] for fine-grained part updates.
  *
- * [HistoryLoaded] and [Cleared] both trigger a full rebuild from the model.
+ * [HistoryLoaded] and [Cleared] replace or remove the turn views without detaching the footer.
  *
  * A [ProgressPanel] is always kept as the last child — it appears at the
  * bottom of the transcript inside the scroll pane and shows a spinner while
@@ -72,13 +82,18 @@ class SessionMessageListPanel(
     private val banner: RevertBanner? = null,
     private val onOpenSubagent: ((String, String) -> Unit)? = null,
     private val onPromoteBackgroundAgent: BackgroundPromote? = null,
+    /** Whether the transcript is on screen. Feeds the per-turn live gate for auto-expand. */
+    private val visible: () -> Boolean = { true },
+    /** Schedules one drain slice. Tests pass an inline runner so drains complete synchronously. */
+    private val schedule: (() -> Unit) -> Unit = ::edtLater,
 ) : SessionLayoutPanel(
     SessionUiStyle.SessionLayout.GAP,
     Insets(
         SessionUiStyle.SessionLayout.INNER_TOP,
         SessionUiStyle.SessionLayout.INNER_HORIZONTAL,
         SessionUiStyle.SessionLayout.INNER_BOTTOM,
-        SessionUiStyle.SessionLayout.INNER_HORIZONTAL,
+        // Wider than the left: the prompt rail is drawn over this edge and must clear the content.
+        SessionUiStyle.SessionLayout.INNER_RIGHT,
     ),
 ), Disposable, SessionEditorStyleTarget {
 
@@ -96,27 +111,77 @@ class SessionMessageListPanel(
     private var pendingReflow = false
     private var dead = false
 
+    /** Fired once when a chunked history rebuild finishes adding every turn. */
+    var onRebuilt: (() -> Unit)? = null
+
+    /** Fired whenever searchable transcript structure or prose may have changed. */
+    var onSearchInvalidated: (() -> Unit)? = null
+
+    /** True while a chunked history rebuild is still assembling turns. */
+    val rebuilding: Boolean get() = rebuild.active
+
+    // Both drains slice their work across EDT turns and share the injected [schedule], so the
+    // unbounded loops (rebuilding a long transcript, re-applying a display change) never pin the EDT.
+    private val rebuild = EdtDrain(
+        size = REBUILD_BATCH,
+        schedule = { block -> schedule(block) },
+        idle = ::rebuilt,
+        sink = ::buildTurns,
+    )
+    private val displays = EdtDrain(
+        size = DISPLAY_BATCH,
+        schedule = { block -> schedule(block) },
+        idle = ::displayed,
+        sink = ::applyDisplay,
+    )
+    private var pendingDisplay: TranscriptDisplay? = null
+    private var pendingForce = false
+    private var displayChanged = false
+
     var onHover: ((PartView, Boolean) -> Unit)? = null
     var onReflow: ((Boolean) -> Unit)? = null
+    @set:RequiresEdt
     var outcome: SessionOutcomeView? = null
         set(value) {
             if (field === value) return
             field?.let { remove(it) }
             field = value
-            value?.applyStyle(style)
+            if (value != null) {
+                value.applyStyle(style)
+                add(value, getComponentZOrder(banner ?: progress))
+            }
             syncActive(model.state)
-            anchorFooter()
             refresh()
         }
 
+    private var preparationFailure: Pair<String, HostedSystemEventDto>? = null
+
+    /** Keeps provider-safe preparation detail on the standard, retained outcome card. */
+    @RequiresEdt
+    fun setPreparationFailure(failure: HostedSystemEventDto?, message: String = "") {
+        val next = failure?.let { message to it }
+        if (preparationFailure == next) return
+        preparationFailure = next
+        syncActive(model.state)
+        refresh()
+    }
+
+    @RequiresEdt
+    fun preparationFailure(state: SessionState = model.state): HostedSystemEventDto? = preparationFailure?.second?.takeIf {
+        state.showsPreparation(it, model.messages().lastOrNull { msg -> msg.info.role == "user" }?.info)
+    }
+
     /** Progress footer — always the last child inside the scroll. */
     val progress = ProgressPanel(model, parent)
+
+    private val footer = listOfNotNull<JComponent>(question, permission, login, banner, progress)
 
     init {
         Disposer.register(parent, this)
         (layout as? SessionLayout)?.maxWidth = { view ->
             SessionUiStyle.SessionLayout.readableWidth(view, style.transcriptFont)
         }
+        footer.forEach { add(it) }
         applyStyle(style)
 
         model.addListener(parent) { event ->
@@ -163,14 +228,7 @@ class SessionMessageListPanel(
                 is SessionModelEvent.HistoryLoaded -> rebuild()
                 is SessionModelEvent.Cleared -> clear()
 
-                is SessionModelEvent.StateChanged -> {
-                    syncActive(event.state)
-                    syncSettled(event.state)
-                    syncReverted()
-                    syncReverting(event.state)
-                    anchorFooter()
-                    refresh()
-                }
+                is SessionModelEvent.StateChanged -> syncActiveState(event.state)
 
                 is SessionModelEvent.RevertChanged -> {
                     syncReverted()
@@ -184,9 +242,16 @@ class SessionMessageListPanel(
                     refresh()
                 }
 
-                // Message events: structural changes are handled via turn events above.
                 is SessionModelEvent.MessageAdded,
-                is SessionModelEvent.MessageRemoved,
+                is SessionModelEvent.MessageRemoved -> {
+                    // A new prompt may supersede preparation without changing the native Busy state.
+                    if (preparationFailure != null &&
+                        (event !is SessionModelEvent.MessageAdded || event.info.info.role == "user")) {
+                        syncActive()
+                        refresh()
+                    }
+                }
+
                 is SessionModelEvent.TodosUpdated,
                 is SessionModelEvent.BackgroundAgentsUpdated,
                 is SessionModelEvent.SessionUpdated,
@@ -203,7 +268,11 @@ class SessionMessageListPanel(
                     if (changed && turn != null) (layout as? SessionLayout)?.forget(turn)
                     // A failure landing on the tail decides whether the footer prints the reason or only
                     // offers Retry, so the footer has to be re-evaluated with it.
-                    if (changed && id == tail()) syncActive()
+                    if ((changed && id == tail()) ||
+                        (preparationFailure != null && event.info.info.role == "user")) {
+                        syncActive()
+                        changed = true
+                    }
                     val view = turnViews[id]
                     if (view?.setDiffs(event.info.info.summary?.diffs.orEmpty()) == true) {
                         (layout as? SessionLayout)?.forget(view)
@@ -256,6 +325,35 @@ class SessionMessageListPanel(
     /** Find the [TurnView] that contains a message. */
     fun findTurn(messageId: String): TurnView? = msgToTurn[messageId]
 
+    /** Find the rendered component for one part of a message, or null if neither has a view. */
+    fun findPart(message: String, part: String): JComponent? = msgToView[message]?.part(part)
+
+    /** Width of the transcript's centered content lane, used by the Find bar. */
+    internal fun searchLaneWidth(): Int = SessionUiStyle.SessionLayout.readableWidth(this, style.transcriptFont)
+
+    /** Ordered conversation prose bodies suitable for transcript search. */
+    @RequiresEdt
+    internal fun searchBodies(): List<TranscriptSearchBody> {
+        if (dead || rebuild.active) return emptyList()
+        return turnViews.values.flatMap { it.searchBodies() }
+    }
+
+    /**
+     * Opens the collapsible card for one part before the navigator scrolls to it, so a question jump
+     * lands on the answers instead of a collapsed header. Returns whether the card was expanded.
+     */
+    @RequiresEdt
+    fun expandPart(message: String, part: String): Boolean {
+        val view = msgToView[message]?.part(part) as? AbstractSessionPartView ?: return false
+        if (!view.open()) return false
+        view.revalidate()
+        reflow()
+        return true
+    }
+
+    /** Find only a user prompt's painted bubble, excluding its toolbar/footer. */
+    fun findPrompt(message: String): JComponent? = msgToView[message]?.promptTarget()
+
     /** Number of top-level turns currently displayed. */
     fun turnCount(): Int = turnViews.size
 
@@ -293,6 +391,50 @@ class SessionMessageListPanel(
         }
     }.trimEnd()
 
+    /** Authoritative text of every rendered [role] message, in order. */
+    @RequiresEdt
+    fun messageText(role: String): String = model.messages()
+        .filter { it.info.role == role }
+        .joinToString("\n") { message ->
+            message.parts.values.filterIsInstance<Text>().joinToString("") { it.content.toString() }
+        }
+
+    /** Message failures the transcript renders: Cloud terminals plus native message errors. */
+    @RequiresEdt
+    fun messageErrors(): String = model.messages()
+        .mapNotNull { message ->
+            val terminal = message.terminal?.status?.takeIf { it == "failed" || it == "interrupted" }
+            val error = message.info.error
+            when {
+                terminal != null && error != null ->
+                    "${message.info.role}: terminal=$terminal ${error.type}: ${error.message.orEmpty()}"
+                terminal != null -> "${message.info.role}: terminal=$terminal"
+                error != null -> "${message.info.role}: ${error.type}: ${error.message.orEmpty()}"
+                else -> null
+            }
+        }
+        .joinToString(" | ")
+
+    /** Simple name of the current session state, e.g. `Busy`, `Idle`, `TurnEnded`, or `Error`. */
+    @RequiresEdt
+    fun stateName(): String = model.state::class.simpleName ?: "Unknown"
+
+    /** Human-readable detail carried by states that expose one. */
+    @RequiresEdt
+    fun stateMessage(): String? = when (val state = model.state) {
+        is SessionState.Busy -> state.text
+        is SessionState.Error -> state.message
+        is SessionState.TurnEnded -> state.finish ?: state.outcome.name
+        is SessionState.Retry -> state.message
+        is SessionState.Offline -> state.message
+        is SessionState.LoginRequired -> state.message
+        else -> null
+    }
+
+    /** Loaded session id, or null while no session is attached. */
+    @RequiresEdt
+    fun sessionId(): String? = model.session?.id
+
     @RequiresEdt
     internal fun reflow(): Boolean {
         // Measuring at zero width reflows every HTML pane to a 1-char column and yields a bogus
@@ -324,24 +466,19 @@ class SessionMessageListPanel(
     // ------ private event handlers ------
 
     private fun onTurnAdded(turn: ai.kilocode.client.session.model.Turn) {
-        val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert, fork, deleteQueued, onOpenSubagent, onPromoteBackgroundAgent, ::avatarColor).also {
-            it.setDiffOpener(openDiff, sessionId)
-        }
-        turnViews[turn.id] = tv
-        for (msgId in turn.messageIds) {
-            val msg = model.message(msgId) ?: continue
-            val mv = tv.addMessage(msg)
-            register(msgId, tv, mv)
-        }
-        tv.setDiffs(diffsOf(turn))
-        tv.syncCopyToolbars()
-        syncQueued(tv)
+        // Mid-rebuild, append instead of building so the new turn lands after every turn still
+        // queued ahead of it, preserving model order.
+        if (rebuild.active) return rebuild.submit(listOf(turn))
+        turnViews[turn.id] = createTurn(turn)
+        // Mark the active turn before its parts build, so a live block created with this turn sees
+        // itself as live (settled is otherwise still true) and can auto-expand.
+        syncSettled()
+        addMessages(turn)
+        finishTurn(turn.id, turn)
         syncFailures()
         syncReverted()
-        add(tv)
-        syncSettled()
-        anchorFooter()
         refresh()
+        searchInvalidated()
     }
 
     private fun onTurnUpdated(turn: ai.kilocode.client.session.model.Turn) {
@@ -356,6 +493,8 @@ class SessionMessageListPanel(
             }
         }
 
+        syncSettled()
+
         // Add new messages (appended at the end of the turn)
         for (id in next) {
             if (id in prev) continue
@@ -368,9 +507,9 @@ class SessionMessageListPanel(
         syncQueued(tv)
         syncFailures()
         syncReverted()
-        syncSettled()
 
         refresh()
+        searchInvalidated()
     }
 
     private fun onTurnRemoved(id: String) {
@@ -380,8 +519,79 @@ class SessionMessageListPanel(
         Disposer.dispose(tv)
         syncFailures()
         syncSettled()
-        anchorFooter()
         refresh()
+        searchInvalidated()
+    }
+
+    /** Build and register the [TurnView] for [turn] without its messages or layout. */
+    private fun createTurn(turn: ai.kilocode.client.session.model.Turn): TurnView =
+        TurnView(
+            turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert,
+            fork, deleteQueued, onOpenSubagent, onPromoteBackgroundAgent, ::avatarColor, visible = visible,
+        ).also {
+            it.setDiffOpener(openDiff, sessionId)
+        }
+
+    /** Build the missing message rows of an already-registered [turn]. */
+    private fun addMessages(turn: ai.kilocode.client.session.model.Turn) {
+        val tv = turnViews[turn.id] ?: return
+        for (msgId in turn.messageIds) {
+            val msg = model.message(msgId) ?: continue
+            val mv = tv.addMessage(msg)
+            register(msgId, tv, mv)
+        }
+    }
+
+    /** Apply a turn's diffs and queued-marker sync, then attach it to the panel. */
+    private fun finishTurn(id: String, turn: ai.kilocode.client.session.model.Turn) {
+        val tv = turnViews[id] ?: return
+        tv.setDiffs(diffsOf(turn))
+        tv.syncCopyToolbars()
+        syncQueued(tv)
+        // Insert ahead of the footer without detaching it or scanning the turns for its index.
+        val tail = footer.size + (if (outcome == null) 0 else 1)
+        add(tv, componentCount - tail)
+    }
+
+    /** One rebuild slice: build every turn that is not yet on the panel. */
+    private fun buildTurns(batch: List<ai.kilocode.client.session.model.Turn>) {
+        for (turn in batch) {
+            if (dead) return
+            // A turn may have been removed from the model while it sat queued across EDT turns; skip
+            // it so a removed turn is not rebuilt as a ghost.
+            if (turnViews.containsKey(turn.id) || model.turn(turn.id) == null) continue
+            val tv = createTurn(turn)
+            turnViews[turn.id] = tv
+            addMessages(turn)
+            finishTurn(turn.id, turn)
+        }
+        // Whole-transcript syncs run once per slice, not per turn, so a long rebuild stays linear.
+        syncFailures()
+        syncReverted()
+        refresh()
+        searchInvalidated()
+    }
+
+    /** Rebuild finished: settle every turn, sync the visual state, and hand off to the open flow. */
+    private fun rebuilt() {
+        if (dead) return
+        for (turn in model.turns()) {
+            if (turnViews.containsKey(turn.id)) continue
+            turnViews[turn.id] = createTurn(turn)
+            addMessages(turn)
+            finishTurn(turn.id, turn)
+        }
+        syncActive(model.state)
+        syncSettled(model.state)
+        syncQueued()
+        syncFailures()
+        syncReverted()
+        syncReverting(model.state)
+        banner?.update()
+        scheduleReflow()
+        refresh()
+        onRebuilt?.invoke()
+        searchInvalidated()
     }
 
     private fun rebuild() {
@@ -393,41 +603,36 @@ class SessionMessageListPanel(
         turnViews.clear()
         msgToTurn.clear()
         msgToView.clear()
-        removeAll()
 
-        for (turn in model.turns()) {
-            val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert, fork, deleteQueued, onOpenSubagent, onPromoteBackgroundAgent, ::avatarColor).also {
-                it.setDiffOpener(openDiff, sessionId)
-            }
-            turnViews[turn.id] = tv
-            for (msgId in turn.messageIds) {
-                val msg = model.message(msgId) ?: continue
-                val mv = tv.addMessage(msg)
-                register(msgId, tv, mv)
-            }
-            tv.setDiffs(diffsOf(turn))
-            tv.syncCopyToolbars()
-            syncQueued(tv)
-            add(tv)
+        // Drop any turns still queued from a previous rebuild before enqueueing this one.
+        rebuild.cancel()
+        val turns = model.turns().toList()
+        if (turns.isEmpty()) {
+            // No slices to drain, so run the tail directly; the drain's idle only fires after a pass.
+            rebuilt()
+            return
         }
-
-        syncActive(model.state)
-        syncSettled(model.state)
-        syncQueued()
-        syncFailures()
-        syncReverted()
-        syncReverting(model.state)
-        banner?.update()
-        anchorFooter()
-        scheduleReflow()
-        refresh()
+        rebuild.submit(turns)
     }
 
     /** Last message in the transcript, which is the only message the outcome footer can describe. */
     private fun tail(): String? = turnViews.values.lastOrNull()?.messageIds()?.lastOrNull()
 
     /** Failure the transcript already explains for the tail message, or null when it explains nothing. */
-    private fun explained(): String? = tail()?.let { failureText(model.message(it)?.info?.error) }
+    private fun explained(): String? = tail()?.let { id ->
+        val item = model.message(id)
+        failureText(item?.info?.error) ?: item?.terminal?.let(::terminalText)
+    }
+
+    private fun terminalText(event: ChatEventDto.MessageTerminal): String? = when (event.status) {
+        "failed" -> when {
+            !event.accepted -> KiloBundle.message("session.cloud.message.failed.notAccepted")
+            event.delivery != "sent" -> KiloBundle.message("session.cloud.message.failed.notSent")
+            else -> KiloBundle.message("session.cloud.message.failed")
+        }
+        "interrupted" -> KiloBundle.message("session.cloud.message.interrupted")
+        else -> null
+    }
 
     /** Apply failure visibility policy to every turn. */
     private fun syncFailures(): Boolean {
@@ -442,9 +647,10 @@ class SessionMessageListPanel(
     }
 
     /**
-     * Renders the failure the session is currently sitting on, and nothing else.
+     * Cloud terminal failures belong to their original prompt, even when a newer turn is active.
+     * Native assistant errors render only for the session's current final attempt.
      *
-     * Only the last turn can show one, and only on its final message:
+     * Only the last turn can show a native assistant error, and only on its final message:
      * - a superseded turn shows nothing. Once the conversation moved past a failure it is history, and a
      *   red card stranded between two later turns is noise the user cannot act on;
      * - within the live turn, only the final attempt speaks. Retry continues a turn by appending another
@@ -452,8 +658,8 @@ class SessionMessageListPanel(
      * - a turn whose final message succeeded says nothing, because a failure it recovered from is not
      *   that turn's outcome.
      *
-     * This keeps the card and the footer in lockstep: both describe the tail, so wherever the reason is
-     * visible the Retry action is offered too (when the tail can be continued).
+     * Native errors and the Retry footer describe the tail. A failed Cloud prompt offers send-again
+     * only while it is the exact transcript tail; older correlated cards stay passive.
      */
     private fun syncFailures(view: TurnView): Boolean {
         val live = turnViews.values.lastOrNull() === view
@@ -462,7 +668,14 @@ class SessionMessageListPanel(
         var changed = false
         for (id in ids) {
             val msg = msgToView[id] ?: continue
-            val error = model.message(id)?.info?.error?.takeIf { live && id == last }
+            val item = model.message(id)
+            val terminal = item?.terminal
+            val status = terminal?.status
+            val error = when (status) {
+                "failed" -> item.info.error ?: MessageErrorDto("CloudMessageFailed", terminalText(terminal))
+                "interrupted" -> MessageErrorDto("CloudMessageInterrupted", terminalText(terminal))
+                else -> item?.info?.error?.takeIf { live && id == last }
+            }
             changed = msg.syncError(error) || changed
         }
         return changed
@@ -483,6 +696,10 @@ class SessionMessageListPanel(
     private fun clear() {
         seq++
         stable = -1
+        rebuild.cancel()
+        displays.cancel()
+        pendingDisplay = null
+        displayChanged = false
         clearHover()
         turnViews.values.forEach {
             remove(it)
@@ -492,23 +709,31 @@ class SessionMessageListPanel(
         msgToTurn.clear()
         msgToView.clear()
         revertingMessage = null
-        removeAll()
         syncActive(model.state)
         syncSettled(model.state)
         syncQueued()
         syncReverting(model.state)
         banner?.update()
-        anchorFooter()
         scheduleReflow()
         refresh()
+        searchInvalidated()
     }
 
     /**
      * Show or hide active question/permission/login views based on [state].
-     * All views are always kept as children of this panel (added in [anchorFooter]),
-     * but visibility is controlled here.
+     * The footer stays attached; [SessionLayout] skips invisible cards.
      */
     private fun syncActive(state: SessionState = model.state) {
+        if (preparationFailure(state) != null) {
+            progress.isVisible = false
+            setHiddenQuestionTool(null)
+            question?.hideView()
+            permission?.hideView()
+            login?.hideView()
+            outcome?.showError(preparationFailure!!.first, null)
+            return
+        }
+        if (state is SessionState.Busy || state is SessionState.Retry || state is SessionState.Offline) progress.isVisible = true
         when (state) {
             is SessionState.AwaitingQuestion -> {
                 setHiddenQuestionTool(state.question.tool)
@@ -541,7 +766,7 @@ class SessionMessageListPanel(
                 // before an assistant message existed — have no card, so they still print in full.
                 // Trimmed: the state message is the raw error text, while the card normalizes it.
                 if (explained() == state.message.trim()) outcome?.showRetry()
-                else outcome?.showError(state.message, state.kind)
+                else outcome?.showError(state.message, state.kind, state.dismissible)
             }
             is SessionState.TurnEnded -> {
                 setHiddenQuestionTool(null)
@@ -578,11 +803,15 @@ class SessionMessageListPanel(
         banner?.setReverting(state)
     }
 
-    /** Fan out the hidden question tool ref to all registered [MessageView]s. */
+    @RequiresEdt
     private fun setHiddenQuestionTool(ref: ToolCallRef?) {
-        if (hiddenTool == ref) return
+        val prev = hiddenTool
+        if (prev == ref) return
         hiddenTool = ref
-        for (mv in msgToView.values) mv.setHiddenQuestionTool(ref)
+        if (prev != null && prev.messageId != ref?.messageId) {
+            if (msgToView[prev.messageId]?.setHiddenQuestionTool(null) == true) forgetTurn(prev.messageId)
+        }
+        if (ref != null && msgToView[ref.messageId]?.setHiddenQuestionTool(ref) == true) forgetTurn(ref.messageId)
     }
 
     @RequiresEdt
@@ -592,6 +821,49 @@ class SessionMessageListPanel(
         if (!changed) return
         reflow()
         refresh()
+    }
+
+    @RequiresEdt
+    fun syncTranscriptDisplay(display: TranscriptDisplay, force: Boolean = false) {
+        pendingDisplay = display
+        pendingForce = force
+        // Re-apply across the whole transcript in bounded slices; a newer setting supersedes this one.
+        displays.cancel()
+        displays.submit(msgToView.values.toList())
+    }
+
+    /** One display re-apply slice. */
+    private fun applyDisplay(batch: List<MessageView>) {
+        val display = pendingDisplay ?: return
+        for (mv in batch) displayChanged = mv.syncTranscriptDisplay(display, pendingForce) || displayChanged
+        if (displayChanged) refresh()
+    }
+
+    private fun displayed() {
+        if (dead) return
+        if (displayChanged) {
+            reflow()
+            refresh()
+            searchInvalidated()
+        }
+        displayChanged = false
+        pendingDisplay = null
+    }
+
+    /**
+     * Re-apply [state] to the active question/permission/login/outcome footer and turn settling.
+     * Normally driven by [SessionModelEvent.StateChanged]; also called directly when a session's
+     * component becomes visible again after the state changed while it was hidden, so a question or
+     * permission that arrived off-screen is surfaced instead of staying silently active.
+     */
+    @RequiresEdt
+    fun syncActiveState(state: SessionState = model.state) {
+        syncActive(state)
+        syncSettled(state)
+        syncReverted()
+        syncReverting(state)
+        refresh()
+        searchInvalidated()
     }
 
     private fun syncSettled(state: SessionState = model.state) {
@@ -605,29 +877,6 @@ class SessionMessageListPanel(
 
     private fun syncQueued(view: TurnView) {
         view.setQueued(model.isQueued(view.id)) { id -> deleteQueued?.invoke(id) }
-    }
-
-    /**
-     * Re-insert [question], [permission], [login], and [progress] as the last children
-     * so active views always render after all turn views, and progress is last.
-     *
-     * All active views are added even when invisible — [SessionLayout] skips
-     * invisible children, so no extra space is consumed, and the component tree
-     * remains stable for tests.
-     */
-    private fun anchorFooter() {
-        if (question != null) remove(question)
-        if (permission != null) remove(permission)
-        if (login != null) remove(login)
-        if (outcome != null) remove(outcome)
-        if (banner != null) remove(banner)
-        remove(progress)
-        if (question != null) add(question)
-        if (permission != null) add(permission)
-        if (login != null) add(login)
-        if (outcome != null) add(outcome)
-        if (banner != null) add(banner)
-        add(progress)
     }
 
     private fun diffsOf(turn: ai.kilocode.client.session.model.Turn) =
@@ -708,6 +957,11 @@ class SessionMessageListPanel(
         msgToTurn[messageId]?.syncCopyToolbars()
         forgetTurn(messageId)
         refresh()
+        searchInvalidated()
+    }
+
+    private fun searchInvalidated() {
+        onSearchInvalidated?.invoke()
     }
 
     /** Drop [SessionLayout]'s cached height for the turn holding [messageId] after its content changes. */
@@ -748,12 +1002,15 @@ class SessionMessageListPanel(
         progress.applyStyle(style)
         reflow()
         refresh()
+        searchInvalidated()
     }
 
     override fun dispose() {
         dead = true
         seq++
         pendingReflow = false
+        rebuild.cancel()
+        displays.cancel()
         clearHover()
         question?.hideView()
         permission?.hideView()
@@ -779,5 +1036,12 @@ class SessionMessageListPanel(
         // layout settle across several height changes (HTML panes reflow asynchronously) while capping
         // the work a streaming session can trigger, since its height never stabilizes.
         const val REFLOW_BUDGET = REFLOW_PASSES * 4
+
+        // Turns built per EDT turn while a history rebuild drains, so a long transcript assembles
+        // without holding the write action for the whole build.
+        const val REBUILD_BATCH = 4
+
+        // Messages re-applied per EDT turn when a transcript display setting changes.
+        const val DISPLAY_BATCH = 8
     }
 }

@@ -6,7 +6,7 @@
 }
 
 /* kilocode_change start */
-[data-component="spinner"][data-paused] > rect {
+[data-component="spinner"][data-paused] > * {
   animation: none !important;
 }
 /* kilocode_change end */

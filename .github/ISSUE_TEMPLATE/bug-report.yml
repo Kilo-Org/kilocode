@@ -2,6 +2,26 @@ name: Bug report
 description: Report an issue that should be fixed
 labels: ["bug"]
 body:
+  # kilocode_change start
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which part of Kilo is this about? It helps us route your report.
+      options:
+        - VS Code extension
+        - CLI / TUI
+        - Agent Manager
+        - JetBrains plugin
+        - Desktop or web app
+        - Documentation
+        - Kilo Gateway or account
+        - SDK
+        - Other / not sure
+    validations:
+      required: true
+  # kilocode_change end
+
   - type: textarea
     id: description
     attributes:

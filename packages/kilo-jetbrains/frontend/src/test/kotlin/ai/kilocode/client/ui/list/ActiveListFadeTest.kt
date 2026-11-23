@@ -1,5 +1,6 @@
 package ai.kilocode.client.ui.list
 
+import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.testing.rowLines
 import ai.kilocode.client.ui.FadeText
 import ai.kilocode.client.ui.UiStyle
@@ -117,7 +118,7 @@ class ActiveListFadeTest : BasePlatformTestCase() {
      * the row they were rendered for rather than taken by position, so a renderer that swapped the two
      * lines would fail here instead of quietly measuring the wrong one.
      */
-    private fun rendered(row: ActiveListItem): Pair<FadeText, FadeText> {
+    private fun rendered(row: ActiveItem): Pair<FadeText, FadeText> {
         val view = settle()
         view.update(listOf(row))
         val list = view.list
@@ -186,7 +187,7 @@ class ActiveListFadeTest : BasePlatformTestCase() {
         override val title: String,
         override val note: String? = null,
         override val description: String? = null,
-    ) : ActiveListItem {
+    ) : ActiveItem {
         override val key get() = "row"
         override val search get() = title
     }

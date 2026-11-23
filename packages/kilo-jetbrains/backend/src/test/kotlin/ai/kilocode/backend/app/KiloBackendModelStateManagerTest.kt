@@ -84,16 +84,35 @@ class KiloBackendModelStateManagerTest {
     }
 
     @Test
-    fun `clear selection removes agent model`() = runBlocking {
+    fun `clear removes only the requested agent and keeps unrelated state`() = runBlocking {
         val port = start()
-        dir.resolve("model.json").writeText("""{"model":{"code":{"providerID":"kilo","modelID":"auto"},"plan":{"providerID":"openai","modelID":"gpt"}}}""")
+        dir.resolve("model.json").writeText(
+            """{"model":{"code":{"providerID":"kilo","modelID":"auto"},"plan":{"providerID":"openai","modelID":"gpt"}},"recent":[{"providerID":"openai","modelID":"gpt"}],"favorite":[{"providerID":"kilo","modelID":"auto"}],"variant":{"openai/gpt":"high"}}""",
+        )
         val mgr = KiloBackendModelStateManager(log)
         mgr.start(http, port)
 
-        val state = mgr.clear("code")
+        val state = mgr.clear("plan")
+        val raw = dir.resolve("model.json").readText()
 
-        assertTrue("code" !in state.model)
-        assertEquals("gpt", state.model["plan"]?.modelID)
+        assertTrue("plan" !in state.model)
+        assertEquals("auto", state.model["code"]?.modelID)
+        assertEquals(listOf("openai/gpt"), state.recent.map { "${it.providerID}/${it.modelID}" })
+        assertEquals("high", state.variant["openai/gpt"])
+        assertTrue("plan" !in mgr.state().model)
+        assertTrue(!raw.contains("\"plan\""), raw)
+    }
+
+    @Test
+    fun `clear on a missing agent leaves model json intact`() = runBlocking {
+        val port = start()
+        dir.resolve("model.json").writeText("""{"model":{"code":{"providerID":"kilo","modelID":"auto"}}}""")
+        val mgr = KiloBackendModelStateManager(log)
+        mgr.start(http, port)
+
+        val state = mgr.clear("plan")
+
+        assertEquals("auto", state.model["code"]?.modelID)
     }
 
     @Test

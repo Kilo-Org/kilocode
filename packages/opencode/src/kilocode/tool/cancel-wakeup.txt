@@ -6,6 +6,7 @@ Use this tool to:
 
 Call it with action "list" first to find the id, then action "cancel" with that id.
 Cancelling an id that is already gone is safe: the tool reports it and does not fail.
+In a session goal, a wakeup the goal waits for suspends the goal until it fires; cancelling it resumes the goal with a goal turn, or settles it with a reason the user can read.
 
 Do NOT use this tool:
 - As a poll loop while waiting — the harness wakes you when the wakeup fires

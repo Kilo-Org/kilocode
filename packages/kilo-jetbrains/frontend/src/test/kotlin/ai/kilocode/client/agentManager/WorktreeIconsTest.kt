@@ -14,6 +14,7 @@ import com.intellij.util.ui.JBUI
 import java.awt.Color
 import java.awt.image.BufferedImage
 import javax.swing.Icon
+import kotlin.math.abs
 
 class WorktreeIconsTest : BasePlatformTestCase() {
     fun `test running session resolves to the animated spinner`() {
@@ -75,6 +76,11 @@ class WorktreeIconsTest : BasePlatformTestCase() {
             WorktreeIcons.forRow(busy = false, kind = SessionActivityKind.QUESTION),
         )
         assertSame(SessionActivityKind.PLAN.icon(), WorktreeIcons.forRow(busy = false, kind = SessionActivityKind.PLAN))
+    }
+
+    fun `test activity badge punctuation is centered by its painted bounds`() {
+        assertCentered(SessionActivityKind.QUESTION.icon(), UiStyle.Badge.ActivityAttention.bg())
+        assertCentered(SessionActivityKind.ERROR.icon(), UiStyle.Badge.ActivityError.bg())
     }
 
     fun `test rows at rest show what the checkout is`() {
@@ -203,6 +209,39 @@ class WorktreeIconsTest : BasePlatformTestCase() {
             g.color = color
             g.fillRect(x, y, size, size)
         }
+    }
+
+    private fun assertCentered(icon: Icon, background: Color) {
+        val image = BufferedImage(icon.iconWidth, icon.iconHeight, BufferedImage.TYPE_INT_ARGB)
+        val g = image.createGraphics()
+        try {
+            icon.paintIcon(null, g, 0, 0)
+        } finally {
+            g.dispose()
+        }
+
+        val pixels = buildList {
+            for (y in 0 until icon.iconHeight) {
+                for (x in 0 until icon.iconWidth) {
+                    val pixel = image.getRGB(x, y)
+                    val alpha = pixel ushr 24 and 0xff
+                    if (alpha == 0xff && pixel != background.rgb) add(x to y)
+                }
+            }
+        }
+        assertTrue("activity glyph did not paint", pixels.isNotEmpty())
+        val left = pixels.minOf { it.first }
+        val right = pixels.maxOf { it.first } + 1
+        val top = pixels.minOf { it.second }
+        val bottom = pixels.maxOf { it.second } + 1
+        assertTrue(
+            "glyph is horizontally off-center: $left..$right",
+            abs((left + right) / 2f - icon.iconWidth / 2f) <= 0.5f,
+        )
+        assertTrue(
+            "glyph is vertically off-center: $top..$bottom",
+            abs((top + bottom) / 2f - icon.iconHeight / 2f) <= 0.5f,
+        )
     }
 
     fun `test the live-run indicator paints the base glyph and a success dot`() {

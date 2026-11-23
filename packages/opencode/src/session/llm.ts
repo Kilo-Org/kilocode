@@ -21,18 +21,27 @@ import { Plugin } from "@/plugin"
 import { Permission } from "@/permission"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { EventV2 } from "@opencode-ai/core/event"
-import { Wildcard } from "@/util/wildcard"
+// kilocode_change start - workflow tool calls resolve their permission through the shared map
+// import { Wildcard } from "@/util/wildcard"
+// kilocode_change end
 import { SessionID } from "@/session/schema"
 import { Auth } from "@/auth"
 // kilocode_change start
 import { InstanceState } from "@/effect/instance-state"
 import { KiloSession } from "@/kilocode/session"
 import { KiloLLM } from "@/kilocode/session/llm"
+import { KiloWorkflowTools } from "@/kilocode/session/workflow-tools"
 import { KiloSessionOverflow } from "@/kilocode/session/overflow"
 import { KiloToolSchema } from "@/kilocode/session/tool-schema"
+import { KiloMessageDiagnostics } from "@/kilocode/session/message-diagnostics"
 import { SessionExport } from "@/kilocode/session-export"
 import { getActiveOrg } from "@/kilocode/session-export/eligibility"
 import { normalizeUsageForExport, observeFullStreamForExport } from "@/kilocode/session-export/llm"
+import { KiloCustomRouter } from "@/kilocode/auto-routing/router"
+import { openaiMessages, openaiTools } from "@/kilocode/auto-routing/messages"
+import { organization, token } from "@/kilocode/provider/catalog"
+import { KiloRoutedModel } from "@/kilocode/session/routed-model"
+import { Identity } from "@kilocode/kilo-telemetry"
 // kilocode_change end
 import { EffectBridge } from "@/effect/bridge"
 import { RuntimeFlags } from "@/effect/runtime-flags"
@@ -95,6 +104,37 @@ const live: Layer.Layer<
     const events = yield* EventV2Bridge.Service
     const llmClient = yield* LLMClient.Service
     const flags = yield* RuntimeFlags.Service
+
+    // kilocode_change start - ADR 0005: a custom auto router that this CLI can
+    // serve asks the routing worker for a decision and dispatches it itself.
+    const route = Effect.fn("LLM.route")(function* (input: StreamInput) {
+      if (!KiloCustomRouter.isCustomRouter({ providerID: input.model.providerID, modelID: input.model.id })) {
+        return undefined
+      }
+      const item = yield* provider.getProvider(input.model.providerID)
+      const info = yield* auth.get(input.model.providerID)
+      const providers = yield* provider.list()
+      const machineId = yield* Effect.promise(() => Identity.getMachineId().catch(() => undefined))
+      const pick = yield* Effect.promise(async () =>
+        KiloCustomRouter.resolve({
+          modelID: input.model.id,
+          messages: openaiMessages(input.messages),
+          tools: await openaiTools(input.tools),
+          sessionID: input.sessionID,
+          requestID: input.user.id,
+          mode: input.agent.name,
+          machineId,
+          token: token(item.options, info),
+          organizationId: organization(item.options, info),
+          providers,
+        }),
+      )
+      if (!pick) return undefined
+      const model = KiloCustomRouter.routedModel({ pick, base: input.model, providers })
+      if (!model) throw new Error(KiloCustomRouter.errorMessage("custom_router_unavailable", input.model.id))
+      return { model, variant: pick.variant }
+    })
+    // kilocode_change end
 
     const run = Effect.fn("LLM.run")(function* (input: StreamRequest) {
       const l = log.clone().tag("providerID", input.model.providerID).tag("modelID", input.model.id) // kilocode_change
@@ -184,11 +224,18 @@ const live: Layer.Layer<
         }
         workflowModel.sessionID = input.sessionID
         workflowModel.systemPrompt = prepared.system.join("\n")
+        // kilocode_change start - apply the session ruleset to workflow tool calls before dispatch
+        const ruleset = Permission.merge(input.agent.permission ?? [], input.permission ?? [])
+        const gate = KiloWorkflowTools.gate({ tools: prepared.tools, ruleset })
+        // kilocode_change end
         workflowModel.toolExecutor = async (toolName, argsJson, _requestID) => {
-          const t = prepared.tools[toolName]
-          if (!t || !t.execute) {
-            return { result: "", error: `Unknown tool: ${toolName}` }
+          // kilocode_change start
+          const refusal = gate.refuse(toolName)
+          if (refusal) {
+            return { result: "", error: refusal }
           }
+          const t = prepared.tools[toolName]
+          // kilocode_change end
           try {
             const result = await t.execute!(JSON.parse(argsJson), {
               toolCallId: _requestID,
@@ -206,11 +253,10 @@ const live: Layer.Layer<
           }
         }
 
-        const ruleset = Permission.merge(input.agent.permission ?? [], input.permission ?? [])
-        workflowModel.sessionPreapprovedTools = Object.keys(prepared.tools).filter((name) => {
-          const match = ruleset.findLast((rule) => Wildcard.match(name, rule.permission))
-          return !match || match.action !== "ask"
-        })
+        // kilocode_change start - the gate decides which tools need no prompt: a whole-tool
+        // deny or ask withholds the tool, and a path-scoped rule leaves it to the tool's own check
+        workflowModel.sessionPreapprovedTools = gate.preapproved
+        // kilocode_change end
 
         const approvedToolsForSession = new Set<string>()
         workflowModel.approvalHandler = bridge.bind(async (approvalTools) => {
@@ -326,6 +372,7 @@ const live: Layer.Layer<
           }),
           // kilocode_change end
           providerOptions: prepared.params.options,
+          messageTransformOptions: prepared.messageTransformOptions, // kilocode_change
           headers: prepared.headers,
           abort: input.abort,
         })
@@ -436,7 +483,7 @@ const live: Layer.Layer<
       })
       // kilocode_change end
       // kilocode_change start - capture eligible session export request completion off the stream path
-      if (!exportable) return { type: "ai-sdk" as const, result }
+      if (!exportable) return { type: "ai-sdk" as const, result, messages: prepared.messages }
       return {
         type: "ai-sdk" as const,
         result: {
@@ -450,6 +497,7 @@ const live: Layer.Layer<
             retries: input.retries ?? 0,
           }),
         },
+        messages: prepared.messages,
       }
       // kilocode_change end
     })
@@ -463,9 +511,28 @@ const live: Layer.Layer<
               (ctrl) => Effect.sync(() => ctrl.abort()),
             )
 
-            const result = yield* run({ ...input, abort: ctrl.signal })
+            // kilocode_change start - ADR 0005: dispatch a custom auto router this CLI can serve
+            const routing: { current?: { providerID: string; modelID: string } } = {}
+            const stamp = (event: LLMEvent) =>
+              routing.current ? KiloRoutedModel.stamp(event, routing.current) : event
+            const mark = (events: Stream.Stream<LLMEvent, unknown>): Stream.Stream<LLMEvent, unknown> =>
+              events.pipe(Stream.map(stamp))
+            const routed = yield* route(input)
+            if (routed) routing.current = { providerID: routed.model.providerID, modelID: routed.model.id }
+            const request: StreamInput = routed
+              ? {
+                  ...input,
+                  model: routed.model,
+                  user: routed.variant
+                    ? { ...input.user, model: { ...input.user.model, variant: routed.variant } }
+                    : input.user,
+                }
+              : input
+            // kilocode_change end
 
-            if (result.type === "native") return result.stream
+            const result = yield* run({ ...request, abort: ctrl.signal }) // kilocode_change - ADR 0005 dispatch the routed model
+
+            if (result.type === "native") return mark(result.stream) // kilocode_change - ADR 0005 stamp the routed model
 
             // Adapter seam: both runtimes expose the same LLMEvent stream. Native
             // already returns one; AI SDK streams are converted here.
@@ -474,7 +541,14 @@ const live: Layer.Layer<
               e instanceof Error ? e : new Error(String(e)),
             ).pipe(
               Stream.mapEffect((event) => LLMAISDK.toLLMEvents(state, event)),
+              // kilocode_change start - emit structural diagnostics when the AI SDK
+              // rejects the assembled ModelMessage[] before dispatch (#13185)
+              Stream.tapError((e) =>
+                Effect.sync(() => KiloMessageDiagnostics.reportModelMessageError(e, result.messages)),
+              ),
+              // kilocode_change end
               Stream.flatMap((events) => Stream.fromIterable(events)),
+              Stream.map(stamp), // kilocode_change - ADR 0005 stamp the routed model
             )
           }),
         ),

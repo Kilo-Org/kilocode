@@ -101,26 +101,26 @@ describe("migrateDefaultAutocompleteSettings", () => {
   })
 
   it("leaves an explicitly chosen non-default model untouched", async () => {
-    setGlobal(state, "provider", "inception")
-    setGlobal(state, "model", "mercury-edit-2")
+    setGlobal(state, "provider", "mistral")
+    setGlobal(state, "model", "codestral-2508")
     const { context, flag } = makeContext()
 
     await migrateDefaultAutocompleteSettings(context)
 
-    expect(state.get("provider")?.globalValue).toBe("inception")
-    expect(state.get("model")?.globalValue).toBe("mercury-edit-2")
+    expect(state.get("provider")?.globalValue).toBe("mistral")
+    expect(state.get("model")?.globalValue).toBe("codestral-2508")
     expect(flag.get("kilo.autocomplete.defaultClearMigrationV1")).toBe(true)
   })
 
   it("leaves a partial match untouched", async () => {
     setGlobal(state, "provider", DEFAULT_AUTOCOMPLETE_MODEL.providerID)
-    setGlobal(state, "model", "inception/mercury-edit-2")
+    setGlobal(state, "model", "codestral-2508")
     const { context } = makeContext()
 
     await migrateDefaultAutocompleteSettings(context)
 
     expect(state.get("provider")?.globalValue).toBe(DEFAULT_AUTOCOMPLETE_MODEL.providerID)
-    expect(state.get("model")?.globalValue).toBe("inception/mercury-edit-2")
+    expect(state.get("model")?.globalValue).toBe("codestral-2508")
   })
 
   it("ignores workspace-scoped pins so they aren't mistaken for global defaults", async () => {

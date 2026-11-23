@@ -11,6 +11,8 @@ import ai.kilocode.client.testing.deactivateIde
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhState
+import ai.kilocode.rpc.dto.SessionActivityDto
+import ai.kilocode.rpc.dto.SessionActivityKindDto
 import ai.kilocode.rpc.dto.WorktreeDirtyDto
 import ai.kilocode.rpc.dto.WorktreeDirtyListDto
 import ai.kilocode.rpc.dto.WorktreePrDto
@@ -23,6 +25,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withContext
 
 @Suppress("UnstableApiUsage")
@@ -31,6 +34,9 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     private lateinit var rpc: FakeWorktreeRpcApi
     private lateinit var timers: TestUiTimers
     private lateinit var service: WorktreeStatusService
+
+    /** Stands in for KiloSessionService's live activity map, which the service watches for turn endings. */
+    private val activity = MutableStateFlow<Map<String, SessionActivityDto>>(emptyMap())
 
     override fun setUp() {
         super.setUp()
@@ -43,7 +49,7 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
         ApplicationManager.getApplication()
             .replaceService(GhStatusCoordinator::class.java, GhStatusCoordinator(coroutines.scope, TestUiTimers()), testRootDisposable)
         timers = TestUiTimers()
-        service = WorktreeStatusService(project, coroutines.scope, timers)
+        service = WorktreeStatusService(project, coroutines.scope, timers) { activity }
     }
 
     override fun tearDown() {
@@ -291,6 +297,55 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
         handle.close()
     }
 
+    fun `test a branch change drops the old badge and reloads past the throttle`() {
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val key = normalizeWorktreePath(path)
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 1, GhState.OPEN, "https://pr/1")))
+        val handle = service.attach()
+        drain()
+        assertEquals(1, service.pr.value[key]?.number)
+        // A recent poll must not make the branch change wait out the throttle.
+        service.refreshPr(force = true)
+        drain()
+
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 2, GhState.OPEN, "https://pr/2")))
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforePrStatus = { gate.await() }
+        service.branchChanged(setOf(path))
+        assertTrue(coroutines.pumpUntil { rpc.prCalls.size == 3 })
+        assertNull("the old branch's badge must disappear before the new answer", service.pr.value[key])
+        assertEquals(0L, rpc.prAges.last())
+        assertEquals(listOf(key), rpc.prFresh.last())
+
+        gate.complete(Unit)
+        drain()
+
+        assertEquals(2, service.pr.value[key]?.number)
+        handle.close()
+    }
+
+    fun `test a branch change discards a lookup started for the old branch`() {
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val key = normalizeWorktreePath(path)
+        val gate = CompletableDeferred<Unit>()
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 1, GhState.OPEN, "https://pr/1")))
+        rpc.beforePrStatus = { gate.await() }
+        val handle = service.attach()
+        assertTrue(coroutines.pumpUntil { rpc.prCalls.size == 1 })
+
+        // The running answer was resolved against the branch the row no longer has.
+        service.branchChanged(setOf(path))
+        assertNull(service.pr.value[key])
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 2, GhState.OPEN, "https://pr/2")))
+        rpc.beforePrStatus = {}
+        gate.complete(Unit)
+        drain()
+
+        assertEquals(2, rpc.prCalls.size)
+        assertEquals(2, service.pr.value[key]?.number)
+        handle.close()
+    }
+
     fun `test a forced refresh does not stack a second lookup on a running one`() {
         val gate = CompletableDeferred<Unit>()
         rpc.prResult = WorktreePrListDto(GhAvailability.OK)
@@ -442,8 +497,6 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     }
 
     fun `test a pr lookup cancelled by a disable cannot publish after a re-enable`() {
-        val path = "${project.basePath}/.kilo/worktrees/feature-x"
-        val key = normalizeWorktreePath(path)
         val gate = CompletableDeferred<Unit>()
         // The lookup that gets abandoned. It answers empty and OK, which is what the RPC layer
         // synthesizes when it swallows the cancellation. NonCancellable holds it open past the
@@ -454,19 +507,17 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
         assertTrue(coroutines.pumpUntil { rpc.prCalls.isNotEmpty() })
 
         github(false)
-        // The fresh lookup after re-enabling sees a real PR and an unauthorized gh.
+        // The fresh lookup after re-enabling sees an unauthorized gh.
         rpc.beforePrStatus = {}
-        rpc.prResult = WorktreePrListDto(GhAvailability.UNAUTH, listOf(WorktreePrDto(path, 7, GhState.OPEN, "https://pr/7")))
+        rpc.prResult = WorktreePrListDto(GhAvailability.UNAUTH)
         github(true)
         drain()
-        assertEquals(7, service.pr.value[key]?.number)
         assertEquals(GhAvailability.UNAUTH, service.gh.value)
 
-        // Now let the abandoned lookup finish. It must not wipe the badge or report a false OK.
+        // Now let the abandoned lookup finish. It must not report a false OK.
         gate.complete(Unit)
         drain()
 
-        assertEquals(7, service.pr.value[key]?.number)
         assertEquals(GhAvailability.UNAUTH, service.gh.value)
         handle.close()
     }
@@ -527,6 +578,35 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
 
         assertEquals(1, service.pr.value[key]?.number)
         assertEquals(GhAvailability.RATE_LIMITED, service.gh.value)
+        handle.close()
+    }
+
+    fun `test transient PR failures retain hidden badges but auth or git failures clear them`() {
+        val path = normalizeWorktreePath("${project.basePath}/.kilo/worktrees/hidden")
+        val badge = WorktreePrDto(path, 1, GhState.OPEN, "https://pr/1")
+        var hidden = emptySet<String>()
+        val handle = service.attach { hidden }
+        drain()
+
+        for (status in listOf(GhAvailability.UNAUTH, GhAvailability.GIT_MISSING)) {
+            hidden = emptySet()
+            rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(badge))
+            service.refreshPr(force = true)
+            drain()
+            hidden = setOf(path)
+            for (transient in listOf(GhAvailability.TIMEOUT, GhAvailability.RATE_LIMITED)) {
+                rpc.prResult = WorktreePrListDto(transient)
+                service.refreshPr(force = true)
+                drain()
+                assertEquals(listOf(path), rpc.prExcluded.last())
+                assertEquals(badge, service.pr.value[path])
+            }
+            rpc.prResult = WorktreePrListDto(status)
+            service.refreshPr(force = true)
+            drain()
+            assertEquals(status, service.gh.value)
+            assertEmpty(service.pr.value.keys)
+        }
         handle.close()
     }
 
@@ -728,6 +808,209 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
         handle.close()
     }
 
+    fun `test an agent that stops pays a lookup naming only its own worktree`() {
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val key = normalizeWorktreePath(path)
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK)
+        val handle = service.attach()
+        drain()
+        assertEquals(1, rpc.prCalls.size)
+        timers.advanceBy(PR_FLOOR)
+
+        working(path)
+        drain()
+        assertEquals("a turn that has only started cannot have opened a pull request", 1, rpc.prCalls.size)
+
+        // What `gh pr create` inside a worktree leaves behind: nothing local. The branch and the head
+        // commit are what the backend keys "no pull request here" by, and neither moved, so naming the
+        // path is the only way the badge can appear before that answer expires.
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 9, GhState.OPEN, "https://pr/9")))
+        idle()
+        drain()
+
+        assertEquals(2, rpc.prCalls.size)
+        assertEquals(listOf(key), rpc.prFresh.last())
+        assertNull("one row's news is no reason to re-run every other row's lookup", rpc.prAges.last())
+        assertEquals(9, service.pr.value[key]?.number)
+        handle.close()
+    }
+
+    fun `test a hidden worktree keeps its fresh lookup until it is revealed`() {
+        val path = normalizeWorktreePath("${project.basePath}/.kilo/worktrees/hidden")
+        var hidden = setOf(path)
+        val handle = service.attach { hidden }
+        drain()
+        timers.advanceBy(PR_FLOOR)
+        working(path)
+        drain()
+        idle()
+        drain()
+
+        assertEquals(2, rpc.prCalls.size)
+        assertEquals(listOf(path), rpc.prExcluded.last())
+        assertEmpty(rpc.prFresh.last())
+
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 9, GhState.OPEN, "https://pr/9")))
+        hidden = emptySet()
+        service.visibilityChanged()
+        timers.advanceBy(PR_FLOOR)
+        drain()
+        assertEquals(3, rpc.prCalls.size)
+        assertEmpty(rpc.prExcluded.last())
+        assertEquals(listOf(path), rpc.prFresh.last())
+        assertNull(rpc.prAges.last())
+        assertEquals(9, service.pr.value[path]?.number)
+
+        service.refreshPr(force = true)
+        drain()
+        assertEmpty(rpc.prFresh.last())
+        handle.close()
+    }
+
+    fun `test an agent that stops to ask something still pays a lookup`() {
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK)
+        val handle = service.attach()
+        drain()
+        timers.advanceBy(PR_FLOOR)
+        working(path)
+        drain()
+
+        // Opening a PR and then asking a question about it is one turn, and it ends here just as much
+        // as an idle session does — the agent has stopped working either way.
+        activity.value = mapOf("ses" to SessionActivityDto(path, SessionActivityKindDto.QUESTION))
+        drain()
+
+        assertEquals(2, rpc.prCalls.size)
+        assertEquals(listOf(normalizeWorktreePath(path)), rpc.prFresh.last())
+        handle.close()
+    }
+
+    fun `test a worktree that keeps working owes no lookup`() {
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val other = "${project.basePath}/.kilo/worktrees/feature-y"
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK)
+        val handle = service.attach()
+        drain()
+        timers.advanceBy(PR_FLOOR)
+        working(path)
+        drain()
+        assertEquals(1, rpc.prCalls.size)
+
+        // A second agent starting elsewhere republishes the whole map. The first worktree is still
+        // running, so nothing about it has concluded and it must not pay a lookup for the news.
+        activity.value = mapOf(
+            "ses" to SessionActivityDto(path, SessionActivityKindDto.RUNNING),
+            "ses-2" to SessionActivityDto(other, SessionActivityKindDto.RUNNING),
+        )
+        drain()
+
+        assertEquals(1, rpc.prCalls.size)
+        handle.close()
+    }
+
+    fun `test turn endings inside the floor window collapse onto one lookup naming both`() {
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val other = "${project.basePath}/.kilo/worktrees/feature-y"
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK)
+        val handle = service.attach()
+        drain()
+        assertEquals(1, rpc.prCalls.size)
+
+        activity.value = mapOf(
+            "ses" to SessionActivityDto(path, SessionActivityKindDto.RUNNING),
+            "ses-2" to SessionActivityDto(other, SessionActivityKindDto.RUNNING),
+        )
+        drain()
+        // Two agents finishing a few seconds apart, both inside the floor window the attach lookup
+        // opened. Each is real news and neither may be dropped, but one fan-out answers both.
+        activity.value = mapOf("ses-2" to SessionActivityDto(other, SessionActivityKindDto.RUNNING))
+        drain()
+        idle()
+        drain()
+        assertEquals("the floor holds the requests rather than spending on each", 1, rpc.prCalls.size)
+
+        timers.advanceBy(PR_FLOOR)
+        drain()
+
+        assertEquals(2, rpc.prCalls.size)
+        assertEquals(
+            setOf(normalizeWorktreePath(path), normalizeWorktreePath(other)),
+            rpc.prFresh.last().toSet(),
+        )
+        handle.close()
+    }
+
+    fun `test a turn ending held with a return keeps both the ceiling and the path`() {
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK)
+        val handle = service.attach()
+        drain()
+        working(path)
+        drain()
+
+        // A return wants everything no older than the absence; a turn ending wants one row resolved
+        // from scratch. Merging them has to keep the stricter of the two claims on every axis, or the
+        // one that arrived second would quietly relax the first.
+        deactivateIde(project)
+        timers.advanceBy(Away.FRESH)
+        activateIde(project)
+        drain()
+        idle()
+        drain()
+        assertEquals(1, rpc.prCalls.size)
+
+        timers.advanceBy(PR_FLOOR - Away.FRESH)
+        drain()
+
+        assertEquals(2, rpc.prCalls.size)
+        assertEquals(Away.FRESH, rpc.prAges.last())
+        assertEquals(listOf(normalizeWorktreePath(path)), rpc.prFresh.last())
+        handle.close()
+    }
+
+    fun `test a spent github budget suppresses a turn ending`() {
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        rpc.prResult = WorktreePrListDto(GhAvailability.RATE_LIMITED)
+        val handle = service.attach()
+        drain()
+        assertEquals(GhAvailability.RATE_LIMITED, service.gh.value)
+        timers.advanceBy(PR_FLOOR)
+        working(path)
+        drain()
+        val before = rpc.prCalls.size
+
+        // The lookup a turn ending would pay for is the one GitHub is refusing, so it can only confirm
+        // what the last answer already said. The poll stays the single probe that notices the reset.
+        idle()
+        drain()
+        timers.advanceBy(PR_FLOOR)
+        drain()
+
+        assertEquals(before, rpc.prCalls.size)
+        handle.close()
+    }
+
+    fun `test a turn ending while nothing is attached does not start a lookup`() {
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK)
+        val handle = service.attach()
+        drain()
+        working(path)
+        drain()
+        handle.close()
+        val before = rpc.prCalls.size
+
+        // No surface is showing badges, so there is nothing for a fan-out to update. Re-attaching
+        // loads at once anyway.
+        idle()
+        drain()
+        timers.advanceBy(PR_FLOOR)
+        drain()
+
+        assertEquals(before, rpc.prCalls.size)
+    }
+
     fun `test a forced refresh can demand a fresh backend lookup`() {
         rpc.prResult = WorktreePrListDto(GhAvailability.OK)
         val handle = service.attach()
@@ -770,11 +1053,11 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     fun `test disabling clears pr state and stops the poll`() {
         val path = "${project.basePath}/.kilo/worktrees/feature-x"
         val key = normalizeWorktreePath(path)
-        rpc.prResult = WorktreePrListDto(GhAvailability.UNAUTH, listOf(WorktreePrDto(path, 1, GhState.OPEN, "https://pr/1")))
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 1, GhState.OPEN, "https://pr/1")))
         val handle = service.attach()
         drain()
         assertEquals(1, service.pr.value[key]?.number)
-        assertEquals(GhAvailability.UNAUTH, service.gh.value)
+        assertEquals(GhAvailability.OK, service.gh.value)
         val before = rpc.prCalls.size
 
         github(false)
@@ -812,6 +1095,16 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     private fun github(enabled: Boolean) {
         edtWait { setGithubIntegration(enabled, "test") }
         pump()
+    }
+
+    /** Publishes an agent working in [path], as the live activity map reports it. */
+    private fun working(path: String) {
+        activity.value = mapOf("ses" to SessionActivityDto(path, SessionActivityKindDto.RUNNING))
+    }
+
+    /** Publishes every session idle, which is how a finished turn leaves the activity map. */
+    private fun idle() {
+        activity.value = emptyMap()
     }
 
     private fun drain() = coroutines.drain(::pump)

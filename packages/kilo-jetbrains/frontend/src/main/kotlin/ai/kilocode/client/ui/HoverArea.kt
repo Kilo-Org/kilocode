@@ -9,8 +9,6 @@ import java.awt.Container
 import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Graphics
-import java.awt.Graphics2D
-import java.awt.RenderingHints
 import java.awt.event.ActionEvent
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
@@ -160,15 +158,7 @@ internal class HoverArea @RequiresEdt constructor(val content: Component) : JPan
     override fun paintComponent(g: Graphics) {
         super.paintComponent(g)
         if (!live() || (!over && !hasFocus())) return
-        val canvas = g.create() as Graphics2D
-        try {
-            canvas.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-            canvas.color = UiStyle.Colors.actionHoverBackground()
-            val arc = JBUI.scale(JBUI.getInt("Button.arc", 6))
-            canvas.fillRoundRect(0, 0, width, height, arc, arc)
-        } finally {
-            canvas.dispose()
-        }
+        paintActionHover(g, width, height)
     }
 
     @RequiresEdt

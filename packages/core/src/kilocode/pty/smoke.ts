@@ -2,10 +2,13 @@ import { Shell } from "../../shell"
 import { KiloPtyTermination } from "./termination"
 import { spawn } from "#pty"
 
-const TIMEOUT = 15_000
+const TIMEOUT = 30_000
+// Shells can drop input written before they are ready to read it (for example pwsh under
+// ConPTY while PSReadLine starts), so resend the probe until the shell answers.
+const RETRY = 1_000
 
-export async function smoke() {
-  const proc = spawn(Shell.preferred(), [], {
+export async function smoke(file = Shell.preferred(), args: string[] = []) {
+  const proc = spawn(file, args, {
     name: "xterm-256color",
     cwd: process.cwd(),
     env: { ...process.env, TERM: "xterm-256color", KILO_TERMINAL: "1" } as Record<string, string>,
@@ -25,10 +28,19 @@ export async function smoke() {
     exited.resolve(event.exitCode)
   })
   const timeout = AbortSignal.timeout(TIMEOUT)
+  const probe = () => {
+    if (state.exited) return
+    try {
+      proc.write("echo KILO_PTY_READY\r")
+    } catch (err) {
+      output.reject(err)
+    }
+  }
+  const retry = setInterval(probe, RETRY)
 
   try {
     proc.resize(100, 40)
-    proc.write("echo KILO_PTY_READY\r")
+    probe()
     await Promise.race([
       output.promise,
       new Promise<never>((_, reject) =>
@@ -39,6 +51,9 @@ export async function smoke() {
         ),
       ),
     ])
+    // Stop probing before exit so no probe follows the exit command. Probes already queued
+    // only print the marker again and run before exit.
+    clearInterval(retry)
     proc.write("exit 7\r")
     const code = await Promise.race([
       exited.promise,
@@ -50,12 +65,13 @@ export async function smoke() {
     ])
     if (code !== 7) throw new Error(`PTY exited ${code}, expected 7`)
   } finally {
+    clearInterval(retry)
     data.dispose()
     exit.dispose()
     if (!state.exited) proc.kill()
   }
 
-  const active = spawn(Shell.preferred(), [], {
+  const active = spawn(file, args, {
     name: "xterm-256color",
     cwd: process.cwd(),
     env: process.env as Record<string, string>,

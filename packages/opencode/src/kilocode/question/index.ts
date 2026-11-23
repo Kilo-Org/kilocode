@@ -77,13 +77,13 @@ export namespace KiloQuestion {
     })
 
   /**
-   * Auto-dismiss when a newer prompt is already queued on this session — a
+   * Auto-dismiss when a newer foreground prompt is already queued on this session — a
    * tool that calls `Question.ask` after the queue event would otherwise block
    * the run while the user waits for their queued prompt to take over.
    */
   export const guardFollowup = <E>(sessionID: SessionID, makeError: () => E) =>
     Effect.gen(function* () {
-      if (!KiloSessionPromptQueue.hasFollowup(sessionID)) return
+      if (!KiloSessionPromptQueue.hasFollowup(sessionID, true)) return
       log.info("auto-dismissed — followup queued", { sessionID })
       return yield* Effect.fail(makeError())
     })

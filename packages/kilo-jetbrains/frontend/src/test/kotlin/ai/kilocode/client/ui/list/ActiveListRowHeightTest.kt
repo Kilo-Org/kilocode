@@ -1,8 +1,18 @@
 package ai.kilocode.client.ui.list
 
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ActiveConfig
+import ai.kilocode.client.ui.active.ActiveRowHeight
+import ai.kilocode.client.ui.active.ActiveBadge
+import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.util.edtWait
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.CollectionListModel
+import com.intellij.ui.components.JBList
+import com.intellij.ui.components.JBTextArea
 import com.intellij.util.ui.EmptyIcon
 import com.intellij.util.ui.UIUtil
+import java.awt.event.ComponentEvent
 import javax.swing.Icon
 import javax.swing.JPanel
 
@@ -54,22 +64,22 @@ class ActiveListRowHeightTest : BasePlatformTestCase() {
         return view
     }
 
-    private fun rows(vararg keys: String, glyph: Icon): List<ActiveListItem> = keys.map { Row(it, glyph) }
+    private fun rows(vararg keys: String, glyph: Icon): List<ActiveItem> = keys.map { Row(it, glyph) }
 
     /**
      * A row shaped like the worktree list's: equality ignores the click handlers, and the badge getter
      * builds a fresh lambda on every read.
      */
-    private inner class Row(override val key: String, private val glyph: Icon) : ActiveListItem {
+    private inner class Row(override val key: String, private val glyph: Icon) : ActiveSection {
         override val title get() = key
         override val search get() = key
         override val section get() = "Section"
-        override val badges: List<ActiveListBadge>
+        override val badges: List<ActiveBadge>
             get() {
                 reads++
                 // The handler captures state, so every read allocates a lambda the previous one cannot
                 // be equal to — exactly what a badge that opens its own PR url does.
-                return listOf(ActiveListBadge("", id = "pr-checks", icon = glyph, action = { clicks++ }))
+                return listOf(ActiveBadge("", id = "pr-checks", icon = glyph, action = { clicks++ }))
             }
 
         override fun equals(other: Any?): Boolean {
@@ -78,5 +88,133 @@ class ActiveListRowHeightTest : BasePlatformTestCase() {
         }
 
         override fun hashCode() = 31 * key.hashCode() + glyph.hashCode()
+    }
+
+    fun `test ordinary rows discard placeholder preferred dimensions`() {
+        val row = wrapRow("Description")
+        val model = CollectionListModel<ActiveItem>(listOf(row))
+        val list = JBList(model).apply { setSize(400, 200) }
+        val renderer = ActiveListRenderer(model, ActiveConfig.Preferred)
+        val expected = renderer.getListCellRendererComponent(list, row, 0, false, false).preferredSize
+        assertTrue(expected.height > 0)
+        val gap = ActiveGap(row, expected.height * 3)
+        assertEquals(
+            gap.height,
+            renderer.getListCellRendererComponent(list, gap, 0, false, false).preferredSize.height,
+        )
+
+        val stamp = renderer.getListCellRendererComponent(list, row, 0, false, false)
+
+        assertEquals(expected, stamp.preferredSize)
+    }
+
+    // --- ActiveConfig.wrapDescription ---
+
+    fun `test wrapDescription is opt-in - default config keeps a single-line description at any width`() {
+        val renderer = ActiveListRenderer(CollectionListModel(), ActiveConfig.Preferred)
+        val list = JBList<ActiveItem>()
+        val row = wrapRow("word ".repeat(40).trim())
+
+        list.setSize(600, 200)
+        val wide = renderer.bodyPreferredHeight(list, row, 0, false, false)
+        list.setSize(180, 200)
+        val narrow = renderer.bodyPreferredHeight(list, row, 0, false, false)
+
+        // FadeText clips and fades a single line instead of wrapping; the row's height must not
+        // depend on the list's width when wrapping was never requested.
+        assertEquals("un-opted-in rows must stay one line regardless of width", wide, narrow)
+    }
+
+    fun `test wrapDescription grows row height as the list narrows, without growing preferred width`() {
+        val renderer = ActiveListRenderer(CollectionListModel(), ActiveConfig(height = ActiveRowHeight.PREFERRED, wrapDescription = true))
+        val list = JBList<ActiveItem>()
+        val row = wrapRow("word ".repeat(40).trim())
+
+        list.setSize(600, 200)
+        val wideHeight = renderer.bodyPreferredHeight(list, row, 0, false, false)
+        val wideWidth = renderer.getListCellRendererComponent(list, row, 0, false, false).preferredSize.width
+
+        list.setSize(180, 200)
+        val narrowHeight = renderer.bodyPreferredHeight(list, row, 0, false, false)
+        val narrowWidth = renderer.getListCellRendererComponent(list, row, 0, false, false).preferredSize.width
+
+        assertTrue("a narrower list must wrap the body onto more lines", narrowHeight > wideHeight)
+        // The row body tracks the list's own width (HAlign.TRACK contributes zero to preferred
+        // width); a taller wrap must never widen what the row reports back to the list.
+        assertTrue("wrapping a taller body must not grow the row's preferred width", narrowWidth <= wideWidth)
+    }
+
+    fun `test wrapDescription preserves explicit line breaks in the underlying text component`() {
+        val renderer = ActiveListRenderer(CollectionListModel(), ActiveConfig(height = ActiveRowHeight.PREFERRED, wrapDescription = true))
+        val list = JBList<ActiveItem>()
+        list.setSize(400, 200)
+        val row = wrapRow("first line\nsecond line")
+
+        val comp = renderer.getListCellRendererComponent(list, row, 0, false, false)
+
+        val area = UIUtil.findComponentOfType(comp, JBTextArea::class.java) ?: error("expected a wrapping text area")
+        assertEquals("first line\nsecond line", area.text)
+    }
+
+    fun `test wrapDescription body color matches the row regardless of selection`() {
+        val renderer = ActiveListRenderer(CollectionListModel(), ActiveConfig(height = ActiveRowHeight.PREFERRED, wrapDescription = true))
+        val list = JBList<ActiveItem>()
+        list.setSize(400, 200)
+        val row = wrapRow("body text")
+
+        val unselected = UIUtil.findComponentOfType(
+            renderer.getListCellRendererComponent(list, row, 0, false, false),
+            JBTextArea::class.java,
+        ) ?: error("expected a wrapping text area")
+        val selected = UIUtil.findComponentOfType(
+            renderer.getListCellRendererComponent(list, row, 0, true, true),
+            JBTextArea::class.java,
+        ) ?: error("expected a wrapping text area")
+
+        assertEquals(UiStyle.Colors.weak(), unselected.foreground)
+        assertEquals(UiStyle.Colors.weak(), selected.foreground)
+    }
+
+    fun `test wrapDescription remeasures cached preferred heights when the list narrows`() {
+        edtWait {
+            val view = ActiveListView("", ActiveConfig(height = ActiveRowHeight.PREFERRED, wrapDescription = true)) { _, _ -> }
+            val pane = JPanel()
+            pane.add(view)
+            pane.setSize(600, 400)
+            view.setSize(600, 400)
+            view.list.setSize(600, 400)
+            view.update(listOf(wrapRow("word ".repeat(60).trim())))
+            view.list.doLayout()
+            UIUtil.dispatchAllInvocationEvents()
+            val wide = view.list.getCellBounds(0, 0).height
+
+            view.list.setSize(180, 400)
+            view.list.componentListeners.forEach { it.componentResized(ComponentEvent(view.list, ComponentEvent.COMPONENT_RESIZED)) }
+            view.list.doLayout()
+            UIUtil.dispatchAllInvocationEvents()
+            val narrow = view.list.getCellBounds(0, 0).height
+
+            assertTrue("a narrower list must invalidate the old preferred row height: wide=$wide narrow=$narrow", narrow > wide)
+        }
+    }
+
+    fun `test resize leaves non-wrapping cell measurements unchanged`() {
+        edtWait {
+            val view = ActiveListView("", ActiveConfig.Equal) { _, _ -> }
+            view.list.setSize(600, 400)
+            view.update(listOf(wrapRow("Description")))
+            view.list.fixedCellHeight = 777
+
+            view.list.setSize(180, 400)
+            view.list.componentListeners.forEach { it.componentResized(ComponentEvent(view.list, ComponentEvent.COMPONENT_RESIZED)) }
+
+            assertEquals(777, view.list.fixedCellHeight)
+        }
+    }
+
+    private fun wrapRow(description: String): ActiveItem = object : ActiveItem {
+        override val key = "row"
+        override val title = "Title"
+        override val description = description
     }
 }

@@ -34,7 +34,19 @@ describe("TodoView.calculate", () => {
     const view = TodoView.calculate(before, after)
 
     expect(view.mode).toBe("full")
-    expect(view.todos).toEqual(after)
+    expect(view.todos).toEqual([after[0], { ...after[1], done: true }, { ...after[2], done: true }])
+  })
+
+  test("marks todos that just completed or started", () => {
+    const before = [item("Inspect files", "in_progress"), item("Implement fix"), item("Run checks")]
+    const after = [item("Inspect files", "completed"), item("Implement fix", "in_progress"), item("Run checks")]
+    const view = TodoView.calculate(before, after)
+
+    expect(view.todos.map((todo) => [Boolean(todo.done), Boolean(todo.started)])).toEqual([
+      [true, false],
+      [false, true],
+      [false, false],
+    ])
   })
 
   test("shows the full list when todo content is rewritten", () => {

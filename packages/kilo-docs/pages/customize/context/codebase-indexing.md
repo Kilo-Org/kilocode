@@ -67,7 +67,7 @@ You can also edit the `indexing` section in `kilo.jsonc` directly:
 | **Ollama** | Local base URL | No API costs. Runs fully offline. |
 | **OpenAI-Compatible** | Base URL + optional API key | For self-hosted or third-party OpenAI-compatible endpoints, including unauthenticated local servers. |
 | **Gemini** | Google AI API key | Supports `gemini-embedding-001` and other Gemini embedding models. |
-| **Mistral** | API key from [La Plateforme](https://console.mistral.ai/api-keys/) | Use a standard Mistral API key. The Codestral-specific keys from the [Mistral autocomplete setup guide](/docs/code-with-ai/features/autocomplete/mistral-setup) are **not** interchangeable — those only work for completion. |
+| **Mistral** | API key from [Mistral Studio](https://console.mistral.ai/api-keys/) | Use a standard Studio API key, as in the [Mistral autocomplete setup guide](/docs/code-with-ai/features/autocomplete/mistral-setup). Legacy Codestral-only keys do not support embeddings. |
 | **Vercel AI Gateway** | API key | Routes requests through [Vercel AI Gateway](https://vercel.com/docs/ai-gateway). |
 | **AWS Bedrock** | AWS region + profile | Uses the AWS SDK credential chain. |
 | **OpenRouter** | API key (optional specific provider) | Routes through [OpenRouter](https://openrouter.ai/). |
@@ -147,7 +147,7 @@ You can also edit the `indexing` section directly. This is the full shape of the
 | **Ollama** | `ollama` | `{ baseUrl }` | No API costs. Runs fully offline. |
 | **OpenAI-Compatible** | `openai-compatible` | `{ baseUrl, apiKey? }` | For self-hosted or third-party endpoints, including unauthenticated local servers. |
 | **Gemini** | `gemini` | `{ apiKey }` | Supports `gemini-embedding-001`. |
-| **Mistral** | `mistral` | `{ apiKey }` | Use a [La Plateforme](https://console.mistral.ai/api-keys/) key — the Codestral-specific keys from the [autocomplete setup guide](/docs/code-with-ai/features/autocomplete/mistral-setup) don't work for embeddings. |
+| **Mistral** | `mistral` | `{ apiKey }` | Use a standard [Mistral Studio](https://console.mistral.ai/api-keys/) API key, as in the [autocomplete setup guide](/docs/code-with-ai/features/autocomplete/mistral-setup). Legacy Codestral-only keys do not support embeddings. |
 | **Vercel AI Gateway** | `vercel-ai-gateway` | `{ apiKey }` | Routes through [Vercel AI Gateway](https://vercel.com/docs/ai-gateway). |
 | **AWS Bedrock** | `bedrock` | `{ region, profile }` | Uses AWS SDK credential chain. |
 | **OpenRouter** | `openrouter` | `{ apiKey, specificProvider? }` | Routes through [OpenRouter](https://openrouter.ai/). |

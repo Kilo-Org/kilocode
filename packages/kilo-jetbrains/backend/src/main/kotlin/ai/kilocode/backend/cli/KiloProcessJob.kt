@@ -25,14 +25,12 @@ import java.util.concurrent.atomic.AtomicBoolean
  * available, or if any native call fails, and callers fall back to their existing process-tree kill.
  * So this can only ever improve teardown, never regress it.
  *
- * We map the three Job Object functions directly against `kernel32` because the JNA build bundled
- * with the IDE does not expose them. This relies only on the stable core JNA runtime and the
- * kernel32 ABI, so it is unaffected by JNA version changes across IDE releases.
+ * We map the Job Object functions directly against `kernel32` using the platform's JNA runtime
+ * when it is available. If the IDE does not expose JNA to the plugin, normal process-tree teardown
+ * remains available without loading any native types into this facade.
  *
- * JNA is deliberately NOT bundled with the plugin (unlike other third-party deps): it loads a
- * single native `jnidispatch` library per process, so a second copy would collide with the
- * platform's. Like `kotlinx.coroutines`, it must come from the IDE's own classloader — here via
- * `lib/util-8.jar`, which already backs platform APIs such as `WinProcessManager` and `NioFiles`.
+ * JNA is not bundled separately: the IDE owns its native `jnidispatch` library, and another runtime
+ * can conflict with that ownership or the IDE's native-loading configuration.
  *
  * Known limitations:
  * - Persistent background processes: kill-on-close terminates every CLI descendant, including a
@@ -43,19 +41,32 @@ import java.util.concurrent.atomic.AtomicBoolean
  *   window before the process joins the job. Closing it would require creating the process suspended
  *   (abandoning `ProcessBuilder`); the window is negligible next to the previously-always-orphaned CLI.
  */
-internal class KiloProcessJob private constructor(
+internal class KiloProcessJob private constructor(private val handle: AutoCloseable) : AutoCloseable {
+    override fun close() = handle.close()
+
+    companion object {
+        fun assign(pid: Long, log: KiloLog): KiloProcessJob? {
+            if (!SystemInfo.isWindows) return null
+            // Native class initialization can fail before its own availability checks run.
+            return runCatching { WindowsJob.assign(pid, log)?.let { KiloProcessJob(it) } }
+                .getOrElse { log.warn("CLI kill-on-close job failed to initialize (pid=$pid)", it); null }
+        }
+    }
+}
+
+private class WindowsJob private constructor(
     private val lib: Kernel32Job,
     private val handle: Pointer,
     private val pid: Long,
     private val log: KiloLog,
-) {
+) : AutoCloseable {
     private val closed = AtomicBoolean(false)
 
     /**
      * Close the job handle. When this is the last open handle, kill-on-close terminates the whole
      * CLI process tree immediately. Idempotent, and safe to call after the tree has already exited.
      */
-    fun close() {
+    override fun close() {
         if (!closed.compareAndSet(false, true)) return
         log.info("Closing CLI kill-on-close job handle (pid=$pid) — OS terminates the CLI tree")
         val ok = runCatching { lib.CloseHandle(handle) }
@@ -78,28 +89,25 @@ internal class KiloProcessJob private constructor(
 
         private val lib: Kernel32Job? by lazy {
             runCatching { Native.load("kernel32", Kernel32Job::class.java) }
-                .getOrElse { KiloLog.create(KiloProcessJob::class.java).warn("Native.load(kernel32) failed", it); null }
+                .getOrElse { KiloLog.create(WindowsJob::class.java).warn("Native.load(kernel32) failed", it); null }
         }
 
         /**
          * Assign the process tree rooted at [pid] to a kill-on-close job. Returns null (and logs the
          * reason) when not applicable or on any failure, so the caller keeps its existing teardown.
          */
-        fun assign(pid: Long, log: KiloLog): KiloProcessJob? {
-            if (!SystemInfo.isWindows) return null
+        fun assign(pid: Long, log: KiloLog): WindowsJob? {
             // Check JnaLoader.isLoaded() BEFORE any com.sun.jna.Native access. isLoaded() initializes
-            // JNA behind its own failure boundary and returns false if jnidispatch is unavailable, so
-            // a linkage error can never escape this best-effort path and orphan the just-started CLI.
+            // JNA behind its own failure boundary and returns false if jnidispatch is unavailable.
             if (!JnaLoader.isLoaded()) {
                 log.warn("CLI kill-on-close job skipped: JNA not loaded (pid=$pid, arch=${CpuArch.CURRENT})")
                 return null
             }
-            return runCatching { setup(pid, log) }
-                .getOrElse { log.warn("CLI kill-on-close job failed to initialize (pid=$pid)", it); null }
+            return setup(pid, log)
         }
 
-        // All com.sun.jna.Native access lives here, behind assign()'s isLoaded() guard and runCatching.
-        private fun setup(pid: Long, log: KiloLog): KiloProcessJob? {
+        // All native access stays behind the facade's failure boundary and the isLoaded() guard.
+        private fun setup(pid: Long, log: KiloLog): WindowsJob? {
             log.info("Setting up CLI kill-on-close job (pid=$pid, arch=${CpuArch.CURRENT}, pointerSize=${Native.POINTER_SIZE})")
             if (Native.POINTER_SIZE != 8) {
                 log.warn("CLI kill-on-close job skipped: unsupported pointer size ${Native.POINTER_SIZE} (pid=$pid)")
@@ -112,7 +120,7 @@ internal class KiloProcessJob private constructor(
             return create(k, pid, log)
         }
 
-        private fun create(k: Kernel32Job, pid: Long, log: KiloLog): KiloProcessJob? {
+        private fun create(k: Kernel32Job, pid: Long, log: KiloLog): WindowsJob? {
             val job = k.CreateJobObjectW(null, null)
             if (job == null || job == Pointer.NULL) {
                 log.warn("CreateJobObject failed (pid=$pid, err=${Native.getLastError()})")
@@ -145,7 +153,7 @@ internal class KiloProcessJob private constructor(
                 }
                 owned = true
                 log.info("CLI assigned to kill-on-close job object (pid=$pid, job=$job)")
-                return KiloProcessJob(k, job, pid, log)
+                return WindowsJob(k, job, pid, log)
             } finally {
                 if (!owned) closeHandle(k, job, "job (rollback)", pid, log)
             }

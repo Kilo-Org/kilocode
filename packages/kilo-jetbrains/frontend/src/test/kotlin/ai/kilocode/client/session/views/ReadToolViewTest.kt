@@ -49,7 +49,7 @@ class ReadToolViewTest : BasePlatformTestCase() {
         assertEquals("SessionUiLayoutTest.kt", view.linkText())
         assertEquals(path, view.linkHref())
         assertEquals(path, view.linkTooltip())
-        assertTrue(view.linkMarkup().contains("<nobr><u>SessionUiLayoutTest.kt</u></nobr>"))
+        assertTrue(view.linkUnderline())
         assertEquals(UiStyle.Colors.fg().rgb, view.linkForeground().rgb)
         assertEquals(view.linkFont(), view.bodyFont())
         assertTrue(view.labelText().contains("SessionUiLayoutTest.kt"))

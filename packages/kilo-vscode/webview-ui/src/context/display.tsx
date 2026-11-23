@@ -15,7 +15,7 @@ import type { ExtensionMessage } from "../types/messages"
 import { applyFontSize, clampFontSize, readFontSize } from "../font-size"
 import { resolveReasoningDisplay } from "../utils/reasoning-display"
 import type { ReasoningDisplay } from "../types/messages"
-import { ToolApprovalVisibilityProvider } from "@kilocode/kilo-ui/message-part"
+import { ToolApprovalVisibilityProvider } from "@kilocode/kilo-ui/tool-approval"
 
 interface DisplayContextValue {
   reasoningDisplay: Accessor<ReasoningDisplay>

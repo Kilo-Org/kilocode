@@ -19,16 +19,59 @@ The mobile app lets you:
 - Spawn Cloud Agents and code directly from the app.
 - Monitor and view all non-remote sessions in one place.
 - Send follow-up messages while a session is still running — they are queued and processed in order.
-- Run slash commands (like `/compact`) on connected remote CLI sessions, and start a new session in the same workspace with `/new`. The new session inherits the current session's mode and model. Older CLI versions that do not support remote commands prompt you to upgrade.
+- Run slash commands (like `/compact`) on connected remote CLI sessions, and start a new session in the same workspace with `/new`. Typing `/` also lists the session's [skills](/docs/customize/skills) next to the commands; a skill row carries a **Skill** badge, and selecting it invokes that skill in the session. The new session inherits the current session's mode and model. Older CLI versions that do not support remote commands prompt you to upgrade.
 - Track a session's [goal](/docs/code-with-ai/agents/goals) from a fixed section under the session header, and start or control one with `/goal`.
 - Clear the visible transcript of a remote CLI session with `/clear`. Clearing is client-side only, so it works on any CLI version; server history is kept and may reappear when you re-enter the session.
 - Rename a remote CLI session from the app or the CLI — renames sync in both directions.
-- Review GitHub pull requests end to end — diffs, checks, comments, and merging.
+- Copy a link to the message on screen from the session header, then open it on the web or another device to continue from the same position.
+- Review GitHub pull requests, GitLab merge requests, and Bitbucket pull requests end to end — diffs, checks, comments, and merging.
 - Start a new session on a connected `kilo remote` CLI instance with the **Run on** picker.
+- Browse the files an agent produced straight from your phone's file browser — see [Agent artifacts in your file browser](#agent-artifacts-in-your-file-browser).
+- Use the Kilo tools from a signed-in chat, with no key or URL to configure — see [Kilo tools in chat](#kilo-tools-in-chat).
+- Share a session or open a shared link to read it in the app — see [Sharing a session](#sharing-a-session).
+- Review a session's changed files, refresh the diff, and send line comments to the agent — see [Reviewing session changes](#reviewing-session-changes).
+- Manage your account from the app: profile links, sign-in methods, provider keys (BYOK), data export, and blocked or muted people — see [Account settings](#account-settings).
+- Review your credit history and invoices, and manage Kilo Pass — see [Kilo Pass and billing](#kilo-pass-and-billing).
+- Connect GitHub, GitLab, Slack, Linear, Discord, and Bitbucket for your account or an organization — see [Integrations](#integrations).
+- See your usage — cost, requests, tokens, top models, and top features — for your account or an organization — see [Usage](#usage).
+- See sandbox compute cost in session totals and open sandbox previews — see [Session cost and model details](#session-cost-and-model-details) and [Sandbox previews and triggers](#sandbox-previews-and-triggers).
+- Manage an organization — billing, audit log, settings areas, and creation — see [Organization management](#organization-management).
+- Configure automated code reviews and review memory — see [Code reviewer settings](#code-reviewer-settings).
+
+## App actions
+
+Four actions are available from outside the app. On iOS they appear in the **Shortcuts** app; on Android the same four are addressable from the launcher, the Assistant, or another app.
+
+| Action | What it does |
+|---|---|
+| Start agent | Starts a new session and reports it to the caller. Runs with the app closed. |
+| Open agent needing input | Opens the only session waiting for input, or the Agents list when none or several are waiting. |
+| Open session | Opens a session in the app. |
+| Open pull request | Opens a pull request or merge request from a review link. |
+
+**Start agent** uses the same create path as the in-app new-session screen, including your repository, model preference, and mode. An unsupported GitHub or GitLab repository reports a repository-specific reason and a next action, and a start-agent request with no prompt is refused as prompt-required instead of being left to time out.
+
+**Start agent** asks for confirmation in the app before it creates a session. A native alert shows the full prompt and the named repository, or your most recent repository when the request did not name one. Both platforms bring the app to the foreground first, and the alert waits until the app is active before it appears, so a start requested from a shortcut or another app is not silently dropped. Choosing Cancel returns a cancelled result to the caller and creates no session.
+
+**Open session** and **Open pull request** open the same screens as their in-app controls. A pull request link that is not a review link reports the app's not-a-pull-request message and opens nothing.
+
+### App icon shortcuts and Quick Settings tile
+
+On Android, long-press the Kilo app icon to open the [app shortcuts](https://developer.android.com/guide/topics/ui/shortcuts) **New agent**, **Needs input**, and **Open last session**. On iOS, long-press the app icon to see the same actions as [Home Screen Quick Actions](https://developer.apple.com/design/human-interface-guidelines/home-screen-quick-actions). Each opens the same screen as the matching in-app control.
+
+- **New agent** opens the new-agent composer.
+- **Needs input** opens the session that is waiting for input. It appears only while at least one session is waiting and disappears again when nothing is waiting.
+- **Open last session** opens the session you last opened. It is available after a cold start even when your account identity resolves after the chat screen first renders.
+
+On Android, the Kilo [Quick Settings tile](https://developer.android.com/develop/ui/views/quicksettings-tiles) mirrors this state. While a session is waiting, the tile reads **Needs input** and opens the chat of the session that has waited longest; with nothing waiting, it reads **New agent** and opens the new-agent composer. If the backend is unreachable, the tile still opens the last published waiting session and shows no error of its own. Signing out removes **Needs input** and **Open last session** from the app shortcuts and the tile.
+
+App shortcuts require Android 7.1 (API 25) or later; the Quick Settings tile works on Android 7.0 (API 24) or later.
 
 ## Finding sessions
 
 The **Agents** tab shows live sessions. Tap **See all** there to search past sessions, filter by platform or project, and change the sort order. **See all** on Home opens the live Agents list instead.
+
+Sessions, pull requests, and security findings from the app also appear in your phone's own search — Spotlight on iOS and AppSearch on Android. Tapping a result opens that item's screen in the app. The index is built only from data the app already has, with no background fetch. Signing out, or switching accounts, removes the previous account's entries from the phone's search even when the index was mid-refresh.
 
 ## Privacy and telemetry
 
@@ -54,7 +97,29 @@ The app follows your device language, with English as the fallback. Choose anoth
 
 For Kilo Pass pricing, billing, and account management details, use the [Kilo Pass pricing page](https://kilo.ai/pricing/kilo-pass).
 
-On Android, you can buy, restore, and change Kilo Pass tiers through Google Play. Tier changes take effect at the next renewal; your current tier and credits stay in place until then. Google manages cancellation and payment methods for passes purchased through Google Play.
+Kilo Pass is not sold inside the iOS or Android app. Your profile's Kilo Pass card and the Kilo Pass screen read the pass on your account: an active pass shows its plan and billing cadence, status, the renewal date (or the date a cancellation or pause takes effect), the current period's usage against your available credits, and the bonus credits earned for the period. An account with no pass shows that Kilo Pass is not available in the app, and a pass that has ended shows the ended message. While the details load, the card and screen show placeholders, and a failed read offers **Retry**.
+
+### Managing Kilo Pass
+
+The Kilo Pass screen manages an existing pass. You can cancel it (behind a confirmation), resume a cancelled or paused pass, and view or cancel a scheduled plan change; while a cancellation is pending, the status line reads **Cancels on <date>**. Plan changes that cost money stay on the web, so the app opens the web page on Android and shows plain text on iOS. A pass bought through a store points to the store's own subscription settings instead. The page keeps its placeholders until every ledger it shows has answered, so it does not shift after the first paint.
+
+### Buying credits in the app
+
+The personal credits section shows an **Add credits** entry at any balance, which opens a **Buy credits** screen with your current balance and four preset packs: $10, $50, $100, and $500. The stores sell fixed products, not arbitrary amounts, so the app offers these preset packs rather than a custom amount. Each row shows the credit amount and the store's localized price; a pack the store cannot price is disabled and reads **Price unavailable**.
+
+Selecting a pack opens the store's own purchase sheet — StoreKit on iOS, Google Play Billing on Android. The app never grants credits itself: credits are added only after the backend validates the purchase with the store. A successful purchase shows a confirmation and refreshes your balance, and a cancelled purchase shows no error. If a purchase fails, the screen shows one inline message with a retry action; if the store is unreachable, it shows one banner naming that store while keeping the four packs visible. A purchase the backend has not yet credited is recovered the next time the app connects, and a refunded pack has its credits reversed.
+
+For other ways to add credits, see [Adding Credits](/docs/getting-started/adding-credits).
+
+### Credit history
+
+Your account's **Credit history** screen lists every credit movement — purchases, bonuses, Kilo Pass months, expiries, and deductions — in the same layout as the organization credit activity. Opening a card purchase shows its Stripe receipt. An App Store or Google Play purchase shows **Receipt from the App Store** or **Receipt from Google Play** in place of an invoice link.
+
+### Invoices
+
+The **Invoices** screen lists your Stripe invoices with the same period and cursor paging as the organization invoice list, and opening one lets you share its PDF. An account with no Stripe customer shows an empty list; the app does not create a customer for you.
+
+A **Manage billing on kilo.ai** row under Credits opens the web billing page on Android and shows plain text on iOS.
 
 {% imageGallery columns="3" width="220px" %}
 {% image src="/docs/img/mobile-apps/home.webp" alt="Kilo Code mobile home screen showing active agent sessions" caption="Start coding tasks and resume active sessions from the mobile home screen." /%}
@@ -77,13 +142,131 @@ The new-session screen includes a **Run on** picker that chooses where your sess
 
 Remote sessions start with the mode and model selected on the new-session screen; older CLI versions that don't accept those fields fall back to their own defaults. By default, the workspace is the CLI's launch directory. Use **Folder** to choose a child folder, including nested folders, before starting. If the CLI cannot list folders, the app explains this and starts in the launch directory instead. In organization context, the new session belongs to that organization.
 
+When you select a computer as the run target, the agent picker offers the built-in agents, the profile's agents, and the agents the connected CLI loads for the selected launch folder — including project agents from the project's `.kilo/agents` directory. If you switch the target away from that computer, an agent that only that CLI offered falls back to `code`. Opening an existing remote session merges the profile's agents with the agents the CLI reports for that session's folder. Agents a CLI reports carry no model pin, so the model picker keeps its own choice.
+
 For Cloud Agent sessions, choose a repository from GitHub, GitLab, or, for organizations, Bitbucket. The picker groups repositories by provider and includes **Recently used**. Each provider has its own connection and error messages, so a problem with one does not hide the others.
+
+Cloud Agent sessions also offer a **Sandbox** field, which starts on the backend's default destination. The owner's default sandbox and per-repository overrides are set in [Cloud Agent settings](/docs/code-with-ai/platforms/cloud-agent#choosing-where-sessions-run). Tap it to pick a sandbox type from a sheet that groups the types the backend offers by provider; the field then shows the choice, such as `Cloudflare · Shared`. While the options load, a field-sized skeleton holds the slot, and a failed load shows **Couldn't load sandbox options** with **Retry**. If a chosen type is no longer offered, the field shows why and offers **Use Default**, and you cannot start until you resolve it. Starting sends the type you picked, or the backend default when you pick nothing. Owners without sandbox selection see no Sandbox field.
+
+A Cloud Agent session can also start from a saved cloud environment. The **Cloud environment** row lists the environments that contain the selected repository in your personal or organization scope. When one environment matches, Kilo uses it automatically; when several match, Kilo asks **Select an environment to start.** and blocks Start until you choose. Kilo remembers your last choice for that repository and scope.
+
+Open an environment to see its build state. The build view shows the state, the failure reason when a build fails, the last published snapshot, and the build logs while a build runs. The available action matches the web: **Build**, **Refresh**, **Cancel**, or the reason it is blocked. Build logs and controls are manager-only, as on the web. This row is separate from the **Environment** row, which selects an agent environment profile.
+
+## Agent environment profiles
+
+The **Profile** tab lets you browse, create, edit, and delete [agent environment profiles](/docs/code-with-ai/platforms/cloud-agent#agent-environment-profiles) from your phone. Profiles are personal or organization-owned, and you can manage their repository bindings and reorder them with the up and down buttons. Each profile row shows its MCP server count.
+
+Organization-owned profiles are read-only for members: only organization owners and admins can create, edit, or delete one. Members can open an organization profile and use it for a session, but its editor is read-only. You can always create and manage your own personal profiles.
+
+When you start a session, pick a profile in the new-session screen or choose **No profile**. The active profile appears as a chip on the new-session and session screens; in an organization session, tap the chip to open the profile in its owner's scope. You can also change the profile under **Advanced Configuration** while starting a session. Environment variables and setup commands you enter under **Advanced Configuration** are sent with the session even if you do not save them to a profile.
+
+The profile editor manages the profile's environment variables, setup commands, slash commands, MCP servers, skills, agents, and instruction files. Secret values stay masked until you reveal them; enter a new value to rotate a secret. To save the current environment variables and setup commands as a new profile, use **Save as Profile**, which appears once a setup command has text. Marking a profile as the default updates it for the profile's owner.
+
+Each profile also has an **Instructions** screen, reachable from both the **Profile** tab and profile management. It lists the profile's instruction files with an enable switch and lets you create, edit, and delete them; deleting asks for confirmation. The form mirrors the server's limits and shows the saved path before you save.
+
+An **Import config** row opens a sheet where you paste a `kilo.json` (or paste it from the clipboard), preview what each section would add or change, toggle sections, and apply. Server parse errors and issues show inline, and **Import** stays disabled while the config is invalid. Importing on mobile carries `kilo.json` only — instruction file contents and skill folders still need the web ZIP upload described in [Importing a local configuration](/docs/code-with-ai/platforms/cloud-agent#importing-a-local-configuration).
+
+## Account settings
+
+The **Profile** tab also provides your account settings:
+
+- **Edit profile** — set the LinkedIn and GitHub links shown on your profile. Your display name comes from your sign-in provider and is not editable here.
+- **Sign-in methods** — view the providers linked to your account, unlink one behind a confirmation, or **Link another provider**, which opens the web connected-accounts page. The server refuses to unlink your last remaining method and shows the reason inline.
+- **Sign out of all web sessions** — ends every web session on your account, behind a confirmation.
+- **Provider keys (BYOK)** — list, add, test, enable or disable, and delete provider keys for your account or an organization. See [Provider keys](#provider-keys).
+- **Your data** — request an export of your data, follow each export's status, enter the emailed download code, and download or share the file. This follows the same release toggle as the web, so accounts without it see a not-available state.
+- **Blocked and muted people** — review the people you have blocked or muted and **Unblock** or **Unmute** them.
+
+After you report a comment from a pull request discussion, a report receipt screen shows the report and lets you appeal once.
+
+### Provider keys
+
+Open **Provider keys (BYOK)** from the **Profile** tab for your account, or from an organization hub for that organization. See [Bring Your Own Key (BYOK)](/docs/getting-started/byok) for what a key does and how requests use it.
+
+- Any organization member can view its keys. Only an owner, admin, or billing manager can add, replace, enable or disable, test, or delete one. A member who opens the form sees the permission state instead of an input the server would reject.
+- A key row offers **Test**, **Edit**, and **Remove**. Editing means entering a new value, because the server never returns the stored one.
+- Azure Foundry, AWS Bedrock (an API key or an access key pair), and Google Vertex AI use native forms instead of a raw JSON field. The app stores the same credential JSON as the web.
+- Secret fields turn off autocorrect, suggestions, autofill, and spell check. Single-line secrets are masked. The multiline Vertex private key opens no keyboard, so paste it in.
+
+The list and the save each have pending, empty, success, retryable failure with **Retry**, and non-retryable failure states, where the screen shows the server's message and no retry.
+
+## Integrations
+
+The **Profile** tab has a **Connected services** section, and the organization hub has an **Integrations** row; both open the **Integrations** screen for that scope. The screen reads one status for every service and shows a row per service, reading **Connected to <account>** when it is connected.
+
+**Connect** opens the web page that owns the provider's OAuth flow, because provider callbacks land on the web; the screen refetches when you return. **Disconnect** asks for confirmation first. Which services you can act on follows the web: GitHub and Slack are available to owners and admins, GitLab, Discord, and Linear to billing roles, and Bitbucket to owners and billing managers. Members see status only.
+
+Bitbucket is organization-only and is the exception to the web hand-off: **Connect** opens a native sheet where you paste a Bitbucket workspace access token, and **Disconnect** acts in the app. When the workspace is already connected, the same sheet replaces its token, because a workspace accepts only one Kilo connection. Depending on the workspace's readiness, the sheet offers **Connect**, **Reconnect**, or **Refresh repositories**. **Connect** stays disabled until you enter a token, and the sheet then reports success, a retryable failure you can submit again, or a non-retryable failure such as losing the role required to connect.
+
+The screen shows a loading skeleton while it resolves, a retryable error with **Retry**, and an explanation when you lose the permission to act.
+
+## Usage
+
+Your **Profile** tab has a **Usage** row under the credits card, and the organization hub has a usage card; both open a native usage screen backed by the same analytics as the web. Choose a 7-, 30-, or 90-day range to see cost, request, and token totals, a daily bar chart you can switch between **Cost**, **Requests**, and **Tokens**, and lists of your top models and top features.
+
+In organization scope, owners and billing managers see organization-wide usage; other roles see their own usage in that organization, as on the web. Organization member rows show each member's daily spend as `$spent / $limit` only for sales-demo organizations that report both values, otherwise `$limit/day`, and nothing when there is no limit.
+
+## Organization management
+
+Select an organization to open its hub, which mirrors the areas of the web sidebar that the app covers.
+
+- **Billing** — the organization's plan, subscription state (renews, cancels at period end, trial, past due, or ended), seats used and total, any scheduled seat decrease, the auto top-up amount and threshold, and the organization [Kilo Pass](#kilo-pass-and-billing). It follows the web's role rules: billing roles see it, and other roles get an access-denied message. Every money-changing action — buy seats, change plan, or set up auto top-up — opens the web page on Android and shows plain text on iOS.
+- **Settings** — one row for each area that lives on the web: usage details, providers and models, guardrails, SSO and domain, email preferences, request logs, integrations, sub-organizations, distribute funds, and data collection. Rows follow the web sidebar's role and plan rules, and each opens its web page.
+- **Custom modes**, **groups**, and **provider keys (BYOK)** — native screens instead of the web, described in [Organization custom modes and groups](#organization-custom-modes-and-groups) and [Provider keys](#provider-keys).
+- **Audit log** — a native read-only list of organization events with paging, shown to the same roles as the web. See [Audit Logs](/docs/collaborate/enterprise/audit-logs).
+
+You can create an organization from **Profile** or from the no-organization state. Enter a name and the app creates it with the same defaults as the web flow, then switches to the new organization. The company domain stays a web dashboard setting.
+
+An invite link for an organization (`/organizations/<id>`) opens in the app, so accepting an invite lands on the organization. Only that path is claimed — `/organizations/new`, `/organizations/create`, and any deeper organization page open in the browser.
+
+### Organization custom modes and groups
+
+The **Custom modes** and **Groups** rows in an organization hub open native screens instead of the web.
+
+- **Custom modes** — list, create, edit, and delete organization [custom modes](/docs/collaborate/teams/custom-modes-org).
+- **Groups** — list, create, edit members of, and delete [groups](/docs/collaborate/enterprise/groups). Changes are limited to the roles the server allows; a member sees groups read-only.
+
+Both screens show loading, empty, content, retryable failure, and non-retryable failure states. Delete works without editing a field first.
+
+## Code reviewer settings
+
+The app configures Kilo's automated [Code Reviews](/docs/automate/code-reviews/overview) from the **Code Reviewer** area, matching the web settings:
+
+- **Skip bot pull requests** — a GitHub reviewer setting that stops automatic reviews of pull requests opened by bots.
+- **Review memory** — use **Analyze now** to pick a repository and start a review-memory analysis, with the same result messages as the web.
+- **Per-repository model and effort** — on the repositories screen, override the review model and thinking effort for individual repositories.
+- **Council review** — for an entitled organization when council review is enabled for it (off by default, like the web), configure specialists, the aggregation strategy, required labels, and per-repository opt-in. The screen refuses a change that would drop an enabled council below its minimum specialist count.
+- **Review analytics** — an organization screen with four metric cards and a per-repository breakdown for 7, 30, or 90 days.
+- **Clear findings for removed repositories** — on the security repositories screen, remove findings for a repository the GitHub App can no longer access, behind a two-step confirmation. See [Security Reviews](/docs/deploy-secure/security-reviews).
+
+## Starting a session from a picture
+
+Home has a **New task from a picture** button beneath the new-task button. It offers **Camera** and **Photo Library**, with Cancel last. Taking a photo or picking a screenshot opens the ordinary new-agent composer with the image attached, where you can add typed text before starting the session. The photo library asks for a single selection, so one tap attaches one image. Cancelling the sheet or the system picker returns to Home without starting an agent.
 
 ## Continuing a finished session
 
 Open a finished session and tap **Continue** to copy its conversation into a new session. The form starts with the source repository, mode, model, and reasoning variant. Choose **Cloud Agent** or a connected CLI in **Run on**, then tap **Start**.
 
 The CLI must support importing sessions. If it does not, the app explains why and disables **Start** rather than creating an empty session. An unavailable model or repository also prevents starting until you choose an available option.
+
+### Forking a session from a message
+
+Long-press a message in a Cloud Agent or remote CLI session and select **Fork from here** to start a new session cut at that point. This uses the same Continue screen described above, so you choose the destination and the model.
+
+- **Assistant message** — the fork keeps the transcript up to and including that message.
+- **User message** — the fork cuts before that message and puts its text in the new composer.
+
+The action is not shown on the first user message, on queued or failed messages, or on a reply that is still streaming. A message that is not saved yet reports **This message is not saved yet. Try again in a moment.**
+
+A Cloud Agent source has no per-message file changes, so the Continue screen reports **Files start from the base branch.** For a computer destination it reports **Files on this computer are not changed.**
+
+Forking to a connected CLI needs a CLI that supports the session cut. An older CLI shows **Update the Kilo CLI**, and **Start** stays disabled.
+
+## Sharing a session
+
+Open a session's context sheet and use the **Share** section to create a public link. Choose how long the link lasts — 1 hour, 1 day, 7 days, 30 days, or never — and whether new messages are included. The active link shows its expiry, with actions to copy it (the row shows **Link copied**), open your device's native share sheet, and **Revoke** it after a confirmation. A link created elsewhere shows as active here, and creating a new link replaces the existing one, as on the web.
+
+Shared links use the `/s/<token>` form. Opening one — from a message, the share sheet, or a universal link — opens the shared session read-only in the app. The screen shows a loading state, offers **Retry** after a network failure, and shows a terminal message with no retry when the link has expired or been revoked. The in-app view requires you to be signed in and accepts only a live share link, never a session ID, so it is narrower than the public web page at the same link, which anyone can open.
 
 ## Live session counts
 
@@ -97,11 +280,66 @@ Auto-approve applies to one session only, so other sessions keep prompting. Clar
 
 The toggle is kept in memory for the session and never changes your global auto-approve configuration. Signing out or switching accounts turns auto-approve off for every session.
 
+## Kilo tools in chat
+
+A signed-in chat can reach the Kilo tools automatically using your signed-in session — there is no key to paste and no URL to enter. The model sees the available Kilo tools (named `mcp_kilo_*`) and can call them, reading their answers in the reply.
+
+Every chat has a **Kilo tools** switch in its Kilo tools sheet. It is on by default, and your choice is kept when you reopen the chat or switch models. With the switch off, the chat sends no Kilo tool to the model and contacts no server.
+
+The Kilo tools sheet names the connection state and offers **Retry** only when retrying can help. If the server is slow, refuses the session, or disappears mid-chat, the chat stays usable and reports what happened; a failed call reaches the model as a failed tool result.
+
+Signing out drops the connection and its tools, and signing in as another user never shows the previous account's tools.
+
+## Remote MCP servers
+
+Quick Chat can connect to remote [MCP servers](/docs/automate/mcp/what-is-mcp) so the model can use the tools they expose. Manage servers in the chat's MCP settings, where you add or edit a server and choose how it authenticates:
+
+- **No sign-in** — the server accepts requests without credentials.
+- **Bearer token** — enter the server's token; the app sends it with every request.
+- **OAuth sign-in** — the app runs the server's OAuth flow in your browser, then stores the resulting tokens for your account and refreshes them automatically. If a refresh fails, the request fails as unauthorized.
+
+When an OAuth server needs you to sign in, its row shows **Sign in to use this server** with a **Sign in** button instead of **Retry**. OAuth credentials are kept for your account and cleared when you sign out, delete the server, or change its URL or authentication type.
+
+### MCP Apps views
+
+Some remote MCP servers attach an MCP Apps view to a tool. After a call to that tool finishes, the chat transcript draws the view in a card under the tool call, and you can interact with it on your phone. The view can call tools its own server offers, open links, and resize to fit its content. Tools without a view keep their usual result, and a call that has not finished keeps its usual row.
+
+The view runs in a sandboxed page that allows only the origins the server declared for it. A server that declares none gets no external origins, and anything that would widen that policy is rejected. The app does not offer views sampling, model context updates, messages, or downloads, and a view cannot call a tool its server was not discovered to offer.
+
+## Web search in chat
+
+A chat can search the web with the `web_search` tool, which runs through Kilo's own web search service. The **Search the web** switch at the top of the Quick Chat tools sheet turns it on for that chat, and the model names its sources in the reply.
+
+- The switch is on by default for a chat on a Kilo model, and off for a chat on a custom backend or an on-device model (Apple, Gemini Nano, or GGUF). Your choice is stored for the chat and follows it to a new model.
+- The set of tools is fixed when a chat starts, so moving the switch starts a new session, as the Kilo tools switch does. A model without a tool loop still gets no tools.
+- One question can run up to five searches, and a search stops after 15 seconds.
+- Offline, the tool fails immediately without sending a request.
+- If your web search allowance is used up and you have no credit, a toast reports it and the model is told it could not search.
+
+## On-device models
+
+Quick Chat can run a model on your phone. The Chat backend settings sheet lists the models you have downloaded, shows downloads in progress, and offers **Browse models** and a direct link form. Use **Browse models** to open the model catalog, a searchable list of GGUF models from Hugging Face.
+
+The catalog has a search field and two tabs:
+
+- **Fits this device** — models whose smallest quantization file should fit in your device's memory.
+- **All** — every model the catalog offers.
+
+Recommended models are pinned at the top of the list. Open a model to see its downloads, likes, parameters, context window, and license, whether it supports tools or images, and every single-file quantization. Each quantization shows its download size, the estimated memory it needs, and a fit badge: **Fits**, **Tight fit**, **Too large**, or **Not enough storage**.
+
+- A **Too large** quantization asks for confirmation before it downloads. A gated model, or one that does not fit on disk, cannot download.
+- Downloads are checked against the model's published checksum. If a file does not match, the partial download is removed and you can try again. A model added by direct link publishes no checksum, so it is not checked.
+- Split files (such as `-00001-of-00002.gguf`) and files that are not a quantization are not offered, because the on-device runner loads a single file.
+
 ## Hiding thinking details
 
 Turn on **Hide thinking details** in **Settings → Preferences → General** to remove thinking rows, collapsed thinking items, and thinking text from the session page, including streaming and loaded sessions and the subagent sheet. The setting is off by default and is remembered across app launches.
 
 While a model streams reasoning, the composer and subagent spinners still read **Thinking**. With the setting off, the session page behaves exactly as before.
+
+## Collapsing tool calls
+
+The app groups consecutive tool calls into a collapsed row by default, so the transcript stays focused on the conversation. Turn this off with the switch under **Preferences**.
 
 ## Queueing follow-up messages
 
@@ -135,23 +373,54 @@ Attach up to **5 files** (each up to **20 MiB**) from your phone to the remote s
 
 Attaching files from the phone is the mobile flow — this is separate from `kilo run --file <path>`, which attaches local files to a local prompt.
 
+### Previewing document attachments
+
+For a document attachment, Kilo offers a preview as the first choice, opening the file in your phone's native viewer — for example, a PDF in the platform PDF viewer. The existing **Open as text** and **Open in external app** options remain available.
+
+A device with no viewer for the file type reports that once and then drops the preview choice for that chip, and unsupported files such as archives keep only the text and share choices. If the file has not finished downloading, Kilo reports the error so you can retry.
+
 ### Receiving files from the CLI on your phone
 
 While the CLI is connected, the agent can deliver a file to your phone with the `send_file` tool (up to **4 MiB**, remote sessions only). The file appears as a chip on the tool card — tap the chip to open the share sheet and save or forward the file. This tool works only when `kilo remote` is actively connected; it is not available in Cloud Agent sessions.
 
-## Reviewing GitHub pull requests
+## Agent artifacts in your file browser
 
-Open a pull request from a PR link to review it without leaving the app:
+On iOS and Android, your phone's file browser shows a **Kilo** location alongside your other file providers.
 
-- **Overview** — PR state and CI checks, plus sidebar metadata: when the pull request opened and last moved, its labels, the reviewers and each one's state (approved, changes requested, commented, dismissed, or awaiting review), assignees, the linked issues it closes, and a comment-count badge on the **Discussion** tab. Sections that GitHub reports nothing for are hidden.
+- It lists each agent session as a folder, in the same recency order as the app.
+- Open a session folder to see the files that agent produced. File names match the names shown in the app.
+- Open a file to view its contents.
+- A session with no artifacts opens as an empty folder rather than an error.
+
+The location is read-only: you cannot create folders, rename, or delete anything from it. When you are signed out, it shows nothing to browse. Files are mirrored in the background, so a session's artifacts can take a few minutes to appear, and only recent sessions are kept — the oldest are removed first as new ones are added.
+
+## Reviewing pull requests and merge requests
+
+Open a pull request or merge request from a link to review it without leaving the app. GitHub pull requests, GitLab merge requests, and Bitbucket pull requests use the same review layout, with each provider's own wording for states and checks:
+
+- **Overview** — request state and CI checks, plus sidebar metadata for the details the provider reports, such as when the request opened and last moved, its labels, reviewers and each one's state, assignees, and the linked issues it closes. A comment-count badge on the **Discussion** tab shows the unresolved threads, and sections the provider reports nothing for are hidden.
 - **Files** — syntax-highlighted diffs with line-level comments and a file navigator.
 - **Discussion** — review threads with replies, resolve/unresolve, and reactions.
 
-Comments you leave on diffs are collected into a pending review on your device and submitted to GitHub as a single review. To post a regular conversation comment instead, tap **Comment on this pull request** at the bottom of **Discussion**. These comments appear directly in the discussion and are not part of a review.
+Comments you leave on diffs are collected into a pending review on your device and submitted as a single review. To post a regular conversation comment instead, tap **Comment on this pull request** at the bottom of **Discussion**. These comments appear directly in the discussion and are not part of a review, and they work on GitHub pull requests, GitLab merge requests, and Bitbucket pull requests. The comment sheet header shows the provider's own reference, such as `group/sub/repo!12` on GitLab or `workspace/repo#77` on Bitbucket.
 
-When the PR is ready, you can merge it (merge, squash, or rebase), enable or disable auto-merge, or update the branch, all from the app.
+Every comment row shows a **Fix with Kilo** pill beside its overflow menu, on diff-line review threads and on conversation comments. Tapping it opens the new-session screen with the composer prefilled with `Please address the following PR comment: <that comment's link>`. The link targets the exact comment, and a comment with no addressable provider URL shows no pill.
 
-PR review uses your connected GitHub account; the app asks you to connect GitHub if you have not already.
+When the request is ready, you can merge it (merge, squash, or rebase), enable or disable auto-merge where the provider supports it, or update the branch, all from the app. Bitbucket's API has no auto-merge, so the app explains that instead of offering it.
+
+Reviews use your connected account for that provider; the app asks you to connect it if you have not already. GitLab merge requests work in personal and organization contexts, including self-managed instances. Bitbucket Cloud is available in organization contexts and explains how to proceed from a personal context.
+
+Recents, drafts, viewed-file sets, and pending comments stay separate across providers, accounts, and GitLab instances, so same-named repositories never share state.
+
+## Reviewing session changes
+
+A session's changes screen lists the files a Cloud Agent session changed so you can review them and send line comments back to the agent.
+
+- **Refresh** — the header action and pull-to-refresh reload the worktree changes. A failed refresh shows **Couldn't refresh. Pull down to try again.**
+- **Changed files** — the list shows each file's status, its additions and deletions, a marker for binary files, and a notice when the list is truncated. Open a file to view its diff at the listed revision; a file that is stale, was not captured, is no longer listed, or had its diff omitted shows its own state.
+- **Line comments** — tap a line to add or edit a comment, and commented lines are marked. The review sheet sends your comments to the agent as a single message. Discarding a comment asks for confirmation.
+
+Draft comments live with the screen, so leaving the screen discards them. A session without a Cloud Agent keeps its stored diff and shows a banner that comments are off.
 
 ## Session cost and model details
 
@@ -159,16 +428,63 @@ The app shows what each session cost and which models did the work:
 
 - **Session list** — a finished session with a recorded cost shows it in the row's meta line (for example, `$0.12 · 5m ago`). Sessions that are still running or have no cost show no cost.
 - **Cost breakdown** — open a session's Context usage sheet to see a Token usage section (input, output, reasoning, cache read, and cache write tokens, plus the cache hit rate) and a collapsible Models section with each model's name, provider, step count, and cost. A Subagents row covers any remaining spend, so the per-model costs always add up to the session total.
+- **Compute cost** — the session header's cost pill and the Context usage sheet's total add the session's sandbox compute charges to model cost. A Compute section lists the total, each sandbox run with its time, duration × rate, and amount, and the current Medium and Large sandbox rates.
 - **Per-message model label** — assistant messages show a dimmed model label on the first assistant reply and whenever the model changes during the session. Turns routed by [Auto Model](/docs/code-with-ai/agents/auto-model) show the concrete model that handled the turn.
 
-Cost is recorded when a session closes; sessions that closed before this feature shipped do not show a cost.
+Cost is recorded when a session closes; sessions that closed before this feature shipped do not show a cost. Session lists, live rows, and the Android glanceable card show model cost only, because compute is read one session at a time.
+
+## Sandbox previews and triggers
+
+When a Cloud Agent session is running, its context sheet lists the sandbox's preview services. Tap a preview to open its minted URL in the app's in-app browser. The list shows loading, stopped, empty, unsupported, and failed states.
+
+The same context sheet has a sandbox section that shows the sandbox's state, a detail line, and when that state was last checked. If the sandbox failed to start, the section offers a fresh start: Kilo checks for a recoverable workspace snapshot and, after you confirm, removes a snapshot that cannot be used.
+
+## Triggers and webhooks
+
+The **Profile** tab has a **Triggers & webhooks** row that opens the native triggers screens for the current scope, personal or organization. See [Triggers](/docs/code-with-ai/platforms/cloud-agent#triggers) for what triggers do and how they start sessions.
+
+- **List** — each trigger shows its inbound URL with a copy action and a pause switch that updates immediately. Selecting the row opens its detail.
+- **Create and edit** — set the name, activation (webhook, or a schedule with a time zone), repository, agent, model and reasoning effort, prompt, environment, profile, body schema, secret header and shared secret, and options.
+- **Deliveries** — inbound calls and scheduled runs; selecting a row opens the session it started.
+- **Run now** — starts a scheduled trigger immediately.
+- **Delete** — behind a destructive confirmation.
+
+The list, detail, and deliveries screens each show loading, empty, content, and failure states. A failed save separates a retryable failure from a rejected change.
+
+A stored secret is never shown again. Leaving the secret field blank keeps the stored value, and turning off authentication clears it.
+
+The app does not offer KiloClaw trigger targets, the sandbox allocation picker, or the web list's status filter.
+
+## Notifications
+
+Agent notifications arrive as two kinds: **Needs input** and **Agent progress**. The app has no screen for choosing them — your device's own notification settings own the choice.
+
+- **Needs input** alerts you that an agent is waiting on you, including an explicit `notify_user` message. Turn on the app's Do Not Disturb access to let Needs input break through Do Not Disturb; it also breaks through an iOS Focus, while each Focus can allow or silence Agent progress.
+- **Agent progress** reports ordinary session activity and stays quiet. Silencing Agent progress leaves Needs input alerting.
+
+On Android, the system notification settings list both kinds by name. The ongoing **Active agents** card joins its kind's group and alerts only when it first becomes needs input, including the first card after a restart.
+
+Needs-input notifications are time-sensitive and carry action buttons:
+
+- **Approve** — for a permission request. Answers the agent with the app closed; the notification then reads **Request approved**.
+- **Reply** — for a question. Sends the answer you type with the app closed; the notification then reads **Reply sent**.
+- **Open pull request** — appears only when the session has a pull request, and opens the pull request review screen.
+- **Open session** — opens that session's chat.
+
+A failed **Approve** or **Reply** keeps its buttons and reads **Couldn't answer. Tap again to retry.** An action that can no longer be answered reads **This request is no longer waiting.** and drops its buttons. Button labels follow the app language.
+
+[Spend alerts](/docs/getting-started/cost-controls-and-usage-safeguards#spend-alerts) arrive as their own push category. You can turn them off on their own, and the choice stays in sync with the spend view.
 
 ## Widgets and live updates
 
 Add the **Active Agents** widget to track **Needs input**, **Working**, and **Idle** session counts. Tap the widget to open your agents in the app. Background updates keep these surfaces informed while the app is not open; signing out stops updates for that account.
 
-- **iOS**: widgets are available on the Home Screen and Lock Screen, with a Live Activity on the Lock Screen and Dynamic Island. Compact layouts prioritize agents that need input, then working agents, then idle agents. If Live Activities are disabled, the Agents tab offers a prompt to open device settings.
-- **Android**: the resizable Home Screen widget shows **Needs input**, **Working**, and **Idle** counts at every size, including zeros while work is present. An ongoing **Active agents** notification also reports session activity. Supported devices can promote it to a Live Update. If notifications are disabled while work is pending, the app offers a prompt to enable them in device settings.
+The Home Screen widget also shows the newest session and how many agents are waiting, refreshed on every session update. When an agent is waiting, it offers **Approve**, which answers that agent's oldest permission without opening the app. With no agents waiting, it reads **No agents waiting** and offers **New agent**, which starts a session from your saved draft. While an action runs, the widget shows its progress line; a failed action shows its own message and stays tappable for a retry. An agent waiting on a free-form question, and a tap on the widget body, open the app instead of acting inside the widget.
+
+The running agent activity on iOS and Android offers **Approve** and **Open** as well. Approve answers a waiting cloud-agent permission without opening the app, then the activity updates in place and drops Approve. Open opens the waiting session, or the Agents list when nothing is waiting. A failed Approve shows a retry line and keeps Approve for a second tap, while a permission already answered elsewhere makes Approve disappear with no error. Approve appears only for a cloud-agent permission ask, so a waiting question shows Open only. Button labels follow the app language.
+
+- **iOS**: widgets are available on the Home Screen and Lock Screen, with a Live Activity on the Lock Screen and Dynamic Island. The Home Screen widget carries the newest session line and both action buttons; the Lock Screen widget stays generic. The Live Activity's **Approve** and **Open** sit on the Lock Screen and the expanded Dynamic Island; the compact Dynamic Island stays counts-only. Compact layouts prioritize agents that need input, then working agents, then idle agents. If Live Activities are disabled, the Agents tab offers a prompt to open device settings.
+- **Android**: the resizable Home Screen widget shows **Needs input**, **Working**, and **Idle** counts at every size, including zeros while work is present. An ongoing **Active agents** notification also reports session activity. Supported devices can promote it to a Live Update, which carries **Approve** and **Open**; the promoted chip itself stays counts-only. If notifications are disabled while work is pending, the app offers a prompt to enable them in device settings.
 
 ## Android App
 

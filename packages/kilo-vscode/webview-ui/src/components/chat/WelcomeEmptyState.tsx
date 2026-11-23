@@ -5,10 +5,13 @@ import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import { recentSessions } from "../../context/session-utils"
+import type { SessionInfo } from "../../types/messages"
 import { formatRelativeDate } from "../../utils/date"
 import { FeedbackDialog } from "./FeedbackDialog"
+import { WorkspaceScopeHint } from "./WorkspaceScopeHint"
 
 interface WelcomeEmptyStateProps {
+  sessions?: () => SessionInfo[]
   onSelectSession?: (id: string) => void
   onShowHistory?: () => void
   footer?: JSX.Element
@@ -56,12 +59,13 @@ export const WelcomeEmptyState: Component<WelcomeEmptyStateProps> = (props) => {
   const session = useSession()
   const language = useLanguage()
   const dialog = useDialog()
-  const recent = () => recentSessions(session.sessions())
+  const recent = () => recentSessions(props.sessions?.() ?? session.sessions())
 
   return (
     <div class="message-list-empty">
       <KiloLogo />
       <p class="kilo-about-text">{language.t("session.messages.welcome")}</p>
+      <WorkspaceScopeHint />
       <Show when={recent().length > 0 && props.onSelectSession}>
         <div class="recent-sessions">
           <span class="recent-sessions-label">{language.t("session.recent")}</span>

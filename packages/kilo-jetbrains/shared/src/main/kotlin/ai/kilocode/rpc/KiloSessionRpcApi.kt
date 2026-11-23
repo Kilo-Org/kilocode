@@ -59,6 +59,9 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
     /** Get a single session by ID. */
     suspend fun get(id: String, directory: String): SessionDto
 
+    /** Look up a local session; null means HTTP 404, while all other failures throw. */
+    suspend fun find(id: String, directory: String): SessionDto?
+
     /** Delete a session. */
     suspend fun delete(id: String, directory: String)
 
@@ -108,7 +111,7 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
     /** Send a prompt to a session (fire-and-forget). */
     suspend fun prompt(id: String, directory: String, prompt: PromptDto)
 
-    /** Run a configured slash command/workflow in a session. */
+    /** Run a configured slash command in a session. */
     suspend fun command(id: String, directory: String, command: String, arguments: String, prompt: PromptDto)
 
     /** Abort ongoing processing for a session. */

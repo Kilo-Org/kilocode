@@ -2,7 +2,8 @@ import { describe, it, expect, spyOn } from "bun:test"
 import type { SessionStatus } from "@kilocode/sdk/v2/client"
 import * as vscode from "vscode"
 import type { PartUpdate } from "../../src/shared/stream-messages"
-import type { AbortRequest } from "../../webview-ui/src/types/messages/webview-messages"
+import type { AbortRequest, ClearSessionRequest } from "../../webview-ui/src/types/messages/webview-messages"
+import { REVERT_ERROR_CODE } from "../../src/shared/revert-error"
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
 const { KiloProvider, unwrapSyncEvent } = await import("../../src/KiloProvider")
@@ -67,6 +68,7 @@ function createClient(options?: {
   messagesData?: unknown[]
   deleteDeferred?: Deferred<unknown>
   revertDeferred?: Deferred<{ data?: unknown; error?: unknown }>
+  unrevertResult?: { data?: unknown; error?: unknown }
   sessionData?: unknown
   sessionGet?: (params: { sessionID: string; directory?: string }) => Promise<{ data: unknown }>
   status?: (params: { directory?: string }) => Promise<{ data: Record<string, SessionStatus> | null }>
@@ -96,6 +98,7 @@ function createClient(options?: {
   const sandboxed: Array<Record<string, unknown>> = []
   const sandboxSupport: Array<Record<string, unknown>> = []
   const configReads: Array<Record<string, unknown>> = []
+  const switched: Array<Record<string, unknown>> = []
   return {
     calls,
     stopped,
@@ -108,6 +111,7 @@ function createClient(options?: {
     sandboxed,
     sandboxSupport,
     configReads,
+    switched,
     session: {
       list: async () => ({ data: [] }),
       create: async (params: Record<string, unknown>) => {
@@ -125,6 +129,7 @@ function createClient(options?: {
         if (options?.revertDeferred) return options.revertDeferred.promise
         return { data: mkSession({ messageID: String(params.messageID) }) }
       },
+      unrevert: async () => options?.unrevertResult ?? { data: mkSession() },
       promptAsync: async (params: Record<string, unknown>) => {
         prompted.push(params)
         return { data: undefined }
@@ -183,6 +188,12 @@ function createClient(options?: {
     kilo: {
       notifications: async () => ({ data: [] }),
       profile: async () => ({ data: {} }),
+      organization: {
+        set: async (params: Record<string, unknown>) => {
+          switched.push(params)
+          return { data: {} }
+        },
+      },
     },
     command: { list: async () => ({ data: [] }) },
   }
@@ -265,6 +276,7 @@ type ProviderInternals = {
   handleCostAlertResponse: (sid: string, limit: number, response: "continue" | "stop") => Promise<void>
   setMaxCost: (value: unknown) => void
   handleRevertSession: (sid: string, messageID: string) => Promise<void>
+  handleUnrevertSession: (sid: string) => Promise<void>
   handleSendMessage: (text: string, messageID?: string, sessionID?: string, draftID?: string) => Promise<void>
   trackOpenSessions: (ids: string[]) => void
   fetchAndSendSandboxDefault: (directory?: string, requestID?: string) => Promise<void>
@@ -1103,7 +1115,83 @@ describe("KiloProvider revert ordering", () => {
   })
 })
 
+describe("KiloProvider revert failure reporting", () => {
+  it("tags a failed revert with the code the webview translates", async () => {
+    const logged = spyOn(console, "error").mockImplementation(() => {})
+    const revert = defer<{ data?: unknown; error?: unknown }>()
+    revert.resolve({ error: new Error("revert failed") })
+    const client = createClient({ revertDeferred: revert })
+    const { internal, sent } = makeProvider(client)
+
+    await expect(internal.handleRevertSession("s1", "m1")).rejects.toThrow("revert failed")
+
+    expect(sent).toContainEqual({
+      type: "error",
+      message: "revert failed",
+      code: REVERT_ERROR_CODE,
+      sessionID: "s1",
+    })
+    logged.mockRestore()
+  })
+
+  it("tags a failed redo the same way", async () => {
+    const logged = spyOn(console, "error").mockImplementation(() => {})
+    const client = createClient({ unrevertResult: { error: new Error("redo failed") } })
+    const { internal, sent } = makeProvider(client)
+
+    await expect(internal.handleUnrevertSession("s1")).rejects.toThrow("redo failed")
+
+    expect(sent).toContainEqual({
+      type: "error",
+      message: "redo failed",
+      code: REVERT_ERROR_CODE,
+      sessionID: "s1",
+    })
+    logged.mockRestore()
+  })
+})
+
 describe("KiloProvider.handleLoadMessages / focus mode freshness", () => {
+  it.each(["focus", "clear"])(
+    "cancels an old worktree transcript when %s changes the local selection",
+    async (action) => {
+      const pending = Promise.withResolvers<ReturnType<typeof mkResult>>()
+      const requested = Promise.withResolvers<void>()
+      const client = createClient()
+      client.session.messages = async (params: { sessionID?: string; before?: string; limit?: number }) => {
+        if (params.sessionID !== "s1") return mkResult([])
+        requested.resolve()
+        return pending.promise
+      }
+      const { provider, internal, sent } = makeProvider(client)
+      provider.setSessionDirectory("s1", "/project-a/worktree")
+      provider.setSessionDirectory("s2", "/project-b")
+      const load = internal.handleLoadMessages("s1")
+      await requested.promise
+      const abort = internal.loadMessagesAbort
+
+      if (action === "focus") await internal.handleLoadMessages("s2", { mode: "focus" })
+      if (action === "clear") {
+        const listener = Promise.withResolvers<(message: ClearSessionRequest) => Promise<void>>()
+        internal.setupWebviewMessageHandler({
+          onDidReceiveMessage: (handler: (message: ClearSessionRequest) => Promise<void>) => {
+            listener.resolve(handler)
+            return { dispose: () => {} }
+          },
+        })
+        const receive = await listener.promise
+        await receive({ type: "clearSession" })
+      }
+      pending.resolve(mkResult([mkMessage("m1", "user", 1)]))
+      await load
+
+      expect(abort?.signal.aborted).toBe(true)
+      expect(sent).not.toContainEqual(expect.objectContaining({ type: "messagesLoaded", sessionID: "s1" }))
+      expect(internal.contextSessionID).toBe(action === "focus" ? "s2" : undefined)
+      provider.dispose()
+    },
+  )
+
   it("recovers the session Git directory from loaded tool history", async () => {
     const client = createClient({
       messagesData: [
@@ -1219,6 +1307,32 @@ describe("KiloProvider.handleLoadMessages / focus mode freshness", () => {
     internal.currentSession = null
 
     expect(client.stopped).toEqual([{ sessionID: "s2", directory: "/repo/s2" }])
+  })
+
+  it("posts the workspace root once clearSession stops the session overriding it", async () => {
+    // The prompt's mention search resolves against the directory the webview
+    // was last told about. A worktree session overrides the workspace root, so
+    // clearing the session must announce the root that is effective again —
+    // otherwise a mention picked after the clear still resolves in the worktree.
+    const client = createClient()
+    const { provider, internal, sent } = makeProvider(client, { rootDirectory: () => "/repo/project-b" })
+    internal.currentSession = { id: "s1", directory: "/repo/worktree" }
+    internal.contextSessionID = "s1"
+    internal.sessionDirectories.set("s1", "/repo/worktree")
+
+    const listener = Promise.withResolvers<(message: ClearSessionRequest) => Promise<void>>()
+    internal.setupWebviewMessageHandler({
+      onDidReceiveMessage: (handler: (message: ClearSessionRequest) => Promise<void>) => {
+        listener.resolve(handler)
+        return { dispose: () => {} }
+      },
+    })
+    const receive = await listener.promise
+    await receive({ type: "clearSession" })
+
+    expect(internal.contextSessionID).toBeUndefined()
+    expect(sent).toContainEqual({ type: "workspaceDirectoryChanged", directory: "/repo/project-b" })
+    provider.dispose()
   })
 
   it("refetches the tail page on focus-mode reselection and posts a reconcile snapshot", async () => {
@@ -1910,5 +2024,37 @@ describe("KiloProvider.handleLoadMessages / prepend into deleted session", () =>
       (msg) => typeof msg === "object" && msg && (msg as { type?: unknown }).type === "messagesLoaded",
     )
     expect(loaded).toEqual([])
+  })
+})
+
+describe("KiloProvider setOrganization dispatch", () => {
+  it("answers a request whose organization id cannot be dispatched", async () => {
+    const client = createClient()
+    const { internal, sent } = makeProvider(client)
+    const listener =
+      Promise.withResolvers<
+        (message: { type: string; organizationId?: unknown; requestID?: string }) => Promise<void>
+      >()
+    internal.setupWebviewMessageHandler({
+      onDidReceiveMessage: (handler: (message: never) => Promise<void>) => {
+        listener.resolve(handler)
+        return { dispose: () => {} }
+      },
+    })
+    const receive = await listener.promise
+
+    // Every dispatched switch must be answered, so a value the host cannot
+    // dispatch still reports a correlated failure instead of staying pending.
+    await receive({ type: "setOrganization", organizationId: 42, requestID: "request-bad" })
+
+    const results = sent.filter(
+      (msg) =>
+        typeof msg === "object" && msg !== null && (msg as { type?: unknown }).type === "organizationSwitchResult",
+    )
+    expect(results).toHaveLength(1)
+    expect(results[0]).toMatchObject({ requestID: "request-bad", ok: false, data: null })
+    // The reply carries no message of its own, so the webview stays localized.
+    expect("error" in (results[0] as object)).toBe(false)
+    expect(client.switched).toEqual([])
   })
 })

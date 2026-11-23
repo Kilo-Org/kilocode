@@ -73,6 +73,12 @@ data class ConfigDto(
     val permission: PermissionConfigDto? = null,
     /** Kilo Swarm. Null means unset, which the CLI treats as enabled. */
     val shared_agent_board: Boolean? = null,
+    /** Snapshot tracking. Null means unset, which the CLI treats as enabled. */
+    val snapshot: Boolean? = null,
+    /** Machine-wide session retention policy. Null means disabled with a 30-day default. */
+    val retention: RetentionConfigDto? = null,
+    /** Effective CLI telemetry level. Null means the settings endpoint is unavailable or has not responded yet. */
+    val telemetry: Boolean? = null,
 )
 
 @Serializable
@@ -108,7 +114,29 @@ data class McpConfigDto(
     val headers: Map<String, String>? = null,
     val enabled: Boolean? = null,
     val timeout: Long? = null,
+    val oauth: McpOAuthDto? = null,
 )
+
+@Serializable
+data class McpOAuthDto(
+    val enabled: Boolean? = null,
+    val clientId: String? = null,
+    val clientSecret: String? = null,
+    val scope: String? = null,
+    val callbackPort: Int? = null,
+    val redirectUri: String? = null,
+    val clear: Boolean = false,
+) {
+    /**
+     * Redacts [clientSecret].
+     *
+     * The generated `toString` of a data class prints every field, and this DTO travels through RPC
+     * logging and exception messages, so the secret would otherwise end up in the IDE log.
+     */
+    override fun toString(): String =
+        "McpOAuthDto(enabled=$enabled, clientId=$clientId, clientSecret=${if (clientSecret == null) "null" else "***"}, " +
+            "scope=$scope, callbackPort=$callbackPort, redirectUri=$redirectUri, clear=$clear)"
+}
 
 typealias PermissionConfigDto = Map<String, PermissionRuleDto>
 
@@ -135,6 +163,22 @@ data class ConfigPatchDto(
     val permission: PermissionConfigDto? = null,
     /** Kilo Swarm. Always written as an explicit boolean, matching the VS Code toggle. */
     val shared_agent_board: Boolean? = null,
+    /** Snapshot tracking. Always written as an explicit boolean, matching the VS Code toggle. */
+    val snapshot: Boolean? = null,
+    /** Machine-wide session retention policy. */
+    val retention: RetentionPatchDto? = null,
+)
+
+@Serializable
+data class RetentionConfigDto(
+    val enabled: Boolean? = null,
+    val maxAgeDays: Int? = null,
+)
+
+@Serializable
+data class RetentionPatchDto(
+    val enabled: Boolean? = null,
+    val maxAgeDays: Int? = null,
 )
 
 @Serializable
@@ -195,6 +239,19 @@ data class ProfileDto(
     val balance: ProfileBalanceDto? = null,
     val kiloPass: ProfileKiloPassDto? = null,
     val currentOrgId: String? = null,
+)
+
+/**
+ * Result of a profile refresh that follows a completed account step (sign-in, organization switch).
+ *
+ * [profile] is the account, or null when the CLI reports that nobody is signed in.
+ * [error] is set when the profile could not be read; [profile] is then null and the caller must
+ * keep its current account state, because the step itself already succeeded.
+ */
+@Serializable
+data class ProfileSyncDto(
+    val profile: ProfileDto? = null,
+    val error: LoadErrorDto? = null,
 )
 
 @Serializable

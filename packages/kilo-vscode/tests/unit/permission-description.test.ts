@@ -21,6 +21,7 @@ const labels: Record<string, string> = {
   "ui.permission.toolLabel.externalDirectory": "Access External Directory",
   "ui.permission.toolLabel.webFetch": "Web Fetch",
   "ui.permission.toolLabel.codeSearch": "Code Search",
+  "ui.permission.toolLabel.browserOpen": "Integrated Browser",
   "ui.permission.toolLabel.todoRead": "Todo Read",
   "ui.permission.toolLabel.todoWrite": "Todo Write",
   "ui.permission.toolLabel.task": "Task",
@@ -122,6 +123,7 @@ describe("describePatterns", () => {
       webfetch: "ui.permission.toolLabel.webFetch",
       websearch: "ui.permission.toolLabel.webSearch",
       codesearch: "ui.permission.toolLabel.codeSearch",
+      browser_open: "ui.permission.toolLabel.browserOpen",
       todoread: "ui.permission.toolLabel.todoRead",
       todowrite: "ui.permission.toolLabel.todoWrite",
       task: "ui.permission.toolLabel.task",
@@ -172,6 +174,34 @@ describe("describePatterns", () => {
     const result = describePatterns("lsp", ["diagnostics"], t)
     expect(result).toEqual({ kind: "single", text: "LSP diagnostics" })
   })
+
+  test("browser_open hides the navigate prefix on the origin", () => {
+    const result = describePatterns("browser_open", ["navigate:http://localhost:3000"], t)
+    expect(result).toEqual({ kind: "single", text: "Integrated Browser http://localhost:3000" })
+  })
+
+  test("browser_open keeps multiple origins readable", () => {
+    const result = describePatterns(
+      "browser_open",
+      ["navigate:http://localhost:3000", "navigate:https://example.com"],
+      t,
+    )
+    expect(result).toEqual({
+      kind: "multi",
+      title: "Integrated Browser:",
+      paths: ["http://localhost:3000", "https://example.com"],
+    })
+  })
+
+  test("escapes format controls in a single pattern", () => {
+    const result = describePatterns("read", ["src/\u202Egnp.exe"], t)
+    expect(result).toEqual({ kind: "single", text: "Read src/\\u202egnp.exe" })
+  })
+
+  test("escapes format controls in each multi path", () => {
+    const result = describePatterns("read", ["src/app.ts", "src/\u202Egnp.exe"], t)
+    expect(result).toEqual({ kind: "multi", title: "Read:", paths: ["src/app.ts", "src/\\u202egnp.exe"] })
+  })
 })
 
 describe("describeRule", () => {
@@ -183,6 +213,25 @@ describe("describeRule", () => {
     expect(describeRule("read", "*", t)).toBe("Read")
     expect(describeRule("external_directory", "*", t)).toBe("Access External Directory")
     expect(describeRule("read", "src/app.ts", t)).toBe("Read src/app.ts")
+  })
+
+  test("browser_open rules hide the navigate prefix", () => {
+    expect(describeRule("browser_open", "navigate:*", t)).toBe("Integrated Browser *")
+    expect(describeRule("browser_open", "navigate:http://localhost:3000", t)).toBe(
+      "Integrated Browser http://localhost:3000",
+    )
+  })
+
+  test("escapes format controls in the rule text", () => {
+    expect(describeRule("read", "src/\u202Egnp.exe", t)).toBe("Read src/\\u202egnp.exe")
+  })
+
+  test("escapes the doom loop tool name", () => {
+    expect(describeRule("doom_loop", "read\u202E", t)).toBe("Continue read\\u202e calls")
+  })
+
+  test("escapes an unknown tool name used as its own label", () => {
+    expect(describeRule(`acme_\u202Elookup`, "src/app.ts", t)).toBe("acme_\\u202elookup src/app.ts")
   })
 })
 
@@ -218,6 +267,7 @@ describe("resolveLabel", () => {
       webfetch: "Web Fetch",
       websearch: "Web Search",
       codesearch: "Code Search",
+      browser_open: "Integrated Browser",
       todoread: "Todo Read",
       todowrite: "Todo Write",
       task: "Task",

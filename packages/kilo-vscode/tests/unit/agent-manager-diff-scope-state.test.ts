@@ -1,7 +1,62 @@
 import { describe, it, expect } from "bun:test"
+import path from "node:path"
 import { composeDiffId, parseDiffId, scopeDescriptors } from "../../webview-ui/agent-manager/diff-scope-state"
 
 describe("agent-manager webview diff scope descriptors", () => {
+  it("restores project and worktree scopes without namespacing protocol IDs", () => {
+    const child = Bun.spawnSync(
+      [
+        process.execPath,
+        "--conditions=browser",
+        "-e",
+        `
+        import { strict as assert } from "node:assert"
+        import { createRoot, createSignal } from "solid-js"
+        import { createDiffReviewScope } from "./webview-ui/agent-manager/diff-review-scope"
+        import { diffDataKey } from "./webview-ui/agent-manager/worktree-diffs"
+
+        createRoot((dispose) => {
+          const [project, setProject] = createSignal("a")
+          const [ctx, setContext] = createSignal("local")
+          const [session, setSession] = createSignal("ses-a")
+          const sent = []
+          const review = createDiffReviewScope({
+            ctx, key: () => diffDataKey(project(), ctx()), session, project,
+            panelOpen: () => false, reviewActive: () => false,
+            vscode: { postMessage: (msg) => sent.push(msg) },
+          })
+          review.select("local#unstaged")
+          setProject("b")
+          assert.equal(review.id(), "local#branch")
+          review.select("local#staged")
+          setContext("wt-1")
+          assert.equal(review.id(), "wt-1#branch")
+          review.select("wt-1#session:ses-a")
+          setSession("ses-b")
+          assert.equal(review.id(), "wt-1#session:ses-b")
+          setContext("local")
+          assert.equal(review.id(), "local#staged")
+          setProject("a")
+          assert.equal(review.id(), "local#unstaged")
+          setContext("wt-1")
+          assert.equal(review.id(), "wt-1#branch")
+          review.selectBase("main")
+          assert.deepEqual(sent, [{
+            type: "agentManager.setDiffBaseBranch", projectId: "a",
+            sessionId: "wt-1", scope: "branch", branch: "main",
+          }])
+          setProject("b")
+          assert.equal(review.id(), "wt-1#session:ses-b")
+          assert.equal(review.descriptors().at(-1).id, "wt-1#session:ses-b")
+          dispose()
+        })
+      `,
+      ],
+      { cwd: path.resolve(import.meta.dir, "../.."), stdout: "pipe", stderr: "pipe" },
+    )
+    expect(child.exitCode, child.stdout.toString() + child.stderr.toString()).toBe(0)
+  })
+
   it("offers the three git scopes without an active session", () => {
     const descriptors = scopeDescriptors("wt_1")
     expect(descriptors.map((d) => d.type)).toEqual(["workspace", "staged", "unstaged"])

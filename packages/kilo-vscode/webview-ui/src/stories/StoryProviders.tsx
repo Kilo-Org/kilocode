@@ -99,7 +99,9 @@ const MOCK_PROVIDERS = {
 const MOCK_MODELS = flattenModels(MOCK_PROVIDERS as any)
 
 /** A synchronous mock ProviderContext — provides models without waiting for a postMessage round-trip. */
-const MockProviderProvider: ParentComponent<{ kiloAuth?: boolean; training?: boolean }> = (props) => {
+const MockProviderProvider: ParentComponent<{ kiloAuth?: boolean; training?: boolean; loadFailed?: boolean }> = (
+  props,
+) => {
   const models = createMemo(() =>
     MOCK_MODELS.map((model) => ({
       ...model,
@@ -118,6 +120,10 @@ const MockProviderProvider: ParentComponent<{ kiloAuth?: boolean; training?: boo
     authMethods: () => ({}),
     authStates: () => (props.kiloAuth ? { kilo: "oauth" } : {}) as Record<string, ProviderAuthState>,
     isModelValid: () => true,
+    kiloUnavailable: () => false,
+    failures: () => [],
+    loadFailed: () => props.loadFailed === true,
+    trackDialog: () => {},
   }
   return <ProviderContext.Provider value={value}>{props.children}</ProviderContext.Provider>
 }
@@ -237,9 +243,6 @@ export function mockSessionValue(overrides?: {
     selected: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
     modelForAgent: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
     selectModel: noop,
-    preferredSelection: () => undefined,
-    preferencesReady: () => true,
-    rememberSelection: noop,
     trackScopes: () => noop,
     costBreakdown: () => [],
     contextUsage: () => undefined,
@@ -250,6 +253,19 @@ export function mockSessionValue(overrides?: {
     refreshSkills: noop,
     removeSkill: noop,
     removeAgent: noop,
+    removeMcp: noop,
+    mcpStatus: () => ({}),
+    mcpLoading: () => null,
+    connectMcp: noop,
+    disconnectMcp: noop,
+    mcpAuth: () => ({ needsAuth: [], busy: [] }),
+    mcpRemoving: () => [],
+    signInMcp: noop,
+    cancelMcpSignIn: noop,
+    resetMcpAuth: noop,
+    mcpAuthResult: () => undefined,
+    mcpBundles: () => [],
+    refreshMcpBundles: noop,
     selectedAgent: () => "code",
     selectAgent: noop,
     getSessionAgent: () => "code",
@@ -286,6 +302,7 @@ export function mockSessionValue(overrides?: {
     loadSessions: noop,
     loadMoreSessions: noop,
     sessionsHasMore: () => false,
+    keepSessions: () => noop,
     sessionsLoadingMore: () => false,
     loadOlderMessages: () => false,
     selectSession: noop,
@@ -320,6 +337,7 @@ interface StoryProvidersProps {
   features?: Partial<FeatureFlags>
   globalConfig?: Config
   projectConfig?: Config
+  workspaceConfig?: Config
   onConfigChange?: (config: Config) => void
   onGlobalConfigChange?: (config: Config) => void
   onProjectConfigChange?: (config: Config) => void
@@ -327,6 +345,8 @@ interface StoryProvidersProps {
   onOpenFile?: OpenFileFn
   kiloAuth?: boolean
   training?: boolean
+  /** When true, the mock provider context reports a failed provider read for this project. */
+  loadFailed?: boolean
   /** When true, renders children without the default 12px padding wrapper */
   noPadding?: boolean
 }
@@ -337,6 +357,7 @@ const ConfigWrapper: ParentComponent<{
   features?: Partial<FeatureFlags>
   globalConfig?: Config
   projectConfig?: Config
+  workspaceConfig?: Config
   onConfigChange?: (config: Config) => void
   onGlobalConfigChange?: (config: Config) => void
   onProjectConfigChange?: (config: Config) => void
@@ -346,6 +367,9 @@ const ConfigWrapper: ParentComponent<{
     const [cfg, setCfg] = createSignal(props.config)
     const [global, setGlobal] = createSignal(props.globalConfig ?? props.config)
     const [project, setProject] = createSignal(props.projectConfig ?? props.config)
+    // An unscoped story has no workspace layer of its own, so it stays empty and
+    // no saved rule is presented as revocable.
+    const [workspace, setWorkspace] = createSignal(props.workspaceConfig ?? {})
     const [settings, setSettings] = createSignal<Record<string, unknown>>({})
     const [dirty, setDirty] = createSignal(false)
     const features = createMemo(() => {
@@ -364,15 +388,22 @@ const ConfigWrapper: ParentComponent<{
     const value = {
       config: createMemo(() => cfg()),
       globalConfig: createMemo(() => (scoped ? global() : cfg())),
+      mergedGlobalConfig: createMemo(() => (scoped ? global() : cfg())),
+      homeDir: () => undefined,
       globalDraft: () => ({}),
       projectConfig: createMemo(() => (scoped ? project() : cfg())),
+      // The workspace layer is its own scope: never fall back to the effective
+      // config, or a saved rule would look workspace-supplied.
+      workspaceConfig: createMemo(() => workspace()),
       collections: () => ({}),
       settings,
+      shortcuts: () => ({ bindings: {}, selection: false }),
       features,
       loading: () => false,
       isDirty: dirty,
       saving: () => false,
       saveError: () => null,
+      clearSaveError: noop,
       updateConfig: (partial: Partial<Config>) => {
         setCfg((prev) => {
           const next = merge(prev as Record<string, unknown>, partial as Record<string, unknown>) as Config
@@ -438,12 +469,13 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
             features={props.features}
             globalConfig={props.globalConfig}
             projectConfig={props.projectConfig}
+            workspaceConfig={props.workspaceConfig}
             onConfigChange={props.onConfigChange}
             onGlobalConfigChange={props.onGlobalConfigChange}
             onProjectConfigChange={props.onProjectConfigChange}
           >
             <DisplayProvider>
-              <MockProviderProvider kiloAuth={props.kiloAuth} training={props.training}>
+              <MockProviderProvider kiloAuth={props.kiloAuth} training={props.training} loadFailed={props.loadFailed}>
                 <DialogProvider>
                   <LanguageContext.Provider
                     value={{

@@ -6,6 +6,10 @@ import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { assertExternalDirectoryEffect } from "./external-directory"
 import DESCRIPTION from "./glob.txt"
 import * as Tool from "./tool"
+// kilocode_change start - search ignored paths the user listed in config
+import { Config } from "@/config/config"
+import * as KiloGlob from "@/kilocode/tool/glob-ignored"
+// kilocode_change end
 
 // kilocode_change start — support absolute glob patterns (e.g. ~/.config/kilo/command/*.md)
 function normalize(p: string) {
@@ -37,6 +41,7 @@ export const GlobTool = Tool.define(
   Effect.gen(function* () {
     const fs = yield* FSUtil.Service
     const ripgrep = yield* Ripgrep.Service
+    const config = yield* Config.Service // kilocode_change
     return {
       description: DESCRIPTION,
       parameters: Parameters,
@@ -69,7 +74,7 @@ export const GlobTool = Tool.define(
 
           const limit = 100
           // kilocode_change start - retain bounded-search metadata from Core ripgrep.
-          const result = yield* ripgrep.glob({
+          const result = yield* KiloGlob.search(ripgrep, config, ins.directory, {
             cwd: search,
             pattern: absolute?.pattern ?? params.pattern, // kilocode_change - absolute patterns are split into cwd + relative glob
             limit,

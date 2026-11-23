@@ -1,6 +1,5 @@
-import { describe, expect, it, mock } from "bun:test"
-import * as vscode from "vscode"
-import { detectMarketplaceRelevance } from "../../src/services/marketplace/relevance"
+import { describe, expect, it } from "bun:test"
+import { detectMarketplaceRelevance, filenamePatterns, matchesPattern } from "../../src/services/marketplace/relevance"
 import type { MarketplaceItem } from "../../src/services/marketplace/types"
 
 const items: MarketplaceItem[] = [
@@ -41,14 +40,8 @@ const items: MarketplaceItem[] = [
 ]
 
 describe("Marketplace relevance", () => {
-  it("matches workspace files and installed extensions with deduplicated bounded searches", async () => {
-    const root = vscode.Uri.file("/repo")
-    const find = mock(async (_root: vscode.Uri, pattern: string) => pattern === "*.component.ts")
-
-    const relevance = await detectMarketplaceRelevance(items, [root], {
-      extensions: ["MS-ToolsAI.Jupyter"],
-      find,
-    })
+  it("combines backend filename matches with installed extensions", () => {
+    const relevance = detectMarketplaceRelevance(items, ["*.component.ts"], ["MS-ToolsAI.Jupyter"])
 
     expect(relevance).toEqual({
       "agent:angular": { filename: ["*.component.ts"] },
@@ -57,48 +50,21 @@ describe("Marketplace relevance", () => {
         vscodeExtension: ["ms-toolsai.jupyter"],
       },
     })
-    expect(find).toHaveBeenCalledTimes(3)
-    expect(find.mock.calls).toContainEqual([root, "*.component.ts"])
-    expect(find.mock.calls).toContainEqual([root, "*.ipynb"])
-    expect(find.mock.calls).toContainEqual([root, "*.rs"])
   })
 
-  it("searches every workspace root and preserves remote URIs", async () => {
-    const local = vscode.Uri.file("/repo")
-    const remote = vscode.Uri.parse("vscode-remote://ssh-remote+host/workspace")
-    const find = mock(async (root: vscode.Uri, pattern: string) => root === remote && pattern === "*.ipynb")
-
-    const relevance = await detectMarketplaceRelevance(items, [local, remote], { extensions: [], find })
-
-    expect(relevance).toEqual({ "mcp:jupyter": { filename: ["*.ipynb"] } })
-    expect(find.mock.calls).toContainEqual([remote, "*.ipynb"])
-  })
-
-  it("ignores malformed suggestion metadata", async () => {
+  it("ignores malformed suggestion metadata", () => {
     const malformed = {
       ...items[0],
       suggest_for: { filename: "*.component.ts", vscode_extension: [42] },
     } as unknown as MarketplaceItem
-    const find = mock(async () => true)
 
-    const relevance = await detectMarketplaceRelevance([malformed], [vscode.Uri.file("/repo")], {
-      extensions: ["test.extension"],
-      find,
-    })
-
-    expect(relevance).toEqual({})
-    expect(find).not.toHaveBeenCalled()
+    expect(detectMarketplaceRelevance([malformed], ["*.component.ts"], ["test.extension"])).toEqual({})
   })
 
-  it("still matches installed extensions without a workspace", async () => {
-    const find = mock(async () => true)
-
-    const relevance = await detectMarketplaceRelevance(items, [], {
-      extensions: ["ms-toolsai.jupyter"],
-      find,
-    })
-
-    expect(relevance).toEqual({ "mcp:jupyter": { vscodeExtension: ["ms-toolsai.jupyter"] } })
-    expect(find).not.toHaveBeenCalled()
+  it("matches created paths against filename patterns", () => {
+    expect(filenamePatterns(items)).toEqual(["*.component.ts", "*.ipynb", "*.rs"])
+    expect(matchesPattern("notebooks/analysis.ipynb", "*.ipynb")).toBe(true)
+    expect(matchesPattern("src\\app\\app.component.ts", "*.component.ts")).toBe(true)
+    expect(matchesPattern("src/main.ts", "*.component.ts")).toBe(false)
   })
 })

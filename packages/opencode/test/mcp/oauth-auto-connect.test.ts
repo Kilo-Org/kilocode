@@ -145,7 +145,12 @@ mcpTest.instance("first connect to OAuth server shows needs_auth instead of fail
     const mcp = yield* MCP.Service
     const result = yield* mcp.add("test-oauth", remote(server.url))
 
-    expect((result.status as Record<string, { status: string }>)["test-oauth"]).toEqual({ status: "needs_auth" })
+    // kilocode_change start - preserve the classified auth failure for client diagnostics
+    expect((result.status as Record<string, { status: string; error?: string }>)["test-oauth"]).toEqual({
+      status: "needs_auth",
+      error: "Unauthorized",
+    })
+    // kilocode_change end
   }),
 )
 
@@ -216,7 +221,7 @@ mcpTest.instance("failed reauthentication preserves existing credentials", () =>
 
     expect(yield* mcp.finishAuth(name, "invalid-code")).toEqual({
       status: "failed",
-      error: "OAuth completion failed: Token exchange failed",
+      error: "Token exchange failed: Token exchange failed (invalid_grant)", // kilocode_change
     })
     expect((yield* auth.get(name))?.tokens?.accessToken).toBe("working-token")
     expect((yield* auth.get(name))?.clientInfo).toMatchObject({

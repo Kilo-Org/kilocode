@@ -2,7 +2,9 @@ package ai.kilocode.client.session
 
 import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.client.session.settings.BlockDisplay
 import ai.kilocode.client.session.ui.ModifiedFilesView
 import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.client.session.ui.header.BranchDock
@@ -41,6 +43,7 @@ import java.awt.Point
 import javax.swing.AbstractButton
 import javax.swing.JButton
 import javax.swing.JComponent
+import javax.swing.JPanel
 import javax.swing.Scrollable
 import javax.swing.SwingConstants
 import javax.swing.JTextArea
@@ -49,6 +52,21 @@ import kotlinx.coroutines.CompletableDeferred
 
 @Suppress("UnstableApiUsage")
 class SessionScrollTest : SessionUiTestBase() {
+
+    override fun setUp() {
+        super.setUp()
+        // Scroll-preservation tests manually expand shell cards; pin that fixture behavior instead
+        // of depending on the transcript's user-configurable terminal default.
+        KiloPluginSettings.setTerminalCommandDisplay(BlockDisplay.COLLAPSED)
+    }
+
+    override fun tearDown() {
+        try {
+            KiloPluginSettings.unsetTerminalCommandDisplay()
+        } finally {
+            super.tearDown()
+        }
+    }
 
     fun `test session update follows when transcript is at bottom`() {
         showMessages()
@@ -1127,6 +1145,48 @@ class SessionScrollTest : SessionUiTestBase() {
 
         assertEquals(value, bar.value)
         assertTrue(jumpButton().isVisible)
+    }
+
+    fun `test hidden question is followed when session is revealed`() {
+        val host = JPanel()
+        host.setSize(800, 600)
+        host.add(ui)
+
+        try {
+            host.addNotify()
+            ui.setSize(800, 600)
+            showMessages()
+            fillTranscript(24)
+            val bar = scrollBar()
+            setValue(bar, bottom(bar) / 2)
+            val value = bar.value
+            drainScroll()
+
+            assertEquals(value, bar.value)
+            assertFalse(ui.scroll.following())
+            assertTrue(jumpButton().isVisible)
+
+            host.remove(ui)
+            UIUtil.dispatchAllInvocationEvents()
+            assertFalse(ui.isShowing)
+
+            emit(ChatEventDto.QuestionAsked("ses_test", question("q_hidden_reveal")))
+            drainScroll()
+
+            assertEquals(value, bar.value)
+            assertFalse("Hidden metadata update alone must not resume following", ui.scroll.following())
+            assertTrue(jumpButton().isVisible)
+
+            host.add(ui)
+            drainScroll()
+
+            assertTrue(ui.isShowing)
+            assertBottom(bar)
+            assertTrue(ui.scroll.following())
+            assertFalse(jumpButton().isVisible)
+        } finally {
+            host.removeNotify()
+        }
     }
 
     fun `test question overlay replaces scroll icon and still jumps to bottom`() {

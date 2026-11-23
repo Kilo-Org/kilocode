@@ -20,12 +20,18 @@ function joinCspDirectives(directives: string[]): string {
 /**
  * Build the full CSP policy string for a webview.
  */
-export function buildCspString(cspSource: string, nonce: string, port?: number, frame?: string): string {
+export function buildCspString(
+  cspSource: string,
+  nonce: string,
+  port?: number,
+  frame?: string,
+  module = false,
+): string {
   const connectSrc = buildConnectSrc(port)
   const directives = [
     "default-src 'none'",
     `style-src 'unsafe-inline' ${cspSource}`,
-    `script-src 'nonce-${nonce}' 'wasm-unsafe-eval'`,
+    `script-src 'nonce-${nonce}' 'wasm-unsafe-eval'${module ? " 'strict-dynamic'" : ""}`,
     // Allow the bundled Shiki highlighting worker (loaded as a webview resource).
     `worker-src ${cspSource}`,
     `font-src ${cspSource}`,

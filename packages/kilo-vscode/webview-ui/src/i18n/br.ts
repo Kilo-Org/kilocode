@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Quadro",
+  "task.swarm.open": "Abrir quadro",
   "task.swarm.refresh": "Atualizar",
   "task.swarm.reset": "Redefinir quadro",
   "task.swarm.resetTitle": "Redefinir este quadro?",
@@ -85,15 +86,19 @@ export const dict = {
   "revert.banner.count_other": "{{count}} mensagens revertidas",
   "revert.banner.redo": "Refazer",
   "revert.banner.redo.all": "Refazer Tudo",
-  "revert.banner.hint": "You can redo these changes until you send a new message",
+  "revert.banner.hint": "Você pode refazer estas alterações até enviar uma nova mensagem",
   "revert.banner.workspace.snapshotsDisabled":
     "Conversa revertida. As alterações nos arquivos não foram restauradas porque os snapshots estão desativados.",
   "revert.banner.workspace.unavailable":
     "Conversa revertida. Nenhum ponto de restauração dos arquivos estava disponível, portanto as alterações no espaço de trabalho não foram restauradas.",
+  "revert.banner.workspace.notAGitRepo":
+    "Conversa revertida. Os pontos de restauração dos arquivos exigem um repositório Git, portanto as alterações no espaço de trabalho não foram restauradas.",
   "revert.banner.workspace.legacy":
     "Conversa revertida. O status da restauração do espaço de trabalho não está disponível para esta reversão anterior.",
   "revert.banner.workspace.enableSnapshots": "Ativar snapshots",
   "revert.disabled.agentBusy": "Aguarde o agente terminar",
+  "revert.error.body":
+    "O repositório pode estar em uso. Tente novamente ou consulte os logs do Kilo para mais detalhes.",
   "command.session.compact": "Compactar sessão",
   "command.session.export": "Exportar transcrição da sessão",
 
@@ -120,13 +125,13 @@ export const dict = {
   "provider.connect.apiKey.description":
     "Digite sua chave de API do {{provider}} para conectar sua conta e usar modelos do {{provider}} no Kilo.",
   "provider.connect.apiKey.description.local":
-    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+    "Conecte-se ao seu servidor {{provider}} local. Deixe a chave de API vazia se o servidor não exigir uma (padrão para localhost).",
   "provider.connect.atomicChat.description":
-    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
+    "Conecte-se ao Atomic Chat na sua máquina (padrão http://127.0.0.1:1337). Nenhuma chave de API é necessária para o servidor local — inicie o Atomic Chat, carregue um modelo e conecte.",
   "provider.connect.apiKey.label": "Chave de API do {{provider}}",
-  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
+  "provider.connect.apiKey.label.optional": "Chave de API do {{provider}} (opcional)",
   "provider.connect.apiKey.placeholder": "Chave de API",
-  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
+  "provider.connect.apiKey.placeholder.optional": "Deixe vazio para o servidor local",
   "provider.connect.apiKey.required": "A chave de API é obrigatória",
   "provider.connect.prompt.required": "{{field}} é obrigatório",
   "provider.connect.azure.endpointType.label": "Selecionar configuração de endpoint do Azure",
@@ -196,13 +201,28 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "Pesquisar Worktrees",
   "prompt.thinking.tooltip": "Esforço de raciocínio",
+  "prompt.shortcutHint.addSelection": "para adicionar a seleção",
+  "prompt.shortcutHint.waiting": "para responder a uma sessão em espera",
+  "prompt.shortcutHint.type": "para digitar",
+  "prompt.shortcutHint.sessions": "para trocar de sessão",
+  "prompt.shortcutHint.stop": "para parar",
+  "prompt.shortcutHint.changes": "para revisar as alterações",
+  "prompt.shortcutHint.pr": "para abrir o PR",
+  "prompt.shortcutHint.mode": "Próximo modo",
   "prompt.action.send": "Enviar",
   "prompt.action.continue": "Continuar",
   "prompt.action.send.blocked": "Responda ou feche a pergunta pendente primeiro",
   "prompt.action.send.recording": "Transcrever e enviar",
   "prompt.action.stop": "Parar",
+  "prompt.action.stop.background": "Parar o agente principal. Os agentes em segundo plano continuam em execução.",
+  "prompt.agents.show": "Mostrar agentes em segundo plano",
   "prompt.action.enhance": "Melhorar prompt",
+  "prompt.action.more": "Mais ações",
   "prompt.paste.expand": "Clique para expandir o texto colado",
+  "prompt.issues.title": "Problemas da sessão",
+  "prompt.mcp.provider": "MCP {{name}}",
+  "prompt.mcp.openSettings": "Abrir nas Configurações",
+  "prompt.mcp.signIn.busy": "Fazendo login…",
   "prompt.action.autoApprove.enable": "Ativar aprovação automática",
   "prompt.action.autoApprove.disable": "Desativar aprovação automática",
   "prompt.action.autoApprove.enabled":
@@ -273,6 +293,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Faça login no ChatGPT novamente e envie sua mensagem de novo para continuar usando os modelos Codex.",
 
+  "provider.failure.unauthorized": "Credenciais rejeitadas (HTTP {{status}}). Faça login novamente.",
+  "provider.failure.unauthorizedNoStatus": "Credenciais rejeitadas. Faça login novamente.",
+  "provider.failure.unauthenticated": "Não conectado.",
+  "provider.failure.network": "Não foi possível acessar o provedor. Verifique sua conexão.",
+  "provider.failure.http": "Erro do provedor (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Erro do provedor.",
+  "provider.failure.schema": "Resposta inesperada do provedor.",
+
   "notification.permission.title": "Permissão necessária",
   "notification.permission.titleSubagent": "Permissão necessária (subagente)",
   "notification.permission.titleSkillShell": "Executar comandos de shell da skill “{{skill}}”?",
@@ -289,6 +317,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "Remover da lista de permitidos",
   "ui.permission.rule.addToDenied": "Adicionar à lista de negados",
   "ui.permission.rule.removeFromDenied": "Remover da lista de negados",
+  "ui.permission.rule.fromConfig": "Gerenciada por um arquivo de configuração",
   "ui.permission.toolLabel.read": "Ler",
   "ui.permission.toolLabel.edit": "Editar",
   "ui.permission.toolLabel.write": "Escrever",
@@ -306,6 +335,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Ler Tarefas",
   "ui.permission.toolLabel.todoWrite": "Escrever Tarefas",
   "ui.permission.toolLabel.codeSearch": "Pesquisa de Código",
+  "ui.permission.toolLabel.browserOpen": "Navegador Integrado",
   "ui.permission.copyCommand": "Copiar",
   "ui.approval.auto": "Aprovado automaticamente",
   "ui.approval.manual": "Aprovado por você",
@@ -451,7 +481,7 @@ export const dict = {
   "provider.custom.field.providerID.description": "Letras minúsculas, números, hifens ou underscores",
   "provider.custom.field.name.label": "Nome de exibição",
   "provider.custom.field.name.placeholder": "Meu Provedor de IA",
-  "provider.custom.field.package.label": "Provider API",
+  "provider.custom.field.package.label": "API do provedor",
   "provider.custom.field.baseURL.label": "URL base",
   "provider.custom.field.baseURL.placeholder": "https://api.myprovider.com/v1",
   "provider.custom.field.apiKey.label": "Chave de API",
@@ -468,6 +498,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "Alternar imagem para todos",
   "provider.custom.models.remove": "Remover modelo",
   "provider.custom.models.add": "Adicionar modelo",
+  "provider.custom.models.fetch.button": "Buscar modelos",
   "provider.custom.models.fetch.authError": "Falha na autenticação. Verifique a chave de API acima e tente novamente.",
   "provider.custom.models.fetch.empty": "Nenhum modelo encontrado neste servidor.",
   "provider.custom.models.fetch.added": "{{count}} modelo(s) adicionado(s).",
@@ -497,6 +528,9 @@ export const dict = {
   "provider.custom.error.duplicate": "Duplicado",
   "settings.openLocalConfig": "Config Local",
   "settings.openGlobalConfig": "Config Global",
+  "settings.search.placeholder": "Pesquisar configurações",
+  "settings.search.noResults": "Nenhuma configuração encontrada",
+  "settings.search.clear": "Limpar pesquisa",
   "settings.config.scope.local": "Local",
   "settings.config.scope.global": "Global",
   "settings.config.status.loaded": "carregado",
@@ -539,6 +573,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "Buscar conteúdo de uma URL",
   "settings.permissions.tool.websearch.description": "Pesquisar na web",
   "settings.permissions.tool.codesearch.description": "Pesquisar código na web",
+  "settings.permissions.tool.browser_open.description": "Abrir uma página no Navegador Integrado",
   "settings.permissions.tool.external_directory.description": "Acessar arquivos fora do diretório do projeto",
   "settings.permissions.tool.doom_loop.description": "Detectar chamadas de ferramentas repetidas com entrada idêntica",
 
@@ -558,6 +593,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Nova",
   "session.tabs.switcher.busy": "Trabalhando",
   "session.tabs.switcher.scheduled": "Agendado",
+  "session.tabs.pinHint": "Shift+clique para fixar ou desafixar",
   "session.tab.local": "Local",
   "session.tab.cloud": "Nuvem",
   "session.tab.worktree": "Árvore de trabalho",
@@ -737,9 +773,14 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code é um assistente de programação com IA. Peça para criar funcionalidades, corrigir bugs ou explicar sua base de código.",
+  "session.workspaceScope.description":
+    "O chat do Kilo usa apenas “{{folder}}”, a primeira pasta deste espaço de trabalho.",
+  "session.workspaceScope.alternatives":
+    "Para trabalhar com outra pasta, abra-a em uma janela própria ou adicione-a como um projeto no Agent Manager.",
+  "session.workspaceScope.dismiss": "Ocultar dica sobre o escopo do espaço de trabalho",
   "session.messages.scrollToBottom": "Rolar para o final",
-  "session.messages.initializing": "O teraouiñ...",
-  "session.messages.taskStarting": "O kregiñ...",
+  "session.messages.initializing": "Inicializando...",
+  "session.messages.taskStarting": "Iniciando...",
   "session.prompts.navLabel": "Navegador de prompts",
   "session.prompts.tick": "Prompt {{index}} de {{total}}: {{prompt}}",
   "session.prompts.noAnswer": "Sem resposta ainda",
@@ -779,11 +820,14 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Considerando próximos passos...",
 
   "dialog.model.noProviders": "Nenhum provedor",
+  "dialog.model.unavailable": "Modelos Kilo indisponíveis",
+  "dialog.model.loadFailed": "Não foi possível carregar os provedores deste projeto.",
 
   "prompt.placeholder.connecting": "Conectando ao servidor...",
   "prompt.placeholder.error": "Conexão falhou. Verifique o painel de saída ou reinicie a extensão.",
   "prompt.placeholder.default":
     "Digite uma mensagem, @ para mencionar arquivos... (Enter para enviar, Shift+Enter para nova linha)",
+  "prompt.placeholder.hint": "Digite uma mensagem, @ para mencionar arquivos... ({{key}} {{action}})",
 
   "context.usage.sessionCost": "Custo da sessão",
   "context.usage.olderSessions": "{{count}} sessões anteriores",
@@ -813,7 +857,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Isso redefine apenas as configurações específicas da extensão VS Code para seus valores padrão. As configurações compartilhadas com o CLI, como modos e regras de aprovação automática, são armazenadas na configuração do CLI e não serão redefinidas.",
   "settings.aboutKiloCode.resetSettings.button": "Redefinir Todas as Configurações",
-  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Redefinir notificações lidas",
   "settings.aboutKiloCode.settingsTransfer.title": "Transferência de configurações",
   "settings.aboutKiloCode.settingsTransfer.description":
     "Exporte ou importe suas configurações para transferi-las entre instâncias do VS Code.",
@@ -831,8 +875,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "Telemetria",
   "settings.aboutKiloCode.telemetry.description":
-    'A telemetria é controlada pela configuração de telemetria integrada do VS Code. Para desativá-la, vá para Configurações > Telemetria > Nível de Telemetria e defina como "off". Reinicie o VS Code para aplicar a alteração.',
-  "settings.aboutKiloCode.telemetry.openSettings": "Abrir Configurações de Telemetria",
+    "Use este controle para alterar sua preferência de telemetria no Kilo. A telemetria permanece desativada se o VS Code ou o ambiente a desativar.",
+  "settings.aboutKiloCode.telemetry.toggle": "Ativar telemetria",
+  "settings.aboutKiloCode.telemetry.saveFailed": "Não foi possível atualizar a configuração de telemetria",
 
   "settings.agentBehaviour.subtab.agents": "Agentes",
   "settings.agentBehaviour.subtab.mcpServers": "Servidores MCP",
@@ -843,7 +888,8 @@ export const dict = {
   "settings.browser.description":
     "Configure a automação de navegador integrada com tecnologia Playwright. O Kilo pode navegar, interagir e capturar telas de páginas da web nas suas sessões.",
   "settings.browser.enable.title": "Ativar Automação do Navegador",
-  "settings.browser.enable.description": "Registrar o servidor Playwright MCP no backend CLI.",
+  "settings.browser.enable.description":
+    "Ativar o navegador do Agent Manager específico de cada sessão para aplicações locais e páginas HTTPS públicas.",
   "settings.browser.systemChrome.title": "Usar Chrome do Sistema",
   "settings.browser.systemChrome.description":
     "Usar o navegador Chrome instalado em vez de uma instância separada do Chromium.",
@@ -926,6 +972,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Ferramentas nativas de notebook",
   "settings.experimental.nativeNotebookTools.description":
     "Ativar ferramentas experimentais para ler, editar e executar notebooks do VS Code",
+  "settings.experimental.globIncludeIgnored.title": "Pesquisar caminhos ignorados",
+  "settings.experimental.globIncludeIgnored.description":
+    "Pastas ou arquivos que a ferramenta glob deve pesquisar mesmo quando o .gitignore ou outros arquivos de exclusão os ignoram. Use padrões no estilo gitignore relativos ao workspace; pastas ignoradas dentro deles continuam excluídas.",
   "settings.experimental.continueOnDeny.title": "Continuar ao negar",
   "settings.experimental.continueOnDeny.description": "Continuar o loop do agente quando uma permissão é negada",
   "settings.sandboxing.title": "Isolamento em sandbox",
@@ -939,15 +988,15 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Caminhos graváveis adicionais",
   "settings.sandboxing.writablePaths.description":
     "Caminhos adicionais do sistema de arquivos onde o sandbox permite gravação (por exemplo, /tmp, /var/log). Eles são mesclados com os caminhos graváveis padrão quando o sandbox está ativo.",
-  "settings.experimental.multiProject.title": "Agent Manager Multi-Projeto",
+  "settings.experimental.conversationPromptHistory.title": "Histórico de prompts por conversa",
+  "settings.experimental.conversationPromptHistory.description":
+    "Mantenha o histórico de prompts (ArrowUp/ArrowDown) separado para cada conversa, em vez de compartilhar um único histórico entre todas as conversas.",
+  "settings.experimental.agentManagerSplash.title": "Tela de boas-vindas do Agent Manager",
+  "settings.experimental.agentManagerSplash.description":
+    "Experimente a nova introdução do Agent Manager com exemplos de fluxos de trabalho. Aplicação imediata.",
   "settings.experimental.claudeMigration.title": "Migração do Claude Code",
   "settings.experimental.claudeMigration.description":
     "Importe uma vez instruções globais CLAUDE.md compatíveis, habilidades simples e definições MCP desativadas. Os arquivos originais do Claude permanecem inalterados; reinicie o backend após ativar.",
-  "settings.experimental.multiProject.description":
-    "Ativar gerenciamento de sessões e worktrees em múltiplos repositórios no Agent Manager. O repositório do workspace atual é sempre o projeto padrão.",
-  "settings.experimental.taskModelSelection.title": "Seleção de modelo de subagente do Task",
-  "settings.experimental.taskModelSelection.description":
-    "Permite selecionar explicitamente o modelo, o provedor e o esforço de raciocínio dos subagentes do Task.",
   "settings.experimental.mcpTimeout.title": "Tempo limite MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Tempo limite para solicitações do servidor MCP em milissegundos",
   "settings.experimental.remote.title": "Controle Remote",
@@ -1037,12 +1086,31 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.title": "Remover servidor MCP",
   "settings.agentBehaviour.removeMcp.confirm":
     'Remover o servidor MCP "{{name}}"? Isso o removerá da sua configuração.',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    'Remover o servidor MCP "{{name}}" e suas habilidades complementares? Isso remove o servidor e todas as habilidades desta instalação do Marketplace.',
   "settings.agentBehaviour.removeMcp.button": "Remover",
   "settings.agentBehaviour.editMcp": "Editar Servidor MCP",
   "settings.agentBehaviour.editMcp.transportLocal": "Servidor local (transporte stdio)",
   "settings.agentBehaviour.editMcp.transportRemote": "Servidor remoto (transporte SSE/HTTP)",
   "settings.agentBehaviour.editMcp.env": "Variáveis de Ambiente",
   "settings.agentBehaviour.editMcp.env.help": "Variáveis passadas para o processo do servidor MCP.",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "Deixe em Automático a menos que o servidor exija um cliente pré-registrado. Um segredo do cliente é armazenado no seu arquivo de configuração do Kilo.",
+  "settings.agentBehaviour.editMcp.oauth.mode": "Modo",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "Automático",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "Desativado",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "Cliente personalizado",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "ID do cliente",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "Segredo do cliente",
+  "settings.agentBehaviour.editMcp.oauth.scope": "Escopo",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "Porta de retorno",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "URI de redirecionamento",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "O padrão é http://127.0.0.1:19876/mcp/oauth/callback, que substitui a porta de retorno.",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "Informe uma porta entre 1 e 65535.",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "Um segredo do cliente exige um ID do cliente.",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "Informe um URI de redirecionamento válido.",
   "settings.agentBehaviour.addMcp.command": "Comando",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "Argumentos",
@@ -1056,6 +1124,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "Remover habilidade",
   "settings.agentBehaviour.removeSkill.confirm":
     'Remover a habilidade "{{name}}"? Isso excluirá os arquivos da habilidade do disco.',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    'Remover a habilidade "{{name}}"? Isso também desinstala o servidor MCP {{mcp}} e todas as habilidades complementares da mesma instalação do Marketplace.',
   "settings.agentBehaviour.removeSkill.button": "Remover",
   "settings.agentBehaviour.rules.description":
     "Regras são arquivos de instrução que orientam o comportamento do agente. Elas são incluídas no prompt do sistema para cada conversa. Adicione caminhos de arquivos abaixo para incluir regras adicionais.",
@@ -1072,6 +1142,12 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.command": "Comando",
   "settings.agentBehaviour.mcpDetail.args": "Argumentos",
   "settings.agentBehaviour.mcpDetail.env": "Ambiente",
+  "settings.agentBehaviour.mcpSignIn.cancel": "Cancelar login",
+  "settings.agentBehaviour.mcpRemoving": "Removendo…",
+  "settings.agentBehaviour.mcpResetAuth": "Redefinir login",
+  "settings.agentBehaviour.mcpResetAuth.title": "Redefinir login do MCP",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    'Limpar o login armazenado de "{{name}}"? Você precisará fazer login novamente.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Explorar Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "Nenhum servidor MCP configurado. Adicione servidores MCP em kilo.jsonc ou peça ao agente para adicioná-los.",
@@ -1127,6 +1203,8 @@ export const dict = {
     "Gerenciar lista de tarefas. Permite ler e atualizar a lista de tarefas interna.",
   "settings.autoApprove.tool.webfetch": "Buscar uma URL. Permite recuperar o conteúdo de uma URL específica.",
   "settings.autoApprove.tool.websearch": "Pesquisar na web. Permite realizar pesquisas externas na web.",
+  "settings.autoApprove.tool.browser_open":
+    "Abrir páginas no Navegador Integrado. Esta é a pré-visualização no aplicativo, não a automação de navegador do Playwright.",
   "settings.autoApprove.tool.external_directory":
     "Acessar arquivos fora do workspace. Acionado ao acessar arquivos fora do diretório do projeto atual.",
   "settings.autoApprove.tool.doom_loop":
@@ -1155,6 +1233,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Executar limpeza agora",
   "settings.autoCleanup.runNow.confirm":
     "Excluir permanentemente as sessões expiradas em todos os projetos e em todos os clientes Kilo desta máquina?",
+  "settings.autoCleanup.stop": "Parar a limpeza",
+  "settings.autoCleanup.progress.cancelling": "Parando a limpeza de sessões...",
+  "settings.autoCleanup.lastRun.cancelled": "interrompida",
   "settings.context.autoCompaction.title": "Compactação automática",
   "settings.context.autoCompaction.description": "Compactar automaticamente o contexto antes que atinja o limite",
   "settings.context.compaction.title": "Compactação",
@@ -1177,20 +1258,21 @@ export const dict = {
   "settings.context.memory.autoSave.title": "Salvar memória do projeto automaticamente",
   "settings.context.memory.autoSave.description":
     "Salva automaticamente fatos duradouros do projeto a partir de turnos concluídos quando a memória está ativada.",
-  "settings.context.memory.storage.title": "Storage",
+  "settings.context.memory.storage.title": "Armazenamento",
   "settings.context.memory.status.notLoaded": "Não carregada",
   "settings.context.memory.status.disabled": "Desativada",
-  "settings.context.memory.status.enabledTokens": "Enabled - ~{{tokens}} stored tokens",
+  "settings.context.memory.status.enabledTokens": "Ativada - ~{{tokens}} tokens armazenados",
   "settings.context.memory.storage.path": "{{path}}",
-  "settings.context.memory.storage.enable": "Enable memory to create project memory files.",
+  "settings.context.memory.storage.enable": "Ative a memória para criar arquivos de memória do projeto.",
   "settings.context.memory.inspect": "Inspecionar",
   "chat.memory.project.disabled": "Memória do projeto desativada",
-  "chat.memory.project.empty": "This project doesn't have any memory yet. It will start showing after you use Kilo.",
+  "chat.memory.project.empty":
+    "Este projeto ainda não tem memória. Ela começará a aparecer depois que você usar o Kilo.",
   "chat.memory.command.failed": "Comando de memória falhou",
-  "chat.memory.updated": "Memory updated",
-  "chat.memory.rebuild": "Memory index rebuilt",
+  "chat.memory.updated": "Memória atualizada",
+  "chat.memory.rebuild": "Índice de memória reconstruído",
 
-  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.title": "Mensagem de commit",
   "settings.commitMessage.override.title": "Usar prompt personalizado",
   "settings.commitMessage.override.description":
     "Substituir o prompt padrão de commit message. Quando ativado, o seu prompt personalizado substitui totalmente o prompt integrado de conventional commits.",
@@ -1246,6 +1328,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Expandidos",
   "settings.display.mcpTool.collapsed": "Recolhidos",
 
+  "settings.display.shortcutHints.title": "Mostrar dicas de atalhos",
+  "settings.display.shortcutHints.description":
+    "Mostra no prompt vazio o atalho de teclado adequado ao que você faz agora, por exemplo como adicionar o código selecionado ou voltar ao prompt.",
   "settings.display.tokenThroughput.title": "Mostrar taxa de tokens",
   "settings.display.tokenThroughput.description":
     "Exibir a taxa de geração de texto (tokens/sec) na mensagem mais recente do assistente e no cabeçalho da tarefa. Exibida por padrão; desative esta configuração para ocultá-la quando necessário.",
@@ -1254,8 +1339,8 @@ export const dict = {
     "Mostra por que uma chamada de ferramenta foi aprovada automaticamente, como uma regra de permissão correspondente ou um padrão do agente.",
 
   "chat.throughput.tooltip":
-    "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
-  "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
+    "Média de {{speed}} tokens/s neste turno. Inclui tokens de saída e de raciocínio; exclui a execução de ferramentas e o tempo de espera.",
+  "chat.throughput.tooltip.missing": "Métricas de taxa de tokens indisponíveis para este turno.",
 
   "settings.providers.defaultModel.title": "Modelo padrão",
   "settings.providers.defaultModel.description": "Modelo principal para conversas",
@@ -1269,6 +1354,8 @@ export const dict = {
   "dialog.model.notSet": "Não definido",
   "profile.personalAccount": "Conta pessoal",
   "profile.switchingAccount": "Trocando de conta…",
+  "profile.unavailableAccount": "Conta indisponível",
+  "profile.switchFailed": "Não foi possível confirmar a troca de conta.",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/br.ts
 
@@ -1323,16 +1410,16 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} tarefas concluídas",
   "task.todos.allDone": "{{count}} tarefas concluídas",
+  "task.todos.title": "Tarefas",
+  "task.todos.done": "Tudo pronto",
   "task.backgroundAgents.running.one": "1 agente em segundo plano",
   "task.backgroundAgents.running.many": "{{count}} agentes em segundo plano",
-  "task.backgroundAgents.more": "+{{count}} mais",
   "task.backgroundAgents.open": "Abrir agente em segundo plano",
   "task.backgroundAgents.openAll": "Abrir todos os agentes em segundo plano",
   "task.backgroundAgents.cancel": "Parar",
   "task.backgroundAgents.continueInBackground": "Continuar em segundo plano",
   "task.backgroundAgents.waiting": "Um agente em segundo plano precisa da sua entrada",
   "task.backgroundAgents.needsInput": "Entrada necessária",
-  "task.backgroundAgents.dismiss": "Dispensar",
   "task.backgroundAgents.clearFinished": "Limpar concluídos",
   "task.backgroundAgents.summary": "{{running}} de {{total}} agentes em segundo plano em execução",
   "task.backgroundAgents.status.running": "Em execução",
@@ -1341,6 +1428,10 @@ export const dict = {
   "task.backgroundAgents.status.error": "Erro",
   "task.backgroundAgents.untitled": "Agente em segundo plano",
   "task.backgroundAgents.stopAll": "Parar todos ({{count}})",
+  "task.backgroundAgents.finished": "Agentes em segundo plano concluídos",
+  "task.stop": "Parar subagente",
+  "task.open.panel": "Abrir subagente no painel",
+  "task.open.tab": "Abrir subagente em uma aba",
   "settings.saveBar.unsavedChanges": "Alterações não salvas",
   "settings.saveBar.discard": "Descartar",
   "settings.saveBar.save": "Salvar",
@@ -1350,6 +1441,9 @@ export const dict = {
   "settings.saveBar.cancel": "Cancelar",
   "settings.saveBar.saving": "Salvando…",
   "settings.saveBar.saveFailed": "Não foi possível salvar as configurações",
+  "settings.saveBar.dismissError": "Descartar",
+  "settings.saveBar.unconfirmedWrite": "O host da extensão não confirmou “{{name}}”.",
+  "settings.saveBar.unconfirmedSave": "O host da extensão não confirmou o salvamento. Tente novamente.",
   "notifications.action.next": "Próximo",
   "notifications.action.close": "Fechar",
   "notifications.action.tryModel": "Experimentar {{model}}",
@@ -1405,5 +1499,13 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Usar Chrome do Sistema",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Use o Google Chrome instalado para o Navegador Integrado. Desative apenas quando um navegador Playwright Chromium compatível já estiver instalado.",
+  "settings.experimental.browserLinks.title": "Abrir links em",
+  "settings.experimental.browserLinks.description":
+    "Escolha onde os links da web abrem a partir das conversas do Kilo. Requer o Navegador Integrado.",
+  "settings.experimental.browserLinks.external": "Navegador do sistema",
+  "settings.experimental.browserLinks.integrated": "Navegador Integrado",
   "chat.search.searchingHistory": "Pesquisando mensagens anteriores…",
+  "browserTab.noSession":
+    "Abra o navegador de uma sessão para visualizar um aplicativo local ou uma página HTTPS pública.",
+  "browserTab.disabled": "O navegador integrado está desativado. Ative-o em Configurações do Kilo > Experimental.",
 }

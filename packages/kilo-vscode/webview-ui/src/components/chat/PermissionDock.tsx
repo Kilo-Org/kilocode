@@ -21,7 +21,9 @@ import { useConfig } from "../../context/config"
 import {
   describePatterns,
   describeRule,
-  displaySkillCommand,
+  displayLines,
+  displayText,
+  removableRuleIndices,
   savedRuleStates,
   type RuleDecision,
 } from "./permission-dock-utils"
@@ -42,12 +44,13 @@ export const PermissionDock: Component<{
     response: "once" | "reject",
     approvedAlways: string[],
     deniedAlways: string[],
+    removedAlways: string[],
     feedback?: string,
   ) => void
 }> = (props) => {
   const session = useSession()
   const language = useLanguage()
-  const { config } = useConfig()
+  const { config, globalConfig, mergedGlobalConfig, workspaceConfig, homeDir } = useConfig()
 
   const fromChild = () => props.request.sessionID !== session.currentSessionID()
   // Skill shell batches are never persisted, so they show no auto-approve rules. The command
@@ -60,31 +63,59 @@ export const PermissionDock: Component<{
   const rules = () => props.request.args?.rules ?? props.request.always ?? []
   // Rules like "git *" or "git log *" — strip the trailing wildcard for display.
   // A bare "*" (global wildcard) becomes empty so only the tool name shows.
-  const label = (rule: string) => (rule === "*" ? "" : rule.replace(/ \*$/, ""))
+  // The rule text is model-supplied, so escape it before it reaches the card.
+  const label = (rule: string) => (rule === "*" ? "" : displayText(rule.replace(/ \*$/, "")))
+  // The command the request carries. Each command surface normalizes its IDN hosts and escapes
+  // controls for display; the copy button returns exactly these bytes.
   const command = () => {
     const cmd = props.request.args?.command
-    if (typeof cmd !== "string") return undefined
-    // Normalize IDN/Unicode hostnames to punycode ASCII to prevent homograph attacks.
-    return normalizeUrls(cmd)
+    return typeof cmd === "string" ? cmd : undefined
   }
   const text = (rule: string) => (command() ? label(rule) : describeRule(props.request.toolName, rule, language.t))
   const external = () => props.request.toolName === "external_directory"
   const sandboxEscalation = () => props.request.toolName === "sandbox_escalation"
   const cmdDescription = () => {
     const val = props.request.args?.description
-    return typeof val === "string" && val.length > 0 ? val : undefined
+    return typeof val === "string" && val.length > 0 ? displayText(val) : undefined
   }
   const description = createMemo(() =>
     command() ? null : describePatterns(props.request.toolName, props.request.patterns, language.t),
   )
 
+  // Dynamic MCP tools send their resolved input as metadata.mcpInput so the full
+  // request, including nested objects and arrays, is inspectable before approval.
+  const input = () => {
+    const value = props.request.args?.mcpInput
+    if (!value || typeof value !== "object") return undefined
+    if (Object.keys(value).length === 0) return undefined
+    return JSON.stringify(value, null, 2)
+  }
+
   const diffs = createMemo(() => permissionDiffs(props.request))
 
   // Pre-populate toggle states from existing config rules so previously
-  // approved/denied patterns show their saved state immediately.
-  const saved = config().permission?.[props.request.toolName]
-  const loadState = savedRuleStates(rules(), saved)
-  // Saved rules are display-only; only explicit toggles can grant new permissions.
+  // approved/denied patterns show their saved state immediately. Both this and the
+  // removal gate read the config accessors, so they are memos: a prompt that mounts
+  // before the first config payload corrects its rows when the payload arrives, and a
+  // config change while the prompt is open refreshes them.
+  const saved = createMemo(() => config().permission?.[props.request.toolName])
+  const loadState = createMemo(() => savedRuleStates(rules(), saved()))
+  // A row carries its removal control when the merged global scope supplies the saved
+  // action and no other scope or broader entry decides the pattern. A named pattern is
+  // removed from every global file that holds it; a wildcard row also requires the
+  // primary global file to hold its own entry. Rows from the workspace scope show a
+  // state indicator because this write changes global files only. `homeDir` resolves a
+  // `~` or `$HOME` prefix on those entries, as the backend does before it matches.
+  const revocable = createMemo(() =>
+    removableRuleIndices({
+      rules: rules(),
+      global: mergedGlobalConfig().permission?.[props.request.toolName],
+      target: globalConfig().permission?.[props.request.toolName],
+      workspace: workspaceConfig().permission?.[props.request.toolName],
+      effective: loadState(),
+      home: homeDir(),
+    }),
+  )
   const [decisions, setDecisions] = createSignal<Record<number, RuleDecision>>({})
   const [expanded, setExpanded] = createSignal(rulesExpandedPreference)
   // Rejecting is a two-step flow: Deny reveals an optional feedback field, then Reject confirms.
@@ -110,25 +141,41 @@ export const PermissionDock: Component<{
 
   const collectRules = () => {
     const all = rules()
+    const states = loadState()
+    const removable = revocable()
     const approved: string[] = []
     const denied: string[] = []
+    const removed: string[] = []
     for (const [i, d] of Object.entries(decisions())) {
-      const rule = all[Number(i)]
+      const index = Number(i)
+      const rule = all[index]
       if (!rule) continue
       if (d === "approved") approved.push(rule)
       else if (d === "denied") denied.push(rule)
+      // Switching off a saved rule asks the host to delete it. A slot that was
+      // never saved has nothing to delete, so it stays a plain cancel.
+      else if (removable.has(index) && states[index]) removed.push(rule)
     }
-    return { approved, denied }
+    return { approved, denied, removed }
   }
 
   const toggleRule = (index: number, decision: RuleDecision) => {
-    const current = decisions()[index] ?? loadState[index] ?? "pending"
-    const next = current === decision ? "pending" : decision
-    const updated = { ...decisions(), [index]: next }
+    const states = loadState()
+    const current = decisions()[index] ?? states[index] ?? "pending"
+    // Activating the active control undoes the row. Switching off the state the config
+    // saves keeps a "pending" slot, which `collectRules` reads as a deletion request;
+    // undoing a local change drops the slot so the row falls back to the saved state.
+    if (current !== decision) {
+      setDecisions({ ...decisions(), [index]: decision })
+      return
+    }
+    const updated = { ...decisions() }
+    if (states[index] === current) updated[index] = "pending"
+    else delete updated[index]
     setDecisions(updated)
   }
 
-  const decision = (index: number): RuleDecision => decisions()[index] ?? loadState[index] ?? "pending"
+  const decision = (index: number): RuleDecision => decisions()[index] ?? loadState()[index] ?? "pending"
 
   const approveTooltip = (index: number) =>
     decision(index) === "approved"
@@ -151,8 +198,8 @@ export const PermissionDock: Component<{
     if (sandboxEscalation()) return language.t("notification.permission.titleSandboxEscalation")
     const skill = props.request.args?.skill
     if (skillShell() && typeof skill === "string" && skill.length > 0)
-      // Escape the untrusted skill name so bidi/control chars can't reorder the header text.
-      return language.t("notification.permission.titleSkillShell", { skill: displaySkillCommand(skill) })
+      // Escape the skill name so the header shows exactly the characters the request carries.
+      return language.t("notification.permission.titleSkillShell", { skill: displayText(skill) })
     return fromChild()
       ? language.t("notification.permission.titleSubagent")
       : language.t("notification.permission.title")
@@ -162,8 +209,15 @@ export const PermissionDock: Component<{
 
   const submit = (response: "once" | "reject") => {
     if (props.responding) return
-    const { approved, denied } = collectRules()
-    props.onDecide(props.request.id, response, approved, denied, response === "reject" ? feedback() : undefined)
+    const { approved, denied, removed } = collectRules()
+    props.onDecide(
+      props.request.id,
+      response,
+      approved,
+      denied,
+      removed,
+      response === "reject" ? feedback() : undefined,
+    )
     setRejecting(false)
     setFeedback("")
     focusPrompt()
@@ -286,43 +340,69 @@ export const PermissionDock: Component<{
                   <div data-slot="permission-rules">
                     <For each={rules()}>
                       {(rule, index) => (
-                        <div data-slot="permission-rule-row" data-decision={decision(index())}>
+                        <div
+                          data-slot="permission-rule-row"
+                          data-decision={decision(index())}
+                          data-source={!revocable().has(index()) && loadState()[index()] ? "config" : undefined}
+                        >
                           <div data-slot="permission-rule-actions">
-                            <Tooltip value={approveTooltip(index())} placement="top">
-                              <IconButton
-                                icon="check-small"
-                                variant="ghost"
-                                size="small"
-                                data-slot="permission-rule-toggle"
-                                tone="success"
-                                data-active={decision(index()) === "approved" ? "" : undefined}
-                                aria-pressed={decision(index()) === "approved"}
-                                disabled={props.responding}
-                                onClick={() => toggleRule(index(), "approved")}
-                                aria-label={approveTooltip(index())}
-                              />
-                            </Tooltip>
-                            <Tooltip value={denyTooltip(index())} placement="top">
-                              <IconButton
-                                icon="close-small"
-                                variant="ghost"
-                                size="small"
-                                data-slot="permission-rule-toggle"
-                                tone="danger"
-                                data-active={decision(index()) === "denied" ? "" : undefined}
-                                aria-pressed={decision(index()) === "denied"}
-                                disabled={props.responding}
-                                onClick={() => toggleRule(index(), "denied")}
-                                aria-label={denyTooltip(index())}
-                              />
-                            </Tooltip>
+                            <Show
+                              when={revocable().has(index()) || !loadState()[index()]}
+                              fallback={
+                                <Tooltip value={language.t("ui.permission.rule.fromConfig")} placement="top">
+                                  <span
+                                    data-slot="permission-rule-source"
+                                    role="img"
+                                    aria-label={`${language.t(
+                                      loadState()[index()] === "approved"
+                                        ? "settings.autoApprove.level.allow"
+                                        : "settings.autoApprove.level.deny",
+                                    )} — ${language.t("ui.permission.rule.fromConfig")}`}
+                                  >
+                                    <Icon
+                                      name={loadState()[index()] === "approved" ? "check-small" : "close-small"}
+                                      size="small"
+                                    />
+                                  </span>
+                                </Tooltip>
+                              }
+                            >
+                              <Tooltip value={approveTooltip(index())} placement="top">
+                                <IconButton
+                                  icon="check-small"
+                                  variant="ghost"
+                                  size="small"
+                                  data-slot="permission-rule-toggle"
+                                  tone="success"
+                                  data-active={decision(index()) === "approved" ? "" : undefined}
+                                  aria-pressed={decision(index()) === "approved"}
+                                  disabled={props.responding}
+                                  onClick={() => toggleRule(index(), "approved")}
+                                  aria-label={approveTooltip(index())}
+                                />
+                              </Tooltip>
+                              <Tooltip value={denyTooltip(index())} placement="top">
+                                <IconButton
+                                  icon="close-small"
+                                  variant="ghost"
+                                  size="small"
+                                  data-slot="permission-rule-toggle"
+                                  tone="danger"
+                                  data-active={decision(index()) === "denied" ? "" : undefined}
+                                  aria-pressed={decision(index()) === "denied"}
+                                  disabled={props.responding}
+                                  onClick={() => toggleRule(index(), "denied")}
+                                  aria-label={denyTooltip(index())}
+                                />
+                              </Tooltip>
+                            </Show>
                           </div>
                           <code data-slot="permission-rule" data-wrap={external() ? "" : undefined} title={text(rule)}>
                             <Show when={external() && rule !== "*"} fallback={text(rule)}>
                               <span data-slot="permission-rule-label">
                                 {language.t("ui.permission.toolLabel.externalDirectory")}{" "}
                               </span>
-                              <span data-slot="permission-rule-path">{rule}</span>
+                              <span data-slot="permission-rule-path">{displayText(rule)}</span>
                             </Show>
                           </code>
                         </div>
@@ -358,7 +438,13 @@ export const PermissionDock: Component<{
                     </div>
                   </Show>
                   <Show when={command()}>
-                    {(cmd) => <PermissionCommand command={cmd()} plain={props.request.args.heredoc === true} />}
+                    {(cmd) => (
+                      <PermissionCommand
+                        command={displayLines(normalizeUrls(cmd()))}
+                        raw={cmd()}
+                        plain={props.request.args.heredoc === true}
+                      />
+                    )}
                   </Show>
 
                   {(() => {
@@ -387,8 +473,22 @@ export const PermissionDock: Component<{
                 </>
               }
             >
-              {/* Verbatim commands (args.commands), control-char/bidi-escaped so the displayed command matches execution. */}
-              <For each={skillShellCommands()}>{(cmd) => <PermissionCommand command={displaySkillCommand(cmd)} />}</For>
+              {/* Verbatim commands (args.commands): Unicode hosts are normalized to punycode like the
+                  ordinary command, then escaped for display; copying returns the original bytes. */}
+              <For each={skillShellCommands()}>
+                {(cmd) => <PermissionCommand command={displayText(normalizeUrls(cmd))} raw={cmd} />}
+              </For>
+            </Show>
+
+            <Show when={input()}>
+              {(json) => (
+                <div data-slot="permission-input">
+                  <div data-slot="permission-input-label">{language.t("ui.messagePart.mcp.input")}</div>
+                  <div data-slot="permission-input-code">
+                    <code>{displayLines(json())}</code>
+                  </div>
+                </div>
+              )}
             </Show>
 
             <Show when={diffs().length > 0}>

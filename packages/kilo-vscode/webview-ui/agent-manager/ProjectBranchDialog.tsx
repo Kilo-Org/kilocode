@@ -4,7 +4,7 @@ import { createMemo, createSignal, type Component } from "solid-js"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import "./agent-manager.css"
 import "./agent-manager-review.css"
-import { BranchSelect } from "../src/components/shared/BranchSelect"
+import { BRANCH_LIMIT, BranchSelect } from "../src/components/shared/BranchSelect"
 import { useLanguage } from "../src/context/language"
 import type { BranchInfo } from "../src/types/messages"
 
@@ -32,7 +32,7 @@ export const ProjectBranchDialog: Component<Props> = (props) => {
   }
   const keydown = (event: KeyboardEvent) => {
     const items = filtered()
-    const total = items.length + 1
+    const total = Math.min(items.length, BRANCH_LIMIT) + 1
     if (event.key === "ArrowDown") {
       event.preventDefault()
       event.stopPropagation()

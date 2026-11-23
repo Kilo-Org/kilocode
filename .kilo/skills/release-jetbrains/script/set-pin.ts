@@ -1,6 +1,9 @@
 #!/usr/bin/env bun
 
 import { $ } from "bun"
+import { readFile, rm } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import semver from "semver"
 import { parseArgs } from "util"
 import { latest, missing } from "./pin-common"
@@ -8,6 +11,7 @@ import { latest, missing } from "./pin-common"
 const repo = process.env.GH_REPO ?? process.env.GITHUB_REPOSITORY ?? "Kilo-Org/kilocode"
 const file = "packages/kilo-jetbrains/package.json"
 const label = "jetbrains-cli-pin-bump"
+const preview = "pre-release"
 
 const { values } = parseArgs({
   args: Bun.argv.slice(2),
@@ -15,21 +19,25 @@ const { values } = parseArgs({
     version: { type: "string" },
     latest: { type: "boolean", default: false },
     pr: { type: "boolean", default: false },
+    "pre-release": { type: "boolean", default: false },
     help: { type: "boolean", short: "h", default: false },
   },
 })
 
 if (values.help) {
   console.log(`
-Usage: bun .kilo/skills/release-jetbrains/script/set-pin.ts (--latest | --version <x.y.z>) [--pr]
+Usage: bun .kilo/skills/release-jetbrains/script/set-pin.ts (--latest | --version <semver>) [--pr] [--pre-release]
 
 Without --pr, rewrites ${file} in the local worktree so you can test a CLI pin.
 With --pr, opens or updates a PR against main using the GitHub API; prepare tags
 origin/main, so the pin bump must merge there before a JetBrains release starts.
+With --pre-release, adds the pre-release label even when the published version is plain semver.
 
 Examples:
   bun .kilo/skills/release-jetbrains/script/set-pin.ts --latest
   bun .kilo/skills/release-jetbrains/script/set-pin.ts --version 7.4.1
+  bun .kilo/skills/release-jetbrains/script/set-pin.ts --version 7.4.2-rc.1 --pr
+  bun .kilo/skills/release-jetbrains/script/set-pin.ts --version 7.4.2 --pr --pre-release
   bun .kilo/skills/release-jetbrains/script/set-pin.ts --latest --pr
 `)
   process.exit(0)
@@ -37,8 +45,8 @@ Examples:
 
 if (values.latest && values.version) throw new Error("Pass either --latest or --version, not both")
 const version = values.latest ? await latest(repo) : values.version?.replace(/^v/, "")
-if (!version || !semver.valid(version) || semver.prerelease(version)) {
-  throw new Error("Pass a stable CLI version with --version x.y.z or use --latest")
+if (!version || !semver.valid(version)) {
+  throw new Error("Pass a valid CLI semver with --version or use --latest")
 }
 
 const miss = await missing(repo, version)
@@ -47,7 +55,7 @@ if (miss.length > 0) {
 }
 
 if (values.pr) {
-  await pr(version)
+  await pr(version, values["pre-release"])
   process.exit(0)
 }
 
@@ -59,11 +67,13 @@ if (previous === version) {
   console.log(`${file} already pins CLI v${version}`)
 } else {
   console.log(`Pinned JetBrains CLI ${previous} -> ${version} in ${file}`)
+  await $`bun install --lockfile-only`.quiet()
+  console.log("Regenerated bun.lock for the new pin")
 }
 console.log("Test locally with: cd packages/kilo-jetbrains && ./gradlew typecheck && ./gradlew test")
 console.log("When satisfied, run this script again with --pr so the bump lands on main before prepare tags it.")
 
-async function pr(version: string) {
+async function pr(version: string, pre: boolean) {
   await $`git fetch origin main`.quiet()
   const branch = `chore/jetbrains-cli-pin-v${version}`
   const main = (await $`git rev-parse origin/main`.text()).trim()
@@ -78,7 +88,13 @@ async function pr(version: string) {
   const body = `${JSON.stringify(pkg, null, 2)}\n`
   await ensure(branch, main)
   const current = (await $`gh api ${`repos/${repo}/contents/${file}?ref=${branch}`}`.json()) as { sha: string }
-  await $`gh api --method PUT ${`repos/${repo}/contents/${file}`} -f message=${`chore(jetbrains): bump CLI pin to v${version}`} -f content=${Buffer.from(body).toString("base64")} -f branch=${branch} -f sha=${current.sha}`.quiet()
+  await put(`repos/${repo}/contents/${file}`, {
+    message: `chore(jetbrains): bump CLI pin to v${version}`,
+    content: Buffer.from(body).toString("base64"),
+    branch,
+    sha: current.sha,
+  })
+  await pushLock(version, previous, branch)
 
   const title = `chore(jetbrains): bump CLI pin to v${version}`
   const desc = [
@@ -95,12 +111,12 @@ async function pr(version: string) {
   const view = await $`gh pr view ${branch} --repo ${repo} --json url --jq .url`.quiet().nothrow()
   if (view.exitCode === 0 && view.stdout.toString().trim()) {
     await $`gh pr edit ${branch} --repo ${repo} --title ${title} --body ${desc}`
-    await tag(branch)
+    await tag(branch, version, pre)
     console.log(view.stdout.toString().trim())
     return
   }
   const url = await $`gh pr create --repo ${repo} --base main --head ${branch} --title ${title} --body ${desc}`.text()
-  await tag(branch)
+  await tag(branch, version, pre)
   console.log(url.trim())
 }
 
@@ -114,10 +130,73 @@ async function ensure(branch: string, sha: string) {
   await $`gh api --method POST ${`repos/${repo}/git/refs`} -f ref=${`refs/heads/${branch}`} -f sha=${sha}`.quiet()
 }
 
-async function tag(branch: string) {
-  await $`gh label create ${label} --repo ${repo} --color 1D76DB --description ${"JetBrains pinned CLI version bump"}`.quiet().nothrow()
-  const result = await $`gh pr edit ${branch} --repo ${repo} --add-label ${label}`.quiet().nothrow()
+// Update bun.lock for the pin bump so the lockfile guard in
+// .github/actions/setup-bun keeps passing. A workspace-only version bump
+// alters exactly one lockfile line (the workspace `version` entry — verified
+// by regenerating locally), so patch that line directly through the API
+// instead of cloning the repo and re-running install.
+async function pushLock(version: string, previous: string, branch: string) {
+  const api = `repos/${repo}/contents/bun.lock`
+  const tmp = join(tmpdir(), `bun-lock-${process.pid}-${Date.now()}`)
+  let patched: string
+  try {
+    // The JSON `content` field is empty for files above 1 MB, which bun.lock is
+    // approaching. Write the raw bytes to a file so the guard's byte-for-byte
+    // comparison sees exactly what GitHub stores; reading through command
+    // substitution can normalize the trailing newline.
+    await $`gh api ${`${api}?ref=${branch}`} -H ${"Accept: application/vnd.github.raw"} > ${tmp}`.quiet()
+    const text = await readFile(tmp, "utf8")
+    // Replace the workspace entry's current version rather than anchoring on
+    // origin/main's version: an already-stale lockfile must heal, not silently
+    // skip the update and fail the lockfile guard.
+    patched = text.replace(
+      /("packages\/kilo-jetbrains": \{\n\s*"name": "@kilocode\/kilo-jetbrains",\n\s*"version": ")[^"]+(")/,
+      `$1${version}$2`,
+    )
+    if (patched === text) {
+      console.warn("bun.lock workspace entry not found; skipping bun.lock update")
+      return
+    }
+  } finally {
+    await rm(tmp, { force: true })
+  }
+  const current = (await $`gh api ${`${api}?ref=${branch}`} --jq .sha`.text()).trim()
+  await put(api, {
+    message: `chore(jetbrains): bump CLI pin to v${version}`,
+    content: Buffer.from(patched).toString("base64"),
+    branch,
+    sha: current,
+  })
+  console.log(`Updated bun.lock for pin v${previous} -> v${version}`)
+}
+
+// File contents go through a request body file: bun.lock's base64 payload is
+// ~1 MB, which exceeds the Linux per-argument limit (MAX_ARG_STRLEN, 128 KiB)
+// and fails the whole call with `bun: Argument list too long: /usr/bin/gh`
+// when passed as -f.
+async function put(api: string, body: Record<string, string>) {
+  const tmp = join(tmpdir(), `gh-body-${process.pid}-${Date.now()}.json`)
+  try {
+    await Bun.write(tmp, JSON.stringify(body))
+    await $`gh api --method PUT ${api} --input ${tmp}`.quiet()
+  } finally {
+    await rm(tmp, { force: true })
+  }
+}
+
+async function tag(branch: string, version: string, pre: boolean) {
+  const labels = [label]
+  await $`gh label create ${label} --repo ${repo} --color 1D76DB --description ${"JetBrains pinned CLI version bump"}`
+    .quiet()
+    .nothrow()
+  if (pre || semver.prerelease(version)) {
+    labels.push(preview)
+    await $`gh label create ${preview} --repo ${repo} --color FBCA04 --description ${"Pre-release version"}`
+      .quiet()
+      .nothrow()
+  }
+  const result = await $`gh pr edit ${branch} --repo ${repo} --add-label ${labels.join(",")}`.quiet().nothrow()
   if (result.exitCode !== 0) {
-    console.warn(`Warning: failed to add ${label} label to ${branch}`)
+    console.warn(`Warning: failed to add ${labels.join(", ")} label(s) to ${branch}`)
   }
 }

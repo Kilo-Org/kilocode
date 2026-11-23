@@ -19,15 +19,12 @@ Object.assign(globalThis, {
   SVGElement: window.SVGElement,
   MutationObserver: window.MutationObserver,
   ResizeObserver: window.ResizeObserver,
+  IntersectionObserver: window.IntersectionObserver,
   CustomEvent: window.CustomEvent,
   Event: window.Event,
   MouseEvent: window.MouseEvent,
   MessageEvent: window.MessageEvent,
-  getComputedStyle: (node: Element) => {
-    const value = style(node)
-    Object.defineProperty(value, "animationName", { configurable: true, value: "none" })
-    return value
-  },
+  getComputedStyle: style,
   requestAnimationFrame: window.requestAnimationFrame.bind(window),
   cancelAnimationFrame: window.cancelAnimationFrame.bind(window),
   acquireVsCodeApi: () => ({

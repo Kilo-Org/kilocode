@@ -3,6 +3,7 @@ import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // ki
 import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { PlanExitTool } from "./plan"
 import { Session } from "@/session/session"
+import { SessionCompaction } from "@/session/compaction" // kilocode_change - compaction service for the experimental compact tool
 import { QuestionTool } from "./question"
 // kilocode_change start
 import { SuggestTool } from "../kilocode/suggestion/tool"
@@ -37,8 +38,10 @@ import { AgentManager } from "@/kilocode/agent-manager/service" // kilocode_chan
 import { Wakeup } from "@/kilocode/wakeup" // kilocode_change
 import { SessionDrain } from "@/kilocode/session/drain" // kilocode_change
 import { RepoOverviewTool } from "@/kilocode/tool/repo-overview" // kilocode_change
+import { ContextInfoTool, CompactTool } from "@/kilocode/tool/context" // kilocode_change
 import { RepoCloneTool } from "./repo_clone" // kilocode_change
 import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
+import { stripZodFormat } from "@opencode-ai/core/kilocode/json-schema-format" // kilocode_change
 import { Auth } from "@/auth" // kilocode_change
 import { Env } from "@/env" // kilocode_change - websearch resolves its config via Env.Service
 import { LspTool } from "./lsp"
@@ -47,7 +50,7 @@ import { ApplyPatchTool } from "./apply_patch"
 import { Glob } from "@opencode-ai/core/util/glob"
 import path from "path"
 import { pathToFileURL } from "url"
-import { Effect, Layer, Context, Option } from "effect" // kilocode_change
+import { Effect, Layer, Context, Option, Result } from "effect" // kilocode_change
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
 import { HttpClient } from "effect/unstable/http" // kilocode_change
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
@@ -85,7 +88,12 @@ export function webSearchEnabled(
   providerID: ProviderV2.ID,
   flags = { exa: Flag.KILO_ENABLE_EXA, parallel: Flag.KILO_ENABLE_PARALLEL },
 ) {
-  return providerID === ProviderV2.ID.kilo || flags.exa || flags.parallel // kilocode_change
+  return (
+    providerID === ProviderV2.ID.kilo || // kilocode_change
+    providerID === ProviderV2.ID.make("opencode-go") ||
+    flags.exa ||
+    flags.parallel
+  )
 }
 
 type TaskDef = Tool.InferDef<typeof TaskTool>
@@ -138,6 +146,10 @@ const layer = Layer.effect(
     const websearch = yield* WebSearchTool
     const clone = yield* RepoCloneTool // kilocode_change
     const overview = yield* RepoOverviewTool // kilocode_change
+    // kilocode_change start - self-context tools
+    const contextInfoTool = yield* ContextInfoTool
+    const compactTool = yield* CompactTool
+    // kilocode_change end
     const shell = yield* ShellTool
     const globtool = yield* GlobTool
     const writetool = yield* WriteTool
@@ -230,6 +242,26 @@ const layer = Layer.effect(
           }
         }
 
+        // kilocode_change start - a plugin tool whose args Zod cannot convert to JSON Schema must not
+        // abort the whole registry: `zodJsonSchema` throws for `z.custom`, `z.instanceof`, `z.symbol`,
+        // BigInt defaults and duplicate `meta({ id })`, and the throw used to escape the state
+        // constructor so the session received no tools at all.
+        const register = Effect.fn("ToolRegistry.registerPlugin")(function* (id: string, def: ToolDefinition) {
+          const result = Result.try({
+            try: () => fromPlugin(id, def),
+            catch: (error) => error,
+          })
+          if (Result.isFailure(result)) {
+            yield* Effect.logError("skipping plugin tool with unconvertible schema", {
+              tool: id,
+              error: result.failure instanceof Error ? result.failure.message : String(result.failure),
+            })
+            return
+          }
+          custom.push(result.success)
+        })
+        // kilocode_change end
+
         const dirs = yield* config.directories()
         const matches = dirs.flatMap((dir) =>
           Glob.scanSync("{tool,tools}/*.{js,ts}", { cwd: dir, absolute: true, dot: true, symlink: true }),
@@ -242,14 +274,14 @@ const layer = Layer.effect(
           const mod = yield* Effect.promise(() => import(pathToFileURL(match).href))
           for (const [id, def] of Object.entries(mod)) {
             if (!isPluginTool(def)) continue
-            custom.push(fromPlugin(id === "default" ? namespace : `${namespace}_${id}`, def))
+            yield* register(id === "default" ? namespace : `${namespace}_${id}`, def) // kilocode_change
           }
         }
 
         const plugins = yield* plugin.list()
         for (const p of plugins) {
           for (const [id, def] of Object.entries(p.tool ?? {})) {
-            custom.push(fromPlugin(id, def))
+            yield* register(id, def) // kilocode_change
           }
         }
 
@@ -278,6 +310,8 @@ const layer = Layer.effect(
           patch: Tool.init(patchtool),
           question: Tool.init(question),
           lsp: Tool.init(lsptool),
+          contextInfo: Tool.init(contextInfoTool), // kilocode_change
+          compact: Tool.init(compactTool), // kilocode_change
           plan: Tool.init(plan),
           suggest: Tool.init(suggesttool),
           ...(codeModeTool ? { execute: Tool.init(codeModeTool) } : {}), // kilocode_change
@@ -316,6 +350,7 @@ const layer = Layer.effect(
               ...KiloToolRegistry.extra(kilo, cfg, flags),
               ...(tool.execute ? [tool.execute] : []),
               ...(flags.experimentalLspTool ? [tool.lsp] : []),
+              ...(flags.experimentalContextTools ? [tool.contextInfo, tool.compact] : []), // kilocode_change
             ],
             kilo,
           ),
@@ -464,7 +499,11 @@ function legacyJsonSchema(entries: [string, unknown][]): JSONSchema7 {
 }
 
 function zodJsonSchema(schema: z.ZodType): JSONSchema7 {
-  const result = normalizeZodJsonSchema(z.toJSONSchema(schema, { io: "input", metadata: zodMetadataRegistry(schema) }))
+  // kilocode_change start - drop zod 4.6 non-standard string formats
+  const result = normalizeZodJsonSchema(
+    z.toJSONSchema(schema, { io: "input", metadata: zodMetadataRegistry(schema), override: stripZodFormat }),
+  )
+  // kilocode_change end
   if (!isJsonSchemaObject(result)) throw new Error("plugin tool Zod schema produced a non-object JSON Schema")
   const { $defs, ...rest } = result
   return (
@@ -531,6 +570,7 @@ export const node = LayerNode.suspend(() =>
       Agent.node,
       Skill.node,
       Session.node,
+      SessionCompaction.node, // kilocode_change - compaction service for the experimental compact tool
       BackgroundJob.node,
       SessionDrain.node,
       Provider.node,

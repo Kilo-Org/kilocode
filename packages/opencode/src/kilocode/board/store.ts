@@ -85,6 +85,12 @@ export namespace BoardStore {
     label: string
     agent?: string
     state: Execution["state"]
+    /**
+     * Set on the posting session's own roster row, so an agent can tell
+     * deterministically that a prospective recipient is itself (and that it
+     * is the board root when that row is `main`).
+     */
+    self?: boolean
   }
 
   export const SessionBoard = Schema.Struct({
@@ -245,7 +251,9 @@ export namespace BoardStore {
             const current = yield* ensure(tx, input.sessionID)
             const target = yield* recipient(input.to, current.root, tx)
             if (target !== ALL && target === input.sessionID)
-              return yield* fail("Board messages cannot be sent to yourself")
+              return yield* fail(
+                `Board messages cannot be sent to yourself${input.to === "main" ? ": \`main\` resolves to the board root, which is your own session" : ": that session is your own"}. Notes addressed to yourself belong in your final response (or goal report) instead of a board post`,
+              )
             const ids = target === ALL ? [input.sessionID] : [input.sessionID, target]
             const labels = yield* titles(tx, current.root, ids, true)
             const call = input.callID ?? ""
@@ -745,6 +753,7 @@ export namespace BoardStore {
             label: excerpt(row.title, MAX_LABEL),
             ...(row.agent ? { agent: excerpt(row.agent, 128) } : {}),
             state: snapshot.sessions.get(row.id)?.state ?? "unknown",
+            ...(row.id === self ? { self: true } : {}),
           }),
         ),
         truncated: rows.length > MAX_ROSTER,

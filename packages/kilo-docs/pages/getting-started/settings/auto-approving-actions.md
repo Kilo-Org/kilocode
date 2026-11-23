@@ -71,7 +71,7 @@ In the feedback field, describe what the agent should change before it retries. 
 
 Use the shield button in the prompt controls to toggle runtime auto-approve for permission prompts without opening Settings. When enabled, the shield is highlighted and pending permission prompts are approved automatically. The runtime state stays synced across the sidebar, open Kilo tabs, and Agent Manager session views.
 
-Expand **Manage Auto-Approve Rules** to add commands or patterns to your allowed or denied lists. These rules are then appended to the bottom of the approval rules in settings and the config file.
+Expand **Manage Auto-Approve Rules** to add commands or patterns to your allowed or denied lists. These rules are then appended to the bottom of the approval rules in settings and the config file. Selecting a saved rule's check or cross control again removes it from the global config, so the pattern asks again. A row shows a state indicator instead of controls when this prompt cannot change it: a workspace config file supplies it, a broader entry in the merged global config already supplies the same action for the pattern, the saved action comes from a bare tool-wide value that another config file holds, or a home-relative entry (`~/…` or `$HOME/…`) in the merged global config or a workspace config file may decide the pattern after its home prefix is resolved. The indicator's accessible name states the saved action before the config-managed wording.
 
 For the `agent_manager` tool, runtime approvals use the requested capability as the pattern: `worktree`, `local`, `overview`, `prompt`, `stop`, `move`, or `answer`. Prompting, stopping, moving, or answering a managed session requires its own explicit capability approval the first time, even when a broad Agent Manager allow rule already exists.
 
@@ -85,9 +85,10 @@ For full details and examples, see [MCP Tool Permissions](/docs/automate/mcp/usi
 
 Most tools default to `"*": "allow"` for a smooth out-of-the-box experience. Notable exceptions that prompt by default:
 
-- **`.env` files** — reading `.env` files prompts for approval. Files matching `*.env.*` (e.g., `.env.local`, `.env.production`) also trigger an ask, while `*.env.example` is explicitly allowed.
+- **`.env` files** — reading `.env` files prompts for approval. Files matching `*.env.*` (e.g., `.env.local`, `.env.production`) also trigger an ask, while `*.env.example` is explicitly allowed. Shell commands that print a file's lines ask as well when they read one of these files. A file reader such as `cat`, `head`, or `less` is covered in any argument position, including a glob, a quoted name, or a path inside a directory; a search command such as `grep` or `rg` is covered when the name is an argument after its search term: in any argument position when the name is `.env`, `.env.*`, or matches `*.env.*`, and as the last argument when it matches `*.env`. A last argument that only ends in `.env`, such as a search term, gets the same level. A stream filter such as `tr` asks when its input is redirected from one of these files. The sample file stays allowed on its own.
 - **`external_directory`** — accessing files outside the project prompts for approval
 - **`doom_loop`** — prompts when the agent enters a repeated failure cycle
+- **`edit` (JetBrains plugin only)** — file edits prompt for approval. This is a plugin default, not an environment override: set `permission.edit` in your global or project `kilo.jsonc`, or use **Settings → Tools → Kilo Code → Auto-Approve**, to change it.
 
 {% /tab %}
 {% tab label="CLI" %}
@@ -276,9 +277,10 @@ For shell commands, saved approvals are written under `permission.bash` and appl
 
 Most tools default to `"*": "allow"` for a smooth out-of-the-box experience. Notable exceptions that prompt by default:
 
-- **`.env` files** — reading `.env` files prompts for approval. Files matching `*.env.*` (e.g., `.env.local`, `.env.production`) also trigger an ask, while `*.env.example` is explicitly allowed.
+- **`.env` files** — reading `.env` files prompts for approval. Files matching `*.env.*` (e.g., `.env.local`, `.env.production`) also trigger an ask, while `*.env.example` is explicitly allowed. Shell commands that print a file's lines ask as well when they read one of these files. A file reader such as `cat`, `head`, or `less` is covered in any argument position, including a glob, a quoted name, or a path inside a directory; a search command such as `grep` or `rg` is covered when the name is an argument after its search term: in any argument position when the name is `.env`, `.env.*`, or matches `*.env.*`, and as the last argument when it matches `*.env`. A last argument that only ends in `.env`, such as a search term, gets the same level. A stream filter such as `tr` asks when its input is redirected from one of these files. The sample file stays allowed on its own.
 - **`external_directory`** — accessing files outside the project prompts for approval
 - **`doom_loop`** — prompts when the agent enters a repeated failure cycle
+- **`edit` (JetBrains plugin only)** — file edits prompt for approval. This is a plugin default, not an environment override: set `permission.edit` in your global or project `kilo.jsonc`, or use **Settings → Tools → Kilo Code → Auto-Approve**, to change it.
 
 ## MCP Tool Permissions
 

@@ -29,7 +29,6 @@ export async function fetchMarketplaceData(
   ctx: MarketplaceActionContext,
   project: string | undefined,
   dir: string | undefined,
-  roots: readonly vscode.Uri[],
 ): Promise<MarketplaceDataResponse> {
   const route = project ?? dir
   if (!route) {
@@ -41,7 +40,7 @@ export async function fetchMarketplaceData(
     }
   }
   const client = await ctx.connection.getClientAsync(route)
-  return retry(() => ctx.marketplace.fetchData(client, project, route, roots))
+  return retry(() => ctx.marketplace.fetchData(client, project, route))
 }
 
 export async function installMarketplaceItem(
@@ -102,7 +101,7 @@ export async function removeMarketplaceItemFromAllScopes(
     if (item.type === "mcp") await removeLegacyMcp(ctx, item.id, project, "all")
     const local = project ? await removeScoped(ctx, item, "project", project) : undefined
     const global = await removeScoped(ctx, item, "global", dir)
-    return Boolean(local?.success || global.success)
+    return (local?.success ?? true) && global.success
   } catch (err) {
     console.warn("[Kilo New] Marketplace removal failed:", err)
     return false

@@ -7,6 +7,7 @@
 import { createMemo } from "solid-js"
 import { useBindings } from "@tui/keymap"
 import { useSync } from "@tui/context/sync"
+import { useProject } from "@tui/context/project"
 import { useDialog } from "@tui/ui/dialog"
 import { useToast } from "@tui/ui/toast"
 import { DialogAlert } from "@tui/ui/dialog-alert"
@@ -33,6 +34,7 @@ type SDK = any
  */
 export function registerKiloCommands(useSDK: () => UseSDK) {
   const sync = useSync()
+  const project = useProject()
   const dialog = useDialog()
   const sdk = useSDK()
   const toast = useToast()
@@ -190,11 +192,12 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
             toast.show({ message: `Failed to update privacy mode (${status})`, variant: "error" })
             return
           }
+          const workspace = project.workspace.current()
           const [cfg, global] = await Promise.all([
-            sdk.client.config.get({}),
+            sdk.client.config.get({ workspace }),
             sdk.client.global.config.get({}),
           ])
-          if (cfg.data) sync.set("config", reconcile(cfg.data))
+          if (cfg.data && workspace === project.workspace.current()) sync.set("config", reconcile(cfg.data))
           if (global.data) sync.set("globalConfig", reconcile(global.data))
           toast.show({
             message: next ? "Privacy mode enabled" : "Privacy mode disabled",

@@ -54,8 +54,13 @@ function binding(internal: Internals, scope: "global" | "project") {
 function createConnection() {
   let drains = 0
   const patches: unknown[] = []
+  // The merged global scope differs from the single write target, so a payload that
+  // reads the wrong field is visible in the assertion.
+  const merged = { permission: { bash: { "*": "ask", "touch *": "allow" } } }
+  const mergedWorkspace = { permission: { bash: { "*": "deny" } } }
   const snapshot = {
     effective: {},
+    workspaceConfig: mergedWorkspace,
     targets: {
       global: {
         scope: "global",
@@ -63,7 +68,7 @@ function createConnection() {
         revision: "global-next",
         exists: true,
         writable: true,
-        raw: {},
+        raw: { permission: { bash: { "touch *": "allow" } } },
       },
       project: {
         scope: "project",
@@ -85,10 +90,17 @@ function createConnection() {
     config: {
       get: async () => ({ data: {} }),
       update: async () => ({ data: {} }),
-      overlay: async () => ({ data: { project: {}, targets: snapshot.targets } }),
+      overlay: async () => ({ data: { global: merged, project: mergedWorkspace, targets: snapshot.targets } }),
       overlayUpdate: async (patch: unknown) => {
         patches.push(patch)
-        return { data: snapshot }
+        return {
+          data: {
+            effective: snapshot.effective,
+            global: merged,
+            project: mergedWorkspace,
+            targets: snapshot.targets,
+          },
+        }
       },
     },
     experimental: {
@@ -157,7 +169,6 @@ describe("KiloProvider indexing refresh", () => {
     const settings = () => ({
       maxCost: 0,
       languageCommitMessage: "sync",
-      multiProject: false,
       claudeMigration: false,
       browserAutomation: false,
       "agentManager.autoBranchNaming": true,
@@ -186,7 +197,11 @@ describe("KiloProvider indexing refresh", () => {
     const payload = {
       config: snapshot.config,
       globalConfig: snapshot.targets!.global.raw,
+      mergedGlobalConfig: snapshot.mergedGlobal,
+      homeDir: snapshot.homeDir,
       projectConfig: snapshot.targets!.project.raw,
+      workspaceConfig: snapshot.workspaceConfig,
+      collections: snapshot.collections,
       settings: snapshot.settings,
       features: snapshot.features,
     }

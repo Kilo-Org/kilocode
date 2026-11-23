@@ -57,7 +57,7 @@ Extension-specific settings should live in the Kilo extension settings, not defa
 
 ## Package Instructions
 
-- When a task primarily touches `packages/kilo-jetbrains/`, read `packages/kilo-jetbrains/AGENTS.md` before planning or editing. It covers split-mode architecture, IntelliJ source lookup, threading fundamentals, UI guidelines, and session component architecture.
+- When a task primarily touches `packages/kilo-jetbrains/`, read `packages/kilo-jetbrains/AGENTS.md` before planning or editing. It holds hard restrictions, a shared-code reuse index, and a skill/command index; load the matching `jetbrains-ui`, `jetbrains-session`, `jetbrains-arch`, or `jetbrains-dev` skill (or the `/release-jetbrains` command) for detailed guidance.
 
 ## Monorepo Structure
 
@@ -131,6 +131,8 @@ Default to a single-word name for variables, parameters, and helper functions. R
 
 You MUST avoid using `mocks` as much as possible.
 Tests MUST test actual implementation, do not duplicate logic into a test.
+
+For VS Code UI changes, the optional shared self-test harness is at https://github.com/Kilo-Org/vscode-extension-self-test (the `vscode-self-test` skill). Offer it and let the user decide whether to install or use it.
 
 ## Markdown Tables
 

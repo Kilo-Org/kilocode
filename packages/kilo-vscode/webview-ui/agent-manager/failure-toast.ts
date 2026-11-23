@@ -7,9 +7,10 @@
  * looks like nothing happening at all.
  */
 import type { AgentManagerPRErrorMessage } from "../src/types/messages"
+import { REVERT_ERROR_CODE } from "../../src/shared/revert-error"
 import { isCurrent } from "./project/message-ownership"
 
-type Failure = { type?: string; message?: unknown; error?: unknown; projectId?: string }
+type Failure = { type?: string; message?: unknown; error?: unknown; code?: string; projectId?: string }
 
 export interface FailureToastDeps {
   toast: (toast: { variant: "error"; title: string; description: string }) => void
@@ -37,6 +38,9 @@ export function reportFailure(msg: Failure, deps: FailureToastDeps): "stale" | u
     return undefined
   }
   if (msg.type !== "error" || typeof msg.message !== "string" || !msg.message) return undefined
+  // SessionProvider, which this webview also mounts, shows a failed revert or redo translated; the
+  // host's raw message would be a second toast for the same failure.
+  if (msg.code === REVERT_ERROR_CODE) return undefined
   deps.toast({ variant: "error", title: deps.t("agentManager.error.title"), description: msg.message })
   return undefined
 }

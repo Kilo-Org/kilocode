@@ -453,6 +453,7 @@ describe("send_file tool", () => {
         image: tool,
         notify: { id: "notify_user" } as Tool.Def,
         send: tool,
+        linkPr: { id: "link_pr" } as Tool.Def,
       },
       {},
       { experimentalSharedAgentBoard: false },

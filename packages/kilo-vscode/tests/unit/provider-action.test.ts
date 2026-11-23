@@ -108,6 +108,26 @@ describe("createProviderAction", () => {
     action.dispose()
   })
 
+  it("carries oauth prompt inputs on the authorize request", () => {
+    const transport = createTransport()
+    const action = createProviderAction(transport)
+
+    action.send({
+      type: "authorizeProviderOAuth",
+      providerID: "azure",
+      method: 1,
+      inputs: { endpointType: "baseURL", baseURL: "https://custom.openai.azure.com/openai" },
+    })
+
+    expect(transport.sent[0]).toMatchObject({
+      type: "authorizeProviderOAuth",
+      providerID: "azure",
+      method: 1,
+      inputs: { endpointType: "baseURL", baseURL: "https://custom.openai.azure.com/openai" },
+    })
+    action.dispose()
+  })
+
   it("can drop stale requests", () => {
     const transport = createTransport()
     const action = createProviderAction(transport)

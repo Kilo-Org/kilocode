@@ -7,6 +7,7 @@ import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -100,6 +101,16 @@ class KiloWorkspaceServiceTest : BasePlatformTestCase() {
         assertEquals(listOf("dep"), rpc.searchQueries)
     }
 
+    fun `test closing a dialog cancels model loading without returning a load error`() = runBlocking {
+        val err = CancellationException("dialog closed")
+        rpc.modelsGate = CompletableDeferred<Unit>().apply { completeExceptionally(err) }
+
+        val failure = withContext(Dispatchers.Default) { runCatching { service.models("/test") }.exceptionOrNull() }
+
+        assertTrue(failure is CancellationException)
+        assertEquals(err.message, failure?.message)
+    }
+
     fun `test refreshConfigFiles logs backend failure and completes`() = runBlocking {
         rpc.refreshConfigThrows = IllegalStateException("backend unavailable")
 
@@ -110,6 +121,26 @@ class KiloWorkspaceServiceTest : BasePlatformTestCase() {
         assertEquals(listOf("/test"), rpc.refreshedConfigs.toList())
         assertEquals(0, rpc.localConfigPathCalls)
         assertEquals(0, rpc.globalConfigPathCalls)
+    }
+
+    fun `test reloadCoreSettings calls core for the requested workspace`() = runBlocking {
+        var result: CoreReloadResult? = null
+
+        service.reloadCoreSettings("/test worktree") { result = it }.join()
+        pumpEdt()
+
+        assertEquals(listOf("/test worktree"), rpc.coreReloads.toList())
+        assertEquals(CoreReloadResult.SUCCESS, result)
+    }
+
+    fun `test reloadCoreSettings reports an active session conflict`() = runBlocking {
+        rpc.coreReloadResult = false
+        var result: CoreReloadResult? = null
+
+        service.reloadCoreSettings("/test") { result = it }.join()
+        pumpEdt()
+
+        assertEquals(CoreReloadResult.BUSY, result)
     }
 
     fun `test comparison wrappers preserve contents and patches flags`() = runBlocking {

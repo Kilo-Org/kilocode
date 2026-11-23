@@ -15,12 +15,19 @@ import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaType
@@ -48,6 +55,7 @@ class KiloBackendChatManager(
 ) {
     companion object {
         private val JSON_TYPE = "application/json".toMediaType()
+        private val JSON = Json { ignoreUnknownKeys = true }
         private const val ENHANCE_TIMEOUT_MINUTES = 2L
         private const val REVERT_TIMEOUT_SECONDS = 35L
 
@@ -78,6 +86,7 @@ class KiloBackendChatManager(
 
     private val _events = MutableSharedFlow<ChatEventDto>(extraBufferCapacity = 128)
     val events: SharedFlow<ChatEventDto> = _events.asSharedFlow()
+    internal val subscriptionCount: StateFlow<Int> = _events.subscriptionCount
 
     private var client: OkHttpClient? = null
     private var base: String? = null
@@ -136,6 +145,24 @@ class KiloBackendChatManager(
         base = null
         normalizer = KiloCliDataParser.ChatEventNormalizer()
         log.info("Chat manager stopped")
+    }
+
+    /**
+     * Publish an event synthesized outside the global SSE stream, such as a remapped hosted event.
+     *
+     * Hosted streams are separate SSE connections, so they enter the same flow here. Status,
+     * activity, and per-session subscriptions all derive from this flow and therefore treat hosted
+     * events exactly like local ones. A dropped event is recovered by the hosted resnapshot.
+     */
+    fun publish(event: ChatEventDto) {
+        if (!_events.tryEmit(event)) {
+            log.warn("${ChatLogSummary.sid(event)} kind=event route=hosted emit=dropped")
+        }
+    }
+
+    /** Hosted replay boundaries and materialized snapshots must not lose events under backpressure. */
+    suspend fun publishAwait(event: ChatEventDto) {
+        _events.emit(event)
     }
 
     // ------ prompt ------
@@ -348,27 +375,27 @@ class KiloBackendChatManager(
 
     // ------ permission / question ------
 
-    fun replyPermission(requestId: String, dir: String, reply: PermissionReplyDto) {
+    suspend fun replyPermission(requestId: String, dir: String, reply: PermissionReplyDto) = withContext(Dispatchers.IO) {
         log.debug { "kind=permission rid=$requestId ${ChatLogSummary.dir(dir)} op=replyPermission reply=${reply.reply} send=true" }
         val body = KiloCliDataParser.buildPermissionReplyJson(reply)
-        post("/permission/$requestId/reply?directory=${encode(dir)}", body, "replyPermission", "kind=permission rid=$requestId")
+        post("/permission/$requestId/reply?directory=${encode(dir)}", body, "replyPermission", "kind=permission rid=$requestId", strict = true)
     }
 
     fun savePermissionRules(requestId: String, dir: String, rules: PermissionAlwaysRulesDto) {
         log.debug { "kind=permission rid=$requestId ${ChatLogSummary.dir(dir)} op=savePermissionRules approved=${rules.approvedAlways.size} denied=${rules.deniedAlways.size} send=true" }
         val body = KiloCliDataParser.buildPermissionAlwaysRulesJson(rules)
-        post("/permission/$requestId/always-rules?directory=${encode(dir)}", body, "savePermissionRules", "kind=permission rid=$requestId")
+        post("/permission/$requestId/always-rules?directory=${encode(dir)}", body, "savePermissionRules", "kind=permission rid=$requestId", strict = true)
     }
 
-    fun replyQuestion(requestId: String, dir: String, answers: QuestionReplyDto) {
+    suspend fun replyQuestion(requestId: String, dir: String, answers: QuestionReplyDto) = withContext(Dispatchers.IO) {
         log.debug { "kind=question rid=$requestId ${ChatLogSummary.dir(dir)} op=replyQuestion answers=${answers.answers.size} send=true" }
         val body = KiloCliDataParser.buildQuestionReplyJson(answers)
-        post("/question/$requestId/reply?directory=${encode(dir)}", body, "replyQuestion", "kind=question rid=$requestId")
+        post("/question/$requestId/reply?directory=${encode(dir)}", body, "replyQuestion", "kind=question rid=$requestId", strict = true)
     }
 
-    fun rejectQuestion(requestId: String, dir: String) {
+    suspend fun rejectQuestion(requestId: String, dir: String) = withContext(Dispatchers.IO) {
         log.debug { "kind=question rid=$requestId ${ChatLogSummary.dir(dir)} op=rejectQuestion send=true" }
-        post("/question/$requestId/reject?directory=${encode(dir)}", "{}", "rejectQuestion", "kind=question rid=$requestId")
+        post("/question/$requestId/reject?directory=${encode(dir)}", "{}", "rejectQuestion", "kind=question rid=$requestId", strict = true)
     }
 
     fun pendingPermissions(dir: String): List<PermissionRequestDto> {
@@ -378,11 +405,21 @@ class KiloBackendChatManager(
         return parsed
     }
 
+    suspend fun permissionPending(id: String, dir: String): Boolean? = withContext(Dispatchers.IO) {
+        val raw = get("/permission?directory=${encode(dir)}", "permissionPending") ?: return@withContext null
+        pending(raw, id) { KiloCliDataParser.parsePermissionRequest(it)?.id }
+    }
+
     fun pendingQuestions(dir: String): List<QuestionRequestDto> {
         val raw = get("/question?directory=${encode(dir)}", "pendingQuestions") ?: return emptyList()
         val parsed = KiloCliDataParser.parseQuestionRequests(raw)
         log.debug { "kind=question ${ChatLogSummary.dir(dir)} op=pendingQuestions ok=true count=${parsed.size}" }
         return parsed
+    }
+
+    suspend fun questionPending(id: String, dir: String): Boolean? = withContext(Dispatchers.IO) {
+        val raw = get("/question?directory=${encode(dir)}", "questionPending") ?: return@withContext null
+        pending(raw, id) { KiloCliDataParser.parseQuestionRequest(it)?.id }
     }
 
     // ------ utilities ------
@@ -452,25 +489,34 @@ class KiloBackendChatManager(
     private fun requireBase(): String =
         base ?: throw IllegalStateException("Chat manager not started")
 
-    private suspend fun Call.await(): Response = suspendCancellableCoroutine { cont ->
-        cont.invokeOnCancellation { cancel() }
-        enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                if (!cont.isCancelled) cont.resumeWithException(e)
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-                cont.resume(response) { _, value, _ -> value.close() }
-            }
-        })
-    }
-
     private fun encode(value: String): String =
         java.net.URLEncoder.encode(value, "UTF-8")
+
+    private fun pending(raw: String, id: String, parse: (JsonObject) -> String?): Boolean? {
+        val items = runCatching { JSON.parseToJsonElement(raw).jsonArray }.getOrNull() ?: return null
+        for (item in items) {
+            val found = runCatching { parse(item.jsonObject) }.getOrNull() ?: return null
+            if (found == id) return true
+        }
+        return false
+    }
 
     private fun attachmentKey(part: String, name: String, url: String): String {
         val value = listOf(part, name, url).joinToString("\u0000")
         val bytes = java.security.MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8))
         return bytes.take(16).joinToString("") { "%02x".format(it) }
     }
+}
+
+internal suspend fun Call.await(): Response = suspendCancellableCoroutine { cont ->
+    cont.invokeOnCancellation { cancel() }
+    enqueue(object : Callback {
+        override fun onFailure(call: Call, e: IOException) {
+            if (!cont.isCancelled) cont.resumeWithException(e)
+        }
+
+        override fun onResponse(call: Call, response: Response) {
+            cont.resume(response) { _, value, _ -> value.close() }
+        }
+    })
 }

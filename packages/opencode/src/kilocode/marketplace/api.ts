@@ -4,6 +4,7 @@ import type {
   AgentMarketplaceItem,
   McpMarketplaceItem,
   MarketplaceItem,
+  PluginMarketplaceItem,
   RawSkill,
   SkillMarketplaceItem,
 } from "./schema"
@@ -134,6 +135,10 @@ export async function fetchSkills(opts: FetchOptions = {}): Promise<SkillMarketp
   return fetchKind("skills", "skills", (item) => transformSkill(item as RawSkill), opts)
 }
 
+export async function fetchPlugins(opts: FetchOptions = {}): Promise<PluginMarketplaceItem[]> {
+  return fetchKind("plugins", "plugins", (item) => ({ ...item, type: "plugin" }) as PluginMarketplaceItem, opts)
+}
+
 export async function fetchAll(opts: FetchOptions = {}): Promise<{ items: MarketplaceItem[]; errors: string[] }> {
   const errors: string[] = []
   const settled = await Promise.all([
@@ -149,9 +154,13 @@ export async function fetchAll(opts: FetchOptions = {}): Promise<{ items: Market
       errors.push(`Failed to fetch skills: ${err instanceof Error ? err.message : String(err)}`)
       return [] as SkillMarketplaceItem[]
     }),
+    fetchPlugins(opts).catch((err: unknown) => {
+      errors.push(`Failed to fetch plugins: ${err instanceof Error ? err.message : String(err)}`)
+      return [] as PluginMarketplaceItem[]
+    }),
   ])
   log.info("catalog complete", { count: settled.reduce((sum, items) => sum + items.length, 0), errors: errors.length })
-  return { items: [...settled[0], ...settled[1], ...settled[2]], errors }
+  return { items: [...settled[0], ...settled[1], ...settled[2], ...settled[3]], errors }
 }
 
 export function clearCache() {

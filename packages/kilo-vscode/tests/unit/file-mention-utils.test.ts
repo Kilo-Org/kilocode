@@ -151,6 +151,34 @@ describe("buildMentionResults", () => {
     expect(buildMentionResults("browse files", [])).toEqual([FILE_PICKER_RESULT])
   })
 
+  it("ranks a file in another workspace folder on its path within that folder", () => {
+    // The absolute path is what gets inserted, but "nested" occurs only in the
+    // folder's own prefix, never in the file's path within it. Scoring the
+    // absolute form made it a match and lifted it above a file the query misses
+    // just as much, so the order here is what distinguishes the two.
+    const result = buildMentionResults("nested", [
+      { path: "src/aaa.ts", type: "file", root: "repo" },
+      { path: "/deep-nested-name/src/zzz.ts", type: "file", root: "deep-nested-name", relative: "src/zzz.ts" },
+    ])
+    expect(result.filter((item) => item.type === "file").map((item) => item.value)).toEqual([
+      "src/aaa.ts",
+      "/deep-nested-name/src/zzz.ts",
+    ])
+  })
+
+  it("keeps the owning folder ahead of an equally good match elsewhere", () => {
+    // Equal scores must preserve the order the host sent, which is the session's
+    // own project first.
+    const result = buildMentionResults("notes.md", [
+      { path: "notes.md", type: "file", root: "repo" },
+      { path: "/other/notes.md", type: "file", root: "other", relative: "notes.md" },
+    ])
+    expect(result.filter((item) => item.type === "file").map((item) => item.value)).toEqual([
+      "notes.md",
+      "/other/notes.md",
+    ])
+  })
+
   it("keeps browse files last among the entries of a bare @", () => {
     const result = buildMentionResults("", ["src/index.ts"], true, true)
     const types = result.map((item) => item.type)
@@ -439,6 +467,16 @@ describe("buildFileAttachments", () => {
     expect(result).toEqual([])
   })
 
+  it("does not attach a file from another workspace folder", () => {
+    // Multi-root file search offers folders added via "Add Folder to Workspace..."
+    // as absolute mentions. They must stay mention-only: attaching would read the
+    // file on the backend through a path that bypasses external_directory
+    // approval. The agent has to Read them instead.
+    const paths = new Set(["/other-folder/src/app.ts"])
+    const result = buildFileAttachments("@/other-folder/src/app.ts", paths, "/workspace")
+    expect(result).toEqual([])
+  })
+
   it("does not attach an absolute path that escapes the workspace via ../ segments", () => {
     const paths = new Set(["/workspace/../../etc/passwd"])
     const result = buildFileAttachments("@/workspace/../../etc/passwd", paths, "/workspace")
@@ -464,6 +502,35 @@ describe("buildFileAttachments", () => {
     const paths = new Set(["foo.ts"])
     const result = buildFileAttachments("@foo.ts", paths, "C:\\Users\\workspace")
     expect(result[0]!.url).not.toContain("\\")
+  })
+
+  it("attaches nothing when the workspace root is unknown", () => {
+    const paths = new Set(["/outside/file.ts"])
+    expect(buildFileAttachments("@/outside/file.ts", paths, "")).toEqual([])
+  })
+
+  it("attaches nothing for a relative mention when the workspace root is unknown", () => {
+    const paths = new Set(["src/foo.ts"])
+    expect(buildFileAttachments("@src/foo.ts", paths, "")).toEqual([])
+  })
+
+  it("attaches nothing when the workspace root is only whitespace", () => {
+    const paths = new Set(["src/foo.ts"])
+    expect(buildFileAttachments("@src/foo.ts", paths, "   ")).toEqual([])
+  })
+
+  it("treats a bare root as a known workspace root", () => {
+    const paths = new Set(["/etc/hosts"])
+    const result = buildFileAttachments("@/etc/hosts", paths, "/")
+    expect(result).toHaveLength(1)
+    expect(result[0]!.url).toContain("/etc/hosts")
+  })
+
+  it("still attaches a relative mention that lives under a known root", () => {
+    const paths = new Set(["src/foo.ts"])
+    const result = buildFileAttachments("@src/foo.ts", paths, "/workspace")
+    expect(result).toHaveLength(1)
+    expect(result[0]!.url).toContain("/workspace/src/foo.ts")
   })
 
   it("includes source.text with correct position for a plain mention", () => {

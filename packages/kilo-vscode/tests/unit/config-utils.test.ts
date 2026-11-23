@@ -3,8 +3,11 @@ import {
   configUnsetPaths,
   ConfigState,
   deepMerge,
+  hideRemovedMcp,
   mergeScopedConfig,
   pruneConfigSet,
+  removeMcpConfig,
+  retainUnconfirmedMcpRemovals,
   stripNulls,
 } from "../../webview-ui/src/utils/config-utils"
 import type { Config } from "../../webview-ui/src/types/messages"
@@ -98,11 +101,52 @@ describe("stripNulls", () => {
   })
 })
 
+describe("removeMcpConfig", () => {
+  it("removes only the selected MCP server", () => {
+    const config = {
+      mcp: {
+        anaconda: { type: "remote", url: "https://anaconda.com/api/mcp" },
+        docs: { type: "remote", url: "https://docs.example/mcp" },
+      },
+    } satisfies Config
+
+    expect(removeMcpConfig(config, "anaconda")).toEqual({ mcp: { docs: config.mcp.docs } })
+  })
+
+  it("removes the empty MCP collection", () => {
+    expect(removeMcpConfig({ mcp: { anaconda: { type: "remote" } } }, "anaconda")).toEqual({})
+  })
+
+  it("keeps a removed MCP hidden from stale server snapshots", () => {
+    const config = { mcp: { anaconda: { type: "remote" as const }, docs: { type: "remote" as const } } }
+
+    expect(hideRemovedMcp(config, new Set(["anaconda"]))).toEqual({ mcp: { docs: { type: "remote" } } })
+    expect(retainUnconfirmedMcpRemovals(new Set(["anaconda"]), config)).toEqual(new Set(["anaconda"]))
+    expect(retainUnconfirmedMcpRemovals(new Set(["anaconda"]), {})).toEqual(new Set())
+  })
+})
+
 // ---------------------------------------------------------------------------
 // Config state machine — reproduces the actual message-handler flow
 // ---------------------------------------------------------------------------
 
 describe("ConfigState", () => {
+  it("does not let a pending MCP draft resurrect a server removed outside Settings", () => {
+    const s = new ConfigState()
+    const anaconda = { type: "remote" as const, url: "https://anaconda.com/api/mcp" }
+    s.handleConfigLoaded({ mcp: { anaconda } })
+    s.updateConfig({ mcp: { anaconda: { ...anaconda, enabled: true } } })
+
+    s.handleConfigLoaded({})
+    expect(s.config.mcp?.anaconda).toBeDefined()
+
+    s.removeMcp("anaconda")
+    expect(s.config.mcp).toBeUndefined()
+    expect(s.saved.mcp).toBeUndefined()
+    expect(s.draft.mcp).toBeUndefined()
+    expect(s.dirty).toBe(false)
+  })
+
   it("configLoaded sets config when no draft is pending", () => {
     const s = new ConfigState()
     s.handleConfigLoaded({ snapshot: true, username: "alice" })
@@ -210,6 +254,32 @@ describe("ConfigState", () => {
       expect(s.config.username).toBe("bob") // server update applied
     })
 
+    it("keeps the save and its draft when another writer's update arrives mid-save", () => {
+      const s = new ConfigState()
+      s.handleConfigLoaded({ snapshot: true, username: "alice" })
+      s.updateConfig({ snapshot: false })
+      s.saveConfig()
+
+      // Another webview (e.g. PermissionDock), a provider action, or the SSE-driven refresh
+      // pushes while our save is still waiting: it is not the answer to our write.
+      s.handleConfigUpdated({ snapshot: true, username: "bob" })
+
+      expect(s.saving).toBe(true) // our save is still in flight
+      expect(s.dirty).toBe(true) // the draft is still the user's to save
+      expect(s.config.snapshot).toBe(false) // draft preserved
+      expect(s.config.username).toBe("bob") // server update applied
+
+      // Only the answer that echoes our request settles the save.
+      s.handleConfigUpdated({ snapshot: false, username: "bob" }, "someone-else")
+      expect(s.saving).toBe(true)
+      expect(s.dirty).toBe(true)
+
+      s.handleConfigUpdated({ snapshot: false, username: "bob" }, s.request)
+      expect(s.saving).toBe(false)
+      expect(s.dirty).toBe(false)
+      expect(Object.keys(s.draft).length).toBe(0)
+    })
+
     it("clears draft when update confirms our save", () => {
       const s = new ConfigState()
       s.handleConfigLoaded({ snapshot: true })
@@ -218,7 +288,7 @@ describe("ConfigState", () => {
       expect(s.saving).toBe(true)
 
       // Server confirms the write
-      s.handleConfigUpdated({ snapshot: false })
+      s.handleConfigUpdated({ snapshot: false }, s.request)
 
       expect(s.config.snapshot).toBe(false)
       expect(s.dirty).toBe(false)
@@ -233,7 +303,7 @@ describe("ConfigState", () => {
       s.saveConfig()
 
       // Server confirms the write by returning config without default_agent.
-      s.handleConfigUpdated({})
+      s.handleConfigUpdated({}, s.request)
 
       expect(s.config.default_agent).toBeUndefined()
       expect(s.dirty).toBe(false)
@@ -280,7 +350,10 @@ describe("ConfigState", () => {
       s.updateConfig({ default_agent: null })
       s.saveConfig()
 
-      s.handleConfigSaveFailed({ agent: { code: { prompt: "Review", temperature: 0.7 } }, default_agent: "code" })
+      s.handleConfigSaveFailed(
+        { agent: { code: { prompt: "Review", temperature: 0.7 } }, default_agent: "code" },
+        s.request,
+      )
 
       expect(s.saving).toBe(false)
       expect(s.dirty).toBe(true)
@@ -291,6 +364,29 @@ describe("ConfigState", () => {
       expect(s.config.agent?.code?.temperature).toBeUndefined()
       expect(s.config.default_agent).toBeUndefined()
     })
+
+    it("keeps the save and its draft when the failure names another write", () => {
+      const s = new ConfigState()
+      s.handleConfigLoaded({ snapshot: true, username: "alice" })
+      s.updateConfig({ snapshot: false })
+      s.saveConfig()
+
+      // Another webview's failed write is not the answer to ours.
+      s.handleConfigSaveFailed({ snapshot: true, username: "bob" }, "someone-else")
+
+      expect(s.saving).toBe(true)
+      expect(s.dirty).toBe(true)
+      expect(typeof s.request).toBe("string")
+      expect(s.config.snapshot).toBe(false)
+      expect(Object.keys(s.draft).length).toBe(1)
+
+      // The failure that echoes our id still settles the save, keeping the draft for a retry.
+      s.handleConfigSaveFailed({ snapshot: true, username: "bob" }, s.request)
+      expect(s.saving).toBe(false)
+      expect(s.dirty).toBe(true)
+      expect(s.config.snapshot).toBe(false)
+      expect(s.config.username).toBe("bob")
+    })
   })
 
   it("ignores repeated save attempts while a save is already in-flight", () => {
@@ -300,7 +396,7 @@ describe("ConfigState", () => {
 
     s.saveConfig()
     s.saveConfig()
-    s.handleConfigUpdated({ snapshot: false })
+    s.handleConfigUpdated({ snapshot: false }, s.request)
 
     expect(s.saving).toBe(false)
     expect(s.dirty).toBe(false)
@@ -372,7 +468,7 @@ describe("ConfigState", () => {
       s.saveConfig()
 
       // Backend removed the override and pushes the stripped config back.
-      s.handleConfigUpdated({ agent: { explore: {} } })
+      s.handleConfigUpdated({ agent: { explore: {} } }, s.request)
 
       expect(s.config.agent?.explore?.model).toBeUndefined()
       expect(s.dirty).toBe(false)

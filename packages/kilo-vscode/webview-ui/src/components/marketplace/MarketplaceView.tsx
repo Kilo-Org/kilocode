@@ -11,7 +11,7 @@ import type {
   MarketplaceRelevanceMetadata,
 } from "../../types/marketplace"
 import { TelemetryEventName } from "../../../../src/services/telemetry/types"
-import { MarketplaceListView } from "./MarketplaceListView"
+import { MarketplaceListView, type MarketplaceFocus } from "./MarketplaceListView"
 import { InstallModal } from "./InstallModal"
 import { RemoveDialog } from "./RemoveDialog"
 import "./marketplace.css"
@@ -30,8 +30,9 @@ export const MarketplaceView = () => {
   const [relevance, setRelevance] = createSignal<MarketplaceRelevanceMetadata>(EMPTY_RELEVANCE)
   const [fetching, setFetching] = createSignal(true)
   const [errors, setErrors] = createSignal<string[]>([])
-  const [pending, setPending] = createSignal<{ item: MarketplaceItem; scope: "project" | "global" } | null>(null)
   const [showMigrationBanner, setShowMigrationBanner] = createSignal(false)
+  const [search, setSearch] = createSignal("")
+  const [focus, setFocus] = createSignal<MarketplaceFocus>()
 
   const fetchData = () => {
     setFetching(true)
@@ -53,18 +54,17 @@ export const MarketplaceView = () => {
         const match = items().find((i) => i.type === msg.mpItem.type && i.id === msg.mpItem.id)
         handleInstall(match ?? msg.mpItem)
       }
+      if (msg.type === "focusMarketplaceItem") {
+        setSearch(msg.mpItem.name)
+        setFocus((prev) => ({ token: (prev?.token ?? 0) + 1, type: msg.mpItem.type }))
+      }
+      if (msg.type === "resetMarketplaceFilters") {
+        setSearch("")
+        setFocus((prev) => ({ token: (prev?.token ?? 0) + 1 }))
+      }
       if (msg.type === "marketplaceRemoveResult") {
-        const removed = pending()
-        setPending(null)
+        // The CLI reports `Marketplace Item Removed` once the removal succeeds.
         if (msg.success) {
-          if (removed) {
-            telemetry(TelemetryEventName.MARKETPLACE_ITEM_REMOVED, {
-              itemId: removed.item.id,
-              itemType: removed.item.type,
-              itemName: removed.item.name,
-              target: removed.scope,
-            })
-          }
           fetchData()
         } else {
           setErrors((prev) => [...prev, msg.error ?? t("marketplace.remove.failed", { name: msg.slug })])
@@ -98,18 +98,9 @@ export const MarketplaceView = () => {
       <InstallModal
         item={item}
         onClose={() => dialog.close()}
-        onInstallResult={(success, scope, extra) => {
-          if (success) {
-            telemetry(TelemetryEventName.MARKETPLACE_ITEM_INSTALLED, {
-              itemId: item.id,
-              itemType: item.type,
-              itemName: item.name,
-              target: scope,
-              ...(extra?.hasParameters && { hasParameters: true }),
-              ...(extra?.installationMethodName && { installationMethodName: extra.installationMethodName }),
-            })
-            fetchData()
-          }
+        onInstallResult={(success) => {
+          // The CLI reports `Marketplace Item Installed`, so a dialog closed mid-install still counts.
+          if (success) fetchData()
         }}
       />
     ))
@@ -122,7 +113,6 @@ export const MarketplaceView = () => {
         scope={scope}
         onClose={() => dialog.close()}
         onConfirm={() => {
-          setPending({ item, scope })
           vscode.postMessage({
             type: "removeInstalledMarketplaceItem",
             mpItem: item,
@@ -169,6 +159,9 @@ export const MarketplaceView = () => {
         metadata={metadata()}
         relevance={relevance()}
         fetching={fetching()}
+        search={search()}
+        onSearchChange={setSearch}
+        focus={focus()}
         searchPlaceholder={t("marketplace.search")}
         emptyMessage={t("marketplace.empty")}
         relevantEmptyMessage={t("marketplace.empty.relevant")}

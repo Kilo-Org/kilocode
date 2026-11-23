@@ -150,6 +150,17 @@ export const ProvidersDisabledExpanded: Story = {
   ),
 }
 
+export const ProvidersLoadFailure: Story = {
+  name: "ProvidersTab — load failure",
+  render: () => (
+    <StoryProviders loadFailed>
+      <div style={{ "max-height": "700px", overflow: "auto" }}>
+        <ProvidersTab />
+      </div>
+    </StoryProviders>
+  ),
+}
+
 export const ModelsAutocompleteOpen: Story = {
   name: "ModelsTab — autocomplete model picker open",
   render: () => (
@@ -522,6 +533,33 @@ export const McpEditViewRemote: Story = {
             "remote-mcp": {
               type: "remote",
               url: "https://mcp.example.com/sse",
+            },
+          },
+        } as any
+      }
+    >
+      <div style={{ "max-height": "700px", overflow: "auto" }}>
+        <McpEditView name="remote-mcp" onBack={noop} onRemove={noop} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const McpEditViewRemoteWithCustomOauth: Story = {
+  name: "McpEditView — remote server (custom OAuth client)",
+  render: () => (
+    <StoryProviders
+      config={
+        {
+          mcp: {
+            "remote-mcp": {
+              type: "remote",
+              url: "https://mcp.example.com/sse",
+              oauth: {
+                clientId: "my-registered-client",
+                scope: "mcp.read mcp.write",
+                callbackPort: 19999,
+              },
             },
           },
         } as any

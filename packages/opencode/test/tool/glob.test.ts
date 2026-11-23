@@ -18,6 +18,7 @@ import { testEffect } from "../lib/effect"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Git } from "@/git"
 import { Filesystem } from "@/util/filesystem"
+import { Config } from "@/config/config" // kilocode_change
 
 const toolLayer = (flags: Partial<RuntimeFlags.Info> = {}) =>
   Layer.mergeAll(
@@ -27,6 +28,7 @@ const toolLayer = (flags: Partial<RuntimeFlags.Info> = {}) =>
     AppNodeBuilder.build(Truncate.node),
     AppNodeBuilder.build(Agent.node),
     AppNodeBuilder.build(Git.node),
+    AppNodeBuilder.build(Config.node), // kilocode_change
   )
 
 const it = testEffect(toolLayer())

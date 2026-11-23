@@ -8,6 +8,7 @@ import {
   replaceInTabOrder,
   insertInTabOrderAfter,
 } from "../../webview-ui/agent-manager/tab-order"
+import { reorderPinnedTabs } from "../../webview-ui/src/utils/tab-order"
 import { moveTab } from "../../webview-ui/src/utils/tab-order"
 
 describe("reorderTabs", () => {
@@ -180,6 +181,37 @@ describe("togglePinnedTab", () => {
     const pinned = ["a", "b"]
     togglePinnedTab(pinned, "c")
     expect(pinned).toEqual(["a", "b"])
+  })
+})
+
+describe("reorderPinnedTabs", () => {
+  const ids = ["a", "b", "c", "d"]
+
+  it("reorders inside the pinned group without touching the stored order", () => {
+    expect(reorderPinnedTabs(ids, ["c", "d"], "d", "c")).toEqual({ ids, pinned: ["d", "c"] })
+  })
+
+  it("reorders unpinned tabs without touching the pin order", () => {
+    expect(reorderPinnedTabs(ids, ["d"], "b", "a")).toEqual({ ids: ["b", "a", "c", "d"], pinned: ["d"] })
+  })
+
+  it("rejects a move that crosses the pinned boundary", () => {
+    expect(reorderPinnedTabs(ids, ["d"], "a", "d")).toBeUndefined()
+    expect(reorderPinnedTabs(ids, ["d"], "d", "a")).toBeUndefined()
+  })
+
+  it("rejects a repeated or missing id", () => {
+    expect(reorderPinnedTabs(ids, [], "a", "a")).toBeUndefined()
+    expect(reorderPinnedTabs(ids, ["x"], "x", "a")).toBeUndefined()
+    expect(reorderPinnedTabs(ids, [], "missing", "a")).toBeUndefined()
+  })
+
+  it("does not mutate the inputs", () => {
+    const order = ["a", "b"]
+    const pins = ["b"]
+    expect(reorderPinnedTabs(order, pins, "b", "b")).toBeUndefined()
+    expect(order).toEqual(["a", "b"])
+    expect(pins).toEqual(["b"])
   })
 })
 

@@ -66,22 +66,22 @@ export function scopeCapabilities(scope: DiffScope): { revert: boolean; comments
 }
 
 /**
- * Per-context scope selection. Keeps the last-picked scope per context id so
+ * Per-context scope selection. Keeps the last-picked scope per namespaced key so
  * switching between worktrees restores each worktree's scope, while a brand
- * new context defaults to Branch. The context is the sidebar selection, so the
+ * new context defaults to Branch. The key includes the project and selection, so the
  * picked scope survives session tab switches inside the context.
  */
-export function createDiffScope(currentCtx: Accessor<string | undefined>) {
+export function createDiffScope(key: Accessor<string | undefined>) {
   const [scopes, setScopes] = createSignal<Record<string, DiffScope>>({})
 
   const scope = createMemo((): DiffScope => {
-    const ctx = currentCtx()
+    const ctx = key()
     if (!ctx) return DEFAULT_DIFF_SCOPE
     return scopes()[ctx] ?? DEFAULT_DIFF_SCOPE
   })
 
   const setScope = (next: DiffScope) => {
-    const ctx = currentCtx()
+    const ctx = key()
     if (!ctx) return
     setScopes((prev) => ({ ...prev, [ctx]: next }))
   }

@@ -1,7 +1,10 @@
-import { test, expect, describe } from "bun:test"
+import { test, expect, describe, spyOn } from "bun:test"
 import { McpMigrator } from "../../src/kilocode/mcp-migrator"
+import { KilocodePaths } from "../../src/kilocode/paths"
 import { tmpdir } from "../fixture/fixture"
+import os from "os"
 import path from "path"
+import fs from "fs/promises"
 
 describe("McpMigrator", () => {
   describe("convertServer", () => {
@@ -173,6 +176,7 @@ describe("McpMigrator", () => {
       })
 
       expect(Object.keys(result.mcp)).toHaveLength(0)
+      expect(result.available).toBe(false)
       expect(result.warnings).toHaveLength(0)
       expect(result.skipped).toHaveLength(0)
     })
@@ -201,6 +205,7 @@ describe("McpMigrator", () => {
       })
 
       expect(result.mcp).toHaveProperty("filesystem")
+      expect(result.available).toBe(true)
       expect(result.mcp.filesystem).toEqual({
         type: "local",
         command: ["npx", "-y", "@modelcontextprotocol/server-filesystem", "/home"],
@@ -425,6 +430,63 @@ describe("McpMigrator", () => {
       })
 
       expect(Object.keys(result.mcp)).toHaveLength(0)
+      expect(result.available).toBe(false)
+    })
+
+    test("reports availability when a declared server cannot be converted", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          const settingsDir = path.join(dir, ".kilo")
+          await Bun.write(
+            path.join(settingsDir, "mcp.json"),
+            JSON.stringify({
+              mcpServers: {
+                broken: { args: ["--no-command"] },
+              },
+            }),
+          )
+        },
+      })
+
+      const result = await McpMigrator.migrate({
+        projectDir: tmp.path,
+        skipGlobalPaths: true,
+      })
+
+      expect(Object.keys(result.mcp)).toHaveLength(0)
+      expect(result.available).toBe(true)
+    })
+
+    test("merges a project server with a global store server", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          const settingsDir = path.join(dir, ".kilo")
+          await Bun.write(
+            path.join(settingsDir, "mcp.json"),
+            JSON.stringify({ mcpServers: { projectserver: { command: "npx" } } }),
+          )
+        },
+      })
+      await using home = await tmpdir()
+
+      const homedir = spyOn(os, "homedir").mockReturnValue(home.path)
+      // Windows resolves the global storage path from APPDATA first, so point both at the temp home.
+      const appdata = process.env.APPDATA
+      process.env.APPDATA = home.path
+      try {
+        const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "mcp_settings.json")
+        await fs.mkdir(path.dirname(settings), { recursive: true })
+        await Bun.write(settings, JSON.stringify({ mcpServers: { globalserver: { command: "npx" } } }))
+
+        const result = await McpMigrator.migrate({ projectDir: tmp.path })
+
+        expect(Object.keys(result.mcp).sort()).toEqual(["globalserver", "projectserver"])
+        expect(result.available).toBe(true)
+      } finally {
+        homedir.mockRestore()
+        if (appdata === undefined) delete process.env.APPDATA
+        else process.env.APPDATA = appdata
+      }
     })
 
     // Regression: project-level MCP settings use mcp.json, not mcp_settings.json
@@ -449,6 +511,272 @@ describe("McpMigrator", () => {
       })
 
       expect(Object.keys(result.mcp)).toHaveLength(0)
+    })
+
+    // A skipped global store that declared a server this load cannot cover is named in the
+    // report, so a mode's `mcp` group knows which server it lost. Reading it grants nothing.
+    test("names the server a skipped global store declared without loading it", async () => {
+      await using home = await tmpdir()
+
+      const homedir = spyOn(os, "homedir").mockReturnValue(home.path)
+      // Windows resolves the global storage path from APPDATA first, so point both at the temp home.
+      const appdata = process.env.APPDATA
+      process.env.APPDATA = home.path
+      try {
+        const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "mcp_settings.json")
+        await fs.mkdir(path.dirname(settings), { recursive: true })
+        await Bun.write(settings, JSON.stringify({ mcpServers: { globalserver: { command: "npx" } } }))
+
+        const result = await McpMigrator.migrate({
+          projectDir: home.path,
+          skipGlobalPaths: true,
+          reportSkippedGlobal: true,
+        })
+
+        expect(result.skippedGlobalServers).toEqual(["globalserver"])
+        expect(Object.keys(result.mcp)).toHaveLength(0)
+        expect(result.available).toBe(false)
+      } finally {
+        homedir.mockRestore()
+        if (appdata === undefined) delete process.env.APPDATA
+        else process.env.APPDATA = appdata
+      }
+    })
+
+    // Skipping global paths stays hermetic: a host whose real global store declares a server
+    // must not change this result, so the report is opt-in and its absence means "not checked".
+    test("does not read a skipped global store unless the report is asked for", async () => {
+      await using home = await tmpdir()
+
+      const homedir = spyOn(os, "homedir").mockReturnValue(home.path)
+      const appdata = process.env.APPDATA
+      process.env.APPDATA = home.path
+      try {
+        const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "mcp_settings.json")
+        await fs.mkdir(path.dirname(settings), { recursive: true })
+        await Bun.write(settings, JSON.stringify({ mcpServers: { globalserver: { command: "npx" } } }))
+
+        const result = await McpMigrator.migrate({ projectDir: home.path, skipGlobalPaths: true })
+
+        expect(result.skippedGlobalServers).toEqual([])
+        expect(Object.keys(result.mcp)).toHaveLength(0)
+        expect(result.available).toBe(false)
+      } finally {
+        homedir.mockRestore()
+        if (appdata === undefined) delete process.env.APPDATA
+        else process.env.APPDATA = appdata
+      }
+    })
+
+    test("does not report a global store it read", async () => {
+      await using home = await tmpdir()
+
+      const homedir = spyOn(os, "homedir").mockReturnValue(home.path)
+      // Windows resolves the global storage path from APPDATA first, so point both at the temp home.
+      const appdata = process.env.APPDATA
+      process.env.APPDATA = home.path
+      try {
+        const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "mcp_settings.json")
+        await fs.mkdir(path.dirname(settings), { recursive: true })
+        await Bun.write(settings, JSON.stringify({ mcpServers: { globalserver: { command: "npx" } } }))
+
+        const result = await McpMigrator.migrate({ projectDir: home.path })
+
+        expect(result.skippedGlobalServers).toEqual([])
+        expect(Object.keys(result.mcp)).toEqual(["globalserver"])
+        expect(result.available).toBe(true)
+      } finally {
+        homedir.mockRestore()
+        if (appdata === undefined) delete process.env.APPDATA
+        else process.env.APPDATA = appdata
+      }
+    })
+
+    // A disabled server of the skipped store grants nothing when it is read, so withholding it
+    // from the `mcp` group loses nothing and the group is complete.
+    test("reports nothing for a skipped store whose only server is disabled", async () => {
+      await using home = await tmpdir()
+
+      const homedir = spyOn(os, "homedir").mockReturnValue(home.path)
+      const appdata = process.env.APPDATA
+      process.env.APPDATA = home.path
+      try {
+        const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "mcp_settings.json")
+        await fs.mkdir(path.dirname(settings), { recursive: true })
+        await Bun.write(settings, JSON.stringify({ mcpServers: { globalserver: { command: "npx", disabled: true } } }))
+
+        const result = await McpMigrator.migrate({
+          projectDir: home.path,
+          skipGlobalPaths: true,
+          reportSkippedGlobal: true,
+        })
+
+        expect(result.skippedGlobalServers).toEqual([])
+        expect(Object.keys(result.mcp)).toHaveLength(0)
+        expect(result.available).toBe(false)
+      } finally {
+        homedir.mockRestore()
+        if (appdata === undefined) delete process.env.APPDATA
+        else process.env.APPDATA = appdata
+      }
+    })
+
+    // An entry the conversion refuses grants nothing when it is read, so the `mcp` group loses
+    // nothing it could have granted.
+    test("reports nothing for a skipped store server that cannot be converted", async () => {
+      await using home = await tmpdir()
+
+      const homedir = spyOn(os, "homedir").mockReturnValue(home.path)
+      const appdata = process.env.APPDATA
+      process.env.APPDATA = home.path
+      try {
+        const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "mcp_settings.json")
+        await fs.mkdir(path.dirname(settings), { recursive: true })
+        await Bun.write(settings, JSON.stringify({ mcpServers: { broken: { args: ["--no-command"] } } }))
+
+        const result = await McpMigrator.migrate({
+          projectDir: home.path,
+          skipGlobalPaths: true,
+          reportSkippedGlobal: true,
+        })
+
+        expect(result.skippedGlobalServers).toEqual([])
+        expect(Object.keys(result.mcp)).toHaveLength(0)
+      } finally {
+        homedir.mockRestore()
+        if (appdata === undefined) delete process.env.APPDATA
+        else process.env.APPDATA = appdata
+      }
+    })
+
+    // The project store wins the dedup for the same name, so its entry is the one granted and
+    // the skipped store's server is covered: the `mcp` group lost nothing.
+    test("reports nothing for a skipped server the project store also names", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await fs.mkdir(path.join(dir, ".kilo"), { recursive: true })
+          await Bun.write(
+            path.join(dir, ".kilo", "mcp.json"),
+            JSON.stringify({ mcpServers: { globalserver: { command: "bunx" } } }),
+          )
+        },
+      })
+
+      const homedir = spyOn(os, "homedir").mockReturnValue(tmp.path)
+      const appdata = process.env.APPDATA
+      process.env.APPDATA = tmp.path
+      try {
+        const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "mcp_settings.json")
+        await fs.mkdir(path.dirname(settings), { recursive: true })
+        await Bun.write(settings, JSON.stringify({ mcpServers: { globalserver: { command: "npx" } } }))
+
+        const result = await McpMigrator.migrate({
+          projectDir: tmp.path,
+          skipGlobalPaths: true,
+          reportSkippedGlobal: true,
+        })
+
+        expect(result.skippedGlobalServers).toEqual([])
+        expect(result.mcp.globalserver).toMatchObject({ command: ["bunx"] })
+        expect(result.available).toBe(true)
+      } finally {
+        homedir.mockRestore()
+        if (appdata === undefined) delete process.env.APPDATA
+        else process.env.APPDATA = appdata
+      }
+    })
+
+    // Coverage is by permission key, not raw name: `a.b` and `a_b` name one `<server>_*` key, so
+    // the project server `a_b` covers the skipped `a.b` and the `mcp` group lost nothing.
+    test("reports nothing for a skipped server whose permission key the project store supplies", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await fs.mkdir(path.join(dir, ".kilo"), { recursive: true })
+          await Bun.write(
+            path.join(dir, ".kilo", "mcp.json"),
+            JSON.stringify({ mcpServers: { "a_b": { command: "bunx" } } }),
+          )
+        },
+      })
+
+      const homedir = spyOn(os, "homedir").mockReturnValue(tmp.path)
+      const appdata = process.env.APPDATA
+      process.env.APPDATA = tmp.path
+      try {
+        const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "mcp_settings.json")
+        await fs.mkdir(path.dirname(settings), { recursive: true })
+        await Bun.write(settings, JSON.stringify({ mcpServers: { "a.b": { command: "npx" } } }))
+
+        const result = await McpMigrator.migrate({
+          projectDir: tmp.path,
+          skipGlobalPaths: true,
+          reportSkippedGlobal: true,
+        })
+
+        expect(result.skippedGlobalServers).toEqual([])
+        expect(result.mcp.a_b).toMatchObject({ command: ["bunx"] })
+      } finally {
+        homedir.mockRestore()
+        if (appdata === undefined) delete process.env.APPDATA
+        else process.env.APPDATA = appdata
+      }
+    })
+
+    // A store is parsed straight from JSON, so an entry can be null: the report is asked for over
+    // a hand-edited file, and reading such an entry must not throw away the project servers.
+    test("tolerates a skipped store whose entry is null and keeps the project servers", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await fs.mkdir(path.join(dir, ".kilo"), { recursive: true })
+          await Bun.write(
+            path.join(dir, ".kilo", "mcp.json"),
+            JSON.stringify({ mcpServers: { projectserver: { command: "bunx" } } }),
+          )
+        },
+      })
+
+      const homedir = spyOn(os, "homedir").mockReturnValue(tmp.path)
+      const appdata = process.env.APPDATA
+      process.env.APPDATA = tmp.path
+      try {
+        const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "mcp_settings.json")
+        await fs.mkdir(path.dirname(settings), { recursive: true })
+        await Bun.write(settings, JSON.stringify({ mcpServers: { broken: null } }))
+
+        const result = await McpMigrator.migrate({
+          projectDir: tmp.path,
+          skipGlobalPaths: true,
+          reportSkippedGlobal: true,
+        })
+
+        expect(result.skippedGlobalServers).toEqual([])
+        expect(result.mcp.projectserver).toMatchObject({ command: ["bunx"] })
+        expect(result.available).toBe(true)
+      } finally {
+        homedir.mockRestore()
+        if (appdata === undefined) delete process.env.APPDATA
+        else process.env.APPDATA = appdata
+      }
+    })
+
+    // The same hand-edited entry can sit in a project store; it is skipped there too, so the
+    // servers beside it still migrate instead of the whole load throwing.
+    test("skips a project store entry that is not an object and keeps the rest", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await fs.mkdir(path.join(dir, ".kilo"), { recursive: true })
+          await Bun.write(
+            path.join(dir, ".kilo", "mcp.json"),
+            JSON.stringify({ mcpServers: { broken: null, projectserver: { command: "bunx" } } }),
+          )
+        },
+      })
+
+      const result = await McpMigrator.migrate({ projectDir: tmp.path, skipGlobalPaths: true })
+
+      expect(result.skippedGlobalServers).toEqual([])
+      expect(Object.keys(result.mcp)).toEqual(["projectserver"])
+      expect(result.available).toBe(true)
     })
   })
 

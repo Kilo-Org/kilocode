@@ -2,20 +2,26 @@ package ai.kilocode.client.session.board
 
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.testing.FakeSessionRpcApi
-import ai.kilocode.client.testing.fire
-import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.HoverArea
+import ai.kilocode.client.ui.PlainLabel
+import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.BoardMessageDto
 import ai.kilocode.rpc.dto.SessionBoardDto
+import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.util.Disposer
-import com.intellij.openapi.wm.WindowManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.EditorTextField
 import com.intellij.ui.EditorNotificationPanel
 import com.intellij.ui.InlineBanner
-import com.intellij.ui.components.JBList
-import com.intellij.ui.components.labels.LinkLabel
+import com.intellij.ui.components.JBHtmlPane
+import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPanel
+import com.intellij.ui.components.labels.LinkLabel
 import com.intellij.util.ui.UIUtil
+import java.awt.datatransfer.DataFlavor
+import java.awt.event.MouseEvent
+import javax.accessibility.AccessibleRole
 import javax.swing.JComponent
 import javax.swing.JEditorPane
 import kotlinx.coroutines.CoroutineScope
@@ -23,7 +29,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import java.awt.event.MouseEvent
 
 @Suppress("UnstableApiUsage")
 class SessionBoardDialogTest : BasePlatformTestCase() {
@@ -50,7 +55,7 @@ class SessionBoardDialogTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test empty board shows empty text and disables reset`() {
+    fun `test empty board shows empty text and disables reset and copy`() {
         rpc.board = board(messages = emptyList(), hasMore = false)
         val d = open()
 
@@ -59,13 +64,20 @@ class SessionBoardDialogTest : BasePlatformTestCase() {
         edt {
             assertFalse(d.loadMoreButton.isVisible)
             assertFalse(d.resetButton.isEnabled)
+            assertFalse(d.copyButton.isEnabled)
         }
     }
 
-    fun `test loaded messages render route title body description and type badge`() {
+    fun `test loaded messages render route header and Markdown body`() {
         rpc.board = board(
             messages = listOf(
-                message("m1", from = "main", to = "ALL", fromLabel = "Main", toLabel = null, type = "INFO", body = "status\nupdate"),
+                message(
+                    "m1",
+                    from = "main",
+                    to = "ALL",
+                    fromLabel = "Main",
+                    body = "status **update**\n\n```kotlin\nval answer = 42\n```",
+                ),
             ),
             hasMore = false,
         )
@@ -74,11 +86,34 @@ class SessionBoardDialogTest : BasePlatformTestCase() {
         flushUntil { edt { itemCount(d) > 0 } }
 
         edt {
-            val items = items(d)
-            assertEquals(1, items.size)
-            assertEquals("Main \u2192 ALL", items[0].title)
-            assertEquals("status update", items[0].description)
-            assertEquals("INFO", items[0].badges.single().text)
+            val row = rows(d).single()
+            assertEquals(listOf("Main \u2192 ALL"), route(row))
+            assertTrue(html(row).contains("<strong>"))
+            assertTrue(html(row).contains("update"))
+            assertEquals("val answer = 42", editors(row).single().text)
+        }
+    }
+
+    fun `test route uses stable unique icons for both endpoints`() {
+        rpc.board = board(
+            messages = listOf(
+                message("m1", from = "ses_a", to = "ses_b", fromLabel = "Alpha", toLabel = "Beta"),
+                message("m2", from = "ses_a", to = "main", fromLabel = "Alpha", toLabel = "Main"),
+            ),
+            hasMore = false,
+        )
+        val d = open(order = listOf("main", "ses_a", "ses_b"))
+        flushUntil { edt { itemCount(d) == 2 } }
+
+        edt {
+            val rows = rows(d)
+            val first = icons(rows[0])
+            val second = icons(rows[1])
+            assertEquals(2, first.size)
+            assertEquals(2, second.size)
+            assertSame(first[0], second[0])
+            assertNotSame(first[0], first[1])
+            assertNotSame(first[0], second[1])
         }
     }
 
@@ -86,13 +121,15 @@ class SessionBoardDialogTest : BasePlatformTestCase() {
         rpc.board = board(messages = listOf(message("m2", body = "second")), hasMore = true, cursor = "m2")
         val d = open()
         flushUntil { edt { itemCount(d) == 1 } }
+        val retained = edt { rows(d).single() }
 
         rpc.board = board(messages = listOf(message("m1", body = "first")), hasMore = false)
         edt { d.loadMoreButton.doClick() }
         flushUntil { edt { itemCount(d) == 2 } }
 
         edt {
-            assertEquals(listOf("first", "second"), items(d).map { it.description })
+            assertEquals(listOf("first", "second"), rows(d).map(::body))
+            assertSame(retained, rows(d)[1])
             assertFalse(d.loadMoreButton.isVisible)
             // First load has no cursor; the "Load more" click forwards the page's cursor as `before`.
             assertEquals(listOf(null, "m2"), rpc.sessionBoardCalls.map { it.second })
@@ -137,10 +174,10 @@ class SessionBoardDialogTest : BasePlatformTestCase() {
         // The dialog reloads after a conflict rather than trusting the null result.
         flushUntil { edt { itemCount(d) == 1 } }
 
-        edt { assertEquals("still here", items(d).single().description) }
+        edt { assertEquals("still here", body(rows(d).single())) }
     }
 
-    fun `test clicking a non-main participant closes the dialog and opens the agent`() {
+    fun `test clicking a non-main sender header opens the agent without closing the board`() {
         rpc.board = board(
             messages = listOf(message("m1", from = "ses_child", to = "main", fromLabel = "Explorer", body = "found it")),
             hasMore = false,
@@ -148,23 +185,127 @@ class SessionBoardDialogTest : BasePlatformTestCase() {
         val d = open(order = listOf("main", "ses_child"))
         flushUntil { edt { itemCount(d) == 1 } }
 
-        edt { d.list.select("m1") }
-        UIUtil.dispatchAllInvocationEvents()
-        // Route the click the same way a user click would, through the list's onClick callback.
-        edt { clickRow(d, "m1") }
+        edt {
+            val member = member(rows(d).single(), "Explorer")
+            assertEquals(AccessibleRole.PUSH_BUTTON, member.accessibleContext.accessibleRole)
+            assertTrue(member.isFocusable)
+            clickMember(rows(d).single(), "Explorer")
+        }
 
         assertEquals(listOf("ses_child" to "Explorer"), opened)
-        assertEquals(com.intellij.openapi.ui.DialogWrapper.OK_EXIT_CODE, d.exitCode)
+        // The board is modeless precisely so it can stay open while a subagent tab is opened
+        // beside it; a click must never close it.
+        edt { assertFalse(Disposer.isDisposed(d.disposable)) }
     }
 
-    fun `test clicking the main participant does not close the dialog`() {
+    fun `test clicking a non-main recipient header opens the agent without closing the board`() {
+        rpc.board = board(
+            messages = listOf(message("m1", from = "main", to = "ses_child", toLabel = "Explorer", body = "go look")),
+            hasMore = false,
+        )
+        val d = open(order = listOf("main", "ses_child"))
+        flushUntil { edt { itemCount(d) == 1 } }
+
+        edt { clickMember(rows(d).single(), "Explorer") }
+
+        // `main -> agent` and `agent -> main` both open `agent`: only one side of the route can
+        // ever be the non-"main"/"ALL" participant that is actually openable.
+        assertEquals(listOf("ses_child" to "Explorer"), opened)
+        edt { assertFalse(Disposer.isDisposed(d.disposable)) }
+    }
+
+    fun `test each subagent endpoint opens its own agent`() {
+        rpc.board = board(
+            messages = listOf(
+                message(
+                    "m1",
+                    from = "ses_a",
+                    to = "ses_b",
+                    fromLabel = "Alpha",
+                    toLabel = "Beta",
+                    body = "handoff",
+                ),
+            ),
+            hasMore = false,
+        )
+        val d = open(order = listOf("main", "ses_a", "ses_b"))
+        flushUntil { edt { itemCount(d) == 1 } }
+
+        edt {
+            val row = rows(d).single()
+            clickMember(row, "Alpha")
+            clickMember(row, "Beta")
+        }
+
+        assertEquals(listOf("ses_a" to "Alpha", "ses_b" to "Beta"), opened)
+    }
+
+    fun `test clicking a route with only main or ALL opens nothing`() {
         rpc.board = board(messages = listOf(message("m1", from = "main", to = "ALL", body = "note")), hasMore = false)
         val d = open()
         flushUntil { edt { itemCount(d) == 1 } }
 
-        edt { clickRow(d, "m1") }
+        edt {
+            val row = rows(d).single()
+            assertTrue(UIUtil.findComponentsOfType(row, HoverArea::class.java).isEmpty())
+            assertEquals(listOf("main", "ALL"), iconLabels(row).map { it.accessibleContext.accessibleName })
+        }
 
         assertTrue(opened.isEmpty())
+        edt { assertFalse(Disposer.isDisposed(d.disposable)) }
+    }
+
+    fun `test copy all fetches every page and copies oldest-first plain text`() {
+        // Only the newest page is loaded into the dialog; "Copy all" must still walk backward
+        // through every older page on its own, independent of what the dialog has paged in.
+        rpc.board = board(messages = listOf(message("m3", from = "ses_a", to = "main", fromLabel = "Alpha", body = "third")), hasMore = true, cursor = "m3")
+        val d = open(order = listOf("main", "ses_a"))
+        flushUntil { edt { itemCount(d) == 1 } }
+
+        rpc.boardPages = mapOf(
+            null to board(messages = listOf(message("m3", from = "ses_a", to = "main", fromLabel = "Alpha", body = "third")), hasMore = true, cursor = "m3"),
+            "m3" to board(messages = listOf(message("m2", body = "second")), hasMore = true, cursor = "m2"),
+            "m2" to board(messages = listOf(message("m1", body = "first")), hasMore = false),
+        )
+
+        edt { d.copyButton.doClick() }
+        flushUntil { edt { CopyPasteManager.getInstance().getContents<String>(DataFlavor.stringFlavor) != null } }
+
+        val expected = listOf(
+            "main -> ALL [INFO]\nfirst",
+            "main -> ALL [INFO]\nsecond",
+            "Alpha -> main [INFO]\nthird",
+        ).joinToString("\n\n")
+        assertEquals(expected, CopyPasteManager.getInstance().getContents<String>(DataFlavor.stringFlavor))
+        edt { assertTrue(d.copyButton.isEnabled) }
+    }
+
+    fun `test copy all failure leaves clipboard untouched and re-enables the button`() {
+        rpc.board = board(messages = listOf(message("m1", body = "keep")), hasMore = false)
+        val d = open()
+        flushUntil { edt { itemCount(d) == 1 } }
+
+        CopyPasteManager.getInstance().setContents(java.awt.datatransfer.StringSelection("unchanged"))
+        rpc.sessionBoardThrows = RuntimeException("boom")
+
+        edt { d.copyButton.doClick() }
+        flushUntil { edt { d.copyButton.isEnabled } }
+
+        assertEquals("unchanged", CopyPasteManager.getInstance().getContents<String>(DataFlavor.stringFlavor))
+    }
+
+    fun `test copy all is disabled while a copy is already in progress`() {
+        rpc.board = board(messages = listOf(message("m1", body = "keep")), hasMore = false)
+        val d = open()
+        flushUntil { edt { itemCount(d) == 1 } }
+
+        edt { d.copyButton.doClick() }
+
+        // The click above already dispatched to a coroutine but that coroutine has not been
+        // resumed yet (no dispatcher pump between here and the assertion), so the button must
+        // already read disabled from the synchronous `loading = true` the click performed.
+        edt { assertFalse(d.copyButton.isEnabled) }
+        flushUntil { edt { d.copyButton.isEnabled } }
     }
 
     private fun open(
@@ -199,9 +340,6 @@ class SessionBoardDialogTest : BasePlatformTestCase() {
         body: String = "body",
     ) = BoardMessageDto(id = id, timestamp = 0, from = from, to = to, fromLabel = fromLabel, toLabel = toLabel, type = type, body = body)
 
-    // The list has no public "all items" accessor (only selection-based reads), so tests read the
-    // live JList model directly off the real component tree, matching the convention used by other
-    // dialog tests in this plugin (e.g. AgentManagerPanelTest).
     /**
      * The board stays usable while the session and its subagents keep working, so it must not block
      * the IDE. This also pins the contract that callers use `show()`, since `showAndGet()` throws on
@@ -212,6 +350,17 @@ class SessionBoardDialogTest : BasePlatformTestCase() {
         val d = open()
 
         edt { assertFalse(d.isModal) }
+    }
+
+    fun `test board scroll region is the accessible focus target`() {
+        rpc.board = board(messages = emptyList(), hasMore = false)
+        val d = open()
+
+        edt {
+            assertSame(d.scroll, d.preferredFocusedComponent)
+            assertEquals("Kilo Swarm", d.scroll.accessibleContext.accessibleName)
+            assertTrue(d.scroll.isFocusable)
+        }
     }
 
     fun `test window title carries the session name`() {
@@ -301,8 +450,8 @@ class SessionBoardDialogTest : BasePlatformTestCase() {
         }
     }
 
-    /** The center panel is the list's direct parent — see `createCenterPanel`. */
-    private fun center(d: SessionBoardDialog): JComponent = d.list.parent as JComponent
+    /** The center panel is the scroll pane's direct parent — see `createCenterPanel`. */
+    private fun center(d: SessionBoardDialog): JComponent = d.scroll.parent as JComponent
 
     /**
      * The banner renders its message in an HTML [JEditorPane]; the field itself is protected.
@@ -321,34 +470,52 @@ class SessionBoardDialogTest : BasePlatformTestCase() {
             .first { it.text == "Show more" || it.text == "Show less" }
     }
 
-    private fun itemCount(d: SessionBoardDialog): Int = items(d).size
+    private fun itemCount(d: SessionBoardDialog): Int = rows(d).size
 
-    private fun items(d: SessionBoardDialog): List<ActiveListItem> {
-        val list = jList(d) ?: return emptyList()
-        return (0 until list.model.size).map { list.model.getElementAt(it) }
+    private fun rows(d: SessionBoardDialog): List<BoardMessageView> {
+        val stack = d.messages.components.filterIsInstance<Stack>().single()
+        return stack.components.filterIsInstance<BoardMessageView>()
     }
 
-    private fun jList(d: SessionBoardDialog): JBList<ActiveListItem>? =
-        UIUtil.findComponentOfType(d.list, JBList::class.java) as JBList<ActiveListItem>?
+    private fun route(row: BoardMessageView): List<String> =
+        UIUtil.findComponentsOfType(row, PlainLabel::class.java).map { it.text }
 
-    private fun clickRow(d: SessionBoardDialog, key: String) {
-        val list = jList(d) ?: error("board list not found")
-        list.setSize(400, 400)
-        list.doLayout()
-        val index = (0 until list.model.size).first { list.model.getElementAt(it).key == key }
-        val bounds = list.getCellBounds(index, index)
-        fire(list, MouseEvent(
-            list,
+    private fun icons(row: BoardMessageView): List<javax.swing.Icon> = iconLabels(row).mapNotNull { it.icon }
+
+    private fun iconLabels(row: BoardMessageView): List<JBLabel> =
+        UIUtil.findComponentsOfType(row, JBLabel::class.java).filter { it.icon != null }
+
+    private fun html(row: BoardMessageView): String =
+        UIUtil.findComponentsOfType(row, JBHtmlPane::class.java).joinToString("\n") { it.text }
+
+    private fun editors(row: BoardMessageView): List<EditorTextField> =
+        UIUtil.findComponentsOfType(row, EditorTextField::class.java).toList()
+
+    private fun body(row: BoardMessageView): String {
+        val pane = UIUtil.findComponentsOfType(row, JBHtmlPane::class.java).single()
+        return pane.document.getText(0, pane.document.length).trim()
+    }
+
+    private fun clickMember(row: BoardMessageView, title: String) {
+        val area = member(row, title)
+        val event = MouseEvent(
+            area,
             MouseEvent.MOUSE_CLICKED,
             System.currentTimeMillis(),
             0,
-            bounds.x + 8,
-            bounds.y + bounds.height / 2,
+            1,
+            1,
             1,
             false,
             MouseEvent.BUTTON1,
-        ))
+        )
+        area.mouseListeners.forEach { it.mouseClicked(event) }
     }
+
+    private fun member(row: BoardMessageView, title: String): HoverArea =
+        UIUtil.findComponentsOfType(row, HoverArea::class.java).single { item ->
+            item.accessibleContext.accessibleName == title
+        }
 
     private fun <T> edt(block: () -> T): T = edtWait(block)
 

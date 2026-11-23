@@ -1,0 +1,55 @@
+---
+title: "Notebooks"
+description: "Analyze data in interactive Python notebooks alongside your chat in Kilo Desktop."
+---
+
+# Notebooks
+
+Open interactive Python notebooks in a tab next to your chat, so you can explore and visualize data without leaving the conversation. A notebook is a shared document you and the agent build together: you edit and run cells directly, while the agent reads, writes, and runs cells alongside you as you talk through the analysis. Notebooks run on a dedicated notebook runtime.
+
+{% callout type="info" %}
+Notebooks require a [Kilo account](/docs/desktop/settings/general#account). Sign in to create, open, and work with them.
+{% /callout %}
+
+{% image src="/docs/img/desktop/notebooks-with-chat.png" alt="A Python notebook open beside a chat in Kilo Desktop" width="800" /%}
+
+## Open a notebook
+
+A notebook opens as its own tab beside the chat. There are a few ways to get there:
+
+- **Create a notebook** by selecting **Notebook** from the **+** menu, or use **Open notebook** (⌘⇧J / Ctrl+Shift+J).
+- **Ask the agent** to list the files in your workspace, then select an `.ipynb` file in its reply to open it.
+- **From the [Files](/docs/desktop/features/files) tab**, search or browse the workspace and select an `.ipynb` file.
+- **Ask the agent to open it** by name — the agent can open and list notebooks for you, so the one you're discussing stays in view. You can also create a new notebook by asking the agent.
+
+If you're signed out, the **Notebook** option in the **+** menu is grayed out, and a notebook you open from Files or a chat link shows a sign-in prompt instead. If you sign out while a notebook is open, the tab shows the sign-in prompt until you sign in again.
+
+## Work with cells
+
+The toolbar at the top of the notebook has controls to {% svgIcon src="/docs/img/desktop/code.svg" /%} add a code cell, {% svgIcon src="/docs/img/desktop/text-initial.svg" /%} add a Markdown cell, {% svgIcon src="/docs/img/desktop/chevrons-right.svg" /%} run cells, {% svgIcon src="/docs/img/desktop/rotate-ccw.svg" /%} restart, restart and run all cells, and {% svgIcon src="/docs/img/desktop/square.svg" /%} interrupt a running cell. Run a cell to see its output inline, and view the status (such as **Idle**) on the right of the toolbar.
+
+{% image src="/docs/img/desktop/notebooks-toolbar-controls.png" alt="The notebook toolbar" width="800" /%}
+
+Each individual cell includes controls to {% svgIcon src="/docs/img/desktop/play.svg" /%} run it, switch it between {% svgIcon src="/docs/img/desktop/code.svg" /%} code and {% svgIcon src="/docs/img/desktop/text-initial.svg" /%} Markdown, {% svgIcon src="/docs/img/desktop/eye-off.svg" /%} hide its input or output, and {% svgIcon src="/docs/img/desktop/trash.svg" /%} delete it.
+
+## Edit with the agent
+
+Work on notebooks together with the agent. Ask it to make a change — fix a typo, add analysis, rework a chart — and it reads the notebook, edits or adds cells, and saves. When the notebook is open beside the chat, the results appear in its tab, and a dot marks each cell the agent changes so you can see at a glance what it edited.
+
+If you're signed out when the agent tries to open or list notebooks, the chat shows **Sign in to use embedded notebooks?** with **Sign in** and **Not now**. After you sign in, the agent continues the task. **Not now** turns off the agent's notebook tools until you sign in or restart the app. Other features still ask on their own.
+
+Before the agent runs code in a notebook — running cells or restarting the kernel — Kilo Desktop asks you first (for example **Run code in this notebook?**, **Run all code cells?**, or **Restart the notebook kernel?**). The request shows the notebook, the cells or code it will run, and a reminder that the code runs on your computer with your permissions. Choose **Allow once** or **Reject**, or select **Always allow** to let the agent run code in that notebook for the rest of the chat without asking again. Other notebooks and new chats still ask.
+
+## Environment and packages
+
+Each notebook uses a Python environment. Select the kernel button in the toolbar to see its details. By default, a new untitled notebook in a workspace creates a shared `environment.yml` if no supported project file or workspace `uv.lock` or `.venv` environment exists. The environment is built in the workspace's `.conda` folder. Change this under [Settings → Notebooks](/docs/desktop/settings/general#notebooks).
+
+Notebooks discover a supported project environment when they start. Existing project files and workspace uv environments are preserved; already-running notebooks don't automatically switch when you add an environment file. Ask the agent to help configure a project environment or work with [conda environments](/docs/desktop/features/environments).
+
+Before the agent adds packages to a notebook that you haven't approved yet, it asks you first. It also flags package names that look like misspellings of popular packages (a common way to slip in malicious packages).
+
+## Runtime status
+
+Desktop normally prepares the notebook runtime when the app starts. If it can't start, the tab shows **Could not start the notebook runtime** with a **Try again** button.
+
+If the kernel fails to start or packages won't install, ask the agent to diagnose the notebook. It can inspect the error and restart the kernel after the cause is addressed.

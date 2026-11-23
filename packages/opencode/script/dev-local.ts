@@ -39,6 +39,31 @@ function manifest(cloud: string) {
   }
 }
 
+export interface Endpoints {
+  readonly web: number
+  readonly cloudAgent: number
+  readonly ingest?: number
+  readonly events?: number
+}
+
+/**
+ * Endpoint overrides for the discovered local cloud stack. Both
+ * `CLOUD_AGENT_NEXT_BASE_URL` and `KILO_WEB_APP_URL` are set explicitly so the
+ * CLI never falls back to the production Cloud Agent or web origins while
+ * `dev:local` points at a local stack.
+ */
+export function endpointEnv(p: Endpoints): Record<string, string> {
+  const env: Record<string, string> = {
+    KILO_API_URL: `http://localhost:${p.web}`,
+    KILO_WEB_APP_URL: `http://localhost:${p.web}`,
+    CLOUD_AGENT_NEXT_BASE_URL: `http://localhost:${p.cloudAgent}`,
+  }
+  if (p.ingest !== undefined) env.KILO_SESSION_INGEST_URL = `http://localhost:${p.ingest}`
+  else env.KILO_DISABLE_SESSION_INGEST = "1"
+  if (p.events !== undefined) env.EVENT_SERVICE_URL = `ws://localhost:${p.events}`
+  return env
+}
+
 async function main() {
   const argv = process.argv.slice(2)
   const sep = argv.indexOf("--")
@@ -64,21 +89,24 @@ async function main() {
   const m = manifest(cloud)
   const svc = (name: string) => m.services?.find((s) => s.name === name)?.port
   const webPort = Number(read(path.join(cloud, ".dev-port"))) || svc("nextjs")
+  const cloudAgentPort = svc("cloud-agent-next")
   const ingestPort = noIngest ? undefined : svc("cloudflare-session-ingest")
   const eventsPort = noEvents ? undefined : svc("event-service")
   if (!webPort) die(`no web port found in ${cloud} — is the dev server started? (pnpm dev:start)`)
+  if (!cloudAgentPort) {
+    die(
+      `no cloud-agent-next port found in ${cloud} — refusing to fall back to the production Cloud Agent URL (start the local stack with pnpm dev:start)`,
+    )
+  }
 
   const env: NodeJS.ProcessEnv = { ...process.env }
   for (const [k, d] of [["XDG_DATA_HOME", "data"], ["XDG_CONFIG_HOME", "config"], ["XDG_STATE_HOME", "state"], ["XDG_CACHE_HOME", "cache"]] as const) {
     const p = path.join(home, d); fs.mkdirSync(p, { recursive: true }); env[k] = p
   }
-  env.KILO_API_URL = `http://localhost:${webPort}`
+  Object.assign(env, endpointEnv({ web: webPort, cloudAgent: cloudAgentPort, ingest: ingestPort, events: eventsPort }))
   env.KILO_DEV_CWD = project
   env.KILO_DISABLE_AUTOUPDATE = "1"
-  if (ingestPort) env.KILO_SESSION_INGEST_URL = `http://localhost:${ingestPort}`
-  else env.KILO_DISABLE_SESSION_INGEST = "1"
   if (eventsPort) {
-    env.EVENT_SERVICE_URL = `ws://localhost:${eventsPort}`
     delete env.KILO_DISABLE_PRESENCE
     delete env.KILO_EVENT_SERVICE_URL
   } else env.KILO_DISABLE_PRESENCE = "1"
@@ -86,6 +114,7 @@ async function main() {
   const webUp = await alive(webPort)
   console.log(`${dim}project${rst}  ${project}`)
   console.log(`${dim}web${rst}      :${webPort}  ${webUp ? `${grn}up${rst}` : `${red}down${rst}`}`)
+  console.log(`${dim}agent${rst}    :${cloudAgentPort}`)
   console.log(`${dim}ingest${rst}   ${ingestPort ? `:${ingestPort}` : "off"}`)
   console.log(`${dim}events${rst}   ${eventsPort ? `:${eventsPort}` : "off"}`)
   console.log(`${dim}home${rst}     ${home}`)
@@ -96,4 +125,4 @@ async function main() {
   process.exit(await Bun.spawn({ cmd: ["bun", "run", "--cwd", "packages/opencode", "--conditions=browser", "src/index.ts", ...pass], cwd: kilo, env, stdio: ["inherit", "inherit", "inherit"] }).exited)
 }
 
-void main().catch((e) => die(e instanceof Error ? e.message : String(e)))
+if (import.meta.main) void main().catch((e) => die(e instanceof Error ? e.message : String(e)))

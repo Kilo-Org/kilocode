@@ -3,9 +3,9 @@ package ai.kilocode.client.session.views
 import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.session.ui.attachment.AttachmentCardItem
 import ai.kilocode.client.session.ui.attachment.AttachmentChip
+import ai.kilocode.client.ui.PlainLabel
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import com.intellij.ui.components.JBLabel
 import java.awt.Container
 
 class PromptAttachmentViewTest : BasePlatformTestCase() {
@@ -57,9 +57,10 @@ class PromptAttachmentViewTest : BasePlatformTestCase() {
             startLine = 40,
             endLine = 42,
         )
-        val label = components(chip).filterIsInstance<JBLabel>().single()
+        val label = components(chip).filterIsInstance<PlainLabel>().single()
 
-        assertTrue(label.text.contains("<u>HvJwtFilter.java:40-42</u>"))
+        assertEquals("HvJwtFilter.java:40-42", label.text)
+        assertTrue(label.underline)
     }
 
     private fun components(root: Container): List<java.awt.Component> = buildList {

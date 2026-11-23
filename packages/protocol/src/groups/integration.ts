@@ -2,7 +2,9 @@ import { Integration } from "@opencode-ai/schema/integration"
 import { Location } from "@opencode-ai/schema/location"
 import { Schema } from "effect"
 import { HttpApiEndpoint, HttpApiGroup, HttpApiSchema, OpenApi } from "effect/unstable/httpapi"
-import { InvalidRequestError } from "../errors"
+// kilocode_change start - attempt handles may be absent or already settling
+import { AttemptNotFoundError, ConflictError, InvalidRequestError } from "../errors"
+// kilocode_change end
 import { LocationQuery, locationQueryOpenApi } from "./location"
 
 const Inputs = Schema.Record(Schema.String, Schema.String)
@@ -99,7 +101,7 @@ export const IntegrationGroup = HttpApiGroup.make("server.integration")
       query: LocationQuery,
       payload: Schema.Struct({ code: Schema.optional(Schema.String) }),
       success: HttpApiSchema.NoContent,
-      error: InvalidRequestError,
+      error: [InvalidRequestError, AttemptNotFoundError, ConflictError], // kilocode_change - an absent attempt is a 404 and a settling one a 409
     })
       .annotateMerge(locationQueryOpenApi)
       .annotateMerge(

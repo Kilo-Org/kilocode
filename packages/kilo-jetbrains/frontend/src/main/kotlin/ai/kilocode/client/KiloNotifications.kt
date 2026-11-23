@@ -17,28 +17,34 @@ object KiloNotifications {
     }
 
     fun error(project: Project?, title: String, content: String? = null) {
-        val notification = NotificationGroupManager.getInstance()
-            .getNotificationGroup(GROUP)
-            ?.createNotification(title, content ?: "", NotificationType.ERROR)
-            ?: Notification(GROUP, title, content ?: "", NotificationType.ERROR)
-        notification.notify(project)
+        build(title, content, NotificationType.ERROR).notify(project)
     }
 
     /** Error notification with a single expiring action (e.g. a retry). */
     fun error(project: Project?, title: String, content: String?, actionLabel: String, action: () -> Unit) {
-        val notification = NotificationGroupManager.getInstance()
-            .getNotificationGroup(GROUP)
-            ?.createNotification(title, content ?: "", NotificationType.ERROR)
-            ?: Notification(GROUP, title, content ?: "", NotificationType.ERROR)
-        notification.addAction(NotificationAction.createSimpleExpiring(actionLabel) { action() })
+        error(project, title, content, listOf(actionLabel to action))
+    }
+
+    /** Error notification with one or more expiring actions (e.g. retry, copy path, reveal). */
+    fun error(project: Project?, title: String, content: String?, actions: List<Pair<String, () -> Unit>>) {
+        val notification = build(title, content, NotificationType.ERROR)
+        actions.forEach { (label, action) -> notification.addAction(NotificationAction.createSimpleExpiring(label) { action() }) }
         notification.notify(project)
     }
 
     fun warning(project: Project?, title: String, content: String? = null) {
-        val notification = NotificationGroupManager.getInstance()
-            .getNotificationGroup(GROUP)
-            ?.createNotification(title, content ?: "", NotificationType.WARNING)
-            ?: Notification(GROUP, title, content ?: "", NotificationType.WARNING)
+        build(title, content, NotificationType.WARNING).notify(project)
+    }
+
+    /** Warning notification with a single expiring action (e.g. open the page that can retry). */
+    fun warning(title: String, content: String?, actionLabel: String, action: () -> Unit) {
+        val project = ProjectManager.getInstance().openProjects.firstOrNull { !it.isDefault }
+        warning(project, title, content, actionLabel, action)
+    }
+
+    fun warning(project: Project?, title: String, content: String?, actionLabel: String, action: () -> Unit) {
+        val notification = build(title, content, NotificationType.WARNING)
+        notification.addAction(NotificationAction.createSimpleExpiring(actionLabel) { action() })
         notification.notify(project)
     }
 
@@ -75,4 +81,8 @@ object KiloNotifications {
         notification.addAction(NotificationAction.createSimpleExpiring(KiloBundle.message("common.dont.show.again")) {})
         notification.notify(project)
     }
+
+    private fun build(title: String, content: String?, type: NotificationType): Notification =
+        NotificationGroupManager.getInstance().getNotificationGroup(GROUP)?.createNotification(title, content ?: "", type)
+            ?: Notification(GROUP, title, content ?: "", type)
 }

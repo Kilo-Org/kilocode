@@ -293,29 +293,30 @@ export namespace MemoryModel {
       resolve: ({ configured, session }) =>
         Effect.gen(function* () {
           const parsed = MemoryConfig.parse(configured)
-          const sessionModel = () =>
-            input.provider.getModel(ProviderV2.ID.make(session.providerID), ModelV2.ID.make(session.modelID))
-          let reason: string | undefined
-          let source: Provider.Model
-          if (configured && !parsed) {
-            reason = "invalid model"
-            source = yield* sessionModel()
-          } else if (parsed) {
-            source = yield* input.provider
-              .getModel(ProviderV2.ID.make(parsed.providerID), ModelV2.ID.make(parsed.modelID))
-              .pipe(
-                Effect.catch(() =>
-                  Effect.sync(() => {
-                    reason = "model unavailable"
-                  }).pipe(Effect.flatMap(sessionModel)),
-                ),
+          const load = (ref: MemoryPorts.ModelRef) =>
+            Effect.gen(function* () {
+              const source = yield* input.provider.getModel(
+                ProviderV2.ID.make(ref.providerID),
+                ModelV2.ID.make(ref.modelID),
               )
-          } else {
-            source = yield* sessionModel()
-          }
-          if (reason) log.warn("memory model config ignored", { reason, model: configured })
-          const language = yield* input.provider.getLanguage(source)
-          return { handle: modelOptions(source, language), ...(reason ? { fallback: { reason } } : {}) }
+              const language = yield* input.provider.getLanguage(source)
+              return modelOptions(source, language)
+            })
+          const fallback = (reason: string) =>
+            Effect.gen(function* () {
+              log.warn("memory model config ignored", { reason, model: configured })
+              return { handle: yield* load(session), fallback: { reason } }
+            })
+          if (!configured) return { handle: yield* load(session) }
+          if (!parsed) return yield* fallback("invalid model")
+          // A configured model is unavailable when it cannot be found or its language model cannot
+          // load. getLanguage reports SDK load failures as defects, so cover both channels.
+          const handle = yield* load(parsed).pipe(
+            Effect.catch(() => Effect.succeed(undefined)),
+            Effect.catchDefect(() => Effect.succeed(undefined)),
+          )
+          if (handle) return { handle }
+          return yield* fallback("model unavailable")
         }).pipe(Effect.mapError(MemoryError.from)),
       run: ({ handle, sessionID, system, prompt, timeoutMs, signal }) => {
         const resolved = handle as ModelHandle

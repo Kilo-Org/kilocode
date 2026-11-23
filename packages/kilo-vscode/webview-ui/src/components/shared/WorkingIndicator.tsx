@@ -16,7 +16,7 @@ import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { StatusText } from "./StatusText"
 import { tracksElapsed } from "./working-indicator-utils"
-import { active as activeTiming } from "../../context/session-timing"
+import { active as activeTiming, running } from "../../context/session-timing"
 
 interface WorkingIndicatorProps {
   onScrollToBottom?: () => void
@@ -29,12 +29,13 @@ export const WorkingIndicator: Component<WorkingIndicatorProps> = (props) => {
 
   const [elapsed, setElapsed] = createSignal(0)
   const [retryCountdown, setRetryCountdown] = createSignal(0)
+  const goal = () => running(session.currentSession()?.goal, session.status(), session.closeReason())
 
   createEffect(() => {
     const timing = session.busyTiming()
     const status = session.status()
 
-    if (!tracksElapsed(status, session.submitting(), timing)) {
+    if (!tracksElapsed(status, session.submitting(), timing, goal())) {
       setElapsed(0)
       return
     }
@@ -93,7 +94,7 @@ export const WorkingIndicator: Component<WorkingIndicatorProps> = (props) => {
 
   // The counter's slot is reserved for exactly as long as the turn is timed, so a
   // state that never counts (a retry with no start time) keeps the row compact.
-  const timing = () => tracksElapsed(session.status(), session.submitting(), session.busyTiming())
+  const timing = () => tracksElapsed(session.status(), session.submitting(), session.busyTiming(), goal())
 
   const handleCancelRetry = () => {
     const sid = session.currentSessionID()

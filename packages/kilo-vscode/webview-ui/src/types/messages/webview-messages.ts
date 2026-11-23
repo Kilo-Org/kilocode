@@ -6,7 +6,8 @@ import type { ModelSelection, ProviderConfig } from "./providers"
 import type { Config } from "./config"
 import type { ModelAllocation, ReviewCommentEntry, TerminalDestination, TerminalPlacement } from "./agent-manager"
 import type { PRReviewCommentData, ReviewMessageData } from "../../../../src/shared/review-comments"
-import type { BrowserFeedbackData } from "../../../../src/shared/browser-feedback"
+import type { BrowserFeedbackData, BrowserReference } from "../../../../src/shared/browser-feedback"
+import type { BrowserInteraction, BrowserViewport, BrowserViewIdentity } from "../../../../src/shared/browser-stream"
 import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
 import type { RefreshProviderUsageMessage, RequestProviderUsageMessage } from "./provider-usage"
 import type { AnacondaDesktopWebviewMessage } from "../../../../src/shared/anaconda-desktop-messages"
@@ -99,6 +100,8 @@ export interface PermissionResponseRequest {
   response: "once" | "always" | "reject"
   approvedAlways: string[]
   deniedAlways: string[]
+  /** Patterns whose saved rule the user cleared; the host deletes them. */
+  removedAlways?: string[]
   feedback?: string
 }
 
@@ -181,6 +184,11 @@ export interface OpenExternalRequest {
   url: string
 }
 
+export interface OpenWebLinkRequest {
+  type: "openWebLink"
+  url: string
+}
+
 export interface OpenFileRequest {
   type: "openFile"
   filePath: string
@@ -216,6 +224,11 @@ export interface CancelLoginRequest {
 export interface SetOrganizationRequest {
   type: "setOrganization"
   organizationId: string | null
+  /**
+   * Correlates the `organizationSwitchResult` reply with this request. The host
+   * supplies one when a caller omits it, so every dispatched request is answered.
+   */
+  requestID?: string
 }
 
 export interface WebviewReadyRequest {
@@ -281,11 +294,6 @@ export interface ConfigureAgentManagerSetupScriptMessage {
 
 export interface OpenProfilePanelRequest {
   type: "openProfilePanel"
-}
-
-export interface OpenVSCodeSettingsRequest {
-  type: "openVSCodeSettings"
-  query: string
 }
 
 export interface OpenConfigFileRequest {
@@ -386,9 +394,29 @@ export interface DisconnectMcpMessage {
   name: string
 }
 
-export interface AuthenticateMcpMessage {
-  type: "authenticateMcp"
+export interface RequestMcpAuthStateMessage {
+  type: "requestMcpAuthState"
+}
+
+export interface SignInMcpMessage {
+  type: "signInMcp"
   name: string
+  /** When false, suppress the host's native sign-in outcome notification (the caller renders its own, e.g. the Marketplace install modal). Defaults to true. */
+  notify?: boolean
+}
+
+export interface CancelMcpSignInMessage {
+  type: "cancelMcpSignIn"
+  name: string
+}
+
+export interface ResetMcpAuthMessage {
+  type: "resetMcpAuth"
+  name: string
+}
+
+export interface RequestMcpBundlesMessage {
+  type: "requestMcpBundles"
 }
 
 export interface SetLanguageRequest {
@@ -516,6 +544,8 @@ export interface UpdateSettingRequest {
   type: "updateSetting"
   key: string
   value: unknown
+  /** Echoed unchanged on the outcome message so the sender can match it to this write. */
+  writeId?: string
 }
 
 export interface RequestTimelineSettingMessage {
@@ -529,6 +559,11 @@ export interface RequestAutoCleanupStateMessage {
 
 export interface RunAutoCleanupNowMessage {
   type: "runAutoCleanupNow"
+  requestID: string
+}
+
+export interface StopAutoCleanupNowMessage {
+  type: "stopAutoCleanupNow"
   requestID: string
 }
 
@@ -610,6 +645,8 @@ export interface RequestSpeechToTextModelsMessage {
 export interface OpenSettingsTabRequest {
   type: "openSettingsTab"
   tab: string
+  subtab?: string
+  focus?: string
 }
 
 export interface UpdateConfigMessage {
@@ -622,6 +659,12 @@ export interface UpdateConfigMessage {
   projectUnset?: string[][]
   globalBindingId?: string
   projectBindingId?: string
+  /**
+   * Identifies this write so the host can echo it on the one message that answers it.
+   * A `configUpdated` or `configUpdateFailed` carrying this id is the answer to this write;
+   * one without it came from somewhere else.
+   */
+  requestId?: string
 }
 
 export interface RequestNotificationSettingsMessage {
@@ -676,6 +719,11 @@ export interface TelemetryRequest {
   type: "telemetry"
   event: string
   properties?: Record<string, unknown>
+}
+
+export interface SetTelemetryLevelRequest {
+  type: "setTelemetryLevel"
+  enabled: boolean
 }
 
 // Create a new worktree (with auto-created first session)
@@ -775,6 +823,7 @@ export interface CloseSessionRequest {
 /** Persist a non-worktree session to agent-manager.json (worktreeId = null). */
 export interface PersistSessionRequest {
   type: "agentManager.persistSession"
+  projectId?: string
   sessionId: string
   draftID?: string
 }
@@ -874,6 +923,12 @@ export interface SetProjectExpandedMessage {
   expanded: boolean
 }
 
+// Persist the sidebar order of the additional (not pinned) projects
+export interface SetProjectOrderMessage {
+  type: "agentManager.setProjectOrder"
+  order: string[]
+}
+
 // Configure worktree setup script
 export interface ConfigureSetupScriptRequest {
   type: "agentManager.configureSetupScript"
@@ -921,6 +976,14 @@ export interface OpenWorktreeRequest {
   worktreeId: string
 }
 
+// Copy one worktree's sessions into a new hosted workspace in Cloud. The
+// extension host owns the open session selection and the active session.
+export interface ContinueInCloudRequest {
+  type: "agentManager.continueInCloud"
+  projectId?: string
+  worktreeId: string
+}
+
 export interface AgentManagerCopyToClipboardRequest {
   type: "agentManager.copyToClipboard"
   text: string
@@ -929,6 +992,11 @@ export interface AgentManagerCopyToClipboardRequest {
 export interface AgentManagerSetIntroDismissedRequest {
   type: "agentManager.setIntroDismissed"
   dismissed: boolean
+}
+
+export interface AgentManagerSetSplashFoldedRequest {
+  type: "agentManager.setSplashFolded"
+  folded: boolean
 }
 
 // Copy text to the system clipboard via the extension host
@@ -995,6 +1063,13 @@ export interface AgentManagerOpenFileRequest {
   column?: number
 }
 
+// Copy a file's absolute path to the clipboard for a specific session
+export interface AgentManagerCopyFilePathRequest {
+  type: "agentManager.copyFilePath"
+  sessionId: string
+  filePath: string
+}
+
 export interface AgentManagerRequestDocumentMessage {
   type: "agentManager.requestDocument"
   sessionId: string
@@ -1018,6 +1093,11 @@ export interface DocumentOpenFileMessage {
 
 export interface DocumentCloseMessage {
   type: "document.close"
+}
+
+export interface DocumentCopyPathMessage {
+  type: "document.copyPath"
+  file: string
 }
 
 export interface DocumentSendCommentsMessage {
@@ -1370,13 +1450,24 @@ export interface AgentManagerBrowserRequestMessage {
   type:
     | "agentManager.browser.open"
     | "agentManager.browser.refresh"
+    | "agentManager.browser.back"
+    | "agentManager.browser.forward"
     | "agentManager.browser.close"
     | "agentManager.browser.state"
     | "agentManager.browser.inspect"
     | "agentManager.browser.input"
     | "agentManager.browser.devtools"
+    | "agentManager.browser.viewport"
+    | "agentManager.browser.interact"
+    | "agentManager.browser.acknowledge"
   sessionId: string
   projectId?: string
+  browserId?: string
+  navigation?: number
+  viewport?: BrowserViewport
+  identity?: BrowserViewIdentity
+  event?: BrowserInteraction
+  sequence?: number
   url?: string
   requestId?: string
   x?: number
@@ -1386,6 +1477,63 @@ export interface AgentManagerBrowserRequestMessage {
   hover?: boolean
   click?: boolean
   theme?: "dark" | "light"
+}
+
+/**
+ * Editor-tab Integrated Browser. Mirrors the Agent Manager browser request
+ * shape, but belongs to a sidebar/editor-tab session instead of an Agent
+ * Manager project.
+ */
+export interface BrowserTabRequestMessage {
+  type:
+    | "browserTab.open"
+    | "browserTab.refresh"
+    | "browserTab.back"
+    | "browserTab.forward"
+    | "browserTab.close"
+    | "browserTab.state"
+    | "browserTab.inspect"
+    | "browserTab.input"
+    | "browserTab.devtools"
+    | "browserTab.viewport"
+    | "browserTab.interact"
+    | "browserTab.acknowledge"
+  sessionId: string
+  projectId?: string
+  browserId?: string
+  navigation?: number
+  viewport?: BrowserViewport
+  identity?: BrowserViewIdentity
+  event?: BrowserInteraction
+  sequence?: number
+  url?: string
+  requestId?: string
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+  hover?: boolean
+  click?: boolean
+  theme?: "dark" | "light"
+}
+
+export interface BrowserTabReferenceMessage {
+  type: "browserTab.reference"
+  sessionId: string
+  reference: BrowserReference
+}
+
+export interface BrowserTabReadyMessage {
+  type: "browserTab.ready"
+}
+
+export interface BrowserTabOpenSettingsMessage {
+  type: "browserTab.openSettings"
+}
+
+export interface BrowserTabOpenExternalMessage {
+  type: "browserTab.openExternal"
+  url: string
 }
 
 export interface RequestAutoApproveStateMessage {
@@ -1454,6 +1602,7 @@ export interface AuthorizeProviderOAuthMessage {
   requestId: string
   providerID: string
   method: number
+  inputs?: Record<string, string>
 }
 
 export interface CompleteProviderOAuthMessage {
@@ -1533,19 +1682,6 @@ export interface RequestFavoritesMessage {
   type: "requestFavorites"
 }
 
-// Explicit preferred and per-mode model selection persistence (webview → extension)
-export interface PersistModelSelectionRequest {
-  type: "persistModelSelection"
-  agent: string
-  providerID: string
-  modelID: string
-  variant?: string
-}
-
-export interface RequestModelSelectionsMessage {
-  type: "requestModelSelections"
-}
-
 // Continue in Worktree: transfer sidebar session + git state to an isolated worktree
 export interface ContinueInWorktreeRequest {
   type: "continueInWorktree"
@@ -1594,6 +1730,13 @@ export interface MoveToSectionRequest {
   sectionId: string | null
 }
 
+export interface SetWorktreePinnedRequest {
+  type: "agentManager.setWorktreePinned"
+  projectId?: string
+  worktreeId: string
+  pinned: boolean
+}
+
 export interface MoveSectionRequest {
   type: "agentManager.moveSection"
   projectId?: string
@@ -1626,8 +1769,10 @@ export type WebviewMessage =
   | PRMergeRequest
   | { type: "sessionActivity"; state: Activity }
   | { type: "acknowledgeSession"; sessionID: string; eventID: string }
+  | { type: "requestWorkspaceScope" }
   | DocumentRequestMessage
   | DocumentOpenFileMessage
+  | DocumentCopyPathMessage
   | DocumentCloseMessage
   | DocumentSendCommentsMessage
   | SendMessageRequest
@@ -1655,13 +1800,13 @@ export type WebviewMessage =
   | RequestProviderUsageMessage
   | RefreshProviderUsageMessage
   | OpenExternalRequest
+  | OpenWebLinkRequest
   | OpenSettingsPanelRequest
   | RequestAgentManagerSettingsMessage
   | RequestAgentManagerSettingsBranchesMessage
   | SetAgentManagerDefaultBaseBranchMessage
   | ConfigureAgentManagerSetupScriptMessage
   | OpenProfilePanelRequest
-  | OpenVSCodeSettingsRequest
   | OpenConfigFileRequest
   | OpenMarketplacePanelRequest
   | OpenAgentManagerRequest
@@ -1686,7 +1831,11 @@ export type WebviewMessage =
   | RequestMcpStatusMessage
   | ConnectMcpMessage
   | DisconnectMcpMessage
-  | AuthenticateMcpMessage
+  | RequestMcpAuthStateMessage
+  | SignInMcpMessage
+  | CancelMcpSignInMessage
+  | ResetMcpAuthMessage
+  | RequestMcpBundlesMessage
   | SetLanguageRequest
   | QuestionReplyRequest
   | QuestionRejectRequest
@@ -1712,6 +1861,7 @@ export type WebviewMessage =
   | RequestTimelineSettingMessage
   | RequestAutoCleanupStateMessage
   | RunAutoCleanupNowMessage
+  | StopAutoCleanupNowMessage
   | RequestThroughputSettingMessage
   | RequestAutoApprovalReasonSettingMessage
   | RequestWorkStyleMessage
@@ -1756,6 +1906,7 @@ export type WebviewMessage =
   | ForgetSessionRequest
   | RenameWorktreeRequest
   | TelemetryRequest
+  | SetTelemetryLevelRequest
   | RequestRepoInfoMessage
   | RequestStateMessage
   | RequestProjectsMessage
@@ -1769,6 +1920,7 @@ export type WebviewMessage =
   | ActivateSelectionMessage
   | RememberTargetMessage
   | SetProjectExpandedMessage
+  | SetProjectOrderMessage
   | ConfigureSetupScriptRequest
   | ConfigureRunScriptRequest
   | RunScriptRequest
@@ -1777,11 +1929,14 @@ export type WebviewMessage =
   | ShowLocalTerminalRequest
   | ShowWorktreeTerminalRequest
   | OpenWorktreeRequest
+  | ContinueInCloudRequest
   | AgentManagerCopyToClipboardRequest
   | AgentManagerSetIntroDismissedRequest
+  | AgentManagerSetSplashFoldedRequest
   | CopyToClipboardRequest
   | ShowExistingLocalTerminalRequest
   | AgentManagerOpenFileRequest
+  | AgentManagerCopyFilePathRequest
   | AgentManagerRequestDocumentMessage
   | CreateMultiVersionRequest
   | SetTabOrderRequest
@@ -1838,6 +1993,11 @@ export type WebviewMessage =
   | SidebarOpenSessionsMessage
   | AgentManagerVisibleSessionMessage
   | AgentManagerBrowserRequestMessage
+  | BrowserTabRequestMessage
+  | BrowserTabReferenceMessage
+  | BrowserTabReadyMessage
+  | BrowserTabOpenSettingsMessage
+  | BrowserTabOpenExternalMessage
   | RequestAutoApproveStateMessage
   | ToggleAutoApproveMessage
   | RequestSandboxStatusMessage
@@ -1863,8 +2023,6 @@ export type WebviewMessage =
   | RequestModelSelectorExpandedMessage
   | ToggleFavoriteRequest
   | RequestFavoritesMessage
-  | PersistModelSelectionRequest
-  | RequestModelSelectionsMessage
   | ToggleRemoteMessage
   | ToggleCaffeinationMessage
   | SetRemoteEnabledMessage
@@ -1879,6 +2037,7 @@ export type WebviewMessage =
   | SetSectionColorRequest
   | ToggleSectionCollapsedRequest
   | MoveToSectionRequest
+  | SetWorktreePinnedRequest
   | MoveSectionRequest
   | OpenContentRequest
   | AgentManagerTerminalCreateRequest

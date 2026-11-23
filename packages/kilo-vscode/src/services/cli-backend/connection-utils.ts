@@ -70,6 +70,7 @@ const sessionScopedTransientEvents = new Set<string>([
   "session.wakeup",
   "todo.updated",
   "message.part.delta",
+  "session.next.tool.input.delta",
   "permission.asked",
   "permission.replied",
   "question.asked",

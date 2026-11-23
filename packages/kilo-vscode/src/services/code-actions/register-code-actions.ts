@@ -9,6 +9,7 @@ export function registerCodeActions(
   provider: KiloProvider,
   agentManager?: AgentManagerProvider,
   activeTabProvider?: () => KiloProvider | undefined,
+  lastFocusedChat?: () => KiloProvider | AgentManagerProvider | undefined,
 ): void {
   const target = () => (agentManager?.isActive() ? agentManager : (activeTabProvider?.() ?? provider))
   const reveal = async () => {
@@ -86,7 +87,7 @@ export function registerCodeActions(
     vscode.commands.registerCommand("kilo-code.new.addToContext", async () => {
       const ctx = getEditorContext()
       if (!ctx) return
-      const view = target()
+      const view = lastFocusedChat?.() ?? target()
       if (!(await revealTarget(view))) return
       view.postMessage({
         type: "appendChatContext",
@@ -116,6 +117,21 @@ export function registerCodeActions(
       const view = target()
       if (!(await revealTarget(view))) return
       view.postMessage({ type: "action", action: "focusSearch" })
+    }),
+
+    // The open-tabs switcher only exists in the sidebar and editor-tab chats;
+    // Agent Manager has its own tab bar, so redirect it to the sidebar. Prefer
+    // the last focused chat: an editor tab can still report active while the
+    // user works in the sidebar.
+    vscode.commands.registerCommand("kilo-code.new.showOpenTabs", async () => {
+      const view = (() => {
+        const last = lastFocusedChat?.()
+        if (last) return last === agentManager ? provider : last
+        if (agentManager?.isActive()) return provider
+        return activeTabProvider?.() ?? provider
+      })()
+      if (!(await revealTarget(view))) return
+      view.postMessage({ type: "action", action: "showOpenTabs" })
     }),
   )
 }

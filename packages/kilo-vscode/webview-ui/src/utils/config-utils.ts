@@ -86,9 +86,42 @@ export function resolveConfig(server: Config, draft: Partial<Config>, dirty: boo
   return server
 }
 
+/** Remove one MCP server from resolved, saved, or draft config state. */
+export function removeMcpConfig(config: Config, name: string): Config {
+  if (!config.mcp || !(name in config.mcp)) return config
+  const mcp = { ...config.mcp }
+  delete mcp[name]
+  const next: Config = { ...config, mcp }
+  if (Object.keys(mcp).length === 0) delete next.mcp
+  return next
+}
+
+export function hideRemovedMcp(config: Config, names: Iterable<string>): Config {
+  let next = config
+  for (const name of names) next = removeMcpConfig(next, name)
+  return next
+}
+
+export function retainUnconfirmedMcpRemovals(names: Iterable<string>, config: Config): Set<string> {
+  return new Set([...names].filter((name) => Boolean(config.mcp?.[name])))
+}
+
+let saveCount = 0
+/**
+ * A fresh id for one `saveConfig` write. The host echoes it on the one message that answers
+ * that write, so a `configUpdated` from any other writer cannot settle the save.
+ */
+const nextSaveId = () => `s${(saveCount += 1).toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+
 /**
  * Plain-object config state machine — mirrors the SolidJS ConfigProvider
  * logic without signals so the message-handling behavior is unit-testable.
+ *
+ * It models the message-shaped parts: which push settles which write, and what
+ * stays pending after a failure. Like the settings-write chains, it keeps no
+ * timers, so the bound that lets the provider settle a save the host never
+ * answers lives only in the provider; a save this model marks `saving` stays
+ * that way until an answer settles it.
  */
 export class ConfigState {
   config: Config = {}
@@ -97,6 +130,8 @@ export class ConfigState {
   dirty = false
   saving = false
   loading = true
+  /** The id of the write `saving` waits on; only the answer that echoes it confirms. */
+  request: string | undefined = undefined
 
   /** Accumulate a partial change (same as the toggle click path). */
   updateConfig(partial: Partial<Config>) {
@@ -113,9 +148,21 @@ export class ConfigState {
     this.loading = false
   }
 
-  /** Handle an incoming configUpdated push from the extension. */
-  handleConfigUpdated(server: Config) {
-    if (this.saving) {
+  removeMcp(name: string) {
+    this.config = removeMcpConfig(this.config, name)
+    this.saved = removeMcpConfig(this.saved, name)
+    this.draft = removeMcpConfig(this.draft as Config, name)
+    this.dirty = Object.keys(this.draft).length > 0
+  }
+
+  /**
+   * Handle an incoming configUpdated push from the extension. Only the message that echoes
+   * the in-flight write's request id confirms it; any other push — another webview's save, a
+   * provider action, an SSE-driven refresh — re-applies the draft and leaves `saving` alone.
+   */
+  handleConfigUpdated(server: Config, requestId?: string) {
+    if (this.saving && requestId != null && requestId === this.request) {
+      this.request = undefined
       this.saving = false
       this.draft = {}
       this.dirty = false
@@ -130,15 +177,22 @@ export class ConfigState {
   handleConfigSaved() {
     if (!this.saving) return
     this.saving = false
+    this.request = undefined
     this.draft = {}
     this.dirty = false
     this.saved = this.config
   }
 
-  /** Handle an explicit save failure from the extension. */
-  handleConfigSaveFailed(server: Config) {
+  /**
+   * Handle an explicit save failure from the extension. A failure that names another
+   * writer's request cannot be the answer to this save, so while a save is in flight it
+   * leaves `saving`, the draft, and `dirty` alone — the same guard the provider applies.
+   */
+  handleConfigSaveFailed(server: Config, requestId?: string) {
     if (!this.saving) return
+    if (requestId != null && requestId !== this.request) return
     this.saving = false
+    this.request = undefined
     this.saved = server
     this.config = resolveConfig(server, this.draft, this.dirty)
   }
@@ -147,6 +201,7 @@ export class ConfigState {
   saveConfig() {
     if (this.saving || Object.keys(this.draft).length === 0) return
     this.saving = true
+    this.request = nextSaveId()
   }
 
   /** Discard pending changes. */
@@ -154,5 +209,6 @@ export class ConfigState {
     this.config = this.saved
     this.draft = {}
     this.dirty = false
+    this.request = undefined
   }
 }

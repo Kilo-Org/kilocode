@@ -40,4 +40,16 @@ describe("openRelativeFile", () => {
 
     expect(execute).not.toHaveBeenCalled()
   })
+
+  it("opens absolute paths directly, even without a root", () => {
+    openRelativeFile(undefined, "/repo/app_alpha/README.md")
+
+    expect((execute.mock.calls[0]?.[1] as vscode.Uri).fsPath).toBe("/repo/app_alpha/README.md")
+  })
+
+  it("opens absolute paths that fall outside the selected repository", () => {
+    openRelativeFile("/repo/app_alpha", "/repo/app_beta/README.md")
+
+    expect((execute.mock.calls[0]?.[1] as vscode.Uri).fsPath).toBe("/repo/app_beta/README.md")
+  })
 })

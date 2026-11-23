@@ -42,16 +42,17 @@ describe("opencode run with an empty model completion (non-interactive subproces
   )
 
   // The prompt request itself can fail before the model ever runs (here: an
-  // attached image whose base64 exceeds the server's limit → 400 BadRequest,
-  // with no session.error event). The real error is reported once; the
-  // empty-output diagnostic must not claim a silent model on top of it.
+  // unusable image attachment → 400 InvalidRequestError, with no session.error
+  // event). The real error is reported once; the empty-output diagnostic must
+  // not claim a silent model on top of it.
   cliIt.live(
     "request failure reports the real error without the empty-output diagnostic",
     ({ home, opencode }) =>
       Effect.gen(function* () {
-        // 4 MiB binary content with a .png extension: under the CLI's 10 MiB
-        // attach cap, but its ~5.33 MiB base64 exceeds the server's 5 MiB
-        // image limit, so the prompt request fails with a 400 BadRequest.
+        // 4 MiB of filler behind a PNG magic prefix: under the CLI's 10 MiB attach
+        // cap, but the server rejects it because the bytes are not a decodable
+        // image. (The ~5.33 MiB base64 also exceeds the 5 MiB image limit, but the
+        // decode check runs first, so the reported reason is the decode failure.)
         const big = Buffer.alloc(4 * 1024 * 1024, 7)
         Buffer.from([0x89, 0x50, 0x4e, 0x47]).copy(big, 0)
         yield* Effect.promise(() => Bun.write(`${home}/big.png`, big))
@@ -63,7 +64,9 @@ describe("opencode run with an empty model completion (non-interactive subproces
         })
 
         opencode.expectExit(result, 1)
-        expect(result.stderr).toContain("BadRequest")
+        expect(result.stderr).toContain("InvalidRequestError")
+        // The rejection carries a readable reason rather than an empty 400 body.
+        expect(result.stderr).toContain("could not be decoded as a valid image")
         expect(result.stderr).not.toContain("run ended without an assistant message")
       }),
     60_000,
@@ -92,7 +95,7 @@ describe("opencode run with an empty model completion (non-interactive subproces
           type: "error",
           timestamp: expect.any(Number),
           sessionID: expect.any(String),
-          error: expect.objectContaining({ _tag: "BadRequest" }),
+          error: expect.objectContaining({ _tag: "InvalidRequestError", kind: "attachment" }),
         })
       }),
     60_000,

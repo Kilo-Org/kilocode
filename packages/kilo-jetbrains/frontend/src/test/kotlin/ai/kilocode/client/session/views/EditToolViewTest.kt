@@ -1,10 +1,15 @@
 package ai.kilocode.client.session.views
 
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
+import ai.kilocode.client.session.settings.BlockDisplay
+import ai.kilocode.client.session.settings.ReasoningDisplay
+import ai.kilocode.client.session.settings.TranscriptDisplay
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.tool.EditToolView
+import ai.kilocode.client.session.views.tool.FileLinkLabel
 import ai.kilocode.client.session.views.tool.ReadToolView
 import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.client.ui.DiffStatBadge
@@ -35,9 +40,71 @@ class EditToolViewTest : BasePlatformTestCase() {
     private val views = mutableListOf<EditToolView>()
 
     override fun tearDown() {
-        views.forEach { Disposer.dispose(it) }
-        views.clear()
-        super.tearDown()
+        try {
+            views.forEach { Disposer.dispose(it) }
+            views.clear()
+            KiloPluginSettings.unsetCodeEditDisplay()
+        } finally {
+            super.tearDown()
+        }
+    }
+
+    fun `test expanded display opens edit when diff is available`() {
+        val view = track(EditToolView(tool(), display = BlockDisplay.EXPANDED))
+
+        assertTrue(view.isExpanded())
+        assertTrue(view.bodyCreated())
+    }
+
+    fun `test expanded display waits for diff then opens once expandable`() {
+        val initial = Tool("p1", "edit", toolKind("edit")).also {
+            it.state = ToolExecState.RUNNING
+            it.input = mapOf("filePath" to "/repo/src/App.kt")
+        }
+        val view = track(EditToolView(initial, display = BlockDisplay.EXPANDED))
+
+        assertFalse(view.isExpanded())
+
+        view.update(tool())
+
+        assertTrue(view.isExpanded())
+    }
+
+    fun `test manual edit collapse is not undone by later updates`() {
+        val view = track(EditToolView(tool(), display = BlockDisplay.EXPANDED))
+
+        view.toggle()
+        view.update(tool().also { it.output = "Updated again" })
+
+        assertFalse(view.isExpanded())
+    }
+
+    fun `test live setting expands untouched edit`() {
+        val view = track(EditToolView(tool(), display = BlockDisplay.COLLAPSED))
+
+        assertTrue(view.syncTranscriptDisplay(editDisplay(BlockDisplay.EXPANDED)))
+
+        assertTrue(view.isExpanded())
+    }
+
+    fun `test force expands an edit the user manually collapsed`() {
+        val view = track(EditToolView(tool(), display = BlockDisplay.EXPANDED))
+        view.toggle()
+        assertFalse("manual collapse must stick", view.isExpanded())
+
+        assertTrue(view.syncTranscriptDisplay(editDisplay(BlockDisplay.EXPANDED), force = true))
+
+        assertTrue("force must expand past a manual collapse", view.isExpanded())
+    }
+
+    fun `test force collapses an edit the user manually expanded`() {
+        val view = track(EditToolView(tool(), display = BlockDisplay.COLLAPSED))
+        view.toggle()
+        assertTrue("manual expand must stick", view.isExpanded())
+
+        assertTrue(view.syncTranscriptDisplay(editDisplay(BlockDisplay.COLLAPSED), force = true))
+
+        assertFalse("force must collapse past a manual expand", view.isExpanded())
     }
 
     fun `test edit tool shows Edit title and clickable file link`() {
@@ -120,7 +187,7 @@ class EditToolViewTest : BasePlatformTestCase() {
         assertTrue(view.isExpanded())
         assertEquals(2, view.codeEditors().size)
 
-        val fileLinks = labels(view).filter { it.text?.contains("<u>") == true }
+        val fileLinks = labels(view).filter { it.isFileLink() }
         assertTrue(fileLinks.any { it.text!!.contains("A.kt") && !it.text!!.contains("src/") })
         assertTrue(fileLinks.any { it.text!!.contains("B.kt") && !it.text!!.contains("pkg/") })
         assertTrue(fileLinks.any { it.text!!.contains("A.kt") && it.toolTipText == "src/A.kt" })
@@ -358,7 +425,7 @@ class EditToolViewTest : BasePlatformTestCase() {
         val body = view.headerPopup()!!.build()
 
         try {
-            val fileLinks = labels(body.component).filter { it.text?.contains("<u>") == true }
+            val fileLinks = labels(body.component).filter { it.isFileLink() }
             assertTrue(fileLinks.any { it.text!!.contains("A.kt") && it.toolTipText == "src/A.kt" })
             assertTrue(fileLinks.any { it.text!!.contains("B.kt") && it.toolTipText == "pkg/B.kt" })
 
@@ -489,12 +556,16 @@ class EditToolViewTest : BasePlatformTestCase() {
         return view
     }
 
+    private fun editDisplay(codeEdit: BlockDisplay) = TranscriptDisplay(reasoning = ReasoningDisplay.EXPANDED, codeEdit = codeEdit)
+
     private fun click(component: Component, x: Int) {
         component.dispatchEvent(MouseEvent(component, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(), 0, x, 1, 1, false))
     }
 
     private fun linkLabel(view: EditToolView): JBLabel =
-        labels(view).first { it.text?.contains("<u>") == true }
+        labels(view).first { it.isFileLink() }
+
+    private fun JBLabel.isFileLink() = this is FileLinkLabel && !text.isNullOrEmpty()
 
     private fun labels(root: Container): List<JBLabel> = root.components.flatMap { child ->
         val nested = if (child is Container) labels(child) else emptyList()

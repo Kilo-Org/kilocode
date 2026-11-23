@@ -671,20 +671,28 @@ describe("Agent Manager terminal state", () => {
   // `projectId` so the answer lands back in the namespaced context.
   function nsScene(initial: string | null = LOCAL, pid = "prj-1") {
     const [selection, setSelection] = createSignal<string | null>(initial)
-    const ns = (sel: string) => `${pid}:${sel}`
+    const [project, setProject] = createSignal(pid)
+    const ns = (sel: string) => `${project()}:${sel}`
     const state = createTerminalState(() => {
       const sel = selection()
       return sel === null ? null : ns(sel)
     })
     const posted: Array<Record<string, unknown>> = []
-    const events = { activated: [] as string[], selected: [] as string[], created: [] as string[] }
+    const events = {
+      activated: [] as string[],
+      selected: [] as string[],
+      created: [] as Array<{ key: string; id: string; project?: string }>,
+      saved: 0,
+      remembered: 0,
+      reset: 0,
+    }
     const handlers = createTerminalHandlers({
       state,
       tabIds: () => state.current().map((term) => term.id),
       selectReview: () => undefined,
       selectSessionTab: () => undefined,
       clearSession: () => undefined,
-      resetOthers: () => undefined,
+      resetOthers: () => events.reset++,
       isPendingId: () => false,
       findTab: () => undefined,
       postMessage: (message) => posted.push(message as Record<string, unknown>),
@@ -696,14 +704,21 @@ describe("Agent Manager terminal state", () => {
     })
     const dispatch = createTerminalMessageHandler({
       state,
-      activate: (id) => events.activated.push(id),
-      saveTabMemory: () => undefined,
-      setSelection: (value) => events.selected.push(value),
+      activate: (id) => {
+        events.activated.push(id)
+        handlers.activate(id)
+      },
+      saveTabMemory: () => events.saved++,
+      rememberSession: () => events.remembered++,
+      setSelection: (value) => {
+        events.selected.push(value)
+        setSelection(value)
+      },
       showError: () => undefined,
       postMessage: (message) => posted.push(message as Record<string, unknown>),
-      onCreated: (contextKey) => events.created.push(contextKey),
+      onCreated: (key, id, project) => events.created.push({ key, id, project }),
     })
-    return { state, posted, events, handlers, dispatch, ns }
+    return { state, posted, events, handlers, dispatch, ns, selection, setSelection, setProject }
   }
 
   it("keeps the namespaced state key out of side creates and buckets project-stamped answers", () => {
@@ -732,20 +747,20 @@ describe("Agent Manager terminal state", () => {
     })
   })
 
-  it("buckets project-stamped tab terminals under the namespaced context", () => {
+  it.each([LOCAL, "wt-1"])("activates a project-stamped tab terminal while its %s context is still active", (key) => {
     createRoot((dispose) => {
-      const item = nsScene(LOCAL)
+      const item = nsScene(key)
       item.handlers.requestNew()
       expect(item.posted[0]).toMatchObject({
         type: "agentManager.terminal.create",
         placement: "tab",
-        worktreeId: null,
+        worktreeId: key === LOCAL ? null : key,
       })
       const created: ExtensionMessage = {
         type: "agentManager.terminal.created",
         createId: String(item.posted[0]!.createId),
         placement: "tab",
-        worktreeId: null,
+        worktreeId: key === LOCAL ? null : key,
         projectId: "prj-1",
         terminalId: "terminal:tab",
         title: "Terminal 1",
@@ -755,9 +770,75 @@ describe("Agent Manager terminal state", () => {
       expect(item.dispatch(created)).toBe(true)
       expect(item.state.current().map((term) => term.id)).toEqual(["terminal:tab"])
       // Selection and tab order stay on the plain protocol id.
-      expect(item.events.selected).toEqual([LOCAL])
-      expect(item.events.created).toEqual([LOCAL])
+      expect(item.events.selected).toEqual([key])
+      expect(item.events.created).toEqual([{ key, id: "terminal:tab", project: "prj-1" }])
       expect(item.events.activated).toEqual(["terminal:tab"])
+      expect(item.events.saved).toBe(1)
+      expect(item.events.remembered).toBe(1)
+      expect(item.events.reset).toBe(1)
+      dispose()
+    })
+  })
+
+  it.each([LOCAL, "wt-1"])("keeps a late %s terminal reply in its owner after a project switch", (key) => {
+    createRoot((dispose) => {
+      const item = nsScene(key)
+      item.handlers.requestNew()
+      item.setProject("prj-2")
+      item.state.add(item.ns(key), {
+        id: "terminal:current",
+        title: "Current",
+        wsUrl: "ws://current",
+        font,
+        placement: "tab",
+      })
+      item.state.setActiveId("terminal:current")
+      item.state.setSideActive(item.ns(key), "terminal:side")
+      item.state.requestFocus("terminal:side")
+      const focus = item.state.focusRequest()
+
+      item.dispatch({
+        ...createdSide(String(item.posted.at(0)!.createId), "terminal:late", "Late", key === LOCAL ? null : key),
+        placement: "tab",
+        projectId: "prj-1",
+      })
+
+      expect(item.events.created).toEqual([{ key, id: "terminal:late", project: "prj-1" }])
+      expect(item.state.forSelection(`prj-1:${key}`).map((term) => term.id)).toEqual(["terminal:late"])
+      expect(item.state.current().map((term) => term.id)).toEqual(["terminal:current"])
+      expect(item.selection()).toBe(key)
+      expect(item.state.activeId()).toBe("terminal:current")
+      expect(item.state.sideActiveFor(item.ns(key))).toBe("terminal:side")
+      expect(item.state.focusRequest()).toBe(focus)
+      expect(item.events.activated).toEqual([])
+      expect(item.events.selected).toEqual([])
+      expect(item.events.saved).toBe(0)
+      expect(item.events.remembered).toBe(0)
+      expect(item.events.reset).toBe(0)
+      dispose()
+    })
+  })
+
+  it.each(["wt-2", null])("does not leave context %s for a late terminal reply in the same project", (key) => {
+    createRoot((dispose) => {
+      const item = nsScene("wt-1")
+      item.handlers.requestNew()
+      item.setSelection(key)
+      item.dispatch({
+        ...createdSide(String(item.posted.at(0)!.createId), "terminal:late", "Late", "wt-1"),
+        placement: "tab",
+        projectId: "prj-1",
+      })
+
+      expect(item.events.created).toEqual([{ key: "wt-1", id: "terminal:late", project: "prj-1" }])
+      expect(item.state.forSelection("prj-1:wt-1").map((term) => term.id)).toEqual(["terminal:late"])
+      expect(item.selection()).toBe(key)
+      expect(item.state.activeId()).toBeUndefined()
+      expect(item.events.activated).toEqual([])
+      expect(item.events.selected).toEqual([])
+      expect(item.events.saved).toBe(0)
+      expect(item.events.remembered).toBe(0)
+      expect(item.events.reset).toBe(0)
       dispose()
     })
   })

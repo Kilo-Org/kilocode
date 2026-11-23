@@ -89,6 +89,7 @@ export const isGroupEnd = (wt: WorktreeState, idx: number, list: WorktreeState[]
 
 /**
  * Build the top-level list with ungrouped worktrees before sections.
+ * Pinned worktrees are left out: they render in their own block above this list.
  */
 export function buildTopLevelItems(
   secs: SectionState[],
@@ -97,21 +98,22 @@ export function buildTopLevelItems(
   order: string[],
 ): TopLevelItem[] {
   if (secs.length === 0) {
-    return all.map((wt) => ({ kind: "worktree" as const, wt }))
+    return all.filter((wt) => !wt.pinned).map((wt) => ({ kind: "worktree" as const, wt }))
   }
   const rank = new Map(order.map((id, idx) => [id, idx] as const))
   const sort = <T extends { id: string }>(items: T[]) =>
     [...items].sort((a, b) => (rank.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (rank.get(b.id) ?? Number.MAX_SAFE_INTEGER))
   return [
-    ...sort(ungrouped).map((wt) => ({ kind: "worktree" as const, wt })),
+    ...sort(ungrouped.filter((wt) => !wt.pinned)).map((wt) => ({ kind: "worktree" as const, wt })),
     ...sort(secs).map((section) => ({ kind: "section" as const, section })),
   ]
 }
 
 /**
  * Build the flat visual order of all sidebar items matching what the user sees.
- * LOCAL is always first, then worktrees in visual order (ungrouped first, then sections,
- * skipping collapsed sections). Sessions are reachable through the history view, not the tree.
+ * LOCAL is always first, then pinned worktrees, then worktrees in visual order (ungrouped first,
+ * then sections, skipping collapsed sections). Sessions are reachable through the history view,
+ * not the tree.
  */
 export function buildSidebarOrder(
   items: TopLevelItem[],
@@ -121,22 +123,26 @@ export function buildSidebarOrder(
   anchor?: string,
 ): SidebarItem[] {
   const result: SidebarItem[] = [{ type: "local", id: "local" }]
+  for (const wt of sorted) {
+    if (wt.pinned) result.push({ type: "wt", id: wt.id })
+  }
   if (sections.length > 0) {
     for (const item of items) {
       if (item.kind === "section") {
         if (!item.section.collapsed || anchor) {
           for (const wt of members(item.section.id)) {
+            if (wt.pinned) continue
             if (item.section.collapsed && wt.id !== anchor) continue
             result.push({ type: "wt", id: wt.id })
           }
         }
-      } else {
+      } else if (!item.wt.pinned) {
         result.push({ type: "wt", id: item.wt.id })
       }
     }
   } else {
     for (const wt of sorted) {
-      result.push({ type: "wt", id: wt.id })
+      if (!wt.pinned) result.push({ type: "wt", id: wt.id })
     }
   }
   return result

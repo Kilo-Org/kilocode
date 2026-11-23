@@ -10,3 +10,9 @@ query-filters:
         - path-alert
       tags contain: security
       security-severity: /^(9(\.[0-9])?|10(\.0)?)$/
+
+# CodeQL classifies extensionless files with a `bun`/`node` shebang as plain
+# JavaScript, so TypeScript syntax in these dev-only scripts (e.g. `as const`)
+# is reported as "Could not process some files due to syntax errors".
+paths-ignore:
+  - packages/opencode/script/run-workspace-server

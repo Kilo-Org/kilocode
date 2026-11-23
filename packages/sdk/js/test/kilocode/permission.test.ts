@@ -28,6 +28,33 @@ describe("respondToPermission", () => {
     }
   })
 
+  it("sends the cleared patterns with the rule save", async () => {
+    const bodies: unknown[] = []
+    const paths: string[] = []
+    const server = Bun.serve({
+      port: 0,
+      async fetch(request) {
+        paths.push(new URL(request.url).pathname)
+        if (request.method === "POST") bodies.push(await request.json())
+        return Response.json(true)
+      },
+    })
+    try {
+      const result = await respondToPermission(createKiloClient({ baseUrl: server.url.href }), {
+        ...route,
+        reply: "once",
+        approvedAlways: [],
+        deniedAlways: [],
+        removedAlways: ["bun *"],
+      })
+      expect(result.error).toBeUndefined()
+      expect(paths).toEqual(["/permission/p1/always-rules", "/permission/p1/reply"])
+      expect(bodies[0]).toMatchObject({ approvedAlways: [], deniedAlways: [], removedAlways: ["bun *"] })
+    } finally {
+      await server.stop(true)
+    }
+  })
+
   it("bounds a stalled reply and returns the error", async () => {
     const gate = Promise.withResolvers<Response>()
     const server = Bun.serve({ port: 0, fetch: () => gate.promise })

@@ -38,6 +38,8 @@ import { useKV } from "./kv"
 import { handleSuggestionEvent } from "@/kilocode/suggestion/tui/sync" // kilocode_change
 import { at, recent, slot } from "../kilocode/message-order" // kilocode_change
 import { useToast } from "../ui/toast" // kilocode_change
+import { collector } from "../kilocode/notices" // kilocode_change
+import { errorMessage } from "../util/error" // kilocode_change
 import { usePermission } from "./permission"
 import { GoalSync } from "@/kilocode/cli/cmd/tui/goal-sync" // kilocode_change
 
@@ -126,6 +128,7 @@ export const {
         default: {},
         connected: [],
         failed: [],
+        failures: [], // kilocode_change
       },
       console_state: emptyConsoleState,
       capabilities: {
@@ -177,14 +180,106 @@ export const {
           const processes = draft.background_process[sessionID]?.filter((item) => item.lifetime === "persistent")
           if (processes?.length) draft.background_process[sessionID] = processes
           else delete draft.background_process[sessionID]
-          delete draft.permission[sessionID]
-          delete draft.question[sessionID]
+          // pending asks are one-shot events; an unanswered ask hangs its session forever, so
+          // eviction keeps them and permission.replied/question.replied remove them
           delete draft.suggestion[sessionID]
           delete draft.network[sessionID]
         }),
       )
       fullSyncedSessions.delete(sessionID)
       for (const child of children) evict(child)
+    }
+
+    // pending asks are one-shot events; refetch them so an evicted or missed ask cannot strand a session
+    // skill shell batches and sandbox escalations need an interactive human decision:
+    // the server refuses machine replies for them, mirroring temporaryPermission in cli/cmd/run/permission.shared
+    const temporaryPermission = (request: PermissionRequest) =>
+      request.metadata?.["skillShell"] === true || request.metadata?.["sandboxEscalation"] === true
+    function mergePending<T extends PermissionRequest | QuestionRequest>(
+      list: T[],
+      current: Record<string, T[]>,
+      before: Set<string>,
+      settled: Set<string>,
+    ): Record<string, T[]> {
+      const fresh: Record<string, T[]> = {}
+      for (const request of list) (fresh[request.sessionID] ??= []).push(request)
+      const next: Record<string, T[]> = {}
+      for (const sessionID of new Set([...Object.keys(current), ...Object.keys(fresh)])) {
+        const merged = new Map<string, T>()
+        for (const request of fresh[sessionID] ?? []) {
+          if (settled.has(request.id)) continue // kilocode_change - answered while the list was in flight
+          // skip entries the store already dropped (replied mid-fetch): the stale list resurrects answered asks
+          if (before.has(request.id) && !(current[sessionID] ?? []).some((r) => r.id === request.id)) continue
+          merged.set(request.id, request)
+        }
+        for (const request of current[sessionID] ?? []) {
+          if (merged.has(request.id)) continue
+          if (before.has(request.id)) continue // the server list no longer holds it
+          merged.set(request.id, request)
+        }
+        if (merged.size) next[sessionID] = [...merged.values()].sort((a, b) => a.id.localeCompare(b.id))
+      }
+      return next
+    }
+
+    // kilocode_change start - the in-flight recovery is keyed by run and workspace, so each
+    // workspace selection fetches its own pending asks and publishes only under that selection
+    let pending: { run: number; workspace: string | undefined; task: Promise<void> } | undefined
+    // a session load has no run of its own, so it joins the current run: both callers then share one
+    // fetch per workspace and finish together
+    function syncPending(run: number = bootstrapRun) {
+      const workspace = project.workspace.current()
+      if (pending?.run === run && pending.workspace === workspace) return pending.task // an in-flight recovery serves both callers
+      const task = recover(run, workspace).finally(() => {
+        if (pending?.task === task) pending = undefined
+      })
+      // only the newest run owns the shared entry: a run that a newer one replaced must not evict
+      // the live recovery, or a later caller would start a duplicate fetch and join the wrong task
+      if (run === bootstrapRun) pending = { run, workspace, task }
+      return task
+    }
+
+    async function recover(run: number, workspace: string | undefined) {
+      const before = {
+        permission: new Set(Object.values(store.permission).flatMap((list) => list.map((r) => r.id))),
+        question: new Set(Object.values(store.question).flatMap((list) => list.map((r) => r.id))),
+      }
+      const [permissions, questions] = await Promise.all([
+        // throwOnError so a failed list fetch rejects into the caller's catch instead of
+        // merging an empty list, which would drop live asks and re-hang the session
+        sdk.client.permission.list({ workspace }, { throwOnError: true }).then((x) => x.data ?? []),
+        sdk.client.question.list({ workspace }, { throwOnError: true }).then((x) => x.data ?? []),
+      ])
+      // auto mode answers asks on the server, so its replies go out even after the selection moved
+      if (permission.mode === "auto") {
+        for (const request of permissions) {
+          // skill shell batches and sandbox escalations cannot be settled by a
+          // machine reply: the server refuses non-interactive approvals, so they stay pending for a
+          // human decision and must remain visible instead of being cleared
+          if (temporaryPermission(request)) continue
+          if (terminal.has(request.id)) continue // kilocode_change - already answered, ignore straggler events
+          void sdk.client.permission.reply({ requestID: request.id, reply: "once", workspace })
+        }
+      }
+      // store writes apply only while this run still owns the selection
+      if (!currentRun(run, workspace)) return
+      // kilocode_change end
+      if (permission.mode === "auto") {
+        // keep protected asks visible; clear only what was settled
+        const protectedList = permissions.filter((request) => temporaryPermission(request))
+        const protectedCurrent: Record<string, PermissionRequest[]> = {}
+
+        for (const list of Object.values(store.permission)) {
+          for (const request of list) {
+            if (!temporaryPermission(request)) continue
+            ;(protectedCurrent[request.sessionID] ??= []).push(request)
+          }
+        }
+        setStore("permission", reconcile(mergePending(protectedList, protectedCurrent, before.permission, terminal)))
+      } else {
+        setStore("permission", reconcile(mergePending(permissions, store.permission, before.permission, terminal)))
+      }
+      setStore("question", reconcile(mergePending(questions, store.question, before.question, terminal)))
     }
 
     function strip(message: Message): Message {
@@ -195,8 +290,26 @@ export const {
 
     const fullSyncedSessions = new Set<string>()
     const deleted = new Set<string>() // kilocode_change
+    const terminal = new Set<string>() // kilocode_change
+    // kilocode_change start
+    // replied/rejected asks are terminal: a stale pending list must not resurrect them; cap the set so it cannot grow unbounded
+    const terminalCap = 512
+    function markTerminal(id: string) {
+      terminal.add(id)
+      if (terminal.size <= terminalCap) return
+      const oldest = terminal.values().next().value
+      if (oldest != null) terminal.delete(oldest)
+    }
+    // kilocode_change end
     let syncedWorkspace = project.workspace.current() // kilocode_change
-    let vcsVersion = 0 // kilocode_change
+    let bootstrapRun = 0 // kilocode_change - newest bootstrap run owns the store
+    let vcsVersion = 0 // kilocode_change - invalidates an in-flight vcs.get within a run
+    // kilocode_change start - a bootstrap run owns the store only while it is the newest run
+    // and its workspace is still selected; every write from the run goes through this guard
+    function currentRun(run: number, workspace: string | undefined) {
+      return run === bootstrapRun && workspace === project.workspace.current()
+    }
+    // kilocode_change end
     const syncingSessions = new Map<string, Promise<void>>()
     const hydratingSessions = new Map<string, { messages: Set<string>; parts: Set<string> }>()
     const touchMessage = (sessionID: string, messageID: string) => {
@@ -227,11 +340,13 @@ export const {
         case "server.instance.disposed":
           // kilocode_change start
           deleted.clear()
+          terminal.clear()
           setStore("background_process", {})
           // kilocode_change end
           void bootstrap()
           break
         case "permission.replied": {
+          markTerminal(event.properties.requestID) // kilocode_change - a replied ask is terminal: a stale list must not resurrect it
           const requests = store.permission[event.properties.sessionID]
           if (!requests) break
           const match = search(requests, event.properties.requestID, (r) => r.id)
@@ -248,7 +363,10 @@ export const {
 
         case "permission.asked": {
           const request = event.properties
-          if (permission.mode === "auto") {
+          if (terminal.has(request.id)) break // kilocode_change - already answered, ignore straggler events
+          // kilocode_change start - the server refuses non-interactive approvals for skill shell
+          // batches and sandbox escalations, so auto mode cannot settle them: store for a human decision
+          if (permission.mode === "auto" && !temporaryPermission(request)) {
             void sdk.client.permission.reply({
               requestID: request.id,
               reply: "once",
@@ -257,6 +375,7 @@ export const {
             })
             break
           }
+          // kilocode_change end
           const requests = store.permission[request.sessionID]
           if (!requests) {
             setStore("permission", request.sessionID, [request])
@@ -279,6 +398,7 @@ export const {
 
         case "question.replied":
         case "question.rejected": {
+          markTerminal(event.properties.requestID) // kilocode_change - a settled question is terminal: a stale list must not resurrect it
           const requests = store.question[event.properties.sessionID]
           if (!requests) break
           const match = search(requests, event.properties.requestID, (r) => r.id)
@@ -295,6 +415,7 @@ export const {
 
         case "question.asked": {
           const request = event.properties
+          if (terminal.has(request.id)) break // kilocode_change - already answered, ignore straggler events
           const requests = store.question[request.sessionID]
           if (!requests) {
             setStore("question", request.sessionID, [request])
@@ -558,7 +679,14 @@ export const {
 
         case "lsp.updated": {
           const workspace = project.workspace.current()
-          void sdk.client.lsp.status({ workspace }).then((x) => setStore("lsp", x.data ?? []))
+          // kilocode_change start - the status applies only while its workspace is still selected
+          void sdk.client
+            .lsp.status({ workspace })
+            .then((x) => {
+              if (workspace !== project.workspace.current()) return
+              setStore("lsp", x.data ?? [])
+            })
+          // kilocode_change end
           break
         }
 
@@ -574,8 +702,13 @@ export const {
           void sdk.client.global.config.get().then((result) => {
             if (result.data) setStore("globalConfig", reconcile(result.data))
           })
-          void sdk.client.config.get().then((result) => {
-            if (result.data) setStore("config", reconcile(result.data))
+          // kilocode_change - the workspace config is workspace-scoped: name the active workspace and keep the reply under it
+          const workspace = project.workspace.current()
+          const run = bootstrapRun
+          void sdk.client.config.get({ workspace }).then((result) => {
+            if (!result.data) return
+            if (!currentRun(run, workspace)) return
+            setStore("config", reconcile(result.data))
           })
           break
         }
@@ -711,6 +844,7 @@ export const {
 
     async function bootstrap(input: { fatal?: boolean } = {}) {
       const fatal = input.fatal ?? true
+      const run = ++bootstrapRun // kilocode_change
       const workspace = project.workspace.current()
       // kilocode_change start - isolate workspace-scoped Kilo state
       if (workspace !== syncedWorkspace) {
@@ -777,45 +911,84 @@ export const {
             const globalConfig = responses[6] // kilocode_change
             const sessions = responses[7]
 
+            // kilocode_change start - workspace-scoped slices apply only while this run owns the selection;
+            // globalConfig is not workspace-scoped, so it applies while this run is the newest
+            if (run === bootstrapRun) setStore("globalConfig", reconcile(globalConfig))
+            if (!currentRun(run, workspace)) return
             batch(() => {
               setStore("provider", reconcile(providers.providers))
               setStore("provider_default", reconcile(providers.default))
               setStore("provider_next", reconcile(providerList))
               // kilocode_change start - fail closed when the backend omits the capability
-              setStore(
-                "capabilities",
-                "experimentalBackgroundSubagents",
-                capabilities?.backgroundSubagents === true,
-              )
+              setStore("capabilities", "experimentalBackgroundSubagents", capabilities?.backgroundSubagents === true)
               // kilocode_change end
               setStore("console_state", reconcile(consoleState))
               setStore("agent", reconcile(agents))
               setStore("config", reconcile(config))
-              setStore("globalConfig", reconcile(globalConfig)) // kilocode_change
               if (sessions !== undefined) setStore("session", reconcile(sessions))
             })
+            // kilocode_change end
           })
         })
         .then(() => {
-          if (store.status !== "complete") setStore("status", "partial")
+          if (currentRun(run, workspace) && store.status !== "complete") setStore("status", "partial")
+          // kilocode_change start - the toast store keeps a single toast, so each notice below
+          // re-shows the combined set instead of calling show() with only its own text, which
+          // let whichever fetch resolved last silently replace the others. Each notice still
+          // surfaces on its own fetch, so a rejected sibling cannot suppress it.
+          const notify = collector((notice) => toast.show(notice))
+          // kilocode_change end
           // non-blocking
           void Promise.all([
-            ...(args.continue ? [] : [sessionListPromise.then((sessions) => setStore("session", reconcile(sessions)))]),
-            consoleStatePromise.then((consoleState) => setStore("console_state", reconcile(consoleState))),
-            sdk.client.command.list({ workspace }).then((x) => setStore("command", reconcile(x.data ?? []))),
-            sdk.client.lsp.status({ workspace }).then((x) => setStore("lsp", reconcile(x.data ?? []))),
-            sdk.client.mcp.status({ workspace }).then((x) => setStore("mcp", reconcile(x.data ?? {}))),
+            ...(args.continue
+              ? []
+              : [
+                  sessionListPromise.then((sessions) => {
+                    if (!currentRun(run, workspace)) return
+                    setStore("session", reconcile(sessions))
+                  }),
+                ]),
+            consoleStatePromise.then((consoleState) => {
+              if (!currentRun(run, workspace)) return
+              setStore("console_state", reconcile(consoleState))
+            }),
+            // kilocode_change start - an empty slash menu must not be the only sign the list failed
+            sdk.client.command.list({ workspace }).then((x) => {
+              if (!currentRun(run, workspace)) return
+              if (x.error) {
+                notify({ title: "Commands Unavailable", message: errorMessage(x.error) })
+                return
+              }
+              setStore("command", reconcile(x.data ?? []))
+            }),
+            // kilocode_change end
+            sdk.client.lsp.status({ workspace }).then((x) => {
+              if (!currentRun(run, workspace)) return
+              setStore("lsp", reconcile(x.data ?? []))
+            }),
+            sdk.client.mcp.status({ workspace }).then((x) => {
+              if (!currentRun(run, workspace)) return
+              setStore("mcp", reconcile(x.data ?? {}))
+            }),
             sdk.client.experimental.resource
               .list({ workspace })
-              .then((x) => setStore("mcp_resource", reconcile(x.data ?? {}))),
-            sdk.client.formatter.status({ workspace }).then((x) => setStore("formatter", reconcile(x.data ?? []))),
+              .then((x) => {
+                if (!currentRun(run, workspace)) return
+                setStore("mcp_resource", reconcile(x.data ?? {}))
+              }),
+            sdk.client.formatter.status({ workspace }).then((x) => {
+              if (!currentRun(run, workspace)) return
+              setStore("formatter", reconcile(x.data ?? []))
+            }),
             // kilocode_change start
             sdk.client.network.list().then((result) => {
+              if (!currentRun(run, workspace)) return
               const next: Record<string, SessionNetworkWait[]> = {}
               for (const item of result.data ?? []) (next[item.sessionID] ??= []).push(item)
               setStore("network", reconcile(next))
             }),
             sdk.client.backgroundProcess.list({ workspace }).then((result) => {
+              if (!currentRun(run, workspace)) return
               const next: Record<string, BackgroundProcessInfo[]> = {}
               for (const item of result.data ?? []) {
                 if (deleted.has(item.id)) continue
@@ -826,41 +999,55 @@ export const {
             }),
             // kilocode_change end
             sdk.client.session.status({ workspace }).then((x) => {
+              if (!currentRun(run, workspace)) return
               setStore("session_status", reconcile(x.data ?? {}))
             }),
-            sdk.client.provider.auth({ workspace }).then((x) => setStore("provider_auth", reconcile(x.data ?? {}))),
+            sdk.client.provider.auth({ workspace }).then((x) => {
+              if (!currentRun(run, workspace)) return
+              setStore("provider_auth", reconcile(x.data ?? {}))
+            }),
             sdk.client.vcs.get({ workspace }).then((x) => {
-              if (version === vcsVersion && workspace === project.workspace.current()) {
+              if (version === vcsVersion && currentRun(run, workspace)) {
                 setStore("vcs", reconcile(x.data))
               }
             }),
             project.workspace.sync(),
             // kilocode_change start
             sdk.client.config.warnings().then((result) => {
+              if (!currentRun(run, workspace)) return
               const list = result.data ?? []
-              if (!list.length) return
+              const first = list.at(0)
+              if (!first) return
               const suffix = list.length > 1 ? ` (and ${list.length - 1} more)` : ""
-              toast.show({
-                title: "Config Warning",
-                message: list[0].message + suffix,
-                variant: "warning",
-                duration: 0,
-              })
+              notify({ title: "Config Warning", message: first.message + suffix })
             }),
-            sdk.client.indexing
-              .status()
-              .then((result) => setStore("indexing", reconcile(result.data ?? store.indexing))),
+            sdk.client.indexing.status().then((result) => {
+              if (!currentRun(run, workspace)) return
+              setStore("indexing", reconcile(result.data ?? store.indexing))
+            }),
+            syncPending(run).catch((err) => console.error("pending-ask recovery failed", err)), // kilocode_change - recover pending asks missed while disconnected
             // kilocode_change end
           ]).then(() => {
+            if (!currentRun(run, workspace)) return
             setStore("status", "complete")
           })
         })
         .catch(async (e) => {
+          // kilocode_change start - a run that a newer one replaced reports nothing and does not exit
+          if (run !== bootstrapRun) return
+          if (!currentRun(run, workspace)) {
+            // newest run, but the selection moved on before it failed: leave the status to the run
+            // that now owns it, and do not end the session for a selection nobody is looking at
+            return
+          }
+          // the newest run for the current selection failed: it must not leave the store waiting
           console.error("tui bootstrap failed", {
             error: e instanceof Error ? e.message : String(e),
             name: e instanceof Error ? e.name : undefined,
             stack: e instanceof Error ? e.stack : undefined,
           })
+          if (store.status === "loading") setStore("status", "partial")
+          // kilocode_change end
           if (fatal) {
             exit(e)
           } else {
@@ -991,6 +1178,8 @@ export const {
               }),
             )
             fullSyncedSessions.add(sessionID)
+            // a failed pending-ask recovery must not fail the session load; the next visit retries it // kilocode_change
+            await syncPending().catch((err) => console.error("pending-ask recovery failed", err)) // kilocode_change - recover pending asks lost to eviction or a missed one-shot event
           })().finally(() => {
             syncingSessions.delete(sessionID)
             hydratingSessions.delete(sessionID)

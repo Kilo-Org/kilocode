@@ -29,6 +29,12 @@ const patterns = [
   /model_context_window_exceeded/i,
   /too many tokens/i,
   /token limit exceeded/i,
+  // kilocode_change start - providers/gateways report over-long requests as
+  // "<N> tokens long and exceeds this model's context length"
+  /exceeds (?:this|the) model'?s (?:(?:maximum|max) )?context length/i,
+  // BytePlus Ark: "Input exceeds the context limit (1048568 tokens)"
+  /exceeds the context limit/i,
+  // kilocode_change end
 ]
 
 // kilocode_change start - keep transient token throttles retryable

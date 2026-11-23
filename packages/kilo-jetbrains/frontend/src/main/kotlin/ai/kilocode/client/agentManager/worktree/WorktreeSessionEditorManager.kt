@@ -2,6 +2,7 @@ package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.agentManager.AgentManagerHost
+import ai.kilocode.client.agentManager.WorkspaceSessionEditorManager
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
@@ -10,7 +11,6 @@ import ai.kilocode.client.onboarding.providers.v5migration.MigrationUiController
 import ai.kilocode.client.onboarding.providers.v5migration.MigrationUiState
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionActivityKind
-import ai.kilocode.client.session.SessionHost
 import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.SessionUi
@@ -39,16 +39,14 @@ import com.intellij.util.concurrency.annotations.RequiresEdt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import java.awt.BorderLayout
 import javax.swing.JComponent
-import javax.swing.JPanel
 
 open class WorktreeSessionEditorManager(
     parent: Disposable,
     project: Project,
     private val worktree: Workspace,
     private val list: WorktreeSessionListController,
-    private val session: String? = null,
+    private var session: String? = null,
     private val del: (String, (Boolean, String?) -> Unit) -> Unit = list::delete,
     create: (Project, Workspace, SessionManager, SessionRef?, UiTimerSource) -> SessionUi =
         { project, workspace, manager, ref, timers ->
@@ -88,7 +86,7 @@ open class WorktreeSessionEditorManager(
     private val newWorktreeHost: () -> Unit = {
         project.service<AgentManagerHost>().newWorktree()
     },
-) : SessionHost(project, worktree, create, resolve, status, timers, request) {
+) : WorkspaceSessionEditorManager(project, worktree, create, resolve, status, timers, request) {
     // Both the branch dock and the New Worktree / Move to Worktree flows only make sense from the
     // base checkout -- a linked worktree's own editor tab keeps today's plain session view. Resolved
     // once in start(), before the first session opens; see resolveBase().
@@ -104,26 +102,26 @@ open class WorktreeSessionEditorManager(
     // Unlike the worktree flows above, forking is a plain session copy: it works from a linked
     // worktree's own tab as well as the base checkout's.
     override val supportsFork: Boolean get() = true
-    override val hostedInEditorTab: Boolean get() = true
-    private val right = JPanel(BorderLayout())
     private val deleting = linkedSetOf<String>()
     private var last: String? = null
     private var pending = false
+    private var queuedPrompt: String? = null
+    private var queuedTitle: String? = null
     // Fork requests in flight, keyed by source session. A hover icon or menu item is easy to hit twice
     // before the RPC answers, and each answer opens its session over the last one.
     private val forking = linkedSetOf<String>()
     private var adopted = false
     private var adopting = false
     private var startedOnce = false
+    private val refresh: () -> Unit = {
+        if (startedOnce && baseResolved && currentUi()?.replaceable() != false) restoreSessions(true)
+    }
     private var migrationActive = false
     private var migrationJob: Job? = null
-    var onPresent: ((String?) -> Unit)? = null
-    var onListChanged: (() -> Unit)? = null
-
-    val component: JPanel get() = right
-
     init {
         Disposer.register(parent, this)
+        project.service<WorktreeBaseUpdatePrompts>().register(worktree.directory, this)
+        list.onReload = refresh
         bindMigration()
     }
 
@@ -165,15 +163,75 @@ open class WorktreeSessionEditorManager(
 
     @RequiresEdt
     private fun startSessions() {
-        list.reload {
-            val target = session
-            if (target != null) {
-                openSession(SessionRef.Local(target), false)
-                return@reload
-            }
-            val dto = latest()
-            if (dto != null) openSession(SessionRef.Local(dto), false) else newSession(false)
+        val ui = currentUi()
+        val id = ui?.id
+        val restore: (Boolean) -> Unit = { listed -> if (accepts(ui, id)) restoreSessions(listed) }
+        list.reload(failed = { restore(false) }) { restore(true) }
+    }
+
+    @RequiresEdt
+    private fun restoreSessions(listed: Boolean) {
+        if (Disposer.isDisposed(this)) return
+        val store = service<PendingWorktreePrompt>()
+        val entry = store.peek(worktree.directory)
+        val saved = entry?.session
+        if (saved == null || (listed && list.session(saved) != null)) {
+            openStartup(session ?: saved, listed)
+            return
         }
+        session?.takeUnless { it == saved || it in deleting }?.let { openSession(SessionRef.Local(it), false) }
+        val ui = currentUi()
+        val id = ui?.id
+        // Root-only lists can omit a live session. Verify it before trusting the persisted binding.
+        list.get(saved) { result ->
+            if (!accepts(ui, id)) return@get
+            val dto = result.getOrElse {
+                if (currentUi() == null) showBlank()
+                onListChanged?.invoke()
+                return@get
+            }
+            restoreBound(entry.id, saved, dto, listed)
+        }
+    }
+
+    /** Delayed startup responses must not replace a session opened in the meantime. */
+    @RequiresEdt
+    private fun accepts(ui: SessionUi?, id: String?): Boolean {
+        if (Disposer.isDisposed(this)) return false
+        val current = currentUi()
+        val blank = current?.id == null && current?.replaceable() != false
+        val same = id != null && current === ui && current?.id == id
+        return blank || same
+    }
+
+    @RequiresEdt
+    private fun restoreBound(id: String, saved: String, dto: SessionDto?, listed: Boolean) {
+        val store = service<PendingWorktreePrompt>()
+        if (store.peek(worktree.directory)?.id != id) return
+        if (dto == null) {
+            store.release(worktree.directory, saved)
+            forceSession(saved)
+            if (session == saved) session = null
+        }
+        val target = dto?.id?.takeIf { store.peek(worktree.directory)?.session == it }
+        openStartup(session ?: target, listed)
+    }
+
+    @RequiresEdt
+    private fun openStartup(target: String?, listed: Boolean) {
+        val ref = target?.takeUnless { it in deleting }?.let { SessionRef.Local(it) }
+            ?: latest()?.takeIf { listed }?.let { SessionRef.Local(it) }
+        if (ref != null) {
+            openSession(ref, false)
+            consumeStartupPrompts()
+            return
+        }
+        if (listed) {
+            newSession(false)
+            return
+        }
+        if (currentUi() == null) showBlank()
+        onListChanged?.invoke()
     }
 
     /**
@@ -200,15 +258,17 @@ open class WorktreeSessionEditorManager(
 
     @RequiresEdt
     override fun dispose() {
+        if (list.onReload === refresh) list.onReload = null
+        project.service<WorktreeBaseUpdatePrompts>().unregister(worktree.directory, this)
         migrationJob?.cancel()
         super.dispose()
     }
 
     @RequiresEdt
-    open fun hasPendingNew(): Boolean = pending
+    override fun hasPendingNew(): Boolean = pending
 
     @RequiresEdt
-    open fun deleting(): Set<String> = deleting
+    override fun deleting(): Set<String> = deleting
 
     @RequiresEdt
     override fun emptyPanel(parent: Disposable, controller: SessionController): EmptySessionPanel = EmptySessionPanel(
@@ -231,10 +291,11 @@ open class WorktreeSessionEditorManager(
         pending = true
         onListChanged?.invoke()
         list.create { session ->
+            if (Disposer.isDisposed(this)) return@create
             pending = false
             if (session != null) {
                 openSession(SessionRef.Local(session), focus)
-                consumePendingPrompt()
+                consumeStartupPrompts()
             } else {
                 // The backend could not create a session yet (e.g. it is paused for legacy
                 // migration). Show the empty session panel so the worktree editor mirrors the tool
@@ -278,14 +339,55 @@ open class WorktreeSessionEditorManager(
         }
     }
 
+    /**
+     * Sends a prompt queued by the worktree row action. When this editor is already open, the action
+     * calls this directly; otherwise the action opens the editor and [consumeQueuedPrompt] sends it.
+     */
+    @RequiresEdt
+    fun submitPrompt(text: String, title: String) {
+        val ui = currentUi()
+        if (ui != null) {
+            ui.submitPrompt(text, clearDraft = false, injectedTitle = title)
+        } else {
+            queuedPrompt = text
+            queuedTitle = title
+        }
+    }
+
+    /** Sends anything queued for this worktree once its session is on screen. */
+    @RequiresEdt
+    private fun consumeStartupPrompts() {
+        consumePendingPrompt()
+        consumeQueuedPrompt()
+    }
+
     /** Sends the New Worktree dialog's queued prompt into this worktree's first session, once. */
     @RequiresEdt
     private fun consumePendingPrompt() {
-        val prompt = service<PendingWorktreePrompt>().take(worktree.directory) ?: return
-        currentUi()?.submitPrompt(
-            prompt.text,
-            PromptSelection(prompt.agent, prompt.provider, prompt.model, prompt.variant),
-        )
+        val ui = currentUi() ?: return
+        val id = ui.id ?: return
+        val store = service<PendingWorktreePrompt>()
+        store.claim(worktree.directory, id, ui)?.let { entry ->
+            val prompt = entry.prompt
+            ui.handoffPrompt(
+                prompt.text,
+                PromptSelection(prompt.agent, prompt.provider, prompt.model, prompt.variant),
+                message = entry.id,
+                automatic = !entry.attempted,
+                injectedTitle = prompt.injectedTitle,
+                started = { text -> store.attempted(entry.id, text) },
+                confirmed = { store.acknowledge(worktree.directory, entry.id, id) },
+            )
+        }
+    }
+
+    @RequiresEdt
+    private fun consumeQueuedPrompt() {
+        val text = queuedPrompt ?: return
+        val title = queuedTitle
+        queuedPrompt = null
+        queuedTitle = null
+        currentUi()?.submitPrompt(text, clearDraft = false, injectedTitle = title)
     }
 
     @RequiresEdt
@@ -365,6 +467,12 @@ open class WorktreeSessionEditorManager(
         active.forEach { id ->
             val name = names[id] ?: title(id)
             del(id) { ok, err ->
+                val store = service<PendingWorktreePrompt>()
+                if (ok && session == id) session = null
+                if (ok && store.peek(worktree.directory)?.session == id) {
+                    store.release(worktree.directory, id)
+                    if (currentUi()?.id !in active) consumePendingPrompt()
+                }
                 deleting.remove(id)
                 onListChanged?.invoke()
                 if (!ok) notify(KiloBundle.message("worktree.session.delete.failed.title", name), err)
@@ -372,7 +480,10 @@ open class WorktreeSessionEditorManager(
         }
         active.forEach(::forceSession)
         if (key in active) {
-            if (target != null) openSession(SessionRef.Local(target)) else newSession()
+            if (target != null) {
+                openSession(SessionRef.Local(target))
+                consumePendingPrompt()
+            } else newSession()
         }
     }
 
@@ -390,12 +501,8 @@ open class WorktreeSessionEditorManager(
 
     @RequiresEdt
     override fun present(ui: SessionUi?) {
-        right.removeAll()
-        if (ui != null) right.add(ui, BorderLayout.CENTER)
-        right.revalidate()
-        right.repaint()
         last = ui?.id
-        onPresent?.invoke(currentKey())
+        super.present(ui)
     }
 
     @RequiresEdt

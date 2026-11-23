@@ -5,8 +5,8 @@ import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.ui.PlainLabel
 import ai.kilocode.client.ui.UiStyle
-import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.rpc.dto.TodoDto
 import ai.kilocode.rpc.dto.TodoViewDto
 import com.intellij.openapi.util.Disposer
@@ -42,7 +42,8 @@ class TodoWriteViewTest : BasePlatformTestCase() {
         assertEquals(2, view.rowCount())
         assertTrue(view.rowChecked(0))
         assertFalse(view.rowChecked(1))
-        assertTrue(view.rowText(0).contains("<s>Done</s>"))
+        assertEquals("Done", view.rowText(0))
+        assertEquals(listOf(true, false), struck(view.components.filterIsInstance<TodoListPanel>().single()))
         assertEquals(SessionUiStyle.View.Todo.checkBg(), view.rowCheckBackground(0))
         assertEquals(SessionUiStyle.View.Todo.checkBg(), view.rowCheckBackground(1))
         assertEquals(SessionUiStyle.View.Todo.checkFg(), view.rowCheckForeground(0))
@@ -134,9 +135,26 @@ class TodoWriteViewTest : BasePlatformTestCase() {
         body.setSize(300, body.preferredSize.height)
         body.doLayout()
 
-        val rows = body.components.filterIsInstance<Stack>().filter { it.isVisible }
+        val rows = body.components.filterIsInstance<PlainLabel>().filter { it.isVisible }
         val gap = rows[1].y - (rows[0].y + rows[0].height)
         assertEquals(JBUI.scale(SessionUiStyle.View.Layout.GAP), gap)
+    }
+
+    fun `test each todo row is a single label carrying the check as its icon`() {
+        val view = TodoWriteView(tool("todowrite", ToolExecState.COMPLETED).also {
+            it.todos = listOf(
+                TodoDto("First", "completed", "medium"),
+                TodoDto("Second", "pending", "medium"),
+            )
+        })
+        val body = view.components.filterIsInstance<TodoListPanel>().single()
+
+        val rows = body.components.filterIsInstance<PlainLabel>()
+
+        assertEquals(listOf("First", "Second"), rows.map { it.text })
+        assertTrue(rows.all { it.icon != null && it.componentCount == 0 })
+        assertEquals(listOf(true, false), listOf(0, 1).map(body::rowChecked))
+        assertEquals(listOf("Completed to-do: First", "Pending to-do: Second"), rows.map { it.accessibleContext.accessibleName })
     }
 
     fun `test compact view renders hidden labels and visible rows`() {
@@ -199,7 +217,8 @@ class TodoWriteViewTest : BasePlatformTestCase() {
             assertEquals(2, list.rowCount())
             assertTrue(list.rowChecked(0))
             assertFalse(list.rowChecked(1))
-            assertTrue(list.rowText(0).contains("<s>Done</s>"))
+            assertEquals("Done", list.rowText(0))
+            assertEquals(listOf(true, false), struck(list))
             assertTrue(list.rowText(1).contains("Next"))
             assertEquals(view.rowCheckBackground(0), list.rowCheckBackground(0))
             assertEquals(view.rowCheckForeground(0), list.rowCheckForeground(0))
@@ -244,6 +263,9 @@ class TodoWriteViewTest : BasePlatformTestCase() {
         }
         return visit(root) ?: error("TodoListPanel not found")
     }
+
+    /** Whether each visible to-do row paints struck through, in row order. */
+    private fun struck(list: TodoListPanel) = list.components.filterIsInstance<PlainLabel>().map { it.strike }
 
     private fun tool(name: String, state: ToolExecState) = Tool("p1", name, toolKind(name)).also { it.state = state }
 }

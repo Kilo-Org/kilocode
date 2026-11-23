@@ -1,6 +1,7 @@
 package ai.kilocode.client.ui
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.ui.active.ActiveBadge
 import ai.kilocode.rpc.dto.BranchStatusDto
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhChecks
@@ -10,6 +11,7 @@ import ai.kilocode.rpc.dto.GhMerge
 import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.WorktreePrDto
+import com.intellij.ide.BrowserUtil
 import com.intellij.util.ui.UIUtil
 import com.intellij.xml.util.XmlStringUtil
 
@@ -58,14 +60,15 @@ internal fun reviewTooltip(review: GhReview): String {
  * Tooltip for a CI verdict glyph. Carries the counts the glyph itself cannot, so a red icon can say
  * whether one job of twenty failed or all of them did.
  */
-internal fun checksTooltip(checks: GhChecksDto): String {
+internal fun checksTooltip(checks: GhChecksDto, interactive: Boolean = true): String {
     val head = when (checks.state) {
         GhChecks.PASSED -> KiloBundle.message("worktree.pr.checks.passed", checks.total)
         GhChecks.FAILED -> KiloBundle.message("worktree.pr.checks.failed", checks.failed, checks.total)
         GhChecks.PENDING -> KiloBundle.message("worktree.pr.checks.running", checks.pending, checks.total)
         GhChecks.NONE -> return ""
     }
-    val lines = listOf(head, KiloBundle.message("worktree.pr.checks.tooltip.open")).map(XmlStringUtil::escapeString)
+    val lines = listOfNotNull(head, KiloBundle.message("worktree.pr.checks.tooltip.open").takeIf { interactive })
+        .map(XmlStringUtil::escapeString)
     return XmlStringUtil.wrapInHtml(lines.joinToString("<br>"))
 }
 
@@ -83,9 +86,10 @@ internal fun commentsCount(value: GhCommentsDto): String =
  * Tooltip for the review-conversation badge. The glyph already shows the unresolved count, so the tooltip's
  * job is to name what is being counted and how many conversations there are in total.
  */
-internal fun commentsTooltip(value: GhCommentsDto): String {
+internal fun commentsTooltip(value: GhCommentsDto, interactive: Boolean = true): String {
     val head = commentsLabel(value).takeIf { it.isNotBlank() } ?: return ""
-    val lines = listOf(head, KiloBundle.message("worktree.pr.comments.tooltip.open")).map(XmlStringUtil::escapeString)
+    val lines = listOfNotNull(head, KiloBundle.message("worktree.pr.comments.tooltip.open").takeIf { interactive })
+        .map(XmlStringUtil::escapeString)
     return XmlStringUtil.wrapInHtml(lines.joinToString("<br>"))
 }
 
@@ -152,11 +156,90 @@ internal fun commentsOpenTooltip(): String = hint("worktree.pr.comments.tooltip.
 private fun hint(key: String): String =
     XmlStringUtil.wrapInHtml(XmlStringUtil.escapeString(KiloBundle.message(key)))
 
+/** A null handler leaves known PR evidence visible but inert, without falling back to navigation. */
+internal data class PrBadgeActions(
+    val open: (() -> Unit)? = null,
+    val review: (() -> Unit)? = null,
+    val checks: (() -> Unit)? = null,
+    val comments: (() -> Unit)? = null,
+) {
+    companion object {
+        fun browser(pull: WorktreePrDto?): PrBadgeActions {
+            val p = pull ?: return PrBadgeActions()
+            val open = { BrowserUtil.browse(p.url) }
+            return PrBadgeActions(open, open, { BrowserUtil.browse(checksUrl(p)) }, open)
+        }
+    }
+}
+
+/**
+ * Title-line PR glyphs, in the one order both worktree and hosted rows read: unresolved
+ * conversations, review verdict, CI verdict. Conversations lead because they are the entry that
+ * needs a person; builds and reviews are outcomes to read.
+ */
+internal fun prGlyphBadges(
+    pull: WorktreePrDto?,
+    actions: PrBadgeActions = PrBadgeActions.browser(pull),
+): List<ActiveBadge> {
+    val p = pull ?: return emptyList()
+    return listOfNotNull(commentsBadge(p, actions.comments), reviewBadge(p, actions.review), checksBadge(p, actions.checks))
+}
+
+/** The `#<number>` secondary-line pill for a PR, or null when there is no linked PR. */
+internal fun prNumberBadge(
+    pull: WorktreePrDto?,
+    actions: PrBadgeActions = PrBadgeActions.browser(pull),
+): ActiveBadge? {
+    val p = pull ?: return null
+    return ActiveBadge(
+        "#${p.number}",
+        style(p.state),
+        id = "pull-request",
+        tooltip = openTooltip().takeIf { actions.open != null },
+        action = actions.open,
+    )
+}
+
+private fun reviewBadge(p: WorktreePrDto, action: (() -> Unit)?): ActiveBadge? {
+    val glyph = PrIcons.review(p.review) ?: return null
+    return ActiveBadge(
+        "",
+        id = "pr-review",
+        tooltip = reviewTooltip(p.review),
+        action = action,
+        icon = glyph,
+    )
+}
+
+private fun checksBadge(p: WorktreePrDto, action: (() -> Unit)?): ActiveBadge? {
+    val glyph = PrIcons.checks(p.checks) ?: return null
+    return ActiveBadge(
+        "",
+        id = "pr-checks",
+        tooltip = checksTooltip(p.checks, action != null),
+        // The checks tab rather than the conversation: someone clicking a red build wants the log.
+        action = action,
+        icon = glyph,
+    )
+}
+
+private fun commentsBadge(p: WorktreePrDto, action: (() -> Unit)?): ActiveBadge? {
+    val glyph = PrIcons.comments(p.comments) ?: return null
+    return ActiveBadge(
+        commentsCount(p.comments),
+        id = "pr-comments",
+        tooltip = commentsTooltip(p.comments, action != null),
+        // The conversation tab, which is where GitHub lists the threads themselves.
+        action = action,
+        icon = glyph,
+    )
+}
+
 /**
  * Tooltip for a PR title that can be truncated — the header, where the pill and the title are laid out
  * in a row that a narrow editor tab clips. Carries the state, number, full title, and worktree name.
  */
-internal fun prTooltip(pull: WorktreePrDto, name: String? = null): String {
+internal fun prTooltip(pull: WorktreePrDto, name: String? = null, interactive: Boolean = true): String {
     val title = pull.title.trim()
     val head = buildString {
         append(stateLabel(pull.state))
@@ -170,7 +253,7 @@ internal fun prTooltip(pull: WorktreePrDto, name: String? = null): String {
     val lines = listOfNotNull(
         head,
         name?.takeIf { title.isNotBlank() }?.let { "($it)" },
-        KiloBundle.message("worktree.pr.tooltip.open"),
+        KiloBundle.message("worktree.pr.tooltip.open").takeIf { interactive },
     ).map(XmlStringUtil::escapeString)
     return XmlStringUtil.wrapInHtml(lines.joinToString("<br>"))
 }

@@ -35,7 +35,7 @@ Add custom models under the `provider.<provider_id>.models` key in your config f
 - **Provider API** — The protocol used by the provider. Use **OpenAI Responses** for OpenAI and xAI models. Use **Anthropic Messages** for Anthropic and MiniMax models. **OpenAI Compatible** is the default for other OpenAI Chat Completions-compatible endpoints.
 - **Base URL** — The provider's API endpoint (e.g., `https://api.myprovider.com/v1`). When a valid URL is entered, Kilo automatically fetches available models from the endpoint if it exposes an OpenAI-compatible models endpoint.
 - **API key** — Your provider's API key. Optional — leave empty if you manage authentication via headers.
-- **Models** — Add models manually by ID and display name, or select from the auto-fetched list that appears after entering a valid base URL.
+- **Models** — Add models manually by ID and display name, or select from the auto-fetched list that appears after entering a valid base URL. Click **Fetch models** to trigger the fetch on demand, for example after the automatic fetch failed or the endpoint requires extra setup.
 - **Headers** (optional) — Add custom HTTP headers as key-value pairs if your provider requires them.
 
 4. Click **Submit** to save. Your custom provider appears in the provider list and its models become available in the model picker.

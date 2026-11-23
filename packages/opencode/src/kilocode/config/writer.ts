@@ -4,6 +4,7 @@ import path from "path"
 import { ConfigErrorV1 } from "@opencode-ai/core/v1/config/error"
 import { Config } from "@/config/config"
 import { ConfigParse } from "@/config/parse"
+import { ConfigV2Compat } from "@/config/v2-compat"
 import { Filesystem } from "@/util/filesystem"
 import { isRecord } from "@/util/record"
 import { KilocodeConfigOverlay } from "./overlay"
@@ -17,12 +18,14 @@ export namespace KilocodeConfigWriter {
     target: KilocodeConfigOverlay.Target
   }
 
-  export type Result = {
-    ok: true
-    target: KilocodeConfigOverlay.Target
-    changed: boolean
-    sandboxChanged: boolean
-  } | Conflict
+  export type Result =
+    | {
+        ok: true
+        target: KilocodeConfigOverlay.Target
+        changed: boolean
+        sandboxChanged: boolean
+      }
+    | Conflict
 
   export async function write(input: {
     directory: string
@@ -84,7 +87,9 @@ export namespace KilocodeConfigWriter {
       }
     }
     const updated = patchJsonc(before, patch)
-    ConfigParse.schema(Config.Info, ConfigParse.jsonc(updated, checked.path), checked.path)
+    // Validate the runtime representation, but write the original patched JSONC below.
+    const lowered = ConfigV2Compat.lower(ConfigParse.jsonc(updated, checked.path), checked.path)
+    ConfigParse.schema(Config.Info, lowered.value, checked.path)
     const mode = checked.exists
       ? await stat(checked.path).then((info) => info.mode & 0o777)
       : checked.scope === "global"
@@ -117,11 +122,18 @@ export namespace KilocodeConfigWriter {
       const tree = parseTree(input)
       const node = tree && findNodeAtLocation(tree, parts)
       if (node && node.type !== "object") {
-        const replacement = parts[0] === "permission" && parts.length === 2 ? { "*": node.value, ...patch } : patch
-        return applyEdits(
-          input,
-          modify(input, parts, replacement, { formattingOptions: { insertSpaces: true, tabSize: 2 } }),
-        )
+        const promotion = parts[0] === "permission" && parts.length === 2
+        // The promoted object holds the wildcard default plus the valued entries of the patch.
+        const kept = promotion
+          ? Object.entries({ "*": node.value, ...patch }).filter(([, value]) => value !== null && value !== undefined)
+          : []
+        const replacement = promotion ? Object.fromEntries(kept) : patch
+        // A promotion with nothing to carry removes the key instead of an empty object.
+        const cleared = promotion && kept.length === 0
+        const edits = modify(input, parts, cleared ? undefined : replacement, {
+          formattingOptions: { insertSpaces: true, tabSize: 2 },
+        })
+        return applyEdits(input, edits)
       }
     }
     return Object.entries(patch).reduce((text, [key, value]) => patchJsonc(text, value, [...parts, key]), input)

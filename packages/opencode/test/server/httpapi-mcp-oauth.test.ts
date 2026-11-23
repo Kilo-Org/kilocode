@@ -24,7 +24,12 @@ const testMcpHandlers = HttpApiBuilder.group(TestHttpApi, "mcp", (handlers) =>
         Effect.succeed({ authorizationUrl: "https://auth.example/start", oauthState: "state-123" }),
       )
       .handle("authCallback", () => Effect.die("unexpected MCP authCallback"))
-      .handle("authAuthenticate", () => Effect.die("unexpected MCP authAuthenticate"))
+      // kilocode_change start
+      .handle("authAuthenticate", (ctx) =>
+        Effect.succeed({ status: "failed" as const, error: ctx.payload?.external ? "external" : "server" }),
+      )
+      // kilocode_change end
+      .handle("authCancel", () => Effect.succeed({ success: true as const })) // kilocode_change
       .handle("authRemove", () => Effect.die("unexpected MCP authRemove"))
       .handle("connect", () => Effect.die("unexpected MCP connect"))
       .handle("disconnect", () => Effect.die("unexpected MCP disconnect")) // kilocode_change
@@ -72,4 +77,40 @@ describe("mcp HttpApi OAuth", () => {
       })
     }),
   )
+
+  // kilocode_change start - external browser and cancellation endpoint contracts
+  it.live("keeps an empty authenticate body compatible with existing clients", () =>
+    Effect.gen(function* () {
+      const response = yield* HttpClientRequest.post(McpPaths.authAuthenticate.replace(":name", "demo")).pipe(
+        HttpClient.execute,
+      )
+
+      expect(response.status).toBe(200)
+      expect(yield* response.json).toEqual({ status: "failed", error: "server" })
+    }),
+  )
+
+  it.live("accepts client-driven browser authentication", () =>
+    Effect.gen(function* () {
+      const response = yield* HttpClientRequest.post(McpPaths.authAuthenticate.replace(":name", "demo")).pipe(
+        HttpClientRequest.bodyJson({ external: true }),
+        Effect.flatMap(HttpClient.execute),
+      )
+
+      expect(response.status).toBe(200)
+      expect(yield* response.json).toEqual({ status: "failed", error: "external" })
+    }),
+  )
+
+  it.live("exposes the OAuth cancellation endpoint", () =>
+    Effect.gen(function* () {
+      const response = yield* HttpClientRequest.post(McpPaths.authCancel.replace(":name", "demo")).pipe(
+        HttpClient.execute,
+      )
+
+      expect(response.status).toBe(200)
+      expect(yield* response.json).toEqual({ success: true })
+    }),
+  )
+  // kilocode_change end
 })

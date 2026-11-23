@@ -66,6 +66,7 @@ const state = {
   failed: [] as string[],
   requests: [] as string[],
   reads: 0,
+  orgId: undefined as string | undefined,
 }
 const layer = HttpRouter.serve(
   HttpApiBuilder.layer(HttpApi.make("opencode-instance").addHttpApi(ProviderApi).addHttpApi(ConfigApi)).pipe(
@@ -91,14 +92,21 @@ const layer = HttpRouter.serve(
               ),
       }),
       Layer.mock(ProviderAuth.Service)({}),
-      Layer.mock(ModelCache.Service)({ failedProviders: () => Effect.succeed(state.failed) }),
+      Layer.mock(ModelCache.Service)({
+        failedProviders: () => Effect.succeed(state.failed),
+        getFailure: (providerID: string) =>
+          Effect.succeed(
+            providerID === "kilo" && state.failed.includes("kilo") ? { kind: "unauthorized" as const, status: 401 } : undefined,
+          ),
+      }),
       Layer.mock(Auth.Service)({
         get: () =>
           Effect.suspend(() => {
             state.reads++
-            return state.failure
-              ? Effect.fail(new Auth.AuthError({ message: "Cannot read credentials" }))
-              : Effect.succeed(undefined)
+            if (state.failure) return Effect.fail(new Auth.AuthError({ message: "Cannot read credentials" }))
+            return Effect.succeed(
+              state.orgId ? new Auth.Oauth({ type: "oauth", access: "token", refresh: "", expires: 0, accountId: state.orgId }) : undefined,
+            )
           }),
       }),
       Layer.succeed(
@@ -191,6 +199,8 @@ function result(input: unknown, key: "all" | "providers") {
 
 const external = { id: "external", models: ["model"] }
 const kilo = { id: "kilo", models: ["connected/z-local", "connected/a-remote"] }
+const kiloPlaceholder = { id: "kilo", models: [] as string[] }
+const kiloUnauthenticated = { providerID: "kilo", kind: "unauthenticated" }
 
 describe("provider catalog authentication failures", () => {
   for (const connected of [false, true]) {
@@ -200,13 +210,14 @@ describe("provider catalog authentication failures", () => {
         state.failed = ["existing"]
         const all = yield* request("/provider")
         const config = yield* request("/config/providers")
-        expect(result(all, "all")).toEqual(connected ? [external, kilo] : [external])
+        expect(result(all, "all")).toEqual(connected ? [external, kilo] : [external, kiloPlaceholder])
         expect(result(config, "providers")).toEqual(connected ? [external, kilo] : [external])
         const defaults = { external: "model", ...(connected ? { kilo: "connected/z-local" } : {}) }
         expect(all).toMatchObject({
           default: defaults,
           connected: connected ? ["external", "kilo"] : ["external"],
           failed: ["existing", "kilo"],
+          failures: [{ providerID: "existing", kind: "http" }, kiloUnauthenticated],
         })
         expect(config).toMatchObject({ default: defaults })
         expect(JSON.stringify([all, config])).not.toContain("public/leak")
@@ -221,6 +232,7 @@ describe("provider catalog authentication failures", () => {
           default: { external: "model", kilo: connected ? "connected/a-remote" : "public/leak" },
           connected: connected ? ["external", "kilo"] : ["external"],
           failed: ["existing"],
+          failures: [{ providerID: "existing", kind: "http" }],
         })
         expect(configured).toMatchObject({
           default: { external: "model", ...(connected ? { kilo: "connected/a-remote" } : {}) },
@@ -240,6 +252,7 @@ describe("provider catalog authentication failures", () => {
           default: { external: "model", kilo: connected ? "connected/a-remote" : "public/leak" },
           connected: connected ? ["external", "kilo"] : ["external"],
           failed: [],
+          failures: [],
         })
         expect(config).toMatchObject({
           default: { external: "model", ...(connected ? { kilo: "connected/a-remote" } : {}) },
@@ -253,7 +266,14 @@ describe("provider catalog authentication failures", () => {
     Effect.gen(function* () {
       yield* configure(true, true)
       state.failed = ["kilo", "existing"]
-      expect(yield* request("/provider")).toMatchObject({ failed: ["kilo", "existing"] })
+      const all = yield* request("/provider")
+      expect(all).toMatchObject({
+        failed: ["kilo", "existing"],
+        failures: [
+          { providerID: "kilo", kind: "unauthorized", status: 401 },
+          { providerID: "existing", kind: "http" },
+        ],
+      })
       expect(state.failed).toEqual(["kilo", "existing"])
       expect(state.requests).toEqual([])
     }),
@@ -269,7 +289,12 @@ describe("provider catalog authentication failures", () => {
         const config = yield* request("/config/providers")
         expect(result(all, "all")).toEqual([external])
         expect(result(config, "providers")).toEqual([external])
-        expect(all).toMatchObject({ default: { external: "model" }, connected: ["external"], failed: ["existing"] })
+        expect(all).toMatchObject({
+          default: { external: "model" },
+          connected: ["external"],
+          failed: ["existing"],
+          failures: [{ providerID: "existing", kind: "http" }],
+        })
         expect(config).toMatchObject({ default: { external: "model" } })
         expect(state.requests).toEqual([])
       }),
@@ -284,7 +309,33 @@ describe("provider catalog authentication failures", () => {
       const config = yield* request("/config/providers")
       expect(result(all, "all")).toEqual([external, { id: "kilo", models: [] }])
       expect(result(config, "providers")).toEqual([external, { id: "kilo", models: [] }])
-      expect(all).toMatchObject({ default: { external: "model" }, connected: ["external", "kilo"], failed: ["kilo"] })
+      expect(all).toMatchObject({
+        default: { external: "model" },
+        connected: ["external", "kilo"],
+        failed: ["kilo"],
+        failures: [{ providerID: "kilo", kind: "unauthenticated" }],
+      })
+      expect(config).toMatchObject({ default: { external: "model" } })
+      expect(JSON.stringify([all, config])).not.toContain("public/leak")
+      expect(state.requests).toEqual([])
+    }),
+  )
+
+  it.live("reports an org-scoped 401 with a placeholder and a typed failure", () =>
+    Effect.gen(function* () {
+      yield* configure(false, false)
+      state.orgId = "org_123"
+      state.failed = ["kilo"]
+      const all = yield* request("/provider")
+      const config = yield* request("/config/providers")
+      expect(result(all, "all")).toEqual([external, kiloPlaceholder])
+      expect(result(config, "providers")).toEqual([external])
+      expect(all).toMatchObject({
+        default: { external: "model" },
+        connected: ["external"],
+        failed: ["kilo"],
+        failures: [{ providerID: "kilo", kind: "unauthorized", status: 401 }],
+      })
       expect(config).toMatchObject({ default: { external: "model" } })
       expect(JSON.stringify([all, config])).not.toContain("public/leak")
       expect(state.requests).toEqual([])

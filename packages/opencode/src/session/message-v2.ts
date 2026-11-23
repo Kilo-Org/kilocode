@@ -273,7 +273,13 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
     if (model.api.npm === "@ai-sdk/anthropic") return true
     if (model.api.npm === "@ai-sdk/openai") return true
     if (model.api.npm === "@ai-sdk/amazon-bedrock/mantle") return true
-    if (model.api.npm === "@ai-sdk/amazon-bedrock") return attachment.mime.startsWith("image/")
+    // kilocode_change start - port anomalyco/opencode#50272: Bedrock Converse accepts tool-result images only for Claude, Nova and Llama 4
+    if (model.api.npm === "@ai-sdk/amazon-bedrock") {
+      if (!attachment.mime.startsWith("image/")) return false
+      const id = model.api.id.toLowerCase()
+      return id.includes("anthropic.") || id.includes("nova") || id.includes("llama4") || id.includes("llama-4")
+    }
+    // kilocode_change end
     if (model.api.npm === "@ai-sdk/xai") return attachment.mime.startsWith("image/")
     if (model.api.npm === "@ai-sdk/google-vertex/anthropic") return true
     if (model.api.npm === "@ai-sdk/google") {
@@ -425,8 +431,12 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
             // kilocode_change end
             // kilocode_change start — do not replay send_file delivery attachments to the model;
             // they are mobile delivery artifacts (up to 4 MiB base64), not model context.
+            // generate_image attachments are display copies of the saved file, not model context.
             const attachments =
-              part.state.time.compacted || options?.stripMedia || part.tool === "send_file"
+              part.state.time.compacted ||
+              options?.stripMedia ||
+              part.tool === "send_file" ||
+              part.tool === "generate_image"
                 ? []
                 : (part.state.attachments ?? [])
             // kilocode_change end

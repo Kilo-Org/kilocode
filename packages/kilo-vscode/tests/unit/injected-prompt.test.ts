@@ -66,6 +66,18 @@ describe("injectedView", () => {
     })
   })
 
+  it("labels scheduled cron and wakeup fires instead of showing a user prompt", () => {
+    const note = "(No user is present. You scheduled this wakeup yourself as abc.)"
+    expect(injectedView(undefined, `[scheduled cron task] Check CI\n\n${note}`)).toEqual({
+      label: "Scheduled cron task",
+      preview: "Check CI",
+    })
+    expect(injectedView(undefined, `[scheduled wakeup] Poll deploy\n\n${note}`)).toEqual({
+      label: "Scheduled wakeup",
+      preview: "Poll deploy",
+    })
+  })
+
   it("returns undefined for a plain user message", () => {
     expect(injectedView(undefined, "hello")).toBeUndefined()
     expect(injectedView({ kilo: { review: {} } }, "Do not force-push.")).toBeUndefined()

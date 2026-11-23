@@ -58,6 +58,8 @@ Once you enter a valid **Base URL** and **API Key**, Kilo Code will query the pr
 
 This eliminates the need to manually look up and type model IDs. If auto-detection fails (for example, if the provider doesn't support the `/v1/models` endpoint), you can still enter model IDs manually.
 
+Click **Fetch models** next to the model list to retry the fetch at any time, for example after fixing the base URL or API key.
+
 {% /tab %}
 {% tab label="CLI" %}
 
@@ -102,6 +104,7 @@ Then set your default model using the `provider-id/model-id` format:
 - **`models`** — A map of model IDs to model definitions. Each model should include a `name` and `limit` with `context` and `output` token counts. If `limit.context` or `limit.output` is omitted, it defaults to `0`, which limits context management.
 - **`options.baseURL`** — The base URL of your provider's API endpoint. For Azure OpenAI GPT-5, configure `provider.azure` instead.
 - **`options.apiKey`** — Your API key. Use any non-empty string (e.g., `"none"`) if the provider doesn't require authentication.
+- **`options.kiloOpenAICompatibleToolCallContent`** — Set to `"empty-string"` only when this endpoint requires an empty string for assistant messages containing tool calls. The default preserves the SDK's `null` content.
 
 You can also set the API key via an environment variable instead of putting it in the config file. Use the `env` field to specify which variable to read:
 

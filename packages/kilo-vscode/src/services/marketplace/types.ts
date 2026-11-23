@@ -34,6 +34,7 @@ export interface McpMarketplaceItem extends MarketplaceItemBase {
   url: string
   content: string | McpInstallationMethod[]
   parameters?: McpParameter[]
+  skills?: Array<{ id: string; content: string }>
 }
 
 export interface AgentContent {
@@ -57,7 +58,13 @@ export interface SkillMarketplaceItem extends MarketplaceItemBase {
   displayCategory: string
 }
 
-export type MarketplaceItem = McpMarketplaceItem | AgentMarketplaceItem | SkillMarketplaceItem
+export interface PluginMarketplaceItem extends MarketplaceItemBase {
+  type: "plugin"
+  content: string
+  url?: string
+}
+
+export type MarketplaceItem = McpMarketplaceItem | AgentMarketplaceItem | SkillMarketplaceItem | PluginMarketplaceItem
 export type MarketplaceItemRef = Pick<MarketplaceItem, "id" | "type">
 
 export interface InstallMarketplaceItemOptions {
@@ -89,6 +96,7 @@ export interface InstallResult {
   slug: string
   error?: string
   filePath?: string
+  filePaths?: string[]
   line?: number
 }
 

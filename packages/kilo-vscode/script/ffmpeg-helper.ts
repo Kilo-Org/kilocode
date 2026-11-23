@@ -2,7 +2,8 @@ import { $ } from "bun"
 import { chmodSync, copyFileSync, existsSync, mkdirSync, rmSync } from "node:fs"
 import { join } from "node:path"
 
-const packages: Record<string, string> = {
+/** Exported so SBOM generation can model the exact helper each VSIX ships. */
+export const packages: Record<string, string> = {
   "darwin-x64": "@ffmpeg-installer/darwin-x64@4.1.0",
   "darwin-arm64": "@ffmpeg-installer/darwin-arm64@4.1.5",
   "linux-x64": "@ffmpeg-installer/linux-x64@4.1.0",

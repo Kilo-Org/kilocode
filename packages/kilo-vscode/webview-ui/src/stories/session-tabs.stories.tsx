@@ -108,7 +108,7 @@ const tabs = (items: typeof states) => (
 const gallery = (groups: (typeof states)[]) => (
   <StoryProviders noPadding>
     <div data-activity-story style={{ padding: "12px", background: "var(--surface-base)" }}>
-      <style>{'[data-activity-story] [data-component="spinner"] rect { animation: none !important; }'}</style>
+      <style>{'[data-activity-story] [data-component="spinner"] path { animation: none !important; }'}</style>
       <For each={groups}>{tabs}</For>
     </div>
   </StoryProviders>

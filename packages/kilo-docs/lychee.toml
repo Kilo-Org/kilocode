@@ -31,7 +31,6 @@ exclude = [
   '^https?://([A-Za-z0-9-]+\.)?glama\.ai(/|$)',
   '^https?://(api|console)\.mistral\.ai',
   '^https?://codestral\.mistral\.ai/v1/fim/completions/?$',
-  '^https?://api\.inceptionlabs\.ai/v1/fim/completions/?$',
   '^https?://(app|console)\.requesty\.ai',
   '^https?://(cloud|console)\.google\.ai',
   # API endpoint prefixes are valid but return 4xx to plain GET link checks.
@@ -64,7 +63,7 @@ exclude = [
   # Linear intermittently returns 503 to CI link checks.
   '^https?://linear\.app/?$',
   # These VS Code Marketplace pages intermittently return 503 to automated link checks.
-  '^https://marketplace\.visualstudio\.com/items\?itemName=(connor4312\.esbuild-problem-matchers|dbaeumer\.vscode-eslint|esbenp\.prettier-vscode|Requesty\.requesty)$',
+  '^https://marketplace\.visualstudio\.com/items\?itemName=(dbaeumer\.vscode-eslint|esbenp\.prettier-vscode|Requesty\.requesty)$',
   # Consistently times out in CI
   '^https?://opncd\.ai',
   '^https?://zod\.dev/v4/changelog',

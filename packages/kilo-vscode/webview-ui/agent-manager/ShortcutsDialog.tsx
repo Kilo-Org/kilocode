@@ -1,6 +1,6 @@
 import { For, type Component } from "solid-js"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
-import { parseBindingTokens } from "./keybind-tokens"
+import { parseBindingTokens } from "../src/utils/keybind-tokens"
 import type { ShortcutCategory } from "./shortcuts"
 
 export const ShortcutsDialog: Component<{ title: string; categories: ShortcutCategory[] }> = (props) => (

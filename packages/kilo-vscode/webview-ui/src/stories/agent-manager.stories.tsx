@@ -13,6 +13,8 @@ import { createReviewComposers } from "../../agent-manager/review-composers"
 import { FullScreenDiffView } from "../../diff-viewer/FullScreenDiffView"
 import { WorktreeItem } from "../../agent-manager/WorktreeItem"
 import { createIntro } from "../../agent-manager/intro/AgentManagerIntro"
+import { createSplashIntro } from "../../agent-manager/splash"
+import { SplashExpanded } from "../../agent-manager/splash/Splash"
 import { SessionTab } from "../components/chat/SessionTab"
 import { ChatView } from "../components/chat/ChatView"
 import { registerVscodeToolOverrides } from "../components/chat/VscodeToolOverrides"
@@ -30,14 +32,14 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { ThinkingSelectorBase } from "../components/shared/ThinkingSelector"
-import { DeferredPopover } from "../components/shared/DeferredPopover"
-import { ProjectSelect } from "../../agent-manager/ProjectSelect"
+import { WorktreeOrigin } from "../../agent-manager/WorktreeOrigin"
+import { ProjectsSection } from "../../agent-manager/ProjectsSection"
 import { PRComments } from "../../agent-manager/pr/PRComments"
 import { PRConversation } from "../../agent-manager/pr/PRConversation"
 import { PRPanel } from "../../agent-manager/pr/PRPanel"
 import { PRReviewers } from "../../agent-manager/pr/PRReviewers"
 import type { PRComment, PRReviewer, PRTimelineItem } from "../../agent-manager/pr/pr-types"
-import { For, createSignal, onCleanup, onMount, type JSX } from "solid-js"
+import { For, Show, createSignal, onCleanup, onMount, type JSX } from "solid-js"
 import type {
   AgentProjectSnapshot,
   WorktreeFileDiff,
@@ -149,8 +151,8 @@ const meta: Meta = {
 export default meta
 type Story = StoryObj
 
-function IntroductionPreview(props: { skipped?: boolean }) {
-  const intro = createIntro({
+function IntroductionPreview(props: { skipped?: boolean; folded?: boolean }) {
+  const opts = {
     base: () => "main",
     git: () => true,
     onCreateWorktree: () => {},
@@ -158,7 +160,10 @@ function IntroductionPreview(props: { skipped?: boolean }) {
     onShowHistory: () => {},
     reveal: () => {},
     focus: () => {},
-  })
+    compose: () => {},
+  }
+  // Stories force the splash through its own controller, independent of the setting.
+  const intro = props.folded === undefined ? createIntro(opts) : createSplashIntro(opts, props.folded)
   if (props.skipped) intro.dismiss()
   const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString()
   const session = {
@@ -196,6 +201,108 @@ export const IntroductionSkipped: Story = {
     <StoryProviders>
       <IntroductionPreview skipped />
     </StoryProviders>
+  ),
+}
+
+/** The expanded splash at a given content width, inside the intro host layout. */
+function SplashPreview(props: { example: number; width?: string; dir?: "rtl" }) {
+  return (
+    <StoryProviders>
+      <div
+        class="am-intro-layout"
+        dir={props.dir}
+        style={{ height: "1400px", width: props.width, "max-width": "100%" }}
+      >
+        <div data-slot="message-list" style={{ flex: "1", "min-height": "0" }}>
+          <div data-slot="message-list-content">
+            <SplashExpanded
+              git
+              onHide={() => {}}
+              onCompose={() => {}}
+              onCreateWorktree={() => {}}
+              initialExample={props.example}
+            />
+          </div>
+        </div>
+      </div>
+    </StoryProviders>
+  )
+}
+
+export const SplashCrossStackStory1280: Story = {
+  name: "Splash cross-stack",
+  render: () => <SplashPreview example={0} />,
+}
+
+export const SplashDelegateStory1280: Story = {
+  name: "Splash delegate",
+  render: () => <SplashPreview example={1} />,
+}
+
+export const SplashCompareStory1280: Story = {
+  name: "Splash compare",
+  render: () => <SplashPreview example={2} />,
+}
+
+export const SplashNarrowStory1280: Story = {
+  name: "Splash narrow",
+  render: () => <SplashPreview example={0} width="560px" />,
+}
+
+export const SplashThinStory: Story = {
+  name: "Splash thin",
+  render: () => <SplashPreview example={0} width="340px" />,
+}
+
+export const SplashRtlStory1280: Story = {
+  name: "Splash RTL",
+  render: () => <SplashPreview example={1} dir="rtl" />,
+}
+
+/** The folded splash inside the real chat host, which splash.css lays out around the welcome header. */
+function FoldedChat() {
+  const intro = createSplashIntro(
+    {
+      base: () => "main",
+      git: () => true,
+      onCreateWorktree: () => {},
+      reveal: () => {},
+      focus: () => {},
+      compose: () => {},
+    },
+    true,
+  )
+  return (
+    <ServerContext.Provider value={chatServer}>
+      <WorktreeModeProvider>
+        <div class="am-chat-wrapper" style={{ height: "100vh" }}>
+          <ChatView emptyState={intro.render} introduction={intro.visible()} />
+        </div>
+      </WorktreeModeProvider>
+    </ServerContext.Provider>
+  )
+}
+
+export const SplashFoldedStory1280: Story = {
+  name: "Splash folded",
+  parameters: { layout: "fullscreen" },
+  render: () => (
+    <StoryProviders noPadding>
+      <FoldedChat />
+    </StoryProviders>
+  ),
+}
+
+export const SplashFoldedThin1280: Story = {
+  name: "Splash folded thin",
+  render: () => (
+    <div style={{ width: "440px" }}>
+      <StoryProviders noPadding>
+        <div style={{ height: "640px" }}>
+          <IntroductionPreview folded />
+        </div>
+      </StoryProviders>
+    </div>
   ),
 }
 
@@ -872,7 +979,7 @@ export const WorktreeActivityStates: Story = {
   render: (args: { active?: boolean }) => (
     <StoryProviders noPadding>
       <div data-activity-story style={{ padding: "12px", background: "var(--surface-base)" }}>
-        <style>{'[data-activity-story] [data-component="spinner"] rect { animation: none !important; }'}</style>
+        <style>{'[data-activity-story] [data-component="spinner"] path { animation: none !important; }'}</style>
         <For each={activityStates}>
           {([state, title]) => (
             <WorktreeItem
@@ -908,7 +1015,7 @@ export const SessionTabActivityStates: Story = {
   render: () => (
     <StoryProviders noPadding>
       <div data-activity-story style={{ padding: "12px", background: "var(--surface-base)" }}>
-        <style>{'[data-activity-story] [data-component="spinner"] rect { animation: none !important; }'}</style>
+        <style>{'[data-activity-story] [data-component="spinner"] path { animation: none !important; }'}</style>
         <For each={activityStates}>
           {([state, title]) => (
             <div class="am-tab-bar" role="tablist" aria-label={title}>
@@ -1642,50 +1749,36 @@ export const NewWorktreeProjectDropdown: Story = {
             <div data-slot="dialog-content">
               <div data-slot="dialog-header">
                 <div data-slot="dialog-title">New Worktree</div>
-              </div>
-              <div data-slot="dialog-body">
-                <div class="am-tab-switcher">
-                  <button class="am-tab-switcher-pill am-tab-switcher-pill-active" type="button">
-                    New
-                  </button>
-                  <button class="am-tab-switcher-pill" type="button">
-                    Import
-                  </button>
-                  <div class="am-nv-project-inline">
-                    <div class="am-selector-wrapper">
-                      <DeferredPopover
-                        open
-                        onOpenChange={() => undefined}
-                        placement="bottom-start"
-                        flip={false}
-                        sameWidth
-                        portal={false}
-                        deferDismiss
-                        class="am-dropdown"
-                        trigger={
-                          <button class="am-selector-trigger" type="button" aria-label="Select project">
-                            <span class="am-selector-left">
-                              <Icon name="folder" size="small" />
-                              <span class="am-selector-value">kilocode</span>
-                            </span>
-                            <span class="am-selector-right">
-                              <Icon name="selector" size="small" />
-                            </span>
-                          </button>
-                        }
-                      >
-                        <ProjectSelect
-                          projects={projectPickerProjects}
-                          selected="project-main"
-                          onSelect={() => undefined}
-                          labels={{ missing: "Repository not found" }}
-                        />
-                      </DeferredPopover>
-                    </div>
+                <div class="am-nv-header">
+                  <div class="am-nv-mode" role="tablist" data-tab="new">
+                    <button class="am-nv-mode-tab am-nv-mode-tab-active" role="tab" type="button">
+                      New
+                    </button>
+                    <button class="am-nv-mode-tab" role="tab" type="button">
+                      Import
+                    </button>
                   </div>
                 </div>
+              </div>
+              <div data-slot="dialog-body">
                 <div class="am-nv-dialog" style={{ "max-height": "520px" }}>
                   <div class="am-nv-dialog-content">
+                    <div class="am-nv-start">
+                      <WorktreeOrigin
+                        projects={projectPickerProjects}
+                        project="project-main"
+                        onProject={() => undefined}
+                        projectOpen
+                        onProjectOpen={() => undefined}
+                        branch
+                        branches={[]}
+                        loading={false}
+                        base="main"
+                        fallback="main"
+                        onBase={() => undefined}
+                        onDefault={() => undefined}
+                      />
+                    </div>
                     <div style={{ height: "420px", "flex-shrink": 0 }} />
                     <div class="am-nv-version-bar">
                       <span class="am-nv-config-label">VERSIONS</span>
@@ -1788,9 +1881,13 @@ export const SidebarSearchOpen: Story = {
     return (
       <StoryProviders noPadding>
         <div style={{ "min-height": "430px", padding: "16px", background: "var(--surface-base)" }}>
-          <div class="am-section-header">
-            <span class="am-section-label">WORKTREES</span>
-            <div class="am-section-actions">
+          <div class="am-sidebar-header am-section-header">
+            <div class="am-sidebar-header-main">
+              <div class="am-sidebar-header-label">
+                <span class="am-section-label">WORKTREES</span>
+              </div>
+            </div>
+            <div class="am-sidebar-header-actions">
               <SidebarSearchMenu
                 items={() => sidebarSearchItems}
                 keybind="⌘F"
@@ -2416,4 +2513,58 @@ export const DiffPanelWithPRThreads: Story = {
 export const FullScreenDiffWithPRThreads: Story = {
   name: "FullScreenDiffView - remote PR threads",
   render: () => <RemoteReviewStory full />,
+}
+
+const orgAvatar = `data:image/svg+xml,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><rect width="16" height="16" fill="#f8f675"/><path d="M4 4h3v3H4zM9 9h3v3H9z" fill="#000"/></svg>',
+)}`
+
+const storyProjects = [
+  { id: "p1", root: "/repo/kilocode", label: "kilocode", avatar: orgAvatar, expanded: true, active: true },
+  { id: "p2", root: "/repo/internal-tools", label: "internal-tools", expanded: false, active: false },
+  {
+    id: "p3",
+    root: "/repo/a-very-long-project-name-that-needs-to-truncate",
+    label: "a-very-long-project-name-that-needs-to-truncate",
+    avatar: orgAvatar,
+    expanded: false,
+    active: false,
+  },
+].map((item) => ({ pinned: item.id === "p1", initialized: true, missing: false, ...item }))
+
+const ProjectsStory = () => (
+  <StoryProviders noPadding>
+    <div class="am-layout" style={{ "max-height": "320px" }}>
+      <ProjectsSection
+        projects={storyProjects}
+        t={t}
+        bindings={{}}
+        onAdd={() => {}}
+        onCreateProject={() => {}}
+        onClone={() => {}}
+        onSelect={() => {}}
+        onRemove={() => {}}
+        onExpand={() => {}}
+        onReorder={() => {}}
+        onHistory={() => {}}
+        onNew={() => {}}
+        onCreate={() => {}}
+        onSection={() => {}}
+        onSettings={() => {}}
+        count={(id) => (id === "p1" ? 3 : undefined)}
+        baseBranch={() => "main"}
+        body={() => <div style={{ padding: "6px 34px", color: "var(--text-weak)" }}>local</div>}
+      />
+    </div>
+  </StoryProviders>
+)
+
+export const ProjectsAvatars: Story = {
+  name: "Projects — organization avatars and letter fallback",
+  render: ProjectsStory,
+}
+
+export const ProjectsAvatars200: Story = {
+  name: "Projects — organization avatars 200px",
+  render: ProjectsStory,
 }

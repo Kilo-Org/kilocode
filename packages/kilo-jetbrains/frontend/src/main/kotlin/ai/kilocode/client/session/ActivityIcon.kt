@@ -50,10 +50,11 @@ internal class ActivityIcon private constructor(
 
     private fun paintText(g2: Graphics2D, text: String) {
         g2.font = JBFont.small().asBold()
-        val fm = g2.fontMetrics
-        val width = fm.stringWidth(text)
-        val base = (iconHeight + fm.ascent - fm.descent) / 2
-        g2.drawString(text, (iconWidth - width) / 2, base)
+        val glyph = g2.font.createGlyphVector(g2.fontRenderContext, text)
+        val bounds = glyph.visualBounds
+        val x = ((iconWidth - bounds.width) / 2 - bounds.x).toFloat()
+        val y = ((iconHeight - bounds.height) / 2 - bounds.y).toFloat()
+        g2.drawGlyphVector(glyph, x, y)
     }
 
     companion object {

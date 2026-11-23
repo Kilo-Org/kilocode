@@ -8,9 +8,13 @@ import ai.kilocode.client.session.model.Question
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.ui.ShimmerLabel
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.util.UiTimer
 import ai.kilocode.client.util.UiTimerSource
+import ai.kilocode.rpc.dto.HostedSystemEventDto
+import ai.kilocode.rpc.dto.MessageDto
+import ai.kilocode.rpc.dto.MessageTimeDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -48,6 +52,132 @@ class ProgressPanelTest : BasePlatformTestCase() {
 
     fun `test panel is hidden initially`() {
         assertFalse(panel.isVisible)
+    }
+
+    fun `test preparation failure is persistent generic localized status without native mutation`() {
+        val clock = FakeClock()
+        replace(clock)
+        val error = HostedSystemEventDto("hosted:cloud:one:ses", "cloud.status", cloudStatus = "error",
+            message = "Raw private server error", failure = "unrecognized_safe_code")
+        panel.setPreparation("Stale progress detail", error)
+        assertTrue(panel.isVisible)
+        assertTrue(panel.labelText().startsWith(KiloBundle.message("hosted.workspace.preparation.failed")))
+        assertFalse(panel.labelText().contains("Raw private"))
+        assertFalse(panel.labelText().contains("unrecognized_safe_code"))
+        assertFalse(panel.labelText().contains("Stale progress"))
+        assertTrue(model.state is SessionState.Idle)
+        assertFalse(spinner().isVisible)
+        assertFalse(clock.timer.isRunning())
+        model.setState(SessionState.Idle)
+        assertTrue(panel.isVisible)
+        panel.setPreparation("New preparation")
+        assertEquals("New preparation", panel.labelText())
+        assertTrue(clock.timer.isRunning())
+    }
+
+    fun `test setup failure shows the safe failed command detail`() {
+        val error = HostedSystemEventDto("hosted:cloud:one:ses", "preparing", action = "attempt_failed",
+            failure = "workspace_setup_failed",
+            detail = "Setup command 6: fatal: '' is not a valid branch name")
+
+        panel.setPreparation(null, error)
+
+        assertTrue(panel.labelText().contains("Setup command 6: fatal: '' is not a valid branch name"))
+        assertFalse(panel.labelText().contains("provider"))
+    }
+
+    fun `test setup failure is recognized from the failed step without a safe code`() {
+        panel.setPreparation(null, HostedSystemEventDto("hosted:cloud:one:ses", "preparing",
+            action = "failed", step = "setup_commands", detail = "Setup command 6 failed"))
+
+        assertTrue(panel.labelText().startsWith(KiloBundle.message("hosted.workspace.preparation.setupFailed")))
+        assertTrue(panel.labelText().contains("Setup command 6 failed"))
+    }
+
+    fun `test persistent setup failure churn retains nodes and releases timer`() {
+        val clock = FakeClock()
+        replace(clock)
+        val before = components(panel)
+        repeat(500) { index ->
+            panel.setPreparation("Setup $index")
+            panel.setPreparation(null, HostedSystemEventDto("hosted:cloud:one:ses", "preparing",
+                action = "attempt_failed", failure = "workspace_setup_failed", revision = index.toLong()))
+            model.setState(SessionState.Idle)
+            assertTrue(panel.isVisible)
+            assertTrue(panel.labelText().startsWith(KiloBundle.message("hosted.workspace.preparation.setupFailed")))
+            assertFalse(clock.timer.isRunning())
+            assertEquals(before.size, components(panel).size)
+        }
+        before.zip(components(panel)).forEach { (first, after) -> assertSame(first, after) }
+        panel.setPreparation(null)
+        assertFalse(panel.isVisible)
+        Disposer.dispose(parent)
+        assertFalse(clock.timer.isRunning())
+    }
+
+    fun `test preparation failure does not replace unrelated running native task or pending interaction`() {
+        val error = HostedSystemEventDto("hosted:cloud:one:ses", "preparing", action = "attempt_failed",
+            failure = "workspace_setup_failed", triggerMessageID = "old_msg")
+        model.upsertMessage(MessageDto("new_msg", "ses", "user", MessageTimeDto(created = 200.0)))
+        model.setState(SessionState.Busy("Native task"))
+        panel.setPreparation(null, error)
+        assertEquals("Native task", panel.labelText())
+        assertEquals(SessionState.Busy("Native task"), model.state)
+        model.setState(SessionState.AwaitingQuestion(questionStub()))
+        assertFalse(panel.isVisible)
+        assertTrue(model.state is SessionState.AwaitingQuestion)
+        model.setState(SessionState.AwaitingPermission(stub()))
+        assertFalse(panel.isVisible)
+        assertTrue(model.state is SessionState.AwaitingPermission)
+        model.setState(SessionState.Idle)
+        assertTrue(panel.isVisible)
+    }
+
+    fun `test failure overrides busy from the same failed prompt and unknown identity`() {
+        model.upsertMessage(MessageDto("msg_1", "ses", "user", MessageTimeDto(created = 100.0)))
+        model.setState(SessionState.Busy("Preparing"))
+        val error = HostedSystemEventDto("hosted:cloud:one:ses", "preparing", action = "attempt_failed",
+            failure = "workspace_setup_failed", triggerMessageID = "msg_1", observedAt = 110.0)
+        panel.setPreparation(null, error)
+        assertTrue(panel.labelText().startsWith(KiloBundle.message("hosted.workspace.preparation.setupFailed")))
+        assertEquals(SessionState.Busy("Preparing"), model.state)
+        panel.setPreparation(null, error.copy(triggerMessageID = null))
+        assertTrue(panel.labelText().startsWith(KiloBundle.message("hosted.workspace.preparation.setupFailed")))
+        model.upsertMessage(MessageDto("msg_2", "ses", "user", MessageTimeDto(created = 200.0)))
+        assertEquals("Preparing", panel.labelText())
+    }
+
+    fun `test preparation displays before native turn and restores native status afterward`() {
+        panel.setPreparation("Cloning repository... Receiving objects: 33%")
+        assertTrue(panel.isVisible)
+        assertEquals("Cloning repository... Receiving objects: 33%", panel.labelText())
+        assertTrue(model.state is SessionState.Idle)
+        model.setState(SessionState.Busy("Running commands"))
+        assertEquals("Cloning repository... Receiving objects: 33%", panel.labelText())
+        panel.setPreparation(null)
+        assertEquals("Running commands", panel.labelText())
+        model.setState(SessionState.Idle)
+        assertFalse(panel.isVisible)
+    }
+
+    fun `test streaming preparation retains components and releases progress timer`() {
+        val clock = FakeClock()
+        replace(clock)
+        val before = components(panel)
+        val count = before.size
+        repeat(500) { index ->
+            panel.setPreparation("Receiving objects: $index")
+            assertEquals(count, components(panel).size)
+        }
+        assertEquals("Receiving objects: 499", panel.labelText())
+        assertTrue(clock.timer.isRunning())
+        before.zip(components(panel)).forEach { (first, after) -> assertSame(first, after) }
+        panel.setPreparation(null)
+        assertFalse(panel.isVisible)
+        assertFalse(clock.timer.isRunning())
+        assertEquals(count, components(panel).size)
+        Disposer.dispose(parent)
+        assertFalse(clock.timer.isRunning())
     }
 
     fun `test panel paints the session background`() {
@@ -118,6 +248,94 @@ class ProgressPanelTest : BasePlatformTestCase() {
         assertEquals("Rate limited", panel.labelText())
     }
 
+    fun `test retry renders escaped wrapping html without changing semantic text`() {
+        val text = "The <model> route is at A&B capacity\nAdd another provider"
+
+        model.setState(SessionState.Retry(text, attempt = 0, next = 0L))
+
+        val status = status()
+        assertEquals(text, panel.labelText())
+        assertTrue(status.isVisible)
+        assertTrue(status.isAllowAutoWrapping)
+        assertTrue(status.text.contains("&lt;model&gt;"))
+        assertTrue(status.text.contains("A&amp;B"))
+        assertTrue(status.text.contains("<br"))
+    }
+
+    fun `test long retry wraps within a narrow footer`() {
+        val text = "The request limited providers for this model and they are currently at capacity. Add more providers to continue."
+        model.setState(SessionState.Retry(text, attempt = 4, next = 0L))
+
+        panel.setSize(800, 1)
+        val wide = panel.preferredSize.height
+        panel.setSize(220, 1)
+        val narrow = panel.preferredSize.height
+
+        assertTrue("narrow retry should use more than one line", narrow > wide)
+
+        panel.setSize(220, narrow)
+        layout(panel)
+        listOf(spinner(), status(), elapsed()).forEach { child ->
+            val bounds = SwingUtilities.convertRectangle(child.parent, child.bounds, panel)
+            assertTrue("${child.javaClass.simpleName} must start inside the footer", bounds.x >= 0)
+            assertTrue("${child.javaClass.simpleName} must end inside the footer", bounds.x + bounds.width <= panel.width)
+            assertTrue("${child.javaClass.simpleName} must retain width", bounds.width > 0)
+        }
+        assertTrue("wrapped status must be taller than one line", status().height > elapsed().height)
+    }
+
+    fun `test preferred height reflects a narrower resize before doLayout runs`() {
+        // Mirrors SessionLayout.measure(): it calls setSize(width, ...) on the
+        // ProgressPanel and reads preferredSize.height immediately, without
+        // first running doLayout() on this footer. The footer's own `width`
+        // field is therefore still the previous layout's width at that point,
+        // so `space()` must read the width from the parent chain instead of
+        // trusting its own stale field.
+        val text = "The request limited providers for this model and they are currently at capacity. Add more providers to continue."
+        model.setState(SessionState.Retry(text, attempt = 0, next = 0L))
+
+        // Establish a real single-line layout at a wide width first.
+        panel.setSize(800, panel.preferredSize.height)
+        layout(panel)
+        val oneLine = status().height
+
+        // Narrow the panel like SessionLayout does — resize only, no layout —
+        // and read the preferred height that a subsequent real layout pass
+        // would need to reserve.
+        panel.setSize(220, 1)
+        val measuredNarrow = panel.preferredSize.height
+
+        // Independently confirm the true wrapped height at 220px by actually
+        // laying the panel out at that width.
+        panel.setSize(220, measuredNarrow)
+        layout(panel)
+        val actualNarrow = panel.preferredSize.height
+
+        assertTrue("narrow measurement must already reflect the new width", measuredNarrow > oneLine)
+        assertEquals("measured height must match the true laid-out height", actualNarrow, measuredNarrow)
+    }
+
+    fun `test long unbroken retry stays constrained to footer bounds`() {
+        model.setState(SessionState.Retry("https://example.test/${"segment".repeat(50)}", attempt = 0, next = 0L))
+        panel.setSize(180, panel.preferredSize.height)
+        layout(panel)
+
+        val bounds = SwingUtilities.convertRectangle(status().parent, status().bounds, panel)
+        assertTrue(bounds.x >= 0)
+        assertTrue(bounds.x + bounds.width <= panel.width)
+    }
+
+    fun `test busy label remains plain and shimmering after retry`() {
+        model.setState(SessionState.Retry("Rate limited", attempt = 1, next = 0L))
+        model.setState(SessionState.Busy("Thinking"))
+
+        assertFalse(status().isVisible)
+        assertTrue(busy().isVisible)
+        assertTrue(busy().isShimmering)
+        assertEquals("Thinking", busy().text)
+        assertFalse(busy().text.startsWith("<html>"))
+    }
+
     fun `test elapsed time ticks while progress is visible`() {
         val clock = FakeClock()
         replace(clock)
@@ -152,6 +370,19 @@ class ProgressPanelTest : BasePlatformTestCase() {
         val right = bounds.maxOf { it.x + it.width }
 
         assertTrue("footer row must be centered within one layout pixel", abs(panel.width - left - right) <= 1)
+    }
+
+    fun `test short retry footer remains horizontally centered`() {
+        model.setState(SessionState.Retry("Rate limited", attempt = 0, next = 0L))
+        panel.setSize(300, panel.preferredSize.height)
+        layout(panel)
+
+        val bounds = listOf(spinner(), status(), elapsed())
+            .map { SwingUtilities.convertRectangle(it.parent, it.bounds, panel) }
+        val left = bounds.minOf { it.x }
+        val right = bounds.maxOf { it.x + it.width }
+
+        assertTrue("retry row must be centered within one layout pixel", abs(panel.width - left - right) <= 1)
     }
 
     fun `test elapsed time continues across visible progress states and stops when hidden`() {
@@ -295,6 +526,12 @@ class ProgressPanelTest : BasePlatformTestCase() {
     private fun questionStub() = Question(id = "q1", items = emptyList())
 
     private fun spinner() = labels(panel).first { it.icon != null }
+
+    private fun status() = components(panel).filterIsInstance<StatusLabel>().single()
+
+    private fun busy() = components(panel).filterIsInstance<ShimmerLabel>().single()
+
+    private fun elapsed() = labels(panel).first { it.text == panel.elapsedText() }
 
     private fun labels(root: Container): List<JBLabel> {
         val items = mutableListOf<JBLabel>()

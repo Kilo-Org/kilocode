@@ -2,6 +2,8 @@ package ai.kilocode.client.testing
 
 import ai.kilocode.rpc.KiloWorkspaceRpcApi
 import ai.kilocode.rpc.dto.ConfigTargetDto
+import ai.kilocode.rpc.dto.ConfigDto
+import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.FileSearchResultDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
@@ -32,7 +34,13 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
         private set
     var reloads = 0
         private set
+    val coreReloads = CopyOnWriteArrayList<String>()
+    var coreReloadResult = true
     var models = ModelsWorkspaceDto()
+    var config = ConfigDto()
+    var configCalls = 0
+        private set
+    val configPatches = CopyOnWriteArrayList<ConfigPatchDto>()
     var modelsGate: CompletableDeferred<Unit>? = null
     var fileMatches = emptyList<WorkspaceFileDto>()
     var fileResolver: ((String) -> List<WorkspaceFileDto>)? = null
@@ -95,10 +103,29 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
         reloads += 1
     }
 
+    override suspend fun reloadCoreSettings(directory: String): Boolean {
+        assertNotEdt("reloadCoreSettings")
+        coreReloads.add(directory)
+        return coreReloadResult
+    }
+
     override suspend fun models(directory: String): ModelsWorkspaceDto {
         assertNotEdt("models")
         modelsGate?.await()
         return models
+    }
+
+    override suspend fun config(directory: String): ConfigDto {
+        assertNotEdt("config")
+        configCalls += 1
+        return config
+    }
+
+    override suspend fun updateConfig(directory: String, patch: ConfigPatchDto): ConfigDto {
+        assertNotEdt("updateConfig")
+        configPatches.add(patch)
+        config = config.copy(snapshot = patch.snapshot ?: config.snapshot)
+        return config
     }
 
     override suspend fun files(directory: String, path: String): List<WorkspaceFileDto> {

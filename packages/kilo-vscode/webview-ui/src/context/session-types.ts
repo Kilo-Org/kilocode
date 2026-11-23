@@ -5,6 +5,8 @@ import type {
   AgentInfo,
   ContextUsage,
   FileAttachment,
+  McpAuthStatus,
+  McpBundle,
   McpStatusEntry,
   Message,
   ModelSelection,
@@ -35,6 +37,8 @@ export interface SessionContextValue {
 
   // All sessions (sorted most recent first)
   sessions: Accessor<SessionInfo[]>
+  // Project whose session list is complete enough for absence-based tab cleanup.
+  sessionsProject: Accessor<string | undefined>
 
   // Session status
   status: Accessor<SessionStatus>
@@ -108,13 +112,10 @@ export interface SessionContextValue {
   scopedQuestions: (sessionID: string | undefined) => QuestionRequest[]
   scopedSuggestions: (sessionID: string | undefined) => SuggestionRequest[]
 
-  // Model selection (global, extension-lifetime)
+  // Model selection (per-scope picks over per-agent config)
   selected: (sessionID?: string) => ModelSelection | null
   modelForAgent: (agent: string) => ModelSelection | null
   selectModel: (providerID: string, modelID: string, sessionID?: string) => void
-  preferredSelection: Accessor<(ModelSelection & { variant?: string }) | undefined>
-  preferencesReady: Accessor<boolean>
-  rememberSelection: (agent: string, model: ModelSelection, variant?: string) => void
   trackScopes: (ids: Accessor<readonly string[]>) => () => void
 
   // Cost and context usage for the current session
@@ -138,7 +139,18 @@ export interface SessionContextValue {
   mcpLoading: Accessor<string | null>
   connectMcp: (name: string) => void
   disconnectMcp: (name: string) => void
-  authenticateMcp: (name: string) => void
+
+  // MCP OAuth sign-in state, owned by the extension host's McpAuthService and
+  // shared by Settings, the chat prompt's session-issues indicator, and the
+  // Marketplace install modal.
+  mcpAuth: Accessor<{ needsAuth: string[]; busy: string[] }>
+  mcpRemoving: Accessor<string[]>
+  signInMcp: (name: string, notify?: boolean) => void
+  cancelMcpSignIn: (name: string) => void
+  resetMcpAuth: (name: string) => void
+  mcpAuthResult: Accessor<{ name: string; status: McpAuthStatus; error?: string } | undefined>
+  mcpBundles: Accessor<McpBundle[]>
+  refreshMcpBundles: () => void
   selectedAgent: (sessionID?: string) => string
   submission: (sessionID?: string) => { model?: ModelSelection; variant?: string; agent?: string }
   selectAgent: (name: string, sessionID?: string) => void
@@ -204,10 +216,11 @@ export interface SessionContextValue {
     response: "once" | "always" | "reject",
     approvedAlways: string[],
     deniedAlways: string[],
+    removedAlways: string[],
     feedback?: string,
   ) => boolean
-  replyToQuestion: (requestID: string, answers: string[][]) => void
-  rejectQuestion: (requestID: string) => void
+  replyToQuestion: (requestID: string, answers: string[][]) => boolean
+  rejectQuestion: (requestID: string) => boolean
   closeQuestion: (requestID: string) => void
   acceptSuggestion: (requestID: string, index: number) => void
   dismissSuggestion: (requestID: string) => void
@@ -216,12 +229,25 @@ export interface SessionContextValue {
   loadSessions: () => void
   loadMoreSessions: () => void
   sessionsHasMore: Accessor<boolean>
+  /** Keep these sessions in the store when a full load lists only its first page. */
+  keepSessions: (ids: Accessor<readonly string[]>) => () => void
   sessionsLoadingMore: Accessor<boolean>
   loadOlderMessages: () => boolean
   selectSession: (id: string, options?: { focus?: boolean; scrollToBottom?: boolean }) => void
   scrollBottomID: Accessor<string | undefined>
   consumeScrollBottom: (id: string) => boolean
+  /**
+   * Drops the cached transcript of a session (messages, their parts, tool parts,
+   * paging entry and loaded marker) while keeping the session row, its todos,
+   * its drafts and its status. Todos are session state, not transcript state: an
+   * idle or finished child never re-emits them, so reopening the session shows
+   * the checklist it had. Unlike `deleteSession` it is not permanent: reopening
+   * refetches the transcript, and the session keeps its prompt and status events.
+   * Transcript events are held out until the session is selected, so a session
+   * that keeps running does not rebuild the dropped cache before the refetch.
+   */
   releaseSession: (id: string) => void
+  /** Permanently forgets the session here: drops its data, drafts and later events. */
   deleteSession: (id: string) => void
   renameSession: (id: string, title: string) => void
   exportSessionTranscript: (id: string) => void

@@ -60,6 +60,7 @@ export interface CloudSessionMessage {
     id: string
     sessionID: string
     role: "user" | "assistant"
+    parentID?: string
     time: { created: number; completed?: number }
     cost?: { input: number; output: number; reasoning?: number; cache?: { read: number; write: number } }
     tokens?: { input: number; output: number; reasoning?: number; cache?: { read: number; write: number } }

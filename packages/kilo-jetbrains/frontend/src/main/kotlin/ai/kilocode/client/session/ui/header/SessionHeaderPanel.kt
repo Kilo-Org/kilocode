@@ -42,11 +42,15 @@ class SessionHeaderPanel(
     private val controller: SessionController,
     parent: Disposable,
     private val readonly: Boolean = false,
+    /** Whether this session host supports compaction, re-derived on every [update]. */
+    private val compactVisible: () -> Boolean = { true },
     /** Whether the shared agent board icon should show, re-derived on every [update]. */
     private val boardVisible: () -> Boolean = { false },
     private val onShowBoard: () -> Unit = {},
     /** Opens a background agent's read-only transcript. See [ai.kilocode.client.session.SessionUi.openSubagent]. */
     private val onOpenSubagent: (String, String) -> Unit = { _, _ -> },
+    /** Scrolls the transcript to the step (message id, part id) behind a clicked timeline bar. */
+    private val onJumpTimeline: (String, String) -> Unit = { _, _ -> },
 ) : BorderLayoutPanel(), SessionEditorStyleTarget {
 
     companion object {
@@ -84,6 +88,7 @@ class SessionHeaderPanel(
     private val compact = HoverIcon().apply {
         icon = COMPRESS_ICON
         cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
+        isVisible = !readonly && compactVisible()
         toolTipText = KiloBundle.message("session.header.compact.description")
         accessibleContext.accessibleName = KiloBundle.message("session.header.compact")
         addActionListener { controller.compact() }
@@ -114,6 +119,7 @@ class SessionHeaderPanel(
     private var press: Point? = null
     private var origin = Point()
     private var rest = 0.0
+    private var panned = false
     private val bar = ContextBar()
     private val tokenTitle = JBLabel(KiloBundle.message("session.header.tokens"))
     private val input = JBLabel().apply {
@@ -194,10 +200,18 @@ class SessionHeaderPanel(
             override fun mousePressed(event: MouseEvent) {
                 press = event.point
                 origin = viewport.viewPosition
+                panned = false
             }
 
             override fun mouseReleased(event: MouseEvent) {
                 press = null
+            }
+
+            override fun mouseClicked(event: MouseEvent) {
+                if (!SwingUtilities.isLeftMouseButton(event)) return
+                if (panned) return
+                val item = timeline.itemAt(event) ?: return
+                onJumpTimeline(item.message, item.part.id)
             }
         })
         timeline.addMouseMotionListener(object : MouseMotionAdapter() {
@@ -273,8 +287,8 @@ class SessionHeaderPanel(
         // event, so a session that never had a background agent would otherwise never sync the strip.
         agentStrip.update(controller.model.backgroundAgents)
 
-        compact.isVisible = !readonly
-        compact.isEnabled = !readonly && header.canCompact
+        compact.isVisible = !readonly && compactVisible()
+        compact.isEnabled = compact.isVisible && header.canCompact
         board.isVisible = boardVisible()
         val appended = timeline.setItems(header.timeline)
         sizeTimeline()
@@ -509,7 +523,7 @@ class SessionHeaderPanel(
         val start = press ?: return
         val max = limit()
         val x = (origin.x - (event.x - start.x)).coerceIn(0, max)
-        move(x)
+        if (move(x)) panned = true
     }
 
     private fun endTimeline() {

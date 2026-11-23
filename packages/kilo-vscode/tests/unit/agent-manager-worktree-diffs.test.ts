@@ -41,6 +41,41 @@ describe("diffDataKey", () => {
 })
 
 describe("createWorktreeDiffs", () => {
+  it("retains cached local content across project switches until explicitly reset", () => {
+    createRoot((dispose) => {
+      let project = "a"
+      const store = createWorktreeDiffs(vscode([]), () => project)
+      const entry = { ...diff("a.ts"), before: "before", after: "after", summarized: false }
+      store.onWorktreeDiff({
+        type: "agentManager.worktreeDiff",
+        projectId: project,
+        sessionId: "local#branch",
+        diffs: [entry],
+      })
+      project = "b"
+      store.onWorktreeDiff({
+        type: "agentManager.worktreeDiff",
+        projectId: project,
+        sessionId: "local#branch",
+        diffs: [diff("b.ts")],
+      })
+      store.prune(new Set())
+      project = "a"
+      store.onWorktreeDiffLoading({
+        type: "agentManager.worktreeDiffLoading",
+        projectId: project,
+        sessionId: "local#branch",
+        loading: true,
+      })
+      expect(store.diffDatas()[diffDataKey(project, "local#branch")]?.at(0)).toBe(entry)
+      expect(store.diffLoadingFor(() => "local#branch")).toBe(false)
+      store.reset()
+      expect(store.diffDatas()).toEqual({})
+      expect(store.diffLoading()).toBe(false)
+      dispose()
+    })
+  })
+
   it.each([undefined, "", "project"])("prunes only the complete project namespace %j", (project) => {
     createRoot((dispose) => {
       const store = createWorktreeDiffs(vscode([]), () => project)

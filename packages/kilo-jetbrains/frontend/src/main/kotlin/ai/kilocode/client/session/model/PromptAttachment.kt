@@ -5,6 +5,7 @@ import java.awt.Image
 import java.awt.image.BufferedImage
 import java.awt.image.MultiResolutionImage
 import java.io.ByteArrayOutputStream
+import java.net.URI
 import java.util.Base64
 import java.util.UUID
 import javax.imageio.ImageIO
@@ -66,7 +67,14 @@ object PromptAttachmentExtractor {
             )
         }
 
-    fun image(mime: String): Boolean = mime.startsWith("image/")
+    // Only bitmap formats the server can actually decode and resize (Photon) and that
+    // model providers accept as an inline image. SVG and other non-raster "image/*" mimes
+    // are not in this set -- they're treated as source text instead (see mime() below) so
+    // an unsupported format cannot kill the whole prompt after the message is sent
+    // (ImageDecodeError used to die the request before the user's text was persisted).
+    private val RASTER_IMAGE_MIMES = setOf("image/png", "image/jpeg", "image/gif", "image/webp")
+
+    fun image(mime: String): Boolean = mime in RASTER_IMAGE_MIMES
 
     fun image(raw: Any): PromptAttachment? {
         val image = when (raw) {
@@ -94,10 +102,10 @@ object PromptAttachmentExtractor {
             "jpg", "jpeg" -> "image/jpeg"
             "gif" -> "image/gif"
             "webp" -> "image/webp"
-            "bmp" -> "image/bmp"
-            "svg" -> "image/svg+xml"
             "pdf" -> "application/pdf"
-            "txt", "md", "kt", "kts", "java", "js", "jsx", "ts", "tsx", "json", "xml", "html", "css", "scss", "yml", "yaml", "toml", "sh", "py", "rb", "go", "rs", "c", "cc", "cpp", "h", "hpp" -> "text/plain"
+            // bmp and svg are not in RASTER_IMAGE_MIMES (bmp: the server's decoder can't open it and no
+            // provider accepts it as an image mime; svg: it's markup, not a raster), so attach their source as text
+            "txt", "md", "kt", "kts", "java", "js", "jsx", "ts", "tsx", "json", "xml", "html", "css", "scss", "yml", "yaml", "toml", "sh", "py", "rb", "go", "rs", "c", "cc", "cpp", "h", "hpp", "svg", "bmp" -> "text/plain"
             else -> "application/octet-stream"
         }
     }
@@ -119,3 +127,39 @@ object PromptAttachmentExtractor {
 }
 
 private fun data(path: Path, mime: String) = "data:$mime;base64,${Base64.getEncoder().encodeToString(path.readBytes())}"
+
+// Rebuilds a prompt attachment from what a sent user message persisted, so reverting the message
+// puts the same chips back in the prompt box that were there when it was sent.
+
+/** A file or image the message carried. Prefers the on-disk path so the rebuilt chip is editable. */
+internal fun FileAttachment.toPromptAttachment(): PromptAttachment {
+    val path = filePath(url)
+    val name = filename?.takeIf { it.isNotBlank() } ?: path?.fileName?.toString() ?: "file"
+    return PromptAttachment(
+        id = path?.toAbsolutePath()?.normalize()?.toString() ?: "attachment:$id",
+        name = name,
+        mime = mime,
+        url = path?.toUri()?.toString() ?: url,
+        path = path,
+        reference = path == null || !PromptAttachmentExtractor.image(mime),
+    )
+}
+
+/** An attachment the CLI could not read: only its source path was persisted, in the notice. */
+internal fun Notice.toPromptAttachment(): PromptAttachment? {
+    val raw = path ?: return null
+    val path = runCatching { Path.of(raw) }.getOrNull()
+    return PromptAttachment(
+        id = raw,
+        name = name ?: path?.fileName?.toString() ?: raw,
+        mime = "text/plain",
+        url = path?.toUri()?.toString() ?: raw,
+        path = path,
+        reference = true,
+    )
+}
+
+private fun filePath(url: String): Path? {
+    if (!url.startsWith("file:")) return null
+    return runCatching { Path.of(URI(url)) }.getOrNull()
+}

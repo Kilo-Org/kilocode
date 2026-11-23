@@ -23,13 +23,20 @@ const CSS_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/agent-manager.css"),
   path.join(ROOT, "webview-ui/agent-manager/agent-manager-review.css"),
   path.join(ROOT, "webview-ui/agent-manager/intro/intro.css"),
+  path.join(ROOT, "webview-ui/agent-manager/splash/splash.css"),
   path.join(ROOT, "webview-ui/browser/browser.css"),
 ]
 const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ShortcutsDialog.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ShortcutHints.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/intro/AgentManagerIntro.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/intro/IntroGraph.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/splash/Splash.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/splash/Cards.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/splash/Compact.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/splash/Preview.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/splash/markers.tsx"),
   path.join(ROOT, "webview-ui/src/components/chat/MessageList.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SubagentPanel.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/EditPreviewPanel.tsx"),
@@ -39,6 +46,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/CloneProjectDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectParentField.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectSelect.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/WorktreeOrigin.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/DiffPanel.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/BrowserPanel.tsx"),
@@ -65,14 +73,13 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/SidebarSectionHeader.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SidebarSearchMenu.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SidebarToggleButton.tsx"),
-  path.join(ROOT, "webview-ui/agent-manager/WorktreeSectionActions.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectsSection.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectsFooter.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectSidebarBody.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectList.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectActions.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectRowActions.tsx"),
-  path.join(ROOT, "webview-ui/agent-manager/SidebarBody.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ProjectAvatar.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/orphans/OrphanNotice.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/orphans/OrphanDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/Skeleton.tsx"),
@@ -106,6 +113,9 @@ const SETUP_SCRIPT_RUNNER_FILE = path.join(ROOT, "src/agent-manager/SetupScriptR
 const RUN_MESSAGE_FILE = path.join(ROOT, "src/agent-manager/run/message.ts")
 const TAB_LAYOUT_FILE = path.join(ROOT, "src/agent-manager/tab-layout.ts")
 const TERMINAL_ROUTING_FILE = path.join(ROOT, "src/agent-manager/terminal-routing.ts")
+// State and UI in-message routing live in a vscode-free helper so the provider
+// stays under its cap; keep scanning it for the routed message types.
+const MESSAGE_ROUTING_FILE = path.join(ROOT, "src/agent-manager/message-routing.ts")
 const SCRIPT_TERMINAL_FILE = path.join(ROOT, "src/agent-manager/ScriptTerminalManager.ts")
 const SCRIPT_TERMINAL_RUNTIME_FILE = path.join(ROOT, "src/agent-manager/script-terminal-runtime.ts")
 const RUN_TASK_FILE = path.join(ROOT, "src/agent-manager/run/task.ts")
@@ -172,7 +182,7 @@ describe("Agent Manager CSS/TSX Consistency", () => {
     const defined = new Set(cssMatches.map((m) => m[1]))
 
     // Extract am- classes referenced in TSX (class="am-..." or `am-...`)
-    const tsxMatches = [...tsx.matchAll(/\bam-[a-z0-9-]+/g)]
+    const tsxMatches = [...tsx.matchAll(/(?<![\w-])am-[a-z0-9-]+/g)]
     const used = [...new Set(tsxMatches.map((m) => m[0]))]
 
     const missing = used.filter((c) => !defined.has(c))
@@ -236,10 +246,7 @@ describe("Agent Manager edit preview", () => {
 })
 
 describe("Agent Manager leftover worktree folders", () => {
-  const bodies = [
-    path.join(ROOT, "webview-ui/agent-manager/SidebarBody.tsx"),
-    path.join(ROOT, "webview-ui/agent-manager/ProjectSidebarBody.tsx"),
-  ]
+  const bodies = [path.join(ROOT, "webview-ui/agent-manager/ProjectSidebarBody.tsx")]
 
   it("puts the notice above the worktrees instead of below them", () => {
     for (const file of bodies) {
@@ -298,9 +305,7 @@ describe("Agent Manager leftover worktree folders", () => {
     const disposable = { dispose: () => undefined }
     const host = {
       workspacePath: () => "/repo",
-      multiProject: () => false,
       onDidChangeWorkspaceFolders: () => disposable,
-      onDidChangeMultiProject: () => disposable,
       onDidChangeWorktreePool: () => disposable,
     } as unknown as Host
 
@@ -310,6 +315,7 @@ describe("Agent Manager leftover worktree folders", () => {
       log: () => undefined,
       output: () => undefined,
       activate: () => undefined,
+      empty: () => undefined,
       expand: () => undefined,
       ready: () => Promise.resolve({ ok: true, refsFixed: 0, current: true }),
       push: () => undefined,
@@ -463,7 +469,13 @@ describe("Agent Manager Provider Messages", () => {
     expect(body).toContain("closedDrafts.add(sessionId)")
     expect(body).toContain('vscode.postMessage({ type: "agentManager.closeSession", sessionId })')
     expect(body).not.toContain('type: "agentManager.forgetSession"')
-    expect(getMethodBody("onCloseSession")).toContain("await host.sessions.abort([sessionId])")
+    const close = getMethodBody("onCloseSession")
+    expect(close).toContain("await host.sessions.abort(")
+    // Abort first, then drop the session from state, and only then stop its
+    // processes: a closed session left in state can be restored by a concurrent
+    // state push while a slow process shutdown is still running.
+    expect(close.indexOf("await host.sessions.abort(")).toBeLessThan(close.indexOf("state?.removeSession("))
+    expect(close.indexOf("state?.removeSession(")).toBeLessThan(close.indexOf("stopSessionProcesses("))
     expect(text).toContain("if (created.draftID && closedDrafts.delete(created.draftID)) return")
   })
 
@@ -592,7 +604,7 @@ describe("Agent Manager Worktree Actions", () => {
   it("keeps Cmd+W terminal handling before the empty-worktree fallback", () => {
     const source = fs.readFileSync(TSX_FILE, "utf-8")
     const start = source.indexOf("const closeActiveTab = () =>")
-    const end = source.indexOf("// Close the currently selected worktree", start)
+    const end = source.indexOf("const closeSelectedWorktree =", start)
     const action = source.slice(start, end)
 
     expect(start).toBeGreaterThanOrEqual(0)
@@ -600,6 +612,8 @@ describe("Agent Manager Worktree Actions", () => {
     expect(action).toContain("termHandlers.closeFocused()")
     expect(action).toContain("termHandlers.closeActive()")
     expect(action).toContain("if (tabs.length === 0)")
+    expect(action).toContain('closeSelectedWorktree("arm")')
+    expect(source).toContain('msg.action === "closeWorktree") closeSelectedWorktree("arm")')
   })
 
   it("forwards the quick-worktree command to immediate creation", () => {
@@ -685,7 +699,8 @@ describe("Agent Manager Provider — onMessage routing", () => {
       provider() +
       fs.readFileSync(RUN_MESSAGE_FILE, "utf-8") +
       fs.readFileSync(TERMINAL_ROUTING_FILE, "utf-8") +
-      fs.readFileSync(TAB_LAYOUT_FILE, "utf-8")
+      fs.readFileSync(TAB_LAYOUT_FILE, "utf-8") +
+      fs.readFileSync(MESSAGE_ROUTING_FILE, "utf-8")
     const expected = [
       "agentManager.createWorktree",
       "agentManager.deleteWorktree",
@@ -1297,30 +1312,33 @@ describe("Shared webview provider shell", () => {
 
   it("owns the common provider order and bridges", () => {
     const source = fs.readFileSync(PROVIDER_SHELL_FILE, "utf-8")
-    ordered(source, [
+    const base = fs.readFileSync(path.join(ROOT, "webview-ui/src/context/provider-base.tsx"), "utf-8")
+    const rich = fs.readFileSync(path.join(ROOT, "webview-ui/src/context/rich-provider.tsx"), "utf-8")
+    const session = fs.readFileSync(path.join(ROOT, "webview-ui/src/context/provider-session.tsx"), "utf-8")
+    expect(source).toContain("<Base content={RichProvider}>")
+    ordered(base, [
       "ThemeProvider",
       "DialogProvider",
       "VSCodeProvider",
-      "MermaidDownloadBridge",
       "ServerProvider",
       "LanguageBridge",
-      "MarkedProvider",
-      "DiffComponentProvider",
-      "CodeComponentProvider",
-      "FileComponentProvider",
+      "Content",
       "ProviderProvider",
       "ConfigProvider",
       "SpeechToTextPrewarm",
       "DisplayProvider",
+    ])
+    ordered(rich, ["MarkedProvider", "DiffComponentProvider", "CodeComponentProvider", "FileComponentProvider"])
+    expect(rich).toContain('window.addEventListener("kilo:save-image", save)')
+    ordered(session, [
       "IndexingProvider",
       "KiloEmbeddingModelsProvider",
       "ImageModelsProvider",
       "NotificationsProvider",
       "SessionProvider",
-      "MemoryProvider",
-      "FeedbackProvider",
     ])
-    expect(source.indexOf("<Toast.Region")).toBeGreaterThan(source.indexOf("</VSCodeProvider>"))
+    ordered(source, ["MemoryProvider", "FeedbackProvider"])
+    expect(base.indexOf("<Toast.Region")).toBeGreaterThan(base.indexOf("</VSCodeProvider>"))
   })
 
   it("keeps sidebar-only providers in the sidebar root", () => {

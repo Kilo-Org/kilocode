@@ -6,6 +6,7 @@ import ai.kilocode.backend.testing.FakeCliServer
 import ai.kilocode.backend.testing.MockCliServer
 import ai.kilocode.backend.testing.TestLog
 import ai.kilocode.rpc.dto.WorkspaceFileDto
+import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -18,6 +19,7 @@ import java.nio.file.Files
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -75,6 +77,38 @@ class KiloWorkspaceRpcApiImplTest {
         assertNotNull(state)
         assertEquals(KiloWorkspaceStatusDto.UNSUPPORTED, state.status)
         assertEquals("devcontainer_virtual_filesystem", state.error)
+    }
+
+    @Test
+    fun `workspace config update patches project scope and reloads effective config`() = runBlocking {
+        mock.workspaceConfig = """{"snapshot":false}"""
+        val app = app()
+        val rpc = KiloWorkspaceRpcApiImpl(app)
+
+        assertEquals(false, rpc.config("/repo").snapshot)
+        val config = rpc.updateConfig("/repo", ConfigPatchDto(snapshot = true))
+
+        assertTrue(requireNotNull(mock.lastWorkspaceConfigPatchPath).contains("directory=%2Frepo"))
+        assertEquals("{\"snapshot\":true}", mock.lastWorkspaceConfigPatchBody)
+        assertEquals(true, config.snapshot)
+    }
+
+    @Test
+    fun `reload core settings calls instance reload for the workspace`() = runBlocking {
+        val app = app()
+
+        assertTrue(KiloWorkspaceRpcApiImpl(app).reloadCoreSettings("/test project"))
+
+        assertEquals(1, mock.requestCount("/instance/reload"))
+        assertTrue(requireNotNull(mock.lastInstanceReloadPath).contains("directory="))
+    }
+
+    @Test
+    fun `reload core settings reports a running session conflict`() = runBlocking {
+        mock.instanceReloadStatus = 409
+        val app = app()
+
+        assertFalse(KiloWorkspaceRpcApiImpl(app).reloadCoreSettings("/repo"))
     }
 
     private suspend fun app(): KiloBackendAppService {

@@ -38,6 +38,7 @@ class RevertBanner(
     focus: (() -> Unit)? = null,
     private var openDiff: SessionDiffOpener = { _, _, _ -> },
     private var sessionId: String? = null,
+    private val openSettingsAction: () -> Unit = {},
 ) : DialogView(focus = focus), SessionView {
     override val sessionViewKind = SessionView.Kind.Default
 
@@ -55,10 +56,11 @@ class RevertBanner(
         isVisible = false
     }
 
+    private val diffNode = PartHeader.centered(diff)
+
     private val header = PartHeader().apply {
         leading(JBLabel(AllIcons.Actions.Back))
         left(title)
-        left(PartHeader.centered(diff))
     }
 
     private val body = Stack.vertical(UiStyle.Gap.lg())
@@ -89,9 +91,17 @@ class RevertBanner(
         font = JBFont.small()
     }
 
-    private val notice = JBLabel(KiloBundle.message("revert.banner.filesNotRestored")).apply {
+    private val notice = JBLabel("").apply {
+        name = "revert-workspace-notice"
         font = JBFont.small()
+        setAllowAutoWrapping(true)
     }
+
+    private val snapshotAction = DialogView.Action(
+        "snapshots",
+        KiloBundle.message("revert.banner.workspace.enableSnapshots"),
+        primary = false,
+    ) { openSettingsAction() }
 
     init {
         isOpaque = false
@@ -99,7 +109,7 @@ class RevertBanner(
         body.next(scroll).next(hint).next(notice)
         setContent(body)
         setActions(listOf(
-            DialogView.Action("redo", KiloBundle.message("revert.banner.redo"), primary = false) { redoAction() },
+            DialogView.Action("redo", KiloBundle.message("revert.banner.redo"), primary = true) { redoAction() },
             DialogView.Action("all", KiloBundle.message("revert.banner.redo.all"), primary = false) { redoAllAction() },
         ))
         applyStyle(SessionEditorStyle.current())
@@ -120,11 +130,19 @@ class RevertBanner(
         val total = model.revertedCount()
         title.text = KiloBundle.message(if (total == 1) "revert.banner.count.one" else "revert.banner.count.other", total)
         setActionVisible("all", total > 1)
-        notice.isVisible = revert.snapshot == null
+        val message = workspaceNotice(revert)
+        notice.isVisible = message != null
+        notice.text = message?.let { UiStyle.Text.wrapLines(listOf(it)) } ?: ""
+        setLeftAction(snapshotAction.takeIf { revert.workspace == "snapshots-disabled" })
         val diffs = resolveDiffs(revert)
         val names = disambiguate(diffs.map { it.file })
-        diff.isVisible = diffs.isNotEmpty()
-        diff.isEnabled = diffs.isNotEmpty()
+        val showDiff = diffs.isNotEmpty()
+        if (showDiff && diffNode.parent == null) header.left(diffNode)
+        if (!showDiff && diffNode.parent != null) header.left.remove(diffNode)
+        diff.isVisible = showDiff
+        diff.isEnabled = showDiff
+        header.revalidate()
+        header.repaint()
         val keep = diffs.mapTo(LinkedHashSet()) { it.file }
         rows.entries.removeIf { it.key !in keep }
         scroll.isVisible = diffs.isNotEmpty()
@@ -157,7 +175,7 @@ class RevertBanner(
             setActionLeft(node)
             return
         }
-        setActionLeft(null)
+        restoreLeftAction()
         setActionEnabled("redo", true)
         setActionEnabled("all", true)
     }
@@ -179,6 +197,20 @@ class RevertBanner(
      */
     private fun resolveDiffs(revert: ai.kilocode.rpc.dto.SessionRevertDto): List<DiffFileDto> =
         if (revert.snapshot == null) emptyList() else revert.diffs.ifEmpty { model.diff }
+
+    /**
+     * Explains why workspace files were, or were not, restored. Returns null when files were
+     * restored (nothing to explain) or the CLI didn't report a reason on an older revert whose
+     * files happened to be restored anyway.
+     */
+    private fun workspaceNotice(revert: ai.kilocode.rpc.dto.SessionRevertDto): String? = when (revert.workspace) {
+        "restored" -> null
+        "snapshots-disabled" -> KiloBundle.message("revert.banner.workspace.snapshotsDisabled")
+        "not-a-git-repo" -> KiloBundle.message("revert.banner.workspace.notAGitRepo")
+        "unavailable" -> KiloBundle.message("revert.banner.workspace.unavailable")
+        null -> if (revert.snapshot == null) KiloBundle.message("revert.banner.workspace.legacy") else null
+        else -> KiloBundle.message("revert.banner.workspace.unavailable")
+    }
 
     private fun openDiffViewer() {
         val revert = model.revert() ?: return

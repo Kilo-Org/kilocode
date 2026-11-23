@@ -7,17 +7,18 @@ import ai.kilocode.client.testing.FakeProviderRpcApi
 import ai.kilocode.client.testing.installBrowser
 import ai.kilocode.client.testing.rowDescription
 import ai.kilocode.client.ui.UiStyle
-import ai.kilocode.client.ui.list.ActiveListActionCell
-import ai.kilocode.client.ui.list.ActiveListConfig
-import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.active.ActiveActionCell
+import ai.kilocode.client.ui.active.ActiveConfig
+import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.list.ActiveListRenderer
 import ai.kilocode.client.ui.list.activeListCellAt
 import ai.kilocode.client.ui.list.activeListCellBounds
 import ai.kilocode.client.ui.list.activeListSectionTitle
-import ai.kilocode.client.ui.list.activeListVisibleCells
+import ai.kilocode.client.ui.active.activeVisibleCells
 import ai.kilocode.rpc.dto.CustomModelFetchDto
 import ai.kilocode.rpc.dto.CustomModelFetchResultDto
 import ai.kilocode.rpc.dto.CustomProviderConfigDto
+import ai.kilocode.rpc.dto.CustomProviderSaveDto
 import ai.kilocode.rpc.dto.ModelDto
 import ai.kilocode.rpc.dto.ProviderActionResultDto
 import ai.kilocode.rpc.dto.ProviderAuthMethodDto
@@ -300,6 +301,35 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
             assertEquals("", fields[4].text)
             assertEquals("gpt-4o", fields[5].text)
             assertEquals(KiloBundle.message("settings.providers.customSave"), dialog.okText())
+            dispose(dialog)
+        }
+    }
+
+    fun `test editing a custom provider and deselecting a model submits only the surviving IDs`() {
+        val cs = CoroutineScope(SupervisorJob())
+        scope = cs
+        var saved: CustomProviderSaveDto? = null
+        val dialog = edt {
+            val dialog = CustomProviderDialog(
+                cs,
+                "/tmp",
+                { CustomModelFetchResultDto(listOf("gpt-4o", "gpt-3.5-turbo")) },
+                {
+                    saved = it
+                    ProviderActionResultDto(providerState(provider("my-openai", "My OpenAI")))
+                },
+                CustomProviderEdit("my-openai", "My OpenAI", "https://example.com/v1", null, listOf("gpt-4o", "gpt-3.5-turbo")),
+            )
+            // Simulate the user removing "gpt-3.5-turbo" from the model list before saving.
+            components(center(dialog)).filterIsInstance<JTextField>()[5].text = "gpt-4o"
+            submit(dialog)
+            dialog
+        }
+
+        flushUntil { edt { dialog.outcome != null } }
+
+        edt {
+            assertEquals(listOf("gpt-4o"), saved?.models?.map { it.id })
             dispose(dialog)
         }
     }
@@ -1413,16 +1443,16 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
 
     private fun center(rect: Rectangle) = Point(rect.x + rect.width / 2, rect.y + rect.height / 2)
 
-    private fun renderer(row: ProviderListRow) = ActiveListRenderer(CollectionListModel<ActiveListItem>(listOf(row)))
+    private fun renderer(row: ProviderListRow) = ActiveListRenderer(CollectionListModel<ActiveItem>(listOf(row)))
 
     private fun render(renderer: ActiveListRenderer, list: JBList<ProviderListRow>, row: ProviderListRow, selected: Boolean) {
         @Suppress("UNCHECKED_CAST")
         // A selected row exposes its in-place actions only when the selection is visible (focused).
-        renderer.getListCellRendererComponent(list as JList<out ActiveListItem>, row, 0, selected, selected)
+        renderer.getListCellRendererComponent(list as JList<out ActiveItem>, row, 0, selected, selected)
     }
 
     private fun actionTexts(renderer: ActiveListRenderer): List<String> = components(renderer)
-        .filterIsInstance<ActiveListActionCell>()
+        .filterIsInstance<ActiveActionCell>()
         .filter { it.isVisible }
         .mapNotNull { it.text.takeIf(String::isNotBlank) }
 
@@ -1439,7 +1469,7 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
     private fun hitList(row: ProviderListRow): JBList<ProviderListRow> {
         val model = CollectionListModel<ProviderListRow>(listOf(row))
         val list = JBList(model)
-        list.cellRenderer = ActiveListRenderer(model as CollectionListModel<ActiveListItem>, ActiveListConfig.Preferred)
+        list.cellRenderer = ActiveListRenderer(model as CollectionListModel<ActiveItem>, ActiveConfig.Preferred)
         list.size = Dimension(320, 200)
         list.doLayout()
         UIUtil.dispatchAllInvocationEvents()
@@ -1457,7 +1487,7 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
     }
 
     private fun visibleActions(row: ProviderListRow, selected: Boolean): List<ProviderListAction> {
-        return activeListVisibleCells(row, selected).mapNotNull { cell -> ProviderListAction.entries.firstOrNull { it.name == cell.id } }
+        return activeVisibleCells(row, selected).mapNotNull { cell -> ProviderListAction.entries.firstOrNull { it.name == cell.id } }
     }
 
     private fun triggerPrimary(component: JComponent) {

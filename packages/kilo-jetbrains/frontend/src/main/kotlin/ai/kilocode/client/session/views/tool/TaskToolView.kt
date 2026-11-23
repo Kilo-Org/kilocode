@@ -17,6 +17,7 @@ import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.session.views.base.HeaderOpenAction
 import ai.kilocode.client.ui.HoverIcon
+import ai.kilocode.client.ui.PlainLabel
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
@@ -380,8 +381,8 @@ class TaskToolView(
     private class Row(tool: Tool) {
         private var item = tool
         val icon = JBLabel()
-        val title = JBLabel()
-        val sub = JBLabel().apply { foreground = SessionUiStyle.Text.Secondary.foreground() }
+        val title = PlainLabel()
+        val sub = PlainLabel().apply { foreground = SessionUiStyle.Text.Secondary.foreground() }
         val panel = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
             isOpaque = false
             add(icon, BorderLayout.WEST)
