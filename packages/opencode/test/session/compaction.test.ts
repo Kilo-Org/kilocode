@@ -2228,7 +2228,7 @@ describe("SessionNs.getUsage", () => {
     expect(result.cost).toBe(3 + 1.5)
   })
 
-  test("uses upstreamInferenceCost for Kilo provider", () => {
+  test("uses upstream_inference_cost for a Kilo BYOK call", () => {
     const model = createModel({
       context: 100_000,
       output: 32_000,
@@ -2242,20 +2242,20 @@ describe("SessionNs.getUsage", () => {
     const result = SessionNs.getUsage({
       model,
       provider,
-      usage: usage({ inputTokens: 1_000_000, outputTokens: 100_000, totalTokens: 1_100_000 }),
-      metadata: {
-        openrouter: {
-          usage: {
-            cost: 0.01, // OpenRouter 5% fee
-            costDetails: {
-              upstreamInferenceCost: 0.2, // Actual inference cost
-            },
+      usage: usage({
+        inputTokens: 1_000_000,
+        outputTokens: 100_000,
+        totalTokens: 1_100_000,
+        providerMetadata: {
+          aiSdk: {
+            cost: 0, // What Kilo charged
+            is_byok: true,
+            cost_details: { upstream_inference_cost: 0.2 }, // Billed to the user's own key
           },
         },
-      },
+      }),
     })
 
-    // Should use upstreamInferenceCost for Kilo provider (BYOK)
     expect(result.cost).toBe(0.2)
   })
 
@@ -2319,7 +2319,7 @@ describe("SessionNs.getUsage", () => {
     expect(result.cost).toBe(0.3)
   })
 
-  test("uses regular cost when upstreamInferenceCost is missing for Kilo", () => {
+  test("uses the Kilo charge in usage.cost when the call is not BYOK", () => {
     const model = createModel({
       context: 100_000,
       output: 32_000,
@@ -2333,23 +2333,20 @@ describe("SessionNs.getUsage", () => {
     const result = SessionNs.getUsage({
       model,
       provider,
-      usage: usage({ inputTokens: 1_000_000, outputTokens: 100_000, totalTokens: 1_100_000 }),
-      metadata: {
-        openrouter: {
-          usage: {
-            cost: 0.01,
-            // costDetails is missing
-          },
+      usage: usage({
+        inputTokens: 1_000_000,
+        outputTokens: 100_000,
+        totalTokens: 1_100_000,
+        providerMetadata: {
+          aiSdk: { cost: 0.01, is_byok: false, cost_details: { upstream_inference_cost: 0.2 } },
         },
-      },
+      }),
     })
 
-    // When upstream cost is missing for Kilo, fall back to regular cost field
     expect(result.cost).toBe(0.01)
   })
 
-  // Tests for Anthropic Messages / OpenAI Responses / Vercel AI Gateway cost extraction
-  // live in test/kilocode/provider-cost.test.ts (kilocode_change).
+  // More Kilo Gateway cost tests live in test/kilocode/provider-cost.test.ts (kilocode_change).
   // kilocode_change end
 
   test.each(["@ai-sdk/anthropic", "@ai-sdk/amazon-bedrock", "@ai-sdk/google-vertex/anthropic"])(

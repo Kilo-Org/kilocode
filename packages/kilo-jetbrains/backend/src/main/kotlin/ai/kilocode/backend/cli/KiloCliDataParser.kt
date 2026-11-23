@@ -151,10 +151,29 @@ object KiloCliDataParser {
         val obj = tryParseObject(data) ?: return null
 
         // SSE data is a GlobalEvent: { directory, payload: { type, properties } }
-        val payload = obj["payload"]?.jsonObject ?: obj
-        val props = payload["properties"]?.jsonObject ?: return null
+        val payload = if ("payload" in obj) obj["payload"] as? JsonObject ?: return null else obj
+        val props = payload["properties"] as? JsonObject ?: return null
 
         return when (type) {
+            "cloud.message.failed", "cloud.message.completed" -> {
+                val sid = (props["sessionID"] as? JsonPrimitive)
+                    ?.takeIf { it.isString }?.contentOrNull?.takeIf { it.isNotBlank() } ?: return null
+                val mid = (props["messageId"] as? JsonPrimitive)
+                    ?.takeIf { it.isString }?.contentOrNull?.takeIf { it.isNotBlank() } ?: return null
+                val status = (props["status"] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
+                    ?: return null
+                val delivery = (props["delivery"] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
+                    ?: return null
+                val accepted = (props["accepted"] as? JsonPrimitive)?.takeIf { !it.isString }?.booleanOrNull
+                    ?: return null
+                if (delivery !in setOf("queued", "sent")) return null
+                if (type == "cloud.message.completed") {
+                    if (status != "completed" || delivery != "sent" || !accepted) return null
+                }
+                if (type == "cloud.message.failed" && status !in setOf("failed", "interrupted")) return null
+                ChatEventDto.MessageTerminal(sid, mid, status, delivery, accepted)
+            }
+
             "message.updated" -> {
                 val sid = props.str("sessionID") ?: return null
                 val info = props["info"]?.jsonObject ?: return null
@@ -616,6 +635,18 @@ object KiloCliDataParser {
     }
 
     /**
+     * Extracts the raw project-scope config object from a GET /config/overlay response.
+     *
+     * The overlay reports what each config file itself contains, whereas the resolved
+     * `/config` body repeats values inherited from the global file, so only this raw
+     * object can tell a workspace-scoped setting from a global one.
+     */
+    fun parseConfigOverlayProject(raw: String): String? {
+        val project = tryParseObject(raw)?.get("project").obj() ?: return null
+        return json.encodeToString(JsonObject.serializer(), project)
+    }
+
+    /**
      * Parse the `/global/config` response body into a [ConfigDto]. Tolerant of
      * the discriminated MCP union and the `env`/`environment` alias. Never
      * throws on malformed input so a bad config cannot block startup.
@@ -1020,6 +1051,10 @@ object KiloCliDataParser {
         }
         fields += "\"text\":${escape(part.text.orEmpty())}"
         if (part.synthetic == true) fields += "\"synthetic\":true"
+        val injected = part.injectedTitle?.trim()?.takeIf { it.isNotEmpty() }
+        if (injected != null) {
+            fields += "\"metadata\":{\"kilo\":{\"injected\":{\"title\":${escape(injected)}}}}"
+        }
         return "{${fields.joinToString(",")}}"
     }
 
@@ -1046,6 +1081,7 @@ object KiloCliDataParser {
             "\"command\":${escape(command)}",
             "\"arguments\":${escape(args)}",
         )
+        prompt.messageID?.let { fields += "\"messageID\":${escape(it)}" }
         prompt.agent?.let { fields += "\"agent\":${escape(it)}" }
         prompt.variant?.let { fields += "\"variant\":${escape(it)}" }
         val pid = prompt.providerID
@@ -1375,6 +1411,7 @@ object KiloCliDataParser {
             filename = obj.str("filename"),
             synthetic = obj.flagOrNull("synthetic"),
             source = parseSource(obj["source"]),
+            injectedTitle = injectedTitle(topMeta),
             tool = obj.str("tool"),
             callID = obj.str("callID"),
             state = state?.str("status"),
@@ -2129,6 +2166,11 @@ private fun JsonObject?.map(key: String): Map<String, String> {
         val text = value.scalar() ?: return@mapNotNull null
         name to text
     }.toMap()
+}
+
+private fun injectedTitle(meta: JsonObject?): String? {
+    val injected = meta?.get("kilo")?.obj()?.get("injected")?.obj() ?: return null
+    return injected.str("title")?.trim()?.takeIf { it.isNotEmpty() }?.take(200)
 }
 
 private fun JsonObject?.time(key: String): PartTimeDto? {

@@ -1,6 +1,7 @@
 <idea-plugin>
     <dependencies>
         <module name="intellij.platform.frontend"/>
+        <module name="intellij.platform.lang.impl"/>
         <plugin id="org.jetbrains.plugins.terminal"/>
         <module name="intellij.terminal.frontend"/>
         <module name="kilo.jetbrains.shared"/>
@@ -165,6 +166,11 @@
                 bundle="messages.KiloBundle"
                 key="settings.agentBehavior.rules.displayName"/>
 
+        <registryKey key="kilo.cloudWorkspaces.enabled"
+                     description="Show repository-scoped Cloud workspaces and hosted sessions in Agent Manager."
+                     defaultValue="true"
+                     restartRequired="false"
+                     overrides="false"/>
         <registryKey key="kilo.session.condense"
                      description="Enable event condensing in the session update queue (merges redundant snapshots before model delivery)."
                      defaultValue="true"
@@ -209,6 +215,9 @@
         <action id="Kilo.ReloadCoreSettings"
                 class="ai.kilocode.client.actions.ReloadCoreSettingsAction"/>
 
+        <action id="Kilo.RefreshCloud"
+                class="ai.kilocode.client.actions.RefreshCloudAction"/>
+
         <action id="Kilo.Reinstall"
                 class="ai.kilocode.client.actions.ReinstallKiloAction"/>
 
@@ -239,6 +248,7 @@
 
         <group id="Kilo.CliGroup" text="Core" popup="true">
             <reference ref="Kilo.ReloadCoreSettings"/>
+            <reference ref="Kilo.RefreshCloud"/>
             <separator/>
             <reference ref="Kilo.Restart"/>
             <reference ref="Kilo.Reinstall"/>
@@ -271,8 +281,9 @@
         <action id="Kilo.NewSession"
                 class="ai.kilocode.client.actions.NewSessionAction"/>
 
-        <action id="Kilo.NewWorktree"
-                class="ai.kilocode.client.actions.NewWorktreeAction"/>
+        <group id="Kilo.AgentManager.Add"
+               class="ai.kilocode.client.actions.AgentManagerAddAction"
+               popup="true"/>
 
         <action id="Kilo.Chat.NewWorktree"
                 class="ai.kilocode.client.actions.ChatNewWorktreeAction"
@@ -287,14 +298,6 @@
         <action id="Kilo.History"
                 class="ai.kilocode.client.actions.HistoryAction"/>
 
-        <!-- Declarative toolbar group for the Kilo tool window title bar -->
-        <group id="Kilo.ToolWindowToolbar">
-            <reference ref="Kilo.NewSession"/>
-            <reference ref="Kilo.NewWorktree"/>
-            <reference ref="Kilo.History"/>
-            <reference ref="Kilo.Settings"/>
-        </group>
-
         <action id="Kilo.SendPrompt"
                 class="ai.kilocode.client.actions.SendPromptAction"
                 text="Send Prompt"
@@ -305,6 +308,18 @@
                                first-keystroke="meta ENTER"/>
             <keyboard-shortcut keymap="$default"
                                first-keystroke="control ENTER"/>
+        </action>
+
+        <action id="Kilo.SpeechInput"
+                class="ai.kilocode.client.actions.SpeechInputAction">
+            <keyboard-shortcut keymap="$default"
+                               first-keystroke="control K"/>
+            <keyboard-shortcut keymap="Mac OS X"
+                               first-keystroke="control K"
+                               replace-all="true"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+"
+                               first-keystroke="control K"
+                               replace-all="true"/>
         </action>
 
         <action id="Kilo.SubmitDialog"
@@ -401,6 +416,10 @@
         <action id="Kilo.Worktree.Rename"
                 class="ai.kilocode.client.actions.RenameWorktreeAction"/>
 
+        <group id="Kilo.AgentManager.MoveTo"
+               class="ai.kilocode.client.actions.MoveAgentManagerItemGroup"
+               popup="true"/>
+
         <action id="Kilo.Worktree.Delete"
                 class="ai.kilocode.client.actions.DeleteWorktreeAction"/>
 
@@ -416,6 +435,9 @@
         <action id="Kilo.Worktree.OpenLocalDiff"
                 class="ai.kilocode.client.actions.OpenWorktreeLocalDiffAction"/>
 
+        <action id="Kilo.Worktree.UpdateFromBase"
+                class="ai.kilocode.client.actions.UpdateWorktreeFromBaseAction"/>
+
         <action id="Kilo.Worktree.CopyBranchName"
                 class="ai.kilocode.client.actions.CopyBranchNameAction"/>
 
@@ -424,6 +446,9 @@
 
         <action id="Kilo.Worktree.RunSetupScript"
                 class="ai.kilocode.client.actions.RunWorktreeSetupScriptAction"/>
+
+        <action id="Kilo.HostedWorkspace.Reload"
+                class="ai.kilocode.client.actions.ReloadHostedWorkspaceAction"/>
 
         <action id="Kilo.WorktreeSession.Rename"
                 class="ai.kilocode.client.actions.RenameWorktreeSessionAction"/>
@@ -438,12 +463,12 @@
                 class="ai.kilocode.client.actions.ForkWorktreeSessionAction"/>
 
         <group id="Kilo.Worktree.RowMenu">
-            <reference ref="Kilo.Worktree.Rename"/>
-            <separator/>
             <reference ref="Kilo.Worktree.OpenPr"/>
+            <reference ref="Kilo.HostedWorkspace.Reload"/>
             <separator/>
             <reference ref="Kilo.Worktree.OpenDiff"/>
             <reference ref="Kilo.Worktree.OpenLocalDiff"/>
+            <reference ref="Kilo.Worktree.UpdateFromBase"/>
             <separator/>
             <reference ref="Kilo.Worktree.CopyBranchName"/>
             <reference ref="Kilo.Worktree.CopyBranchPath"/>
@@ -451,6 +476,8 @@
             <separator/>
             <reference ref="Kilo.OpenSetupScript"/>
             <reference ref="Kilo.Worktree.RunSetupScript"/>
+            <separator/>
+            <reference ref="Kilo.AgentManager.MoveTo"/>
             <separator/>
             <reference ref="Kilo.Worktree.Delete"/>
         </group>
@@ -479,6 +506,23 @@
 
         <action id="Kilo.Session.Board"
                 class="ai.kilocode.client.actions.ShowSessionBoardAction"/>
+
+        <!--
+          Transcript Find inherits the user's current IDE shortcuts. The actions are promoted over the
+          editor Find actions only when the data context resolves the active chat, so ordinary file
+          editors keep their native behavior.
+        -->
+        <action id="Kilo.Transcript.Find"
+                class="ai.kilocode.client.actions.TranscriptFindAction"
+                use-shortcut-of="Find"/>
+
+        <action id="Kilo.Transcript.FindNext"
+                class="ai.kilocode.client.actions.TranscriptFindNextAction"
+                use-shortcut-of="FindNext"/>
+
+        <action id="Kilo.Transcript.FindPrevious"
+                class="ai.kilocode.client.actions.TranscriptFindPreviousAction"
+                use-shortcut-of="FindPrevious"/>
 
         <action id="Kilo.Session.CompareToBase"
                 class="ai.kilocode.client.actions.CompareToBaseAction"/>

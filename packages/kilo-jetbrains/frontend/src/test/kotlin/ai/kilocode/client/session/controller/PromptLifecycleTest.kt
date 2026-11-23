@@ -28,6 +28,7 @@ import ai.kilocode.rpc.dto.QuestionInfoDto
 import ai.kilocode.rpc.dto.QuestionOptionDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
+import ai.kilocode.rpc.dto.SessionTimeDto
 import ai.kilocode.rpc.dto.ToolRefDto
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlinx.coroutines.CompletableDeferred
@@ -589,7 +590,7 @@ class PromptLifecycleTest : SessionControllerTestBase() {
                 listOf(listOf("Start new session")),
             )
         }
-        emit(ChatEventDto.SessionCreated("ses_new", session("ses_new", dir = "/test")))
+        emit(ChatEventDto.SessionCreated("ses_new", session("ses_new", dir = "/test", created = System.currentTimeMillis().toDouble())))
         flush()
 
         assertEquals("ses_new", (opened.last() as SessionRef.Local).id)
@@ -640,6 +641,166 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         assertTrue(opened.none { it is SessionRef.Local && it.id == "ses_new" })
     }
 
+    fun `test follow-up handoff binds to a root session in the answered directory`() {
+        val opened = mutableListOf<SessionRef>()
+        armedFollowup { opened.add(it) }
+
+        emit(
+            ChatEventDto.SessionCreated(
+                "ses_child",
+                session("ses_child", dir = "/test", created = System.currentTimeMillis().toDouble())
+                    .copy(parentID = "ses_test"),
+            ),
+        )
+
+        assertTrue(opened.isEmpty())
+
+        emit(ChatEventDto.SessionCreated("ses_new", session("ses_new", dir = "/test", created = System.currentTimeMillis().toDouble())))
+
+        assertEquals(listOf("ses_new"), opened.filterIsInstance<SessionRef.Local>().map { it.id })
+    }
+
+    fun `test follow-up handoff binds to a session created after the answer`() {
+        val opened = mutableListOf<SessionRef>()
+        armedFollowup { opened.add(it) }
+
+        emit(ChatEventDto.SessionCreated("ses_old", session("ses_old", dir = "/test")))
+
+        assertTrue(opened.isEmpty())
+    }
+
+    fun `test follow-up handoff binds to a session other than the asking one`() {
+        val opened = mutableListOf<SessionRef>()
+        armedFollowup { opened.add(it) }
+
+        emit(ChatEventDto.SessionCreated("ses_test", session("ses_test", created = System.currentTimeMillis().toDouble())))
+
+        assertTrue(opened.isEmpty())
+    }
+
+    fun `test follow-up handoff uses the CLI clock when the backend runs behind the client`() {
+        val opened = mutableListOf<SessionRef>()
+        val m = controller(open = { opened.add(it) })
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        flush()
+        edt { m.prompt("go") }
+        flush()
+        // A backend on another host may run well behind this client. Every session timestamp comes from
+        // the CLI, so the creation check uses those and never the local clock.
+        val cli = System.currentTimeMillis().toDouble() - 3_600_000
+        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test").copy(time = SessionTimeDto(created = cli, updated = cli))))
+        emit(ChatEventDto.QuestionAsked("ses_test", planQuestion("q_plan")))
+        edt {
+            m.replyQuestion(
+                "q_plan",
+                QuestionReplyDto(listOf(listOf("Start new session"))),
+                listOf(listOf("Start new session")),
+            )
+        }
+        flush()
+
+        emit(
+            ChatEventDto.SessionCreated(
+                "ses_new",
+                session("ses_new", dir = "/test", created = cli + 1_000),
+            ),
+        )
+
+        assertEquals(listOf("ses_new"), opened.filterIsInstance<SessionRef.Local>().map { it.id })
+    }
+
+    fun `test follow-up arming adopts one session only`() {
+        val opened = mutableListOf<SessionRef>()
+        armedFollowup { opened.add(it) }
+
+        emit(ChatEventDto.SessionCreated("ses_new", session("ses_new", dir = "/test", created = System.currentTimeMillis().toDouble())))
+        emit(ChatEventDto.SessionCreated("ses_next", session("ses_next", dir = "/test", created = System.currentTimeMillis().toDouble())))
+
+        assertEquals(listOf("ses_new"), opened.filterIsInstance<SessionRef.Local>().map { it.id })
+    }
+
+    fun `test follow-up handoff treats a zero CLI updated time as unknown`() {
+        val opened = mutableListOf<SessionRef>()
+        val m = controller(open = { opened.add(it) })
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        flush()
+        edt { m.prompt("go") }
+        flush()
+        // The CLI never stamped an update, so the anchor falls back to its created time and a zero update is
+        // never taken as a real instant on the CLI's clock.
+        val cli = System.currentTimeMillis().toDouble() - 3_600_000
+        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test").copy(time = SessionTimeDto(created = cli, updated = 0.0))))
+        emit(ChatEventDto.QuestionAsked("ses_test", planQuestion("q_plan")))
+        edt {
+            m.replyQuestion(
+                "q_plan",
+                QuestionReplyDto(listOf(listOf("Start new session"))),
+                listOf(listOf("Start new session")),
+            )
+        }
+        flush()
+
+        emit(ChatEventDto.SessionCreated("ses_stale", session("ses_stale", dir = "/test", created = cli - 1_000)))
+
+        assertTrue(opened.isEmpty())
+
+        emit(ChatEventDto.SessionCreated("ses_new", session("ses_new", dir = "/test", created = cli + 1_000)))
+
+        assertEquals(listOf("ses_new"), opened.filterIsInstance<SessionRef.Local>().map { it.id })
+    }
+
+    fun `test follow-up handoff skips the creation check when the CLI has stamped no time`() {
+        val opened = mutableListOf<SessionRef>()
+        val m = controller(open = { opened.add(it) })
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        flush()
+        edt { m.prompt("go") }
+        flush()
+        // Both CLI stamps are the unknown sentinel, so there is no anchor to order a candidate against and
+        // the creation check is skipped instead of failing closed.
+        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test").copy(time = SessionTimeDto(created = 0.0, updated = 0.0))))
+        emit(ChatEventDto.QuestionAsked("ses_test", planQuestion("q_plan")))
+        edt {
+            m.replyQuestion(
+                "q_plan",
+                QuestionReplyDto(listOf(listOf("Start new session"))),
+                listOf(listOf("Start new session")),
+            )
+        }
+        flush()
+
+        emit(ChatEventDto.SessionCreated("ses_new", session("ses_new", dir = "/test", created = 1.0)))
+
+        assertEquals(listOf("ses_new"), opened.filterIsInstance<SessionRef.Local>().map { it.id })
+    }
+
+    fun `test follow-up handoff keeps the root gate without a CLI stamp`() {
+        val opened = mutableListOf<SessionRef>()
+        val m = controller(open = { opened.add(it) })
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        flush()
+        edt { m.prompt("go") }
+        flush()
+        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test").copy(time = SessionTimeDto(created = 0.0, updated = 0.0))))
+        emit(ChatEventDto.QuestionAsked("ses_test", planQuestion("q_plan")))
+        edt {
+            m.replyQuestion(
+                "q_plan",
+                QuestionReplyDto(listOf(listOf("Start new session"))),
+                listOf(listOf("Start new session")),
+            )
+        }
+        flush()
+
+        emit(ChatEventDto.SessionCreated("ses_child", session("ses_child", dir = "/test", created = 1.0).copy(parentID = "ses_test")))
+
+        assertTrue(opened.isEmpty())
+    }
+
     fun `test rejectQuestion calls RPC`() {
         val (m, _, _) = prompted()
         emit(ChatEventDto.QuestionAsked("ses_test", question("q1")))
@@ -670,6 +831,15 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         assertEquals("git diff", perm.meta.command)
         assertEquals(1, perm.meta.fileDiffs.size)
         assertEquals("src/A.kt", perm.meta.fileDiffs[0].file)
+    }
+
+    fun `test local PermissionAsked maps as not hosted`() {
+        val (m, _, _) = prompted()
+
+        emit(ChatEventDto.PermissionAsked("ses_test", permission("perm1")))
+
+        val perm = (m.model.state as SessionState.AwaitingPermission).permission
+        assertFalse(perm.hosted)
     }
 
     fun `test replyPermission without rules leaves rulesSaved empty`() {
@@ -978,6 +1148,32 @@ class PromptLifecycleTest : SessionControllerTestBase() {
             ),
         ),
     )
+
+    /**
+     * A prompted controller whose plan follow-up question was answered with "Start new session", so the
+     * created session that answers it may be adopted.
+     */
+    private fun armedFollowup(open: (SessionRef) -> Unit): SessionController {
+        val m = controller(open = open)
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        flush()
+        edt { m.prompt("go") }
+        flush()
+        // The CLI stamps the asking session as it runs, and the handoff compares creation times on that clock.
+        val now = System.currentTimeMillis().toDouble()
+        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test").copy(time = SessionTimeDto(created = now, updated = now))))
+        emit(ChatEventDto.QuestionAsked("ses_test", planQuestion("q_plan")))
+        edt {
+            m.replyQuestion(
+                "q_plan",
+                QuestionReplyDto(listOf(listOf("Start new session"))),
+                listOf(listOf("Start new session")),
+            )
+        }
+        flush()
+        return m
+    }
 
     private fun planWorkspace() = workspaceReady(
         agents = listOf(

@@ -317,6 +317,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "Retirer de la liste des autorisés",
   "ui.permission.rule.addToDenied": "Ajouter à la liste des refusés",
   "ui.permission.rule.removeFromDenied": "Retirer de la liste des refusés",
+  "ui.permission.rule.fromConfig": "Gérée par un fichier de configuration",
   "ui.permission.toolLabel.read": "Lire",
   "ui.permission.toolLabel.edit": "Modifier",
   "ui.permission.toolLabel.write": "Écrire",
@@ -831,6 +832,7 @@ export const dict = {
 
   "dialog.model.noProviders": "Aucun fournisseur",
   "dialog.model.unavailable": "Modèles Kilo indisponibles",
+  "dialog.model.loadFailed": "Impossible de charger les fournisseurs de ce projet.",
 
   "prompt.placeholder.connecting": "Connexion au serveur...",
   "prompt.placeholder.error": "Échec de la connexion. Vérifiez le panneau de sortie ou redémarrez l'extension.",
@@ -885,8 +887,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "Télémétrie",
   "settings.aboutKiloCode.telemetry.description":
-    'La télémétrie est contrôlée par le paramètre de télémétrie intégré de VS Code. Pour la désactiver, allez dans Paramètres > Télémétrie > Niveau de télémétrie et réglez-le sur "off". Redémarrez VS Code pour appliquer la modification.',
-  "settings.aboutKiloCode.telemetry.openSettings": "Ouvrir les paramètres de télémétrie",
+    "Utilisez ce bouton pour modifier votre réglage de télémétrie dans Kilo. La télémétrie reste désactivée si VS Code ou l'environnement la désactive.",
+  "settings.aboutKiloCode.telemetry.toggle": "Activer la télémétrie",
+  "settings.aboutKiloCode.telemetry.saveFailed": "Impossible de mettre à jour le paramètre de télémétrie",
 
   "settings.agentBehaviour.subtab.agents": "Agents",
   "settings.agentBehaviour.subtab.mcpServers": "Serveurs MCP",
@@ -1002,6 +1005,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "Historique des prompts par conversation",
   "settings.experimental.conversationPromptHistory.description":
     "Garder l'historique des prompts (ArrowUp/ArrowDown) séparé pour chaque conversation au lieu de partager un seul historique entre toutes les conversations.",
+  "settings.experimental.agentManagerSplash.title": "Écran d'accueil Agent Manager",
+  "settings.experimental.agentManagerSplash.description":
+    "Essayez la nouvelle présentation d'Agent Manager avec des exemples de workflows. S'applique immédiatement.",
   "settings.experimental.claudeMigration.title": "Migration Claude Code",
   "settings.experimental.claudeMigration.description":
     "Importer une fois les instructions CLAUDE.md globales prises en charge, les compétences simples et les définitions MCP désactivées. Les fichiers Claude d'origine restent inchangés ; redémarrez le backend après activation.",
@@ -1368,6 +1374,8 @@ export const dict = {
   "dialog.model.notSet": "Non défini",
   "profile.personalAccount": "Compte personnel",
   "profile.switchingAccount": "Changement de compte…",
+  "profile.unavailableAccount": "Compte indisponible",
+  "profile.switchFailed": "Impossible de confirmer le changement de compte.",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/fr.ts
 
   "question.summary": "{{n}} sur {{total}} questions",
@@ -1454,6 +1462,9 @@ export const dict = {
   "settings.saveBar.saveAnyway": "Enregistrer quand même",
   "settings.saveBar.saving": "Enregistrement…",
   "settings.saveBar.saveFailed": "Impossible d'enregistrer les paramètres",
+  "settings.saveBar.dismissError": "Ignorer",
+  "settings.saveBar.unconfirmedWrite": "L'hôte de l'extension n'a pas confirmé «\u00a0{{name}}\u00a0».",
+  "settings.saveBar.unconfirmedSave": "L'hôte de l'extension n'a pas confirmé l'enregistrement. Réessayez.",
   "settings.saveBar.cancel": "Annuler",
   "notifications.action.next": "Suivant",
   "notifications.action.close": "Fermer",

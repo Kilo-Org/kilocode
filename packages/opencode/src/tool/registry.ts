@@ -41,6 +41,7 @@ import { RepoOverviewTool } from "@/kilocode/tool/repo-overview" // kilocode_cha
 import { ContextInfoTool, CompactTool } from "@/kilocode/tool/context" // kilocode_change
 import { RepoCloneTool } from "./repo_clone" // kilocode_change
 import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
+import { stripZodFormat } from "@opencode-ai/core/kilocode/json-schema-format" // kilocode_change
 import { Auth } from "@/auth" // kilocode_change
 import { Env } from "@/env" // kilocode_change - websearch resolves its config via Env.Service
 import { LspTool } from "./lsp"
@@ -49,7 +50,7 @@ import { ApplyPatchTool } from "./apply_patch"
 import { Glob } from "@opencode-ai/core/util/glob"
 import path from "path"
 import { pathToFileURL } from "url"
-import { Effect, Layer, Context, Option } from "effect" // kilocode_change
+import { Effect, Layer, Context, Option, Result } from "effect" // kilocode_change
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
 import { HttpClient } from "effect/unstable/http" // kilocode_change
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
@@ -241,6 +242,26 @@ const layer = Layer.effect(
           }
         }
 
+        // kilocode_change start - a plugin tool whose args Zod cannot convert to JSON Schema must not
+        // abort the whole registry: `zodJsonSchema` throws for `z.custom`, `z.instanceof`, `z.symbol`,
+        // BigInt defaults and duplicate `meta({ id })`, and the throw used to escape the state
+        // constructor so the session received no tools at all.
+        const register = Effect.fn("ToolRegistry.registerPlugin")(function* (id: string, def: ToolDefinition) {
+          const result = Result.try({
+            try: () => fromPlugin(id, def),
+            catch: (error) => error,
+          })
+          if (Result.isFailure(result)) {
+            yield* Effect.logError("skipping plugin tool with unconvertible schema", {
+              tool: id,
+              error: result.failure instanceof Error ? result.failure.message : String(result.failure),
+            })
+            return
+          }
+          custom.push(result.success)
+        })
+        // kilocode_change end
+
         const dirs = yield* config.directories()
         const matches = dirs.flatMap((dir) =>
           Glob.scanSync("{tool,tools}/*.{js,ts}", { cwd: dir, absolute: true, dot: true, symlink: true }),
@@ -253,14 +274,14 @@ const layer = Layer.effect(
           const mod = yield* Effect.promise(() => import(pathToFileURL(match).href))
           for (const [id, def] of Object.entries(mod)) {
             if (!isPluginTool(def)) continue
-            custom.push(fromPlugin(id === "default" ? namespace : `${namespace}_${id}`, def))
+            yield* register(id === "default" ? namespace : `${namespace}_${id}`, def) // kilocode_change
           }
         }
 
         const plugins = yield* plugin.list()
         for (const p of plugins) {
           for (const [id, def] of Object.entries(p.tool ?? {})) {
-            custom.push(fromPlugin(id, def))
+            yield* register(id, def) // kilocode_change
           }
         }
 
@@ -478,7 +499,11 @@ function legacyJsonSchema(entries: [string, unknown][]): JSONSchema7 {
 }
 
 function zodJsonSchema(schema: z.ZodType): JSONSchema7 {
-  const result = normalizeZodJsonSchema(z.toJSONSchema(schema, { io: "input", metadata: zodMetadataRegistry(schema) }))
+  // kilocode_change start - drop zod 4.6 non-standard string formats
+  const result = normalizeZodJsonSchema(
+    z.toJSONSchema(schema, { io: "input", metadata: zodMetadataRegistry(schema), override: stripZodFormat }),
+  )
+  // kilocode_change end
   if (!isJsonSchemaObject(result)) throw new Error("plugin tool Zod schema produced a non-object JSON Schema")
   const { $defs, ...rest } = result
   return (

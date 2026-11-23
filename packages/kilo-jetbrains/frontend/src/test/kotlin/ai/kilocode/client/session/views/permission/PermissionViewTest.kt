@@ -244,7 +244,7 @@ class PermissionViewTest : BasePlatformTestCase() {
                 meta = PermissionMeta(
                     raw = mapOf("skillShell" to "true", "skill" to "git-status"),
                     // \u202e (RLO) would otherwise reverse the trailing text in the prompt.
-                    skillCommands = listOf("rm \u202etxt.exe", "a\nb"),
+                    skillCommands = listOf("rm \u202etxt.exe", "a\nb", "x\u2060y\u2064z"),
                 ),
             )
         )
@@ -253,6 +253,60 @@ class PermissionViewTest : BasePlatformTestCase() {
         assertTrue("Expected escaped RLO, got: ${label.text}", label.text.contains("rm \\u202etxt.exe"))
         assertTrue("Expected escaped newline, got: ${label.text}", label.text.contains("a\\nb"))
         assertFalse("Raw control char must not reach the label", label.text.contains("\u202e"))
+        assertTrue(
+            "Expected escaped zero-width characters, got: ${label.text}",
+            label.text.contains("x\\u2060y\\u2064z"),
+        )
+        assertFalse("Raw zero-width char must not reach the label", label.text.contains("\u2060"))
+    }
+
+    fun `test skill-shell commands escape supplementary-plane and combining format characters`() {
+        // A tag character (U+E0041), a variation selector (U+FE0F), a shorthand format control
+        // (U+1BCA0) and the combining grapheme joiner (U+034F) render without width.
+        val tag = String(Character.toChars(0xE0041))
+        val vs = "\uFE0F"
+        val shorthand = String(Character.toChars(0x1BCA0))
+        val cgj = "\u034F"
+        view.show(
+            Permission(
+                id = "perm_skill_astral",
+                sessionId = "ses",
+                name = "bash",
+                patterns = listOf("printf hi"),
+                always = emptyList(),
+                meta = PermissionMeta(
+                    raw = mapOf("skillShell" to "true", "skill" to "git-status"),
+                    skillCommands = listOf(
+                        "rm -rf ${tag}txt.exe",
+                        "rm -rf ${vs}txt.exe",
+                        "rm -rf ${shorthand}txt.exe",
+                        "rm -rf ${cgj}txt.exe",
+                    ),
+                ),
+            )
+        )
+
+        val label = view.codeLabelsForTest().single()
+        assertTrue(
+            "Expected escaped supplementary tag character, got: ${label.text}",
+            label.text.contains("rm -rf \\u{e0041}txt.exe"),
+        )
+        assertTrue(
+            "Expected escaped variation selector, got: ${label.text}",
+            label.text.contains("rm -rf \\ufe0ftxt.exe"),
+        )
+        assertTrue(
+            "Expected escaped shorthand format control, got: ${label.text}",
+            label.text.contains("rm -rf \\u{1bca0}txt.exe"),
+        )
+        assertTrue(
+            "Expected escaped combining grapheme joiner, got: ${label.text}",
+            label.text.contains("rm -rf \\u034ftxt.exe"),
+        )
+        assertFalse("Raw supplementary character must not reach the label", label.text.contains(tag))
+        assertFalse("Raw variation selector must not reach the label", label.text.contains(vs))
+        assertFalse("Raw shorthand format control must not reach the label", label.text.contains(shorthand))
+        assertFalse("Raw combining grapheme joiner must not reach the label", label.text.contains(cgj))
     }
 
     fun `test skill-shell header escapes control and bidi characters in the skill name`() {
@@ -298,6 +352,66 @@ class PermissionViewTest : BasePlatformTestCase() {
         val text = allText(view)
         assertFalse("Should not contain rules title, got: $text", text.contains("Auto-approve Rules"))
         assertFalse(view.rulesForTest().isVisible)
+        assertEquals("Allow once", view.runButtonForTest().text)
+    }
+
+    fun `test hosted permission card offers no always rules`() {
+        view.show(
+            Permission(
+                id = "perm_hosted",
+                sessionId = "ses",
+                name = "bash",
+                patterns = listOf("git status"),
+                always = listOf("git status"),
+                meta = PermissionMeta(
+                    // Simulates a hosted workspace whose backend sends rule candidates anyway; a
+                    // hosted workspace stores no always-rules, so the card still offers none.
+                    ruleDecisions = listOf(PermissionRuleCandidate("git status")),
+                ),
+                hosted = true,
+            )
+        )
+
+        val text = allText(view)
+        assertFalse("Should not contain rules title, got: $text", text.contains("Auto-approve Rules"))
+        assertFalse(view.rulesForTest().isVisible)
+        assertEquals("Allow once", view.runButtonForTest().text)
+
+        view.runButtonForTest().doClick()
+
+        assertEquals(1, replies.size)
+        assertEquals("perm_hosted", replies.single().first)
+        assertEquals("once", replies.single().second.reply)
+        assertTrue(replies.single().second.interactive)
+        assertNull(replies.single().third)
+    }
+
+    fun `test hosted permission reject sends its reply without rules`() {
+        view.show(
+            Permission(
+                id = "perm_hosted_reject",
+                sessionId = "ses",
+                name = "bash",
+                patterns = listOf("git status"),
+                always = listOf("git status"),
+                meta = PermissionMeta(ruleDecisions = listOf(PermissionRuleCandidate("git status"))),
+                hosted = true,
+            )
+        )
+
+        view.denyButtonForTest().doClick()
+
+        assertEquals(1, replies.size)
+        assertEquals("perm_hosted_reject", replies.single().first)
+        assertEquals("reject", replies.single().second.reply)
+        assertNull(replies.single().third)
+    }
+
+    fun `test local permission card offers always rules after a hosted card`() {
+        view.show(permission().copy(hosted = true))
+        view.show(permissionWithRules("perm_local_after", listOf("git status *")))
+
+        assertTrue(view.rulesForTest().isVisible)
         assertEquals("Allow once", view.runButtonForTest().text)
     }
 

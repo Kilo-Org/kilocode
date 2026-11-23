@@ -59,6 +59,9 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
     /** Get a single session by ID. */
     suspend fun get(id: String, directory: String): SessionDto
 
+    /** Look up a local session; null means HTTP 404, while all other failures throw. */
+    suspend fun find(id: String, directory: String): SessionDto?
+
     /** Delete a session. */
     suspend fun delete(id: String, directory: String)
 

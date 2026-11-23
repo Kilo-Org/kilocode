@@ -1,21 +1,46 @@
 import { ID as AttachmentID } from "@/kilocode/server/hosted-attachments"
 import {
   Availability,
+  ContinueWorkspaceInput,
+  ContinueWorkspaceResult,
+  CreateWorkspaceInput,
+  CreateWorkspaceResult,
+  DeleteWorkspaceResult,
   HostedSession,
   HostedSessionID,
   HostedSessionPage,
   HostedTranscriptPage,
+  HostedWorkspace,
+  HostedWorkspacePage,
+  HostedWorkspaceSessionPage,
+  HostedWorkspaceStatus,
   OrganizationID,
   ProviderID,
   RemoteSessionID,
   StartInput,
   StartResult,
   Transport,
+  WorkspaceID,
+  WorkspaceChangeFileResult,
+  WorkspaceChangeScope,
+  WorkspaceChanges,
+  WorkspaceChangesRefresh,
+  WorkspacePullRequestDiff,
+  WorkspacePullRequestDiffFileResult,
+  WorkspaceProfileDefaultInput,
+  WorkspaceProfileDefaultResult,
+  WorkspaceProfilePage,
+  WorkspaceRepositoryListInput,
+  WorkspaceRepositoryPage,
+  WorkspacePullRequestResult,
+  WorkspaceSessionStartBody,
+  WorkspaceSessionStartResult,
 } from "@/kilocode/session-hosting/types"
 import { described } from "@/server/routes/instance/httpapi/groups/metadata"
 import {
   ApiNotFoundError,
   ConflictError,
+  ForbiddenError,
   InvalidRequestError,
   ServiceUnavailableError,
   UnauthorizedError,
@@ -34,6 +59,22 @@ export const SessionHostPaths = {
   message: `${root}/session/:providerID/:sessionID/message`,
   attach: `${root}/session/:providerID/:sessionID/attach`,
   attachment: `${root}/attachment/:attachmentID`,
+  workspace: `${root}/workspace`,
+  workspaceContinue: `${root}/workspace/continue`,
+  workspaceProfiles: `${root}/workspace/profiles`,
+  workspaceRepositories: `${root}/workspace/repositories`,
+  workspaceProfilePersonalDefault: `${root}/workspace/profiles/personal-default`,
+  workspaceProfilePersonalDefaultDetail: `${root}/workspace/profiles/personal-default/:profileID`,
+  workspaceDetail: `${root}/workspace/:providerID/:workspaceID`,
+  workspaceStatus: `${root}/workspace/:providerID/:workspaceID/status`,
+  workspacePullRequest: `${root}/workspace/:providerID/:workspaceID/pull-request`,
+  workspacePullRequestRefresh: `${root}/workspace/:providerID/:workspaceID/pull-request/refresh`,
+  workspaceChanges: `${root}/workspace/:providerID/:workspaceID/changes`,
+  workspaceChangesRefresh: `${root}/workspace/:providerID/:workspaceID/changes/refresh`,
+  workspaceChangeFile: `${root}/workspace/:providerID/:workspaceID/changes/file`,
+  workspacePullRequestDiff: `${root}/workspace/:providerID/:workspaceID/pull-request-diff`,
+  workspacePullRequestDiffFile: `${root}/workspace/:providerID/:workspaceID/pull-request-diff/file`,
+  workspaceSession: `${root}/workspace/:providerID/:workspaceID/session`,
 } as const
 
 export class SessionHostPaymentRequiredError extends Schema.ErrorClass<SessionHostPaymentRequiredError>(
@@ -44,6 +85,32 @@ export class SessionHostGoneError extends Schema.ErrorClass<SessionHostGoneError
   { code: Schema.String, message: Schema.String },
   { httpApiStatus: 410 },
 ) {}
+
+export class SessionHostCreateConflictError extends Schema.ErrorClass<SessionHostCreateConflictError>(
+  "SessionHostCreateConflictError",
+)(
+  {
+    code: Schema.Literals(["creation_in_progress", "operation_key_reuse_mismatch", "session_create_intent_conflict"]),
+    message: Schema.String,
+    retryable: Schema.Boolean,
+  },
+  { httpApiStatus: 409 },
+) {}
+
+/**
+ * A typed Continue-in-Cloud failure. It carries `code`, `message`, and
+ * `retryable` so the client can decide whether to keep the operation key:
+ * `creation_in_progress` and `continuation_incomplete` are retryable, an
+ * `operation_key_reuse_mismatch` is terminal.
+ */
+export class SessionHostContinuationError extends Schema.ErrorClass<SessionHostContinuationError>(
+  "SessionHostContinuationError",
+)({ code: Schema.String, message: Schema.String, retryable: Schema.Boolean }, { httpApiStatus: 409 }) {}
+
+/** Continue-in-Cloud needs a funded account. Always retryable: false. */
+export class SessionHostInsufficientBalanceError extends Schema.ErrorClass<SessionHostInsufficientBalanceError>(
+  "SessionHostInsufficientBalanceError",
+)({ code: Schema.String, message: Schema.String, retryable: Schema.Boolean }, { httpApiStatus: 402 }) {}
 
 export const SessionHostProviderStatus = Schema.Struct({
   id: ProviderID,
@@ -77,23 +144,74 @@ const SessionErrors = [
 ] as const
 
 const ListQuery = Schema.Struct({
-  limit: Schema.optional(
-    Schema.NumberFromString.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 100 })),
-  ),
+  limit: Schema.optional(Schema.NumberFromString.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 100 }))),
 })
 
 const TranscriptQuery = Schema.Struct({
-  limit: Schema.optional(
-    Schema.NumberFromString.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 100 })),
-  ),
+  limit: Schema.optional(Schema.NumberFromString.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 100 }))),
   before: Schema.optional(Schema.String),
 })
 
 const AttachQuery = Schema.Struct({ organizationID: Schema.optional(OrganizationID) })
 
+const WorkspaceListQuery = Schema.Struct({
+  limit: Schema.optional(Schema.NumberFromString.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 50 }))),
+  sessionLimit: Schema.optional(
+    Schema.NumberFromString.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 100 })),
+  ),
+  cursor: Schema.optional(Schema.String),
+  repositoryUrl: Schema.optional(Schema.String),
+  organizationID: Schema.optional(OrganizationID),
+})
+
+const WorkspaceGetQuery = Schema.Struct({
+  sessionLimit: Schema.optional(
+    Schema.NumberFromString.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 100 })),
+  ),
+  sessionCursor: Schema.optional(Schema.String),
+  organizationID: Schema.optional(OrganizationID),
+})
+
+const WorkspaceProfilesQuery = Schema.Struct({ organizationID: Schema.optional(OrganizationID) })
+
+const WorkspaceRepositoriesQuery = WorkspaceRepositoryListInput.mapFields((fields) => ({
+  ...fields,
+  page: Schema.optional(Schema.NumberFromString.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 100 }))),
+}))
+
+const WorkspaceStatusQuery = Schema.Struct({ organizationID: Schema.optional(OrganizationID) })
+
+const WorkspaceChangeFileQuery = Schema.Struct({
+  path: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(4096)),
+  scope: Schema.optional(WorkspaceChangeScope),
+  expectedRevision: Schema.NumberFromString.check(
+    Schema.isInt(),
+    Schema.isGreaterThan(0),
+    Schema.isLessThanOrEqualTo(Number.MAX_SAFE_INTEGER),
+  ),
+  organizationID: Schema.optional(OrganizationID),
+})
+
+const WorkspacePullRequestDiffFileQuery = Schema.Struct({
+  path: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(4096)),
+  expectedHeadSha: Schema.String.check(Schema.isPattern(/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/)),
+  organizationID: Schema.optional(OrganizationID),
+})
+
+const WorkspaceSessionListQuery = Schema.Struct({
+  limit: Schema.optional(Schema.NumberFromString.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 100 }))),
+  cursor: Schema.optional(Schema.String),
+  organizationID: Schema.optional(OrganizationID),
+})
+
 const Params = {
   providerID: ProviderID,
   sessionID: RemoteSessionID,
+}
+
+const WorkspaceParams = {
+  providerID: ProviderID,
+  workspaceID: WorkspaceID,
 }
 
 /**
@@ -186,6 +304,248 @@ export const SessionHostApi = HttpApi.make("session-host")
             identifier: "sessionHost.detach",
             summary: "Detach a hosted session",
             description: "Dispose a local attachment. This never changes Cloud lifecycle.",
+          }),
+        ),
+        HttpApiEndpoint.get("listWorkspaces", SessionHostPaths.workspace, {
+          query: WorkspaceListQuery,
+          success: described(HostedWorkspacePage, "Hosted workspaces"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.listWorkspaces",
+            summary: "List hosted workspaces",
+            description:
+              "List workspaces from the authenticated default session host provider. A workspace is the shared compute and repository identity that groups root sessions.",
+          }),
+        ),
+        HttpApiEndpoint.post("createWorkspace", SessionHostPaths.workspace, {
+          payload: CreateWorkspaceInput,
+          success: described(CreateWorkspaceResult, "Hosted workspace created"),
+          error: [...SessionErrors, ForbiddenError, SessionHostCreateConflictError],
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.createWorkspace",
+            summary: "Create a hosted workspace",
+            description:
+              "Create a hosted workspace and, optionally, its initial turn, explicit profile, and additional repositories. For a nonempty selection, send the organization and integrationID from the repository catalog. Omit prompt and messageID to create an empty workspace. For a retryable create conflict, reuse the same operation key and unchanged intent.",
+          }),
+        ),
+        HttpApiEndpoint.post("continueWorkspace", SessionHostPaths.workspaceContinue, {
+          payload: ContinueWorkspaceInput,
+          success: described(ContinueWorkspaceResult, "Local worktree continued in Cloud"),
+          error: [...SessionErrors, SessionHostContinuationError, SessionHostInsufficientBalanceError],
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.continueWorkspace",
+            summary: "Continue a local worktree in Cloud",
+            description:
+              "Copy the open root sessions of one local worktree into a new hosted workspace. The CLI validates Git, sessions, and sync and stores one durable request body; reuse the same operation key to retry safely.",
+          }),
+        ),
+        HttpApiEndpoint.get("listWorkspaceProfiles", SessionHostPaths.workspaceProfiles, {
+          query: WorkspaceProfilesQuery,
+          success: described(WorkspaceProfilePage, "Authorized workspace profiles"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.listWorkspaceProfiles",
+            summary: "List workspace creation profiles",
+            description:
+              "List personal and organization profile summaries for workspace creation with their default flags. Secret and environment values are never returned.",
+          }),
+        ),
+        HttpApiEndpoint.get("listWorkspaceRepositories", SessionHostPaths.workspaceRepositories, {
+          query: WorkspaceRepositoriesQuery,
+          success: described(WorkspaceRepositoryPage, "Eligible additional repositories"),
+          error: [...SessionErrors, ForbiddenError],
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.listWorkspaceRepositories",
+            summary: "List eligible additional workspace repositories",
+            description:
+              "Passively list authorized repositories for a GitHub primary in the selected organization. Preserve the returned integrationID for subsequent pages and create. Only a successful supported catalog response enables additional repositories.",
+          }),
+        ),
+        HttpApiEndpoint.post("setWorkspacePersonalDefaultProfile", SessionHostPaths.workspaceProfilePersonalDefault, {
+          payload: WorkspaceProfileDefaultInput,
+          success: described(WorkspaceProfileDefaultResult, "Personal default profile set"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.setWorkspacePersonalDefaultProfile",
+            summary: "Set the personal default workspace profile",
+            description:
+              "Set the authenticated user's personal default profile for workspace creation. The profile must be owned by the caller.",
+          }),
+        ),
+        HttpApiEndpoint.delete(
+          "clearWorkspacePersonalDefaultProfile",
+          SessionHostPaths.workspaceProfilePersonalDefaultDetail,
+          {
+            params: { profileID: Schema.String.check(Schema.isUUID()) },
+            query: WorkspaceProfilesQuery,
+            success: described(WorkspaceProfileDefaultResult, "Personal default profile cleared"),
+            error: SessionErrors,
+          },
+        ).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.clearWorkspacePersonalDefaultProfile",
+            summary: "Clear the personal default workspace profile",
+            description:
+              "Clear the authenticated user's personal default profile for workspace creation. The profile must be owned by the caller.",
+          }),
+        ),
+        HttpApiEndpoint.get("getWorkspace", SessionHostPaths.workspaceDetail, {
+          params: WorkspaceParams,
+          query: WorkspaceGetQuery,
+          success: described(HostedWorkspace, "Hosted workspace"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.getWorkspace",
+            summary: "Get a hosted workspace",
+            description: "Read one hosted workspace with a bounded page of its root sessions.",
+          }),
+        ),
+        HttpApiEndpoint.get("getWorkspaceStatus", SessionHostPaths.workspaceStatus, {
+          params: WorkspaceParams,
+          query: WorkspaceStatusQuery,
+          success: described(HostedWorkspaceStatus, "Hosted workspace status"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.getWorkspaceStatus",
+            summary: "Read hosted workspace status",
+            description: "Read passive compute, activity, wake, billing, and deletion progress without waking compute.",
+          }),
+        ),
+        HttpApiEndpoint.get("getWorkspacePullRequest", SessionHostPaths.workspacePullRequest, {
+          params: WorkspaceParams,
+          query: WorkspaceStatusQuery,
+          success: described(WorkspacePullRequestResult, "Hosted workspace PR observation"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.getWorkspacePullRequest",
+            summary: "Read hosted workspace PR status",
+            description:
+              "Read the cached linked PR without contacting GitHub or waking compute. Only no_pr means no eligible linked PR is known; unavailable or partial observations must not clear previous evidence.",
+          }),
+        ),
+        HttpApiEndpoint.post("refreshWorkspacePullRequest", SessionHostPaths.workspacePullRequestRefresh, {
+          params: WorkspaceParams,
+          query: WorkspaceStatusQuery,
+          success: described(WorkspacePullRequestResult, "Hosted workspace PR refresh observation"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.refreshWorkspacePullRequest",
+            summary: "Refresh hosted workspace PR status",
+            description:
+              "Explicitly refresh the linked PR observation. Preserve cached evidence, partial fields, cooldown status, and retry time; refresh failure is not no_pr and does not mutate the PR or wake compute.",
+          }),
+        ),
+        HttpApiEndpoint.get("getWorkspaceChanges", SessionHostPaths.workspaceChanges, {
+          params: WorkspaceParams,
+          query: WorkspaceStatusQuery,
+          success: described(WorkspaceChanges, "Saved hosted workspace changes"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.getWorkspaceChanges",
+            summary: "Read hosted workspace changes",
+            description:
+              "Read the saved committed and uncommitted workspace comparison without waking compute. Every file reports explicit diff and content availability, and an omitted payload never looks like an empty diff.",
+          }),
+        ),
+        HttpApiEndpoint.post("refreshWorkspaceChanges", SessionHostPaths.workspaceChangesRefresh, {
+          params: WorkspaceParams,
+          query: WorkspaceStatusQuery,
+          success: described(WorkspaceChangesRefresh, "Refreshed hosted workspace changes"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.refreshWorkspaceChanges",
+            summary: "Refresh hosted workspace changes",
+            description:
+              "Explicitly refresh the saved workspace comparison. An offline or failed refresh preserves the previous durable snapshot.",
+          }),
+        ),
+        HttpApiEndpoint.get("getWorkspaceChangeFile", SessionHostPaths.workspaceChangeFile, {
+          params: WorkspaceParams,
+          query: WorkspaceChangeFileQuery,
+          success: described(WorkspaceChangeFileResult, "Hosted workspace file"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.getWorkspaceChangeFile",
+            summary: "Read a hosted workspace file",
+            description:
+              "Read one captured file fenced by the expected snapshot revision. A stale or delisted result never returns another revision's patch.",
+          }),
+        ),
+        HttpApiEndpoint.get("getWorkspacePullRequestDiff", SessionHostPaths.workspacePullRequestDiff, {
+          params: WorkspaceParams,
+          query: WorkspaceStatusQuery,
+          success: described(WorkspacePullRequestDiff, "Hosted workspace pull request diff"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.getWorkspacePullRequestDiff",
+            summary: "Read the hosted workspace pull request diff",
+            description:
+              "Read the verified linked PR and its published file comparison. This comparison is distinct from the committed and uncommitted workspace changes; not_linked is a successful result with no PR data.",
+          }),
+        ),
+        HttpApiEndpoint.get("getWorkspacePullRequestDiffFile", SessionHostPaths.workspacePullRequestDiffFile, {
+          params: WorkspaceParams,
+          query: WorkspacePullRequestDiffFileQuery,
+          success: described(WorkspacePullRequestDiffFileResult, "Hosted workspace pull request file"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.getWorkspacePullRequestDiffFile",
+            summary: "Read a hosted workspace pull request file",
+            description:
+              "Read one PR patch fenced by the verified head SHA. A stale, delisted, or omitted file never returns a synthesized patch.",
+          }),
+        ),
+        HttpApiEndpoint.delete("deleteWorkspace", SessionHostPaths.workspaceDetail, {
+          params: WorkspaceParams,
+          query: WorkspaceStatusQuery,
+          success: described(DeleteWorkspaceResult, "Hosted workspace deleted"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.deleteWorkspace",
+            summary: "Delete a hosted workspace",
+            description:
+              "Delete a hosted workspace and invalidate its local attachments. Attachments for other workspaces are preserved.",
+          }),
+        ),
+        HttpApiEndpoint.get("listWorkspaceSessions", SessionHostPaths.workspaceSession, {
+          params: WorkspaceParams,
+          query: WorkspaceSessionListQuery,
+          success: described(HostedWorkspaceSessionPage, "Hosted workspace sessions"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.listWorkspaceSessions",
+            summary: "List hosted workspace sessions",
+            description: "List a bounded page of a hosted workspace's root sessions.",
+          }),
+        ),
+        HttpApiEndpoint.post("startWorkspaceSession", SessionHostPaths.workspaceSession, {
+          params: WorkspaceParams,
+          payload: WorkspaceSessionStartBody,
+          success: described(WorkspaceSessionStartResult, "Hosted workspace session started"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.startWorkspaceSession",
+            summary: "Start a session in a hosted workspace",
+            description:
+              "Add a root session to an existing hosted workspace. The workspace supplies repository, environment, and compute; reuse the same operation key and message ID to retry safely.",
           }),
         ),
       )

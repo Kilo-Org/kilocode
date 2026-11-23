@@ -6,6 +6,7 @@ import ai.kilocode.backend.app.KiloAppState
 import ai.kilocode.backend.app.KiloBackendAppService
 import ai.kilocode.backend.telemetry.KiloBackendTelemetry
 import ai.kilocode.backend.app.LoadError
+import ai.kilocode.backend.app.LoadFailure
 import ai.kilocode.backend.app.LoadProgress
 import ai.kilocode.backend.app.ProfileResult
 import ai.kilocode.backend.cli.KiloCliPlatform
@@ -34,7 +35,11 @@ import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.ProfileKiloPassDto
 import ai.kilocode.rpc.dto.ProfileOrganizationDto
 import ai.kilocode.rpc.dto.ProfileStatusDto
+import ai.kilocode.rpc.dto.ProfileSyncDto
 import ai.kilocode.rpc.dto.RetentionStatusDto
+import ai.kilocode.rpc.dto.SpeechModelDto
+import ai.kilocode.rpc.dto.SpeechRequestDto
+import ai.kilocode.rpc.dto.SpeechResultDto
 import ai.kilocode.rpc.dto.TelemetryCaptureDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.writeAction
@@ -47,8 +52,26 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
+import java.io.IOException
 import java.nio.file.Files
+import java.util.Base64
+import java.util.concurrent.TimeUnit
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 /**
  * Backend implementation of [KiloAppRpcApi].
@@ -56,9 +79,36 @@ import java.nio.file.Files
  * Delegates directly to the app-level [KiloBackendAppService] —
  * no project resolution needed since all operations are app-scoped.
  */
-class KiloAppRpcApiImpl : KiloAppRpcApi {
+class KiloAppRpcApiImpl internal constructor(
+    private val svc: KiloBackendAppService? = null,
+) : KiloAppRpcApi {
 
-    private val app: KiloBackendAppService get() = service()
+    private var speechTimeout = DEFAULT_SPEECH_TIMEOUT_SECONDS
+
+    internal constructor(svc: KiloBackendAppService?, speechTimeout: Long) : this(svc) {
+        this.speechTimeout = speechTimeout
+    }
+
+    companion object {
+        private const val DEFAULT_SPEECH_TIMEOUT_SECONDS = 120L
+        private const val MODEL_TIMEOUT_SECONDS = 30L
+        private const val ERROR_BODY_LIMIT = 1000
+        private val JSON = Json { ignoreUnknownKeys = true }
+        private val JSON_TYPE = "application/json".toMediaType()
+    }
+
+    @Serializable
+    private data class SpeechModelWire(
+        val id: String,
+        val name: String,
+    )
+
+    @Serializable
+    private data class SpeechResultWire(
+        val text: String,
+    )
+
+    private val app: KiloBackendAppService get() = svc ?: service()
 
     override suspend fun connect() = app.connect()
 
@@ -110,6 +160,11 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
         return appStateDto(app.updateConfig(patch), app.capabilities.value)
     }
 
+    override suspend fun setTelemetryLevel(enabled: Boolean): KiloAppStateDto {
+        app.requireReady()
+        return appStateDto(app.setTelemetryLevel(enabled), app.capabilities.value)
+    }
+
     override suspend fun retentionStatus(): RetentionStatusDto = app.retention.status()
 
     override suspend fun runRetention(force: Boolean): RetentionStatusDto = app.retention.run(force)
@@ -141,14 +196,82 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
 
     override suspend fun refreshProfile(): ProfileDto? = app.refreshProfile()?.let(::profileDto)
 
+    override suspend fun refreshAccount(): ProfileSyncDto = sync { app.refreshAccount() }
+
+    override suspend fun transcriptionModels(directory: String?): List<SpeechModelDto> {
+        app.requireReady()
+        val body = request("kilo/models/transcriptions", directory, null, MODEL_TIMEOUT_SECONDS)
+        return JSON.decodeFromString<List<SpeechModelWire>>(body).map { model ->
+            SpeechModelDto(model.id, model.name)
+        }
+    }
+
+    override suspend fun transcribe(directory: String?, request: SpeechRequestDto): SpeechResultDto {
+        app.requireReady()
+        val payload = buildJsonObject {
+            put("model", request.model)
+            putJsonObject("input_audio") {
+                put("data", Base64.getEncoder().encodeToString(request.data))
+                put("format", request.format)
+            }
+            request.prompt?.let { put("prompt", it) }
+        }
+        val body = this.request("kilo/audio/transcriptions", directory, payload.toString(), speechTimeout)
+        return SpeechResultDto(JSON.decodeFromString<SpeechResultWire>(body).text)
+    }
+
+    private suspend fun request(path: String, directory: String?, body: String?, timeout: Long): String {
+        val http = app.http ?: error("Kilo Core is not connected")
+        val url = "http://127.0.0.1:${app.port}".toHttpUrl().newBuilder()
+            .addPathSegments(path)
+            .apply { directory?.let { addQueryParameter("directory", it) } }
+            .build()
+        val builder = Request.Builder().url(url)
+        if (body == null) builder.get() else builder.post(body.toRequestBody(JSON_TYPE))
+        val call = http.newCall(builder.build())
+        call.timeout().timeout(timeout, TimeUnit.SECONDS)
+        return call.await().use { response ->
+            if (!response.isSuccessful) {
+                val content = response.peekBody(ERROR_BODY_LIMIT.toLong()).string()
+                throw IOException("Kilo Core request failed (${response.code}): $content")
+            }
+            response.body.string()
+        }
+    }
+
+    private suspend fun Call.await(): Response = suspendCancellableCoroutine { continuation ->
+        continuation.invokeOnCancellation { cancel() }
+        enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                if (!continuation.isCancelled) continuation.resumeWithException(e)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                continuation.resume(response) { _, value, _ -> value.close() }
+            }
+        })
+    }
+
     override suspend fun startLogin(directory: String?): DeviceAuthDto = app.startLogin(directory)
 
-    override suspend fun completeLogin(directory: String?): ProfileDto? = app.completeLogin(directory)?.let(::profileDto)
+    override suspend fun completeLogin(directory: String?): ProfileSyncDto =
+        sync { app.completeLogin(directory) }
 
     override suspend fun logout(): Boolean = app.logout()
 
-    override suspend fun setOrganization(organizationId: String?): ProfileDto? =
-        app.setOrganization(organizationId)?.let(::profileDto)
+    override suspend fun setOrganization(organizationId: String?): ProfileSyncDto =
+        sync { app.setOrganization(organizationId) }
+
+    /**
+     * Run one account step and report its outcome. A completed step reports the profile, null when
+     * the CLI reports nobody signed in. A step whose profile read could not complete reports the
+     * error, so the caller keeps the account it already has.
+     */
+    private suspend fun sync(step: suspend () -> KiloProfile200Response?): ProfileSyncDto = try {
+        ProfileSyncDto(profile = step()?.let(::profileDto))
+    } catch (e: LoadFailure) {
+        ProfileSyncDto(error = error(e.error))
+    }
 
     override suspend fun captureTelemetry(capture: TelemetryCaptureDto) {
         service<KiloBackendTelemetry>().capture(app.http, app.port, capture.event, capture.properties)

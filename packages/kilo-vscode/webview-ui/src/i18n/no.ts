@@ -320,6 +320,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "Fjern fra tillatt-listen",
   "ui.permission.rule.addToDenied": "Legg til i blokkert-listen",
   "ui.permission.rule.removeFromDenied": "Fjern fra blokkert-listen",
+  "ui.permission.rule.fromConfig": "Styrt av en konfigurasjonsfil",
   "ui.permission.toolLabel.read": "Les",
   "ui.permission.toolLabel.edit": "Rediger",
   "ui.permission.toolLabel.write": "Skriv",
@@ -779,6 +780,7 @@ export const dict = {
 
   "dialog.model.noProviders": "Ingen leverandører",
   "dialog.model.unavailable": "Kilo-modeller er utilgjengelige",
+  "dialog.model.loadFailed": "Kunne ikke laste inn leverandører for dette prosjektet.",
 
   "prompt.placeholder.connecting": "Kobler til server...",
   "prompt.placeholder.error": "Tilkobling mislyktes. Sjekk utdatapanelet eller start utvidelsen på nytt.",
@@ -829,8 +831,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "Telemetri",
   "settings.aboutKiloCode.telemetry.description":
-    'Telemetri styres av den innebygde telemetri-innstillingen i VS Code. For å deaktivere den, gå til Innstillinger > Telemetry > Telemetry Level og sett den til "off". Start VS Code på nytt for å ta i bruk endringen.',
-  "settings.aboutKiloCode.telemetry.openSettings": "Åpne innstillinger for telemetri",
+    "Bruk denne bryteren til å endre telemetriinnstillingen din i Kilo. Telemetri forblir av hvis VS Code eller miljøet slår den av.",
+  "settings.aboutKiloCode.telemetry.toggle": "Slå på telemetri",
+  "settings.aboutKiloCode.telemetry.saveFailed": "Kunne ikke oppdatere telemetriinnstillingen",
 
   "settings.agentBehaviour.subtab.agents": "Agenter",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-servere",
@@ -941,6 +944,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "Promptlogg per samtale",
   "settings.experimental.conversationPromptHistory.description":
     "Hold promptloggen (ArrowUp/ArrowDown) adskilt for hver samtale i stedet for å dele én logg på tvers av alle samtaler.",
+  "settings.experimental.agentManagerSplash.title": "Agent Manager-velkomstskjerm",
+  "settings.experimental.agentManagerSplash.description":
+    "Prøv den nye introduksjonen til Agent Manager med eksempler på arbeidsflyter. Tas i bruk umiddelbart.",
   "settings.experimental.claudeMigration.title": "Claude Code-migrering",
   "settings.experimental.claudeMigration.description":
     "Importer støttede globale CLAUDE.md-instruksjoner, enkle ferdigheter og deaktiverte MCP-definisjoner én gang. Originale Claude-filer forblir uendret; start backend på nytt etter aktivering.",
@@ -1330,6 +1336,8 @@ export const dict = {
   "dialog.model.notSet": "Ikke angitt",
   "profile.personalAccount": "Personlig konto",
   "profile.switchingAccount": "Bytter konto…",
+  "profile.unavailableAccount": "Utilgjengelig konto",
+  "profile.switchFailed": "Kunne ikke bekrefte kontobytte.",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/no.ts
 
   "question.summary": "{{n}} av {{total}} spørsmål",
@@ -1412,6 +1420,9 @@ export const dict = {
   "settings.saveBar.cancel": "Avbryt",
   "settings.saveBar.saving": "Lagrer…",
   "settings.saveBar.saveFailed": "Kunne ikke lagre innstillinger",
+  "settings.saveBar.dismissError": "Avvis",
+  "settings.saveBar.unconfirmedWrite": "«{{name}}» ble ikke bekreftet av utvidelsesverten.",
+  "settings.saveBar.unconfirmedSave": "Lagringen ble ikke bekreftet av utvidelsesverten. Prøv igjen.",
   "notifications.action.next": "Neste",
   "notifications.action.close": "Lukk",
   "notifications.action.tryModel": "Prøv {{model}}",

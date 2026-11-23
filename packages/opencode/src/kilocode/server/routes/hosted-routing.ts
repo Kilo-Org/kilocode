@@ -1,5 +1,7 @@
 import type { FailureCode, NativeRequest } from "@/kilocode/session-hosting/types"
 import { isNativePath } from "@/kilocode/session-hosting/native-routes"
+import { errorCode } from "@/kilocode/session-hosting/response"
+import { readBoundedJson } from "@/kilocode/cloud/response-json"
 import { Effect, Stream } from "effect"
 import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import * as Attachments from "../hosted-attachments"
@@ -57,7 +59,11 @@ interface ServerRequest {
 
 /** The attachment id carried in the existing workspace selector slot. */
 export function attachmentID(url: URL, headers: Headers) {
-  const candidates = [url.searchParams.get("workspace"), url.searchParams.get("location[workspace]"), headers["x-kilo-workspace"]]
+  const candidates = [
+    url.searchParams.get("workspace"),
+    url.searchParams.get("location[workspace]"),
+    headers["x-kilo-workspace"],
+  ]
   for (const value of candidates) {
     if (value && Attachments.isID(value)) return value
   }
@@ -115,10 +121,17 @@ export function resolve(
     if (found.kind !== "found") return { type: "fail", reason: found.kind } satisfies Plan
     const entry = found.entry
     if (entry.expiresAt <= Date.now()) {
-      const attached = yield* entry.provider.attach({
-        id: entry.session,
-        ...(entry.organizationID ? { organizationID: entry.organizationID } : {}),
-      }).pipe(Effect.catch(() => Effect.succeed(undefined)))
+      const attached = yield* entry.provider
+        .attach({
+          id: entry.session,
+          ...(entry.organizationID ? { organizationID: entry.organizationID } : {}),
+        })
+        .pipe(
+          Effect.catch((error) => {
+            if (error.code === "not_found") invalidate(entry, store)
+            return Effect.succeed(undefined)
+          }),
+        )
       if (!attached) return { type: "fail", reason: "unavailable" } satisfies Plan
       store.renew(entry, { expiresAt: attached.expiresAt })
     } else {
@@ -147,10 +160,29 @@ export function respond(plan: Routed, request: ServerRequest): Effect.Effect<Htt
       ...(plan.entry.organizationID ? { organizationID: plan.entry.organizationID } : {}),
     }
     return yield* route(native).pipe(
-      Effect.flatMap(forwardResponse),
-      Effect.catch((error) => Effect.succeed(failure(error.code))),
+      Effect.flatMap((response) => {
+        if (response.status !== 404) return forwardResponse(response)
+        return Effect.tryPromise({
+          try: () => readBoundedJson(response.clone(), MAX_BODY_BYTES),
+          catch: () => undefined,
+        }).pipe(
+          Effect.catch(() => Effect.succeed(undefined)),
+          Effect.flatMap((body) => {
+            if (errorCode(body) === "KILO_SESSION_NOT_FOUND") invalidate(plan.entry)
+            return forwardResponse(response)
+          }),
+        )
+      }),
+      Effect.catch((error) => {
+        if (error.code === "not_found") invalidate(plan.entry)
+        return Effect.succeed(failure(error.code))
+      }),
     )
   })
+}
+
+function invalidate(entry: Attachments.Entry, store: Attachments.Store = Attachments.store) {
+  store.disposeSession(entry.session)
 }
 
 function forward(headers: Headers) {
@@ -182,8 +214,8 @@ function payload(request: ServerRequest) {
       ),
       Effect.catch((error) => Effect.fail(error instanceof BodyError ? error : new BodyError("invalid"))),
       Effect.match({
-        onFailure: (error) => ({ kind: error.kind } as const),
-        onSuccess: (bytes) => ({ kind: "ok", ...(bytes.byteLength > 0 ? { bytes } : {}) } as const),
+        onFailure: (error) => ({ kind: error.kind }) as const,
+        onSuccess: (bytes) => ({ kind: "ok", ...(bytes.byteLength > 0 ? { bytes } : {}) }) as const,
       }),
     )
   })
@@ -205,10 +237,10 @@ function forwardResponse(response: Response): Effect.Effect<HttpServerResponse.H
   if (!response.body) return Effect.succeed(HttpServerResponse.raw(null, options))
   if (contentType?.startsWith("text/event-stream")) {
     return Effect.succeed(
-      HttpServerResponse.stream(
-        Stream.fromReadableStream({ evaluate: () => response.body!, onError: (err) => err }),
-        { contentType: "text/event-stream", headers },
-      ),
+      HttpServerResponse.stream(Stream.fromReadableStream({ evaluate: () => response.body!, onError: (err) => err }), {
+        contentType: "text/event-stream",
+        headers,
+      }),
     )
   }
   // Native non-streaming routes are bounded JSON. Buffer them instead of
@@ -237,6 +269,21 @@ const STATUS: Record<Failure | FailureCode, number> = {
   invalid_response: 502,
   rejected: 409,
   unknown_provider: 503,
+  worktree_dirty: 409,
+  branch_detached: 409,
+  branch_no_upstream: 409,
+  branch_not_pushed: 409,
+  remote_unsupported: 400,
+  session_not_in_worktree: 400,
+  session_busy: 409,
+  session_changed: 409,
+  sync_unavailable: 503,
+  sync_failed: 503,
+  organization_mismatch: 409,
+  insufficient_balance: 402,
+  continuation_incomplete: 409,
+  creation_in_progress: 409,
+  operation_key_reuse_mismatch: 409,
 }
 
 const MESSAGE: Record<Failure | FailureCode, string> = {
@@ -254,6 +301,21 @@ const MESSAGE: Record<Failure | FailureCode, string> = {
   invalid_response: "Hosted session returned an invalid response",
   rejected: "Hosted session rejected this request",
   unknown_provider: "Session host provider is not registered",
+  worktree_dirty: "The worktree has uncommitted changes",
+  branch_detached: "HEAD is detached",
+  branch_no_upstream: "The branch has no upstream",
+  branch_not_pushed: "The branch is not pushed to the remote",
+  remote_unsupported: "The remote repository is not supported",
+  session_not_in_worktree: "A selected session is not in this worktree",
+  session_busy: "A selected session is busy or waiting for input",
+  session_changed: "A session changed during preparation",
+  sync_unavailable: "Session sync is unavailable",
+  sync_failed: "Sessions did not finish syncing",
+  organization_mismatch: "Selected sessions belong to different accounts",
+  insufficient_balance: "Kilo Cloud requires additional balance",
+  continuation_incomplete: "Kilo Cloud created part of this workspace",
+  creation_in_progress: "Kilo Cloud is still completing this workspace",
+  operation_key_reuse_mismatch: "This operation key was used for a different request",
 }
 
 function failure(reason: Failure | FailureCode) {

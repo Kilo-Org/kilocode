@@ -20,7 +20,17 @@ export const load = (dir: string) =>
         execPath: process.execPath,
         platform: process.platform,
         definitions,
-        flatten,
+        // kilocode_change start - npm's user-agent flattener writes to process.env.
+        flatten: (data: Record<string, unknown>, flat: Record<string, unknown>) => {
+          const agent = process.env.npm_config_user_agent
+          try {
+            return flatten(data, flat)
+          } finally {
+            if (agent == null) delete process.env.npm_config_user_agent
+            if (agent != null) process.env.npm_config_user_agent = agent
+          }
+        },
+        // kilocode_change end
         nerfDarts,
         shorthands,
         warn: false,

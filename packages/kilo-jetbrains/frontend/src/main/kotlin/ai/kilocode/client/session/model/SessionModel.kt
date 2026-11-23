@@ -2,6 +2,8 @@ package ai.kilocode.client.session.model
 
 import ai.kilocode.client.session.background.BackgroundAgent
 import ai.kilocode.client.session.background.BackgroundAgents
+import ai.kilocode.log.KiloLog
+import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
@@ -44,6 +46,7 @@ import kotlin.math.roundToInt
 class SessionModel {
 
     companion object {
+        private val LOG = KiloLog.create(SessionModel::class.java)
         /** Part types that are internal server markers and must never be stored or rendered. */
         val SILENT_PART_TYPES = setOf("step-start", "patch")
 
@@ -61,6 +64,9 @@ class SessionModel {
     }
 
     private val entries = LinkedHashMap<String, Message>()
+    private val terminals = mutableMapOf<String, ChatEventDto.MessageTerminal>()
+    private val optimistic = mutableSetOf<String>()
+    private val optimisticText = HashMap<String, MutableMap<String, String>>()
     private val turnEntries = LinkedHashMap<String, Turn>()
     private val hiddenText = mutableSetOf<Pair<String, String>>()
     private val childRefs = HashMap<String, ChildRef>()
@@ -85,6 +91,8 @@ class SessionModel {
         private set
 
     var session: SessionDto? = null
+        private set
+    var hostedTitle: String? = null
         private set
 
     private var revert: SessionRevertDto? = null
@@ -124,6 +132,39 @@ class SessionModel {
 
     @RequiresEdt
     fun message(id: String): Message? = entries[id]
+
+    /** True while [id] is a client-side placeholder awaiting the authoritative user message. */
+    @RequiresEdt
+    fun isOptimistic(id: String): Boolean = id in optimistic
+
+    /**
+     * Insert the user's prompt before the backend echoes it, so the first send is visible immediately.
+     * The message ID is the one sent with the prompt; the authoritative update replaces this message
+     * in place, and the matching text part is replaced rather than rendered twice.
+     */
+    @RequiresEdt
+    fun addOptimisticUser(dto: MessageDto, parts: List<PartDto>) {
+        optimistic.add(dto.id)
+        val msg = Message(dto, terminal(dto))
+        entries[dto.id] = msg
+        fire(SessionModelEvent.MessageAdded(msg))
+        parts.forEach {
+            val text = it.text
+            if (it.type == "text" && text != null) {
+                optimisticText.getOrPut(dto.id) { HashMap() }[it.id] = text
+            }
+            updateContent(dto.id, it)
+        }
+        regroup()
+        updateHeader()
+    }
+
+    /** Drop a prompt that never reached the backend. Real messages are left untouched. */
+    @RequiresEdt
+    fun removeOptimistic(id: String) {
+        if (!optimistic.remove(id)) return
+        removeMessage(id)
+    }
 
     @RequiresEdt
     fun content(messageId: String, contentId: String): Content? = entries[messageId]?.parts?.get(contentId)
@@ -180,13 +221,14 @@ class SessionModel {
     fun upsertMessage(dto: MessageDto): Boolean {
         val existing = entries[dto.id]
         if (existing != null) {
-            val updated = Message(dto).also { it.parts.putAll(existing.parts) }
+            optimistic.remove(dto.id)
+            val updated = Message(dto, terminal(dto)).also { it.parts.putAll(existing.parts) }
             entries[dto.id] = updated
             fire(SessionModelEvent.MessageUpdated(updated))
             updateHeader()
             return false
         }
-        val msg = Message(dto)
+        val msg = Message(dto, terminal(dto))
         entries[dto.id] = msg
         fire(SessionModelEvent.MessageAdded(msg))
         regroup()
@@ -198,7 +240,7 @@ class SessionModel {
     @RequiresEdt
     fun addMessage(dto: MessageDto): Message? {
         if (entries.containsKey(dto.id)) return null
-        val msg = Message(dto)
+        val msg = Message(dto, terminal(dto))
         entries[dto.id] = msg
         fire(SessionModelEvent.MessageAdded(msg))
         regroup()
@@ -208,6 +250,9 @@ class SessionModel {
 
     @RequiresEdt
     fun removeMessage(id: String) {
+        terminals.remove(id)
+        optimistic.remove(id)
+        optimisticText.remove(id)
         val msg = entries.remove(id) ?: return
         for (part in msg.parts.values) untrackChild(part)
         hiddenText.removeAll { it.first == id }
@@ -240,6 +285,8 @@ class SessionModel {
             return
         }
         hiddenText.remove(key)
+        dropMatchingOptimistic(messageId, msg, dto)
+        replaceOptimisticText(messageId, dto)
         val existing = msg.parts[dto.id]
         if (empty(dto)) {
             if (existing is Text) removeContent(messageId, dto.id)
@@ -327,6 +374,17 @@ class SessionModel {
     }
 
     @RequiresEdt
+    fun title(): String? = (hostedTitle ?: session?.title)?.takeIf { it.isNotBlank() }
+
+    @RequiresEdt
+    fun setHostedTitle(title: String?) {
+        val next = title?.takeIf { it.isNotBlank() }
+        if (hostedTitle == next) return
+        hostedTitle = next
+        updateHeader()
+    }
+
+    @RequiresEdt
     fun setRevert(revert: SessionRevertDto?) {
         if (this.revert == revert) return
         this.revert = revert
@@ -335,10 +393,34 @@ class SessionModel {
 
     @RequiresEdt
     fun setQueued(ids: Set<String>) {
-        if (queued == ids) return
-        queued = ids
-        fire(SessionModelEvent.QueueChanged(ids))
+        val next = ids - terminals.keys
+        if (queued == next) return
+        queued = next
+        fire(SessionModelEvent.QueueChanged(next))
     }
+
+    /** A message terminal is authoritative only for that prompt, never for the session state. */
+    @RequiresEdt
+    fun setTerminal(event: ChatEventDto.MessageTerminal) {
+        if (session?.id?.let { it != event.sessionID } == true) return
+        val msg = entries[event.messageID]
+        if (msg != null && (msg.info.role != "user" || msg.info.sessionID != event.sessionID)) return
+        val previous = terminals[event.messageID]
+        if (previous != null) {
+            if (previous != event) LOG.warn("kind=message-terminal contradiction mid=${event.messageID}")
+            return
+        }
+        terminals[event.messageID] = event
+        setQueued(queued - event.messageID)
+        if (msg == null) return
+        val updated = Message(msg.info, event).also { it.parts.putAll(msg.parts) }
+        entries[event.messageID] = updated
+        fire(SessionModelEvent.MessageUpdated(updated))
+    }
+
+    @RequiresEdt
+    private fun terminal(dto: MessageDto) = terminals[dto.id]
+        ?.takeIf { dto.role == "user" && dto.sessionID == it.sessionID }
 
     @RequiresEdt
     fun setDiff(diff: List<DiffFileDto>) {
@@ -391,7 +473,14 @@ class SessionModel {
 
     @RequiresEdt
     fun loadHistory(history: List<MessageWithPartsDto>) {
+        val retained = history.associate { it.info.id to it.info }
+        terminals.entries.removeIf { (id, event) ->
+            val info = retained[id]
+            info == null || info.role != "user" || info.sessionID != event.sessionID
+        }
         entries.clear()
+        optimistic.clear()
+        optimisticText.clear()
         childRefs.clear()
         childTools.clear()
         childRemoved.clear()
@@ -407,7 +496,7 @@ class SessionModel {
         backgroundAgents = emptyList()
         compactionCount = 0
         for (msg in history) {
-            val item = Message(msg.info)
+            val item = Message(msg.info, terminal(msg.info))
             for (part in msg.parts) {
                 if (part.type in SILENT_PART_TYPES) continue
                 if (hiddenSynthetic(item, part)) {
@@ -428,7 +517,10 @@ class SessionModel {
 
     @RequiresEdt
     fun clear() {
+        terminals.clear()
         entries.clear()
+        optimistic.clear()
+        optimisticText.clear()
         turnEntries.clear()
         childRefs.clear()
         childTools.clear()
@@ -548,6 +640,7 @@ class SessionModel {
                 val text = dto.text ?: return
                 existing.content.clear()
                 existing.content.append(text)
+                dto.injectedTitle?.let { existing.injectedTitle = it }
             }
             is Reasoning -> {
                 val text = dto.text ?: return
@@ -601,6 +694,24 @@ class SessionModel {
 
     private fun empty(dto: PartDto) = dto.type == "text" && dto.text?.isNotBlank() != true
 
+    private fun dropMatchingOptimistic(messageId: String, msg: Message, dto: PartDto) {
+        if (messageId in optimistic || msg.info.role != "user" || dto.type != "text") return
+        val text = dto.text ?: return
+        val match = optimistic.firstOrNull { id ->
+            entries[id]?.parts?.values?.filterIsInstance<Text>()?.any { it.content.toString() == text } == true
+        } ?: return
+        removeOptimistic(match)
+    }
+
+    private fun replaceOptimisticText(messageId: String, dto: PartDto) {
+        if (dto.type != "text") return
+        val text = dto.text ?: return
+        val parts = optimisticText[messageId] ?: return
+        val match = parts.entries.firstOrNull { it.key != dto.id && it.value == text } ?: return
+        parts.remove(match.key)
+        removeContent(messageId, match.key)
+    }
+
     private fun hiddenSynthetic(msg: Message, dto: PartDto) =
         msg.info.role == "user" && dto.type == "text" && dto.synthetic == true && notice(dto) == null
 
@@ -621,6 +732,7 @@ class SessionModel {
         return when (dto.type) {
             "text" -> notice(dto) ?: Text(dto.id).apply {
                 if (content != null && content.isNotEmpty()) this.content.append(content)
+                injectedTitle = dto.injectedTitle
             }
             "reasoning" -> Reasoning(dto.id).apply {
                 if (content != null && content.isNotEmpty()) this.content.append(content)
@@ -721,7 +833,7 @@ class SessionModel {
         val done = todos.count { it.status == "completed" }
         return SessionHeaderSnapshot(
             visible = items.isNotEmpty(),
-            title = session?.title?.takeIf { it.isNotBlank() } ?: "New Session",
+            title = (hostedTitle ?: session?.title)?.takeIf { it.isNotBlank() } ?: "New Session",
             cost = cost,
             context = context,
             tokens = tokens,

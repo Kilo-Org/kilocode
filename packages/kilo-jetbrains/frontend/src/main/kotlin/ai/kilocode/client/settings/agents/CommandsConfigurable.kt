@@ -15,11 +15,11 @@ import ai.kilocode.client.settings.base.settingsContentScroll
 import ai.kilocode.client.settings.base.settingsEditorFileType
 import ai.kilocode.client.ui.CodeViewField
 import ai.kilocode.client.ui.UiStyle
-import ai.kilocode.client.ui.list.ActiveListBadge
-import ai.kilocode.client.ui.list.ActiveListCell
-import ai.kilocode.client.ui.list.ActiveListConfig
-import ai.kilocode.client.ui.list.ActiveListItem
-import ai.kilocode.client.ui.list.ActiveListSelection
+import ai.kilocode.client.ui.active.ActiveBadge
+import ai.kilocode.client.ui.active.ActiveCell
+import ai.kilocode.client.ui.active.ActiveConfig
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ActiveSelection
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.CommandFileDto
 import com.intellij.CommonBundle
@@ -59,7 +59,7 @@ internal class CommandsSettingsUi(
     scope: CoroutineScope,
     dir: String,
     private val edit: (CommandFileDto, Boolean) -> CommandEditDialogHandle = ::CommandEditDialog,
-) : SettingsListPanel(scope, ActiveListConfig.Equal.copy(tooltip = false)), SettingsDraftPage {
+) : SettingsListPanel(scope, ActiveConfig.Equal.copy(tooltip = false)), SettingsDraftPage {
     private var dir = dir
     private var commands = emptyMap<String, CommandFileDto>()
     private val state = SettingsDraftState(commandsDraft(), ::saved)
@@ -80,7 +80,7 @@ internal class CommandsSettingsUi(
         reload()
     }
 
-    override suspend fun fetch(): List<ActiveListItem> {
+    override suspend fun fetch(): List<ActiveItem> {
         val items = withTimeoutOrNull(LOAD_TIMEOUT_MS) {
             service<KiloAgentBehaviorService>().loadCommandFiles(dir)
         } ?: throw SettingsMessageException(KiloBundle.message("settings.agentBehavior.commands.load.timeout"))
@@ -178,7 +178,7 @@ internal class CommandsSettingsUi(
         verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
     }
 
-    private fun rows(items: List<CommandFileDto> = commands.values.toList()): List<ActiveListItem> = items.mapNotNull { cmd ->
+    private fun rows(items: List<CommandFileDto> = commands.values.toList()): List<ActiveItem> = items.mapNotNull { cmd ->
         if (cmd.location in draft.deleted) return@mapNotNull null
         item(cmd)
     }
@@ -188,27 +188,27 @@ internal class CommandsSettingsUi(
         target.edited[cmd.location]?.let { cmd.copy(content = it) } ?: cmd
     }
 
-    private fun item(cmd: CommandFileDto) = object : ActiveListItem {
+    private fun item(cmd: CommandFileDto) = object : ActiveItem {
         override val key = key(cmd)
         override val title = "/${cmd.name}"
         override val note = cmd.location.takeUnless { builtin(cmd) }
         override val description = cmd.description
         override val doubleClick = EDIT_CELL
         override val badges = listOf(
-            ActiveListBadge(KiloBundle.message("settings.agentBehavior.badge.builtin"), UiStyle.Badge.Secondary),
+            ActiveBadge(KiloBundle.message("settings.agentBehavior.badge.builtin"), UiStyle.Badge.Secondary),
         ).takeIf { builtin(cmd) } ?: emptyList()
         override val cells = listOfNotNull(
-            ActiveListCell(
+            ActiveCell(
                 OPEN_CELL,
                 KiloBundle.message("settings.agentBehavior.commands.openInEditor"),
                 primary = true,
             ).takeIf { cmd.editable },
-            ActiveListCell(
+            ActiveCell(
                 EDIT_CELL,
                 KiloBundle.message(if (cmd.editable) "settings.agentBehavior.edit" else "common.open"),
                 primary = !cmd.editable,
             ),
-            ActiveListCell(
+            ActiveCell(
                 DELETE_CELL,
                 KiloBundle.message("common.delete"),
                 icon = AllIcons.Actions.GC,
@@ -226,7 +226,7 @@ internal class CommandsSettingsUi(
         }
         if (!dialog.showAndGet()) return
         state.update { copy(edited = edited + (cmd.location to dialog.content())) }
-        view.update(rows(), ActiveListSelection.Key(key(cmd)))
+        view.update(rows(), ActiveSelection.Key(key(cmd)))
     }
 
     private fun open(cmd: CommandFileDto) {
@@ -254,7 +254,7 @@ internal class CommandsSettingsUi(
         )
         if (result != Messages.YES) return
         state.update { copy(deleted = deleted + cmd.location, edited = edited - cmd.location) }
-        view.update(rows(), ActiveListSelection.Slide)
+        view.update(rows(), ActiveSelection.Slide)
     }
 
     private fun content(cmd: CommandFileDto) = draft.edited[cmd.location] ?: cmd.content

@@ -172,6 +172,14 @@ export const SessionProvider: ParentComponent = (props) => {
   const pendingSubmissions = new Map<string, string>()
   const recoveries = new Map<string, Set<string>>()
   const removedSessions = new Set<string>()
+  // Sessions whose cached transcript a closed panel released. Transcript events
+  // are dropped for them until the session is selected, so a child that keeps
+  // running cannot refill the cache that release dropped.
+  // Status, permission, question and suggestion events still arrive.
+  const releasedTranscripts = new Set<string>()
+  // Transcript arrival for a released session stays out of the store until the
+  // session is selected: a running child keeps streaming after its panel closes.
+  const transcriptDropped = (sessionID: string | undefined) => sessionID != null && releasedTranscripts.has(sessionID)
   const terminalPermissions = new Map<string, undefined>()
   const aborts = createAbortState()
 
@@ -718,7 +726,7 @@ export const SessionProvider: ParentComponent = (props) => {
         handlePermissionResolved(message.permissionID)
         break
       case "permissionError":
-        handlePermissionError(message.permissionID, message.stale)
+        handlePermissionError(message.permissionID, message.stale, message.message)
         break
     }
   })
@@ -1075,6 +1083,7 @@ export const SessionProvider: ParentComponent = (props) => {
   // Event handlers
   function handleSessionCreated(session: SessionInfo, draftID?: string) {
     removedSessions.delete(session.id)
+    releasedTranscripts.delete(session.id)
     freshSessions.add(session.id)
     if (draftID) aborts.move(draftID, session.id)
     batch(() => {
@@ -1234,6 +1243,11 @@ export const SessionProvider: ParentComponent = (props) => {
   ) {
     const mode = input.mode ?? "replace"
     const reset = mode === "prepend"
+    // A released session's rows come back only when the user asks for it: a
+    // selection clears the marker before it posts its fetch, so a snapshot that
+    // arrives on its own, such as the host re-syncing a still-running child,
+    // cannot rebuild the transcript behind a closed panel.
+    if (transcriptDropped(sessionID)) return
 
     if (submissionMap[sessionID]) {
       for (const message of messages) {
@@ -1372,6 +1386,7 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function handleMessageCreated(message: Message) {
+    if (transcriptDropped(message.sessionID)) return
     if (message.role === "assistant") clearSessionDraftDiscarded(message.sessionID)
     // Message confirmed by server — no longer optimistic.
     // Keep placeholder parts until their canonical part.updated events arrive.
@@ -1430,6 +1445,8 @@ export const SessionProvider: ParentComponent = (props) => {
       console.warn("[Kilo New] Part updated without messageID:", part.id, part.type)
       return
     }
+
+    if (transcriptDropped(sessionID ?? part.sessionID)) return
 
     if (sessionID) patchPage(sessionID, { lastMutation: "update" })
     patchToolPart(sessionID, effectiveMessageID, part)
@@ -1495,6 +1512,7 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function handlePartRemoved(sessionID: string | undefined, messageID: string, partID: string) {
+    if (transcriptDropped(sessionID)) return
     if (sessionID) patchPage(sessionID, { lastMutation: "update" })
     dropToolPart(sessionID, partID)
     stash.removePart(messageID, partID)
@@ -1565,7 +1583,7 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
-  function handlePermissionError(permissionID: string, stale?: boolean) {
+  function handlePermissionError(permissionID: string, stale?: boolean, message?: string) {
     setRespondingPermissions((prev) => {
       if (!prev.has(permissionID)) return prev
       const next = new Set(prev)
@@ -1577,10 +1595,7 @@ export const SessionProvider: ParentComponent = (props) => {
       setPermissions((prev) => prev.filter((p) => p.id !== permissionID))
       return
     }
-    showToast({
-      variant: "error",
-      title: language.t("settings.permissions.toast.updateFailed.title"),
-    })
+    showToast({ variant: "error", title: message ?? language.t("settings.permissions.toast.updateFailed.title") })
   }
 
   function handleQuestionRequest(question: QuestionRequest) {
@@ -1888,33 +1903,55 @@ export const SessionProvider: ParentComponent = (props) => {
       setSessions: (updater) => setStore("sessions", produce(updater)),
     })
     batch(() => {
+      for (const info of loaded) removedSessions.delete(info.id)
       for (const info of loaded) if (store.sessions[info.id]) recoverInfo(info)
     })
     paging.finish(hasMore ?? false)
     setSessionsProject(hasMore ? undefined : projectId)
   }
 
+  // Drops the cached transcript. Todos are session state, not transcript state:
+  // a release keeps them and only the delete path clears them. The session row,
+  // drafts and event suppression also belong to the delete path.
+  function dropTranscript(sessionID: string) {
+    const ids = (store.messages[sessionID] ?? []).map((m) => m.id)
+    for (const id of ids) optimisticParts.delete(id)
+    for (const id of ids) stash.remove(id)
+    clearHiddenErrors(ids)
+    setStore(
+      produce((s) => {
+        delete s.messages[sessionID]
+        for (const id of ids) delete s.parts[id]
+        delete s.toolParts[sessionID]
+      }),
+    )
+    // prettier-ignore
+    setPages(produce((map) => { delete map[sessionID] }))
+    // prettier-ignore
+    setLoaded((prev) => { if (!prev.has(sessionID)) return prev; const next = new Set(prev); next.delete(sessionID); return next })
+    pendingOptimistic.delete(sessionID)
+  }
+
+  // Release drops only the cached transcript: drafts, todos and the session's
+  // events stay. It is still current, so clear its latched loading signal.
+  function releaseSession(sessionID: string) {
+    releasedTranscripts.add(sessionID)
+    dropTranscript(sessionID)
+    if (sessionID === currentSessionID()) setLoading(false)
+  }
+
   function handleSessionDeleted(sessionID: string) {
     removedSessions.add(sessionID)
-    pendingOptimistic.delete(sessionID)
+    releasedTranscripts.delete(sessionID)
     freshSessions.delete(sessionID)
     aborts.clear(sessionID)
     confirmSubmissions(sessionID)
     batch(() => {
-      // Collect message IDs so we can clean up their parts (store + stash)
-      const msgs = store.messages[sessionID] ?? []
-      const msgIds = msgs.map((m) => m.id)
-      for (const id of msgIds) optimisticParts.delete(id)
-      for (const id of msgIds) stash.remove(id)
-      clearHiddenErrors(msgIds)
-
+      dropTranscript(sessionID)
       setStore(
         produce((s) => {
           delete s.sessions[sessionID]
-          delete s.messages[sessionID]
-          for (const id of msgIds) delete s.parts[id]
-          delete s.toolParts[sessionID]
-          delete s.todos[sessionID]
+          delete s.todos[sessionID] // session state, unlike the transcript
           for (const [id, state] of Object.entries(s.modelUsage)) {
             if (id === sessionID || state.data?.sessionIDs.includes(sessionID)) delete s.modelUsage[id]
           }
@@ -1923,8 +1960,6 @@ export const SessionProvider: ParentComponent = (props) => {
           for (const key of sessionVariantKeys(s.variantSelections, sessionID)) delete s.variantSelections[key]
         }),
       )
-      // prettier-ignore
-      setPages(produce((map) => { delete map[sessionID] }))
       // Clean up pending questions/errors for the deleted session
       const deleted = questions()
         .filter((q) => q.sessionID === sessionID)
@@ -1961,8 +1996,6 @@ export const SessionProvider: ParentComponent = (props) => {
         if (id.endsWith(suffix)) terminalPermissions.delete(id)
       }
       // prettier-ignore
-      setLoaded((prev) => { if (!prev.has(sessionID)) return prev; const next = new Set(prev); next.delete(sessionID); return next })
-      // prettier-ignore
       setStatusMap(produce((map) => { delete map[sessionID] }))
       clearClose(sessionID)
       // prettier-ignore
@@ -1980,6 +2013,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Splices the message from the store and deletes its parts.
   function handleMessageRemoved(sessionID: string, messageID: string) {
+    if (transcriptDropped(sessionID)) return
     pendingOptimistic.get(sessionID)?.delete(messageID)
     finishSubmission(messageID)
     optimisticParts.delete(messageID)
@@ -2444,6 +2478,7 @@ export const SessionProvider: ParentComponent = (props) => {
     response: "once" | "always" | "reject",
     approvedAlways: string[],
     deniedAlways: string[],
+    removedAlways: string[],
     feedback?: string,
   ): boolean {
     // The rendered request must still exist in this provider. Never fall back to
@@ -2453,10 +2488,8 @@ export const SessionProvider: ParentComponent = (props) => {
     if (isTerminalPermission(permissionId, permission.sessionID)) return false
     if (respondingPermissions().has(permissionId)) return false
 
-    // Mark as responding so the UI disables the buttons.
-    // The permission is removed when the server confirms via permission.replied SSE.
+    // Disable the buttons until the server confirms via the permission.replied event.
     setRespondingPermissions((prev) => new Set(prev).add(permissionId))
-
     const message = feedback?.trim()
     vscode.postMessage({
       type: "permissionResponse",
@@ -2465,6 +2498,7 @@ export const SessionProvider: ParentComponent = (props) => {
       response,
       approvedAlways,
       deniedAlways,
+      removedAlways,
       ...(message ? { feedback: message } : {}),
     })
     return true
@@ -2488,17 +2522,16 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
-  function replyToQuestion(requestID: string, answers: string[][]) {
+  // A request must still exist in this provider, and its owning session is the
+  // only attribution: never fall back to the currently selected session. The
+  // boolean lets a still-mounted dock drop its sending state on a no-op.
+  function replyToQuestion(requestID: string, answers: string[][]): boolean {
     clearQuestionError(requestID)
+    if (cah.reply(requestID, "continue")) return true
     const question = questions().find((item) => item.id === requestID)
-    const sessionID = question?.sessionID ?? currentSessionID() ?? ""
-    if (cah.reply(requestID, "continue")) return
-    vscode.postMessage({
-      type: "questionReply",
-      requestID,
-      sessionID,
-      answers,
-    })
+    if (!question) return false
+    vscode.postMessage({ type: "questionReply", requestID, sessionID: question.sessionID, answers })
+    return true
   }
 
   function dismissQuestion(requestID: string) {
@@ -2510,39 +2543,30 @@ export const SessionProvider: ParentComponent = (props) => {
   function closeQuestion(id: string) {
     cah.close(id, dismissQuestion)
   }
-  function rejectQuestion(requestID: string) {
+  function rejectQuestion(requestID: string): boolean {
     clearQuestionError(requestID)
+    if (cah.reply(requestID, "stop")) return true
     const question = questions().find((item) => item.id === requestID)
-    const sessionID = question?.sessionID ?? currentSessionID() ?? ""
-    if (cah.reply(requestID, "stop")) return
-    vscode.postMessage({
-      type: "questionReject",
-      requestID,
-      sessionID,
-    })
+    if (!question) return false
+    vscode.postMessage({ type: "questionReject", requestID, sessionID: question.sessionID })
+    return true
   }
 
+  // Same rule as the replies above: look the record up, and use only its session.
   function acceptSuggestion(requestID: string, index: number) {
     clearSuggestionError(requestID)
+    const suggestion = suggestions().find((s) => s.id === requestID)
+    if (!suggestion) return
     setRespondingSuggestions((prev) => new Set(prev).add(requestID))
-    const sid = suggestions().find((s) => s.id === requestID)?.sessionID ?? currentSessionID() ?? ""
-    vscode.postMessage({
-      type: "suggestionAccept",
-      requestID,
-      sessionID: sid,
-      index,
-    })
+    vscode.postMessage({ type: "suggestionAccept", requestID, sessionID: suggestion.sessionID, index })
   }
 
   function dismissSuggestion(requestID: string) {
     clearSuggestionError(requestID)
+    const suggestion = suggestions().find((s) => s.id === requestID)
+    if (!suggestion) return
     setRespondingSuggestions((prev) => new Set(prev).add(requestID))
-    const sid = suggestions().find((s) => s.id === requestID)?.sessionID ?? currentSessionID() ?? ""
-    vscode.postMessage({
-      type: "suggestionDismiss",
-      requestID,
-      sessionID: sid,
-    })
+    vscode.postMessage({ type: "suggestionDismiss", requestID, sessionID: suggestion.sessionID })
   }
 
   function createSession() {
@@ -2607,6 +2631,7 @@ export const SessionProvider: ParentComponent = (props) => {
     // Always reassign: a later plain selection must clear a request that
     // MessageList never got to consume, or it would fire on a future switch.
     setScrollBottomID(options.scrollToBottom ? id : undefined)
+    releasedTranscripts.delete(id)
     const ready = loaded().has(id)
     batch(() => {
       agentDrafts.prune(draftSessionID())
@@ -3063,7 +3088,7 @@ export const SessionProvider: ParentComponent = (props) => {
     selectSession,
     scrollBottomID,
     consumeScrollBottom,
-    releaseSession: handleSessionDeleted,
+    releaseSession,
     deleteSession,
     renameSession,
     exportSessionTranscript,

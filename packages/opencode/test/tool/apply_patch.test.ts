@@ -204,6 +204,79 @@ describe("tool.apply_patch freeform", () => {
     { git: true },
   )
 
+  // kilocode_change start
+  it.instance(
+    "approves a move by both of its written paths",
+    () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        const { ctx, calls } = makeCtx()
+        const original = path.join(test.directory, "old", "name.txt")
+        yield* makeDir(path.dirname(original))
+        yield* writeText(original, "old content\n")
+
+        const patchText =
+          "*** Begin Patch\n*** Update File: old/name.txt\n*** Move to: renamed/dir/name.txt\n@@\n-old content\n+new content\n*** End Patch"
+
+        yield* execute({ patchText }, ctx)
+
+        expect(calls.length).toBe(1)
+        expect(calls[0].patterns).toEqual(["old/name.txt", "renamed/dir/name.txt"])
+        expect(calls[0].metadata.filepath).toBe("old/name.txt")
+      }),
+    { git: true },
+  )
+
+  it.instance(
+    "refuses a move onto agent manager state",
+    () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        const { ctx, calls } = makeCtx()
+        const original = path.join(test.directory, "old", "name.txt")
+        const destination = path.join(test.directory, ".kilo", "agent-manager.json")
+        yield* makeDir(path.dirname(original))
+        yield* writeText(original, "old content\n")
+
+        const patchText =
+          "*** Begin Patch\n*** Update File: old/name.txt\n*** Move to: .kilo/agent-manager.json\n@@\n-old content\n+new content\n*** End Patch"
+
+        yield* expectFailure(execute({ patchText }, ctx), "Do not edit Agent Manager state directly")
+
+        expect(calls.length).toBe(0)
+        yield* expectReadFailure(destination)
+        expect(yield* readText(original)).toBe("old content\n")
+      }),
+    { git: true },
+  )
+
+  it.instance(
+    "approves every written path of a mixed patch",
+    () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        const { ctx, calls } = makeCtx()
+        const inPlace = path.join(test.directory, "stays.txt")
+        const original = path.join(test.directory, "old", "name.txt")
+        yield* writeText(inPlace, "line1\nline2\n")
+        yield* makeDir(path.dirname(original))
+        yield* writeText(original, "old content\n")
+
+        const patchText =
+          "*** Begin Patch\n*** Update File: stays.txt\n@@\n-line2\n+changed\n*** Update File: old/name.txt\n*** Move to: renamed/dir/name.txt\n@@\n-old content\n+new content\n*** End Patch"
+
+        yield* execute({ patchText }, ctx)
+
+        expect(calls.length).toBe(1)
+        expect(calls[0].patterns).toEqual(["stays.txt", "old/name.txt", "renamed/dir/name.txt"])
+        expect(yield* readText(inPlace)).toBe("line1\nchanged\n")
+        expect(yield* readText(path.join(test.directory, "renamed", "dir", "name.txt"))).toBe("new content\n")
+        yield* expectReadFailure(original)
+      }),
+    { git: true },
+  )
+  // kilocode_change end
+
   it.instance("applies multiple hunks to one file", () =>
     Effect.gen(function* () {
       const test = yield* TestInstance

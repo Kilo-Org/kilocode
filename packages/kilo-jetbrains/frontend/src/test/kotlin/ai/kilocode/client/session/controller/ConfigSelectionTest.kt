@@ -3,6 +3,7 @@ package ai.kilocode.client.session.controller
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.rpc.dto.AgentDto
 import ai.kilocode.rpc.dto.AgentConfigDto
+import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
@@ -12,6 +13,69 @@ import ai.kilocode.rpc.dto.ModelStateDto
 import ai.kilocode.rpc.dto.ProviderDto
 
 class ConfigSelectionTest : SessionControllerTestBase() {
+
+    fun `test hosted model selection excludes other providers and reasoning variants`() {
+        projectRpc.state.value = workspaceReady(
+            providers = listOf(
+                ProviderDto(id = "kilo", name = "Kilo", models = mapOf(
+                    "opus" to ModelDto(id = "opus", name = "Opus", variants = listOf("high")),
+                )),
+                ProviderDto(id = "other", name = "Other", models = mapOf("model" to ModelDto(id = "model", name = "Other"))),
+            ),
+            connected = listOf("other"),
+        )
+        appRpc.models = ModelStateDto(model = mapOf("code" to ModelSelectionDto("other", "model")))
+        appRpc.state.value = KiloAppStateDto(
+            status = KiloAppStatusDto.READY,
+            config = ConfigDto(model = "other/model"),
+        )
+        val hosted = controller("hosted:kilo-cloud:worktree_1:ses_one")
+        collect(hosted)
+        flush()
+        assertEquals(listOf("kilo"), hosted.model.models.map { it.provider }.distinct())
+        assertEquals("kilo/opus", hosted.model.model)
+        assertTrue(hosted.model.variants.isEmpty())
+        assertNull(hosted.model.variant)
+        edt {
+            hosted.selectModel("other", "model")
+            hosted.selectVariant("high")
+            hosted.prompt("hello")
+        }
+        flush()
+        val sent = rpc.prompts.single().third
+        assertEquals("kilo", sent.providerID)
+        assertNull(sent.variant)
+        assertNull(sent.noReply)
+    }
+
+    fun `test hosted retry replays the optimistic prompt with a new message id`() {
+        val id = "hosted:kilo-cloud:worktree_1:ses_one"
+        rpc.session = rpc.session.copy(id = id)
+        val hosted = controller(id)
+        collect(hosted)
+        flush()
+        edt { hosted.prompt("retry me") }
+        flush()
+        val first = rpc.prompts.single().third
+        assertTrue(hosted.model.isOptimistic(first.messageID!!))
+        val info = hosted.model.message(first.messageID!!)!!.info
+        emit(ChatEventDto.MessageUpdated(id, info))
+        emit(ChatEventDto.MessageTerminal(id, first.messageID!!, "failed", "sent", true))
+        assertTrue(hosted.canRetryTerminal())
+
+        edt {
+            hosted.retryTerminal()
+            hosted.retryTerminal()
+        }
+        flush()
+
+        assertEquals(2, rpc.prompts.size)
+        val second = rpc.prompts.last().third
+        assertEquals("retry me", second.parts.single().text)
+        assertTrue(first.messageID != second.messageID)
+        assertEquals("failed", hosted.model.message(first.messageID!!)?.terminal?.status)
+        assertFalse(hosted.canRetryTerminal())
+    }
 
     fun `test selectModel stays in its session`() {
         projectRpc.state.value = workspaceReady(

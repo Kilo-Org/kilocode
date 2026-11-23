@@ -1,0 +1,104 @@
+diff --git a/lib/cjs/protocol-parser/generated/webdriver-bidi-bluetooth.js b/lib/cjs/protocol-parser/generated/webdriver-bidi-bluetooth.js
+index 713e73bb0ad82ed20e4e0f75503cf21661c395ca..01c250fb9593acc514c079a1d310905b717d8a1a 100644
+--- a/lib/cjs/protocol-parser/generated/webdriver-bidi-bluetooth.js
++++ b/lib/cjs/protocol-parser/generated/webdriver-bidi-bluetooth.js
+@@ -27,7 +27,7 @@ exports.Bluetooth = void 0;
+  */
+ // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+ // @ts-nocheck Some types may be circular.
+-const zod_1 = __importDefault(require("zod"));
++const zod_1 = __importDefault(require("zod/v3"));
+ var Bluetooth;
+ (function (Bluetooth) {
+     Bluetooth.RequestDeviceSchema = zod_1.default.lazy(() => zod_1.default.string());
+diff --git a/lib/cjs/protocol-parser/generated/webdriver-bidi-permissions.js b/lib/cjs/protocol-parser/generated/webdriver-bidi-permissions.js
+index d094879d112e4301cd223ab453a0b1cc4017a6a7..c53d9036fbe0f82d86fe7f5b7f7e2e97615d32ee 100644
+--- a/lib/cjs/protocol-parser/generated/webdriver-bidi-permissions.js
++++ b/lib/cjs/protocol-parser/generated/webdriver-bidi-permissions.js
+@@ -27,7 +27,7 @@ exports.Permissions = exports.PermissionsCommandSchema = void 0;
+  */
+ // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+ // @ts-nocheck Some types may be circular.
+-const zod_1 = __importDefault(require("zod"));
++const zod_1 = __importDefault(require("zod/v3"));
+ exports.PermissionsCommandSchema = zod_1.default.lazy(() => Permissions.SetPermissionSchema);
+ var Permissions;
+ (function (Permissions) {
+diff --git a/lib/cjs/protocol-parser/generated/webdriver-bidi.js b/lib/cjs/protocol-parser/generated/webdriver-bidi.js
+index a5da00d2a3d05e2757f689a2e7c4a79c3638762b..eb0b9a9e0b68b573865deaeb2c0b39f3d0068d40 100644
+--- a/lib/cjs/protocol-parser/generated/webdriver-bidi.js
++++ b/lib/cjs/protocol-parser/generated/webdriver-bidi.js
+@@ -27,7 +27,7 @@ exports.Input = exports.InputCommandSchema = exports.Log = exports.LogEventSchem
+  */
+ // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+ // @ts-nocheck Some types may be circular.
+-const zod_1 = __importDefault(require("zod"));
++const zod_1 = __importDefault(require("zod/v3"));
+ exports.EventSchema = zod_1.default.lazy(() => zod_1.default
+     .object({
+     type: zod_1.default.literal('event'),
+diff --git a/lib/cjs/protocol-parser/protocol-parser.js b/lib/cjs/protocol-parser/protocol-parser.js
+index 6348733f73312886dc2404afd40a8d90c793c5c6..239c9b574788c3f78e4fdbd4bf11caf73e9ab419 100644
+--- a/lib/cjs/protocol-parser/protocol-parser.js
++++ b/lib/cjs/protocol-parser/protocol-parser.js
+@@ -45,7 +45,7 @@ exports.parseObject = parseObject;
+  * @fileoverview Provides parsing and validator for WebDriver BiDi protocol.
+  * Parser types should match the `../protocol` types.
+  */
+-const zod_1 = require("zod");
++const zod_1 = require("zod/v3");
+ const protocol_js_1 = require("../protocol/protocol.js");
+ const WebDriverBidiBluetooth = __importStar(require("./generated/webdriver-bidi-bluetooth.js"));
+ const WebDriverBidiPermissions = __importStar(require("./generated/webdriver-bidi-permissions.js"));
+diff --git a/lib/esm/protocol-parser/generated/webdriver-bidi-bluetooth.js b/lib/esm/protocol-parser/generated/webdriver-bidi-bluetooth.js
+index a756a0e3e3952b0e651933ba8351e22cddc49d70..0aea2071a8a87b053444aea2d85cfc56057d0b13 100644
+--- a/lib/esm/protocol-parser/generated/webdriver-bidi-bluetooth.js
++++ b/lib/esm/protocol-parser/generated/webdriver-bidi-bluetooth.js
+@@ -21,7 +21,7 @@
+  */
+ // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+ // @ts-nocheck Some types may be circular.
+-import z from 'zod';
++import z from 'zod/v3';
+ export var Bluetooth;
+ (function (Bluetooth) {
+     Bluetooth.RequestDeviceSchema = z.lazy(() => z.string());
+diff --git a/lib/esm/protocol-parser/generated/webdriver-bidi-permissions.js b/lib/esm/protocol-parser/generated/webdriver-bidi-permissions.js
+index 03a522584cf1328cb462c6feebed7acc4cc58993..d772d2557a90401435623d1c8f38b1d13a31f615 100644
+--- a/lib/esm/protocol-parser/generated/webdriver-bidi-permissions.js
++++ b/lib/esm/protocol-parser/generated/webdriver-bidi-permissions.js
+@@ -21,7 +21,7 @@
+  */
+ // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+ // @ts-nocheck Some types may be circular.
+-import z from 'zod';
++import z from 'zod/v3';
+ export const PermissionsCommandSchema = z.lazy(() => Permissions.SetPermissionSchema);
+ export var Permissions;
+ (function (Permissions) {
+diff --git a/lib/esm/protocol-parser/generated/webdriver-bidi.js b/lib/esm/protocol-parser/generated/webdriver-bidi.js
+index 7e49607f5e1f193721cf837c92e01f8d1346101a..4edc0c0c61b4eeac3196e388cf02772de459bb66 100644
+--- a/lib/esm/protocol-parser/generated/webdriver-bidi.js
++++ b/lib/esm/protocol-parser/generated/webdriver-bidi.js
+@@ -21,7 +21,7 @@
+  */
+ // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+ // @ts-nocheck Some types may be circular.
+-import z from 'zod';
++import z from 'zod/v3';
+ export const EventSchema = z.lazy(() => z
+     .object({
+     type: z.literal('event'),
+diff --git a/lib/esm/protocol-parser/protocol-parser.js b/lib/esm/protocol-parser/protocol-parser.js
+index bbd95d37ffbaf70bffdf96b8ed06d99e71a5b5ed..e5587ad1bd136e5b9872c0fee8a8989590f865b3 100644
+--- a/lib/esm/protocol-parser/protocol-parser.js
++++ b/lib/esm/protocol-parser/protocol-parser.js
+@@ -18,7 +18,7 @@
+  * @fileoverview Provides parsing and validator for WebDriver BiDi protocol.
+  * Parser types should match the `../protocol` types.
+  */
+-import { z } from 'zod';
++import { z } from 'zod/v3';
+ import { InvalidArgumentException } from '../protocol/protocol.js';
+ import * as WebDriverBidiBluetooth from './generated/webdriver-bidi-bluetooth.js';
+ import * as WebDriverBidiPermissions from './generated/webdriver-bidi-permissions.js';

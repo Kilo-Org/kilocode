@@ -1,6 +1,7 @@
 package ai.kilocode.client
 
 import com.intellij.notification.Notification
+import com.intellij.notification.NotificationType
 import com.intellij.notification.Notifications
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.ActionUiKind
@@ -54,6 +55,23 @@ class KiloNotificationsTest : BasePlatformTestCase() {
         }.single()
 
         assertEquals(listOf("Retry"), note.actions.map { it.templateText })
+        perform(note.actions.single(), note)
+        assertTrue(called)
+    }
+
+    fun `test warning notification with an action reports the warning type and invokes the action`() {
+        var called = false
+        val note = notifications {
+            KiloNotifications.warning(project, "Title", "Body", "Open settings") { called = true }
+        }.single()
+
+        assertEquals("Title", note.title)
+        assertEquals("Body", note.content)
+        assertEquals(listOf("Open settings"), note.actions.map { it.templateText })
+        assertEquals(
+            com.intellij.notification.NotificationType.WARNING,
+            note.type,
+        )
         perform(note.actions.single(), note)
         assertTrue(called)
     }

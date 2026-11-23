@@ -1,0 +1,689 @@
+/* Layout modes follow the splash's own width: thin below 560px, narrow below 880px, wide above. */
+.am-splash {
+  --am-splash-fade: 28px;
+  --am-splash-card-gap: 10px;
+  width: 100%;
+  container: am-splash / inline-size;
+  color: var(--text-base);
+  text-align: start;
+  font-size: var(--kilo-font-size-13);
+  line-height: var(--line-height-large);
+}
+
+.am-splash-hero {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "head" "title" "sub" "nav" "pitch" "sidebar" "cta";
+  gap: 12px;
+  padding: 16px;
+  border: calc(var(--spacing) * 0.25) solid var(--border-weak-base);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised-base);
+  box-shadow: var(--shadow-md);
+}
+
+.am-splash-header {
+  grid-area: head;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--spacing) * 2.5);
+}
+
+.am-splash-logo {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.am-splash-logo > div,
+.am-splash-folded-logo > div {
+  width: 100%;
+  height: 100%;
+  opacity: 1;
+}
+
+.am-splash-eyebrow {
+  font-size: var(--kilo-font-size-11);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--letter-spacing-normal);
+  text-transform: uppercase;
+  color: var(--text-weak);
+}
+
+.am-splash-hide[data-component="button"],
+.am-splash-show[data-component="button"] {
+  height: auto;
+  min-height: calc(var(--spacing) * 7);
+}
+
+.am-splash-hide[data-component="button"] {
+  margin-inline-start: auto;
+  color: var(--text-weak);
+}
+
+.am-splash-hide[data-component="button"]:hover {
+  color: var(--text-base);
+}
+
+.am-splash-title {
+  grid-area: title;
+  min-width: 0;
+  overflow-wrap: break-word;
+  margin: 0;
+  font-size: calc(var(--kilo-font-size-11) * 2);
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: var(--letter-spacing-normal);
+}
+
+.am-splash-subtitle {
+  grid-area: sub;
+  max-width: 58ch;
+  color: var(--text-weak);
+}
+
+/* Wide cards */
+
+.am-splash-wide {
+  display: contents;
+}
+
+.am-splash-picker {
+  grid-area: nav;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 2);
+  min-width: 0;
+}
+
+/* Every example is visible, so the three cards share the row equally. */
+.am-splash-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--am-splash-card-gap);
+  min-width: 0;
+}
+
+.am-splash .am-splash-card[data-component="button"] {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 1.25);
+  align-items: stretch;
+  justify-content: flex-start;
+  height: auto;
+  min-width: 0;
+  padding: calc(var(--spacing) * 3);
+  border: calc(var(--spacing) * 0.25) solid var(--border-weak-base);
+  border-radius: var(--radius-sm);
+  text-align: start;
+  white-space: normal;
+}
+
+.am-splash-card:not(.am-splash-card-selected):hover {
+  border-color: var(--border-base);
+}
+
+.am-splash .am-splash-card[data-component="button"].am-splash-card-selected {
+  border-color: var(--border-focus, var(--vscode-focusBorder));
+  background: color-mix(in srgb, var(--border-focus) 10%, var(--surface-base));
+  box-shadow: inset 3px 0 0 var(--border-focus, var(--vscode-focusBorder));
+}
+
+.am-splash .am-splash-card[data-component="button"].am-splash-card-selected:dir(rtl) {
+  box-shadow: inset -3px 0 0 var(--border-focus, var(--vscode-focusBorder));
+}
+
+.am-splash-card-tag {
+  color: var(--am-splash-tone);
+  font-size: var(--kilo-font-size-10);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--letter-spacing-normal);
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.am-splash-card-title {
+  font-size: var(--kilo-font-size-13);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
+  overflow-wrap: break-word;
+}
+
+/* Compact tabs */
+
+.am-splash-compact[data-component="tabs"] {
+  display: contents;
+}
+
+.am-splash-compact .am-splash-tabs[data-slot="tabs-list"] {
+  --am-splash-tab-gap: 5px;
+  grid-area: nav;
+  display: flex;
+  gap: var(--am-splash-tab-gap);
+  height: auto;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  overflow-x: auto;
+  scrollbar-width: none;
+  container-type: scroll-state;
+}
+
+.am-splash-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+/* Edge fades over tabs scrolled out of view. Without scroll-state queries there is no fade.
+   This selector outranks the shared pill tabs rule that hides the list's ::after. */
+.am-splash .am-splash-compact[data-component="tabs"] .am-splash-tabs[data-slot="tabs-list"]::before,
+.am-splash .am-splash-compact[data-component="tabs"] .am-splash-tabs[data-slot="tabs-list"]::after {
+  content: "";
+  display: block;
+  position: sticky;
+  z-index: 1;
+  flex: none;
+  align-self: stretch;
+  width: var(--am-splash-fade);
+  height: auto;
+  border: 0;
+  background: linear-gradient(var(--am-splash-fade-side), var(--surface-raised-base), transparent);
+  pointer-events: none;
+}
+
+/* Negative margins overlap the neighbouring tab instead of taking up room. */
+.am-splash-tabs::before {
+  --am-splash-fade-side: to right;
+  inset-inline-start: 0;
+  margin-inline-end: calc(-1 * (var(--am-splash-fade) + var(--am-splash-tab-gap)));
+  visibility: hidden;
+}
+
+.am-splash-tabs::after {
+  --am-splash-fade-side: to left;
+  inset-inline-end: 0;
+  margin-inline-start: calc(-1 * (var(--am-splash-fade) + var(--am-splash-tab-gap)));
+  visibility: hidden;
+}
+
+.am-splash-tabs:dir(rtl)::before,
+.am-splash-tabs:dir(rtl)::after {
+  scale: -1 1;
+}
+
+@container scroll-state(scrollable: inline-start) {
+  .am-splash-tabs::before {
+    visibility: visible;
+  }
+}
+
+@container scroll-state(scrollable: inline-end) {
+  .am-splash-tabs::after {
+    visibility: visible;
+  }
+}
+
+.am-splash-compact .am-splash-tabs [data-slot="tabs-trigger-wrapper"] {
+  flex: none;
+  height: auto;
+  padding: 0;
+  background: transparent;
+}
+
+.am-splash-compact .am-splash-tab[data-slot="tabs-trigger"] {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--spacing) * 1.25);
+  height: auto;
+  padding: calc(var(--spacing) * 1.25) calc(var(--spacing) * 2.25);
+  border: 1px solid var(--border-weak-base);
+  border-radius: var(--radius-full, 999px);
+  background: var(--surface-base);
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-12);
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.am-splash-compact .am-splash-tab[data-slot="tabs-trigger"][aria-selected="true"] {
+  border-color: var(--border-focus, var(--vscode-focusBorder));
+  background: color-mix(in srgb, var(--border-focus) 10%, var(--surface-base));
+  color: var(--text-base);
+}
+
+.am-splash-compact [data-slot="tabs-trigger"]::after {
+  display: none;
+}
+
+.am-splash-tab-dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--am-splash-accent, var(--text-weak));
+}
+
+/* Inactive panels stay in the shared cell, hidden by visibility, so the height never changes. */
+.am-splash-compact .am-splash-compact-panel[data-slot="tabs-content"] {
+  display: block;
+  overflow: visible;
+}
+
+/* Every example's pitch shares one grid cell, so the height never changes. */
+.am-splash-example {
+  grid-area: pitch;
+  display: grid;
+  align-items: start;
+}
+
+.am-splash-example-panel {
+  grid-area: 1 / 1;
+  min-width: 0;
+  visibility: hidden;
+}
+
+.am-splash-example-panel-active {
+  visibility: visible;
+}
+
+.am-splash-pitch {
+  font-size: calc((var(--kilo-font-size-13) + var(--kilo-font-size-14)) / 2);
+  font-weight: var(--font-weight-medium);
+  overflow-wrap: break-word;
+}
+
+/* Numbered features pair with preview badges in narrow and wide layouts. */
+
+.am-splash-feature-stack {
+  grid-area: features;
+  display: none;
+  min-width: 0;
+  align-self: start;
+}
+
+.am-splash-features {
+  grid-area: 1 / 1;
+  visibility: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.am-splash-features-active {
+  visibility: visible;
+}
+
+.am-splash-feature {
+  display: flex;
+  align-items: flex-start;
+  gap: calc(var(--spacing) * 2);
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-12);
+}
+
+.am-splash-feature:hover {
+  background: var(--surface-base-hover);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 1px var(--am-splash-accent);
+}
+
+.am-splash-feature-text {
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.am-splash-feature strong {
+  display: block;
+  color: var(--text-base);
+  font-weight: var(--font-weight-medium);
+}
+
+.am-splash-feature-description {
+  display: block;
+  margin-top: 2px;
+  font-size: calc((var(--kilo-font-size-11) + var(--kilo-font-size-12)) / 2);
+  line-height: 1.45;
+}
+
+.am-splash-feature-marker,
+.am-splash-row-marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--am-splash-tone);
+  color: var(--background-base);
+  font-size: var(--kilo-font-size-10);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.am-splash-feature-marker {
+  margin-top: 1px;
+}
+
+/* Actions */
+
+.am-splash-actions {
+  grid-area: cta;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: calc(var(--spacing) * 2.5) calc(var(--spacing) * 3.5);
+  padding-top: calc(var(--spacing) * 1);
+}
+
+.am-splash-actions [data-component="button"] {
+  max-width: 100%;
+  height: auto;
+  min-height: 34px;
+  white-space: normal;
+  text-align: center;
+}
+
+.am-splash-hint {
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-12);
+  overflow-wrap: break-word;
+}
+
+.am-splash-proceed {
+  display: inline;
+  color: var(--text-interactive-base);
+  text-align: inherit;
+  cursor: pointer;
+}
+
+.am-splash-proceed:hover,
+.am-splash-proceed:focus-visible {
+  color: var(--vscode-textLink-activeForeground, var(--text-interactive-base));
+  text-decoration: underline;
+}
+
+.am-splash-card:focus-visible,
+.am-splash-tab:focus-visible,
+.am-splash-compact-panel:focus-visible,
+.am-splash-proceed:focus-visible,
+.am-splash-hide[data-component="button"]:focus-visible,
+.am-splash-show[data-component="button"]:focus-visible,
+.am-splash-actions [data-component="button"]:focus-visible {
+  outline: calc(var(--spacing) * 0.25) solid var(--border-focus, var(--vscode-focusBorder));
+  outline-offset: calc(var(--spacing) * 0.25);
+}
+
+/* Keep a visible gap between the primary button's fill and its focus ring. */
+.am-splash-actions [data-component="button"]:focus-visible {
+  outline-offset: 2px;
+}
+
+/* All inert fleets share one grid cell, sizing the preview to the tallest fixture. */
+
+.am-splash-preview {
+  grid-area: sidebar;
+  align-self: start;
+  min-width: 0;
+}
+
+.am-splash-preview-card {
+  display: grid;
+  height: auto;
+  padding: calc(var(--spacing) * 2);
+  border: calc(var(--spacing) * 0.25) solid var(--border-weak-base);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  font-size: var(--font-size-base);
+  box-shadow: var(--shadow-lg);
+}
+
+.am-splash-preview-fleet {
+  grid-area: 1 / 1;
+  min-width: 0;
+  visibility: hidden;
+}
+
+.am-splash-preview-fleet-active {
+  visibility: visible;
+}
+
+.am-splash-preview-card .am-projects-footer {
+  display: none;
+}
+
+.am-splash-preview-card .am-projects-list {
+  overflow: visible;
+}
+
+.am-splash-legend {
+  display: none;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  padding: 12px 4px 0;
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-12);
+}
+
+.am-splash-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Tones: chart hues mixed toward text weight so small tags and inverse numbers stay readable. */
+
+.am-splash [data-tone] {
+  --am-splash-tone: color-mix(in srgb, var(--am-splash-accent, var(--text-base)) 25%, var(--text-base));
+  --am-splash-ring: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--am-splash-accent);
+}
+
+.am-splash [data-tone="crossStack"] {
+  --am-splash-accent: var(--vscode-charts-orange, var(--text-base));
+}
+
+.am-splash [data-tone="delegate"] {
+  --am-splash-accent: var(--vscode-charts-purple, var(--text-base));
+}
+
+.am-splash [data-tone="compare"] {
+  --am-splash-accent: var(--vscode-charts-blue, var(--text-base));
+}
+
+@container am-splash (width < 560px) {
+  .am-splash-row-marker {
+    display: none;
+  }
+}
+
+@container am-splash (width >= 560px) {
+  .am-splash-hero {
+    grid-template-columns: minmax(260px, 1fr) minmax(150px, 210px);
+    grid-template-areas: "head head" "title title" "sub sub" "nav nav" "pitch pitch" "sidebar features" "cta cta";
+    column-gap: 14px;
+    padding: 18px;
+  }
+
+  .am-splash-feature-stack {
+    display: grid;
+  }
+
+  .am-splash-row-marker-hover {
+    box-shadow: var(--am-splash-ring);
+  }
+}
+
+@container am-splash (width < 880px) {
+  .am-splash-wide,
+  .am-splash-subtitle-wide {
+    display: none;
+  }
+
+  .am-splash-feature-stack {
+    padding-top: 30px;
+  }
+}
+
+@container am-splash (width >= 880px) {
+  .am-splash-hero {
+    grid-template-columns: minmax(0, 1fr) 360px;
+    grid-template-areas: "head sidebar" "title sidebar" "sub sidebar" "nav sidebar" "pitch sidebar" "features sidebar" "fill sidebar" "cta sidebar";
+    grid-template-rows: auto auto auto auto auto auto 1fr auto;
+    column-gap: 30px;
+    row-gap: 14px;
+    padding: 24px 26px;
+  }
+
+  .am-splash-compact[data-component="tabs"],
+  .am-splash-subtitle-compact {
+    display: none;
+  }
+
+  .am-splash-logo {
+    width: 28px;
+    height: 28px;
+  }
+
+  .am-splash-title {
+    font-size: calc(var(--kilo-font-size-14) * 2);
+    line-height: 1.2;
+  }
+
+  .am-splash-subtitle {
+    font-size: var(--kilo-font-size-14);
+    line-height: 1.55;
+  }
+
+  .am-splash-pitch {
+    font-weight: var(--font-weight-regular);
+  }
+
+  .am-splash-features {
+    gap: 9px;
+  }
+
+  .am-splash-feature {
+    font-size: calc((var(--kilo-font-size-12) + var(--kilo-font-size-13)) / 2);
+  }
+
+  .am-splash-feature strong,
+  .am-splash-feature-description {
+    display: inline;
+    font-size: inherit;
+  }
+
+  .am-splash-feature-description::before {
+    content: " · ";
+    color: var(--text-weaker);
+  }
+
+  .am-splash-legend {
+    display: flex;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .am-splash button,
+  .am-splash-folded button {
+    transition: none;
+  }
+}
+
+/* Folded: a one-row bar above the regular welcome screen */
+
+.am-splash-folded-layout {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  container: am-splash-folded / inline-size;
+}
+
+.am-splash-folded {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--spacing) * 3);
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 10px 14px;
+  border: calc(var(--spacing) * 0.25) solid var(--border-weak-base);
+  border-radius: var(--radius-xl);
+  background: var(--surface-inset-base);
+  color: var(--text-base);
+}
+
+.am-splash-folded-logo {
+  width: calc(var(--spacing) * 5.5);
+  height: calc(var(--spacing) * 5.5);
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.am-splash-folded-title {
+  flex-shrink: 0;
+  font-size: var(--kilo-font-size-13);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+.am-splash-folded-note {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-12);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.am-splash-show[data-component="button"] {
+  flex-shrink: 0;
+  gap: calc(var(--spacing) * 0.5);
+  padding-inline: calc(var(--spacing) * 1);
+  white-space: nowrap;
+  color: var(--text-interactive-base);
+}
+
+.am-splash-folded-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+@container am-splash-folded (width < 600px) {
+  .am-splash-folded-note {
+    display: none;
+  }
+
+  .am-splash-folded-title {
+    flex: 1;
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+}
+
+/* The folded bar takes the welcome header's place in the chat host, as the intro layout does. */
+.am-chat-wrapper :has(> [data-slot="message-list"] .am-splash-folded-layout) {
+  display: flex;
+  flex-direction: column;
+}
+
+.am-chat-wrapper :has(> [data-slot="message-list"] .am-splash-folded-layout) > [data-slot="welcome-header"] {
+  position: static;
+  padding: 12px var(--chat-gutter, 16px) 0;
+  flex-shrink: 0;
+}
+
+.am-chat-wrapper [data-slot="message-list"]:has(.am-splash-folded-layout) {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+}

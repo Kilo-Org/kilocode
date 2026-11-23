@@ -23,6 +23,7 @@ const CSS_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/agent-manager.css"),
   path.join(ROOT, "webview-ui/agent-manager/agent-manager-review.css"),
   path.join(ROOT, "webview-ui/agent-manager/intro/intro.css"),
+  path.join(ROOT, "webview-ui/agent-manager/splash/splash.css"),
   path.join(ROOT, "webview-ui/browser/browser.css"),
 ]
 const TSX_FILES = [
@@ -31,6 +32,11 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/ShortcutHints.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/intro/AgentManagerIntro.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/intro/IntroGraph.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/splash/Splash.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/splash/Cards.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/splash/Compact.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/splash/Preview.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/splash/markers.tsx"),
   path.join(ROOT, "webview-ui/src/components/chat/MessageList.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SubagentPanel.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/EditPreviewPanel.tsx"),
@@ -107,6 +113,9 @@ const SETUP_SCRIPT_RUNNER_FILE = path.join(ROOT, "src/agent-manager/SetupScriptR
 const RUN_MESSAGE_FILE = path.join(ROOT, "src/agent-manager/run/message.ts")
 const TAB_LAYOUT_FILE = path.join(ROOT, "src/agent-manager/tab-layout.ts")
 const TERMINAL_ROUTING_FILE = path.join(ROOT, "src/agent-manager/terminal-routing.ts")
+// State and UI in-message routing live in a vscode-free helper so the provider
+// stays under its cap; keep scanning it for the routed message types.
+const MESSAGE_ROUTING_FILE = path.join(ROOT, "src/agent-manager/message-routing.ts")
 const SCRIPT_TERMINAL_FILE = path.join(ROOT, "src/agent-manager/ScriptTerminalManager.ts")
 const SCRIPT_TERMINAL_RUNTIME_FILE = path.join(ROOT, "src/agent-manager/script-terminal-runtime.ts")
 const RUN_TASK_FILE = path.join(ROOT, "src/agent-manager/run/task.ts")
@@ -173,7 +182,7 @@ describe("Agent Manager CSS/TSX Consistency", () => {
     const defined = new Set(cssMatches.map((m) => m[1]))
 
     // Extract am- classes referenced in TSX (class="am-..." or `am-...`)
-    const tsxMatches = [...tsx.matchAll(/\bam-[a-z0-9-]+/g)]
+    const tsxMatches = [...tsx.matchAll(/(?<![\w-])am-[a-z0-9-]+/g)]
     const used = [...new Set(tsxMatches.map((m) => m[0]))]
 
     const missing = used.filter((c) => !defined.has(c))
@@ -595,7 +604,7 @@ describe("Agent Manager Worktree Actions", () => {
   it("keeps Cmd+W terminal handling before the empty-worktree fallback", () => {
     const source = fs.readFileSync(TSX_FILE, "utf-8")
     const start = source.indexOf("const closeActiveTab = () =>")
-    const end = source.indexOf("// Close the currently selected worktree", start)
+    const end = source.indexOf("const closeSelectedWorktree =", start)
     const action = source.slice(start, end)
 
     expect(start).toBeGreaterThanOrEqual(0)
@@ -603,6 +612,8 @@ describe("Agent Manager Worktree Actions", () => {
     expect(action).toContain("termHandlers.closeFocused()")
     expect(action).toContain("termHandlers.closeActive()")
     expect(action).toContain("if (tabs.length === 0)")
+    expect(action).toContain('closeSelectedWorktree("arm")')
+    expect(source).toContain('msg.action === "closeWorktree") closeSelectedWorktree("arm")')
   })
 
   it("forwards the quick-worktree command to immediate creation", () => {
@@ -688,7 +699,8 @@ describe("Agent Manager Provider — onMessage routing", () => {
       provider() +
       fs.readFileSync(RUN_MESSAGE_FILE, "utf-8") +
       fs.readFileSync(TERMINAL_ROUTING_FILE, "utf-8") +
-      fs.readFileSync(TAB_LAYOUT_FILE, "utf-8")
+      fs.readFileSync(TAB_LAYOUT_FILE, "utf-8") +
+      fs.readFileSync(MESSAGE_ROUTING_FILE, "utf-8")
     const expected = [
       "agentManager.createWorktree",
       "agentManager.deleteWorktree",

@@ -121,7 +121,13 @@ Run the auth command and follow the ChatGPT Go, Plus, or Pro sign-in flow:
 kilo auth login --provider codex
 ```
 
-You can also use `--provider openai`. If you already have `OPENAI_API_KEY` or OpenAI config set, ChatGPT OAuth takes priority for Codex models until you log out of the OpenAI provider.
+You can also use `--provider openai`. Kilo Code offers three methods at the prompt:
+
+- **ChatGPT Pro/Plus (browser)** — opens the OpenAI authorize page in your browser for a PKCE OAuth flow. Best for local desktop environments.
+- **ChatGPT Pro/Plus (headless)** — uses a device-code flow. The CLI displays a short code and a URL; open the URL on any device with a browser and enter the code to finish signing in. Use this on a remote host, or behind SSH, Docker, or WSL, where a browser redirect to `127.0.0.1` and the local callback port are not reachable.
+- **Manually enter API Key** — fall back to a standard OpenAI API key.
+
+If you already have `OPENAI_API_KEY` or OpenAI config set, ChatGPT OAuth takes priority for Codex models until you log out of the OpenAI provider.
 
 Then set your default model to one of the OpenAI Codex models available in Kilo Code:
 

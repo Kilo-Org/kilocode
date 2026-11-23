@@ -224,12 +224,39 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
+          title={language.t("settings.experimental.agentManagerSplash.title")}
+          description={language.t("settings.experimental.agentManagerSplash.description")}
+        >
+          <Switch
+            checked={settings().agentManagerSplash === true}
+            onChange={(checked) =>
+              applySetting(
+                "agentManagerSplash",
+                checked,
+                "experimental.agentManagerSplash",
+                language.t("settings.experimental.agentManagerSplash.title"),
+              )
+            }
+            hideLabel
+          >
+            {language.t("settings.experimental.agentManagerSplash.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
           title={language.t("settings.experimental.claudeMigration.title")}
           description={language.t("settings.experimental.claudeMigration.description")}
         >
           <Switch
             checked={settings().claudeMigration === true}
-            onChange={(checked) => applySetting("claudeMigration", checked, "experimental.claudeMigration")}
+            onChange={(checked) =>
+              applySetting(
+                "claudeMigration",
+                checked,
+                "experimental.claudeMigration",
+                language.t("settings.experimental.claudeMigration.title"),
+              )
+            }
             hideLabel
           >
             {language.t("settings.experimental.claudeMigration.title")}
@@ -243,7 +270,12 @@ const ExperimentalTab: Component = () => {
           <Switch
             checked={settings().conversationPromptHistory === true}
             onChange={(checked) =>
-              applySetting("conversationPromptHistory", checked, "experimental.conversationPromptHistory")
+              applySetting(
+                "conversationPromptHistory",
+                checked,
+                "experimental.conversationPromptHistory",
+                language.t("settings.experimental.conversationPromptHistory.title"),
+              )
             }
             hideLabel
           >
@@ -257,7 +289,14 @@ const ExperimentalTab: Component = () => {
         >
           <Switch
             checked={settings().browserAutomation === true}
-            onChange={(checked) => applySetting("browserAutomation", checked, "experimental.browserAutomation")}
+            onChange={(checked) =>
+              applySetting(
+                "browserAutomation",
+                checked,
+                "experimental.browserAutomation",
+                language.t("settings.experimental.browserAutomation.title"),
+              )
+            }
             hideLabel
           >
             {language.t("settings.experimental.browserAutomation.title")}
@@ -279,7 +318,12 @@ const ExperimentalTab: Component = () => {
               onSelect={(o) => {
                 if (!o) return
                 if (o.value === (settings().agentManagerBrowserOpenLinksIn ?? "integrated")) return
-                applySetting("agentManagerBrowserOpenLinksIn", o.value, "agentManager.browser.openLinksIn")
+                applySetting(
+                  "agentManagerBrowserOpenLinksIn",
+                  o.value,
+                  "agentManager.browser.openLinksIn",
+                  language.t("settings.experimental.browserLinks.title"),
+                )
               }}
               variant="secondary"
               size="small"
@@ -295,7 +339,12 @@ const ExperimentalTab: Component = () => {
           <Switch
             checked={settings().agentManagerBrowserUseSystemChrome !== false}
             onChange={(checked) =>
-              applySetting("agentManagerBrowserUseSystemChrome", checked, "agentManager.browser.useSystemChrome")
+              applySetting(
+                "agentManagerBrowserUseSystemChrome",
+                checked,
+                "agentManager.browser.useSystemChrome",
+                language.t("settings.experimental.browserAutomation.systemChrome.title"),
+              )
             }
             hideLabel
           >

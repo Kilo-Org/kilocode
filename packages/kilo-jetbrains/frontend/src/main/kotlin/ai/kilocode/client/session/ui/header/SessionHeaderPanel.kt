@@ -42,6 +42,8 @@ class SessionHeaderPanel(
     private val controller: SessionController,
     parent: Disposable,
     private val readonly: Boolean = false,
+    /** Whether this session host supports compaction, re-derived on every [update]. */
+    private val compactVisible: () -> Boolean = { true },
     /** Whether the shared agent board icon should show, re-derived on every [update]. */
     private val boardVisible: () -> Boolean = { false },
     private val onShowBoard: () -> Unit = {},
@@ -86,6 +88,7 @@ class SessionHeaderPanel(
     private val compact = HoverIcon().apply {
         icon = COMPRESS_ICON
         cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
+        isVisible = !readonly && compactVisible()
         toolTipText = KiloBundle.message("session.header.compact.description")
         accessibleContext.accessibleName = KiloBundle.message("session.header.compact")
         addActionListener { controller.compact() }
@@ -284,8 +287,8 @@ class SessionHeaderPanel(
         // event, so a session that never had a background agent would otherwise never sync the strip.
         agentStrip.update(controller.model.backgroundAgents)
 
-        compact.isVisible = !readonly
-        compact.isEnabled = !readonly && header.canCompact
+        compact.isVisible = !readonly && compactVisible()
+        compact.isEnabled = compact.isVisible && header.canCompact
         board.isVisible = boardVisible()
         val appended = timeline.setItems(header.timeline)
         sizeTimeline()

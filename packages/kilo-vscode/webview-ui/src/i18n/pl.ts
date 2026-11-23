@@ -315,6 +315,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "Usuń z listy dozwolonych",
   "ui.permission.rule.addToDenied": "Dodaj do listy zablokowanych",
   "ui.permission.rule.removeFromDenied": "Usuń z listy zablokowanych",
+  "ui.permission.rule.fromConfig": "Zarządzana przez plik konfiguracji",
   "ui.permission.toolLabel.read": "Czytaj",
   "ui.permission.toolLabel.edit": "Edytuj",
   "ui.permission.toolLabel.write": "Zapisz",
@@ -775,6 +776,7 @@ export const dict = {
 
   "dialog.model.noProviders": "Brak dostawców",
   "dialog.model.unavailable": "Modele Kilo niedostępne",
+  "dialog.model.loadFailed": "Nie udało się wczytać dostawców dla tego projektu.",
 
   "prompt.placeholder.connecting": "Łączenie z serwerem...",
   "prompt.placeholder.error": "Połączenie nie powiodło się. Sprawdź panel wyjściowy lub uruchom ponownie rozszerzenie.",
@@ -826,8 +828,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "Telemetria",
   "settings.aboutKiloCode.telemetry.description":
-    'Telemetria jest kontrolowana przez wbudowane ustawienie telemetrii VS Code. Aby ją wyłączyć, przejdź do Ustawienia > Telemetria > Poziom telemetrii i ustaw na "off". Uruchom ponownie VS Code, aby zastosować zmianę.',
-  "settings.aboutKiloCode.telemetry.openSettings": "Otwórz ustawienia telemetrii",
+    "Użyj tego przełącznika, aby zmienić ustawienie telemetrii w Kilo. Telemetria pozostanie wyłączona, jeśli wyłączy ją VS Code lub środowisko uruchomieniowe.",
+  "settings.aboutKiloCode.telemetry.toggle": "Włącz telemetrię",
+  "settings.aboutKiloCode.telemetry.saveFailed": "Nie udało się zaktualizować ustawienia telemetrii",
 
   "settings.agentBehaviour.subtab.agents": "Agenci",
   "settings.agentBehaviour.subtab.mcpServers": "Serwery MCP",
@@ -938,6 +941,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "Historia promptów dla każdej rozmowy",
   "settings.experimental.conversationPromptHistory.description":
     "Przechowuj historię promptów (ArrowUp/ArrowDown) osobno dla każdej rozmowy zamiast współdzielić jedną historię we wszystkich rozmowach.",
+  "settings.experimental.agentManagerSplash.title": "Ekran powitalny Agent Manager",
+  "settings.experimental.agentManagerSplash.description":
+    "Wypróbuj nowe wprowadzenie do Agent Manager z przykładami przepływów pracy. Zmiany są stosowane natychmiast.",
   "settings.experimental.claudeMigration.title": "Migracja Claude Code",
   "settings.experimental.claudeMigration.description":
     "Jednorazowo importuj obsługiwane globalne instrukcje CLAUDE.md, proste umiejętności i wyłączone definicje MCP. Oryginalne pliki Claude pozostają niezmienione; po włączeniu uruchom ponownie backend.",
@@ -1338,6 +1344,8 @@ export const dict = {
   "dialog.model.notSet": "Nie ustawiono",
   "profile.personalAccount": "Konto osobiste",
   "profile.switchingAccount": "Przełączanie konta…",
+  "profile.unavailableAccount": "Konto niedostępne",
+  "profile.switchFailed": "Nie udało się potwierdzić przełączenia konta.",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/pl.ts
 
   "question.summary": "{{n}} z {{total}} pytań",
@@ -1422,6 +1430,9 @@ export const dict = {
   "settings.saveBar.cancel": "Anuluj",
   "settings.saveBar.saving": "Zapisywanie…",
   "settings.saveBar.saveFailed": "Nie można zapisać ustawień",
+  "settings.saveBar.dismissError": "Odrzuć",
+  "settings.saveBar.unconfirmedWrite": "Host rozszerzenia nie potwierdził „{{name}}”.",
+  "settings.saveBar.unconfirmedSave": "Host rozszerzenia nie potwierdził zapisu. Spróbuj ponownie.",
   "notifications.action.next": "Następny",
   "notifications.action.close": "Zamknij",
   "notifications.action.tryModel": "Wypróbuj {{model}}",

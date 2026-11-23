@@ -1,6 +1,7 @@
 import { test, expect, describe } from "bun:test"
 import { Permission } from "../../src/permission"
 import { readOnlyBash } from "../../src/kilocode/agent"
+import { pattern } from "../../src/kilocode/mcp/tool-id"
 
 /** Build the Ask agent ruleset without MCP servers */
 function askRuleset() {
@@ -26,8 +27,7 @@ function askRuleset() {
 function askRulesetWithMcp(servers: string[], user: Permission.Ruleset = []) {
   const mcpRules: Record<string, "allow" | "ask" | "deny"> = {}
   for (const key of servers) {
-    const sanitized = key.replace(/[^a-zA-Z0-9_-]/g, "_")
-    mcpRules[sanitized + "_*"] = "ask"
+    mcpRules[pattern(key)] = "ask"
   }
   // Mirrors Ask agent merge order: defaults, ask-specific guard, user config, user denies last.
   return Permission.merge(
@@ -210,6 +210,105 @@ describe("Ask agent bash permissions", () => {
     expect(Permission.evaluate("bash", "gh pr view 123", ruleset).action).toBe("allow")
     expect(Permission.evaluate("bash", "gh issue list", ruleset).action).toBe("allow")
     expect(Permission.evaluate("bash", "gh api repos/org/repo", ruleset).action).toBe("ask")
+  })
+
+  // An environment file gets the same level from the shell as from the read rule.
+  // A reader's file counts at any operand position, a searcher's once the name
+  // follows its search term, and a git reader's inside the revision spec.
+  describe("environment files keep the read level", () => {
+    const cases: [string, "allow" | "ask"][] = [
+      // A reader: any operand position, a glob, a quoted operand, a nested path.
+      ["cat .env", "ask"],
+      ["cat prod.env", "ask"],
+      ["cat config/prod.env", "ask"],
+      ["cat .env*", "ask"],
+      ['cat ".env"', "ask"],
+      ["head -n5 .env", "ask"],
+      ["tail -f .env", "ask"],
+      ["less .env", "ask"],
+      ["diff .env src/index.ts", "ask"],
+      ["sort .env", "ask"],
+      ["uniq .env", "ask"],
+      ["cut -d= -f1 .env", "ask"],
+      ["jq . .env", "ask"],
+      ["cat .env notes.txt", "ask"],
+      ["head -n 5 .env.production", "ask"],
+      ["diff a.txt .env.local", "ask"],
+      ["cat apps/web/.env.local", "ask"],
+      // The sample file is allowed only as the lone operand. A second operand and
+      // a nested path state their own level: a rule naming them needs a wildcard
+      // before the path.
+      ["cat .env.example", "allow"],
+      ["diff .env .env.example", "ask"],
+      ["cat .env.example .env", "ask"],
+      ["cat -n .env .env.example", "ask"],
+      ["cat -n .env config/.env.example", "ask"],
+      ["cat config/.env.example", "ask"],
+      // A searcher: the environment file is an operand, the pattern is first.
+      ["grep -rn KEY prod.env", "ask"],
+      ["rg -n SECRET prod.env", "ask"],
+      ["ag KEY prod.env", "ask"],
+      ["grep -n KEY .env", "ask"],
+      ["grep -rn KEY .env.local", "ask"],
+      ["grep x .env src/", "ask"],
+      ["rg KEY config/.env src/", "ask"],
+      ["grep -n KEY app/.env.local src/", "ask"],
+      ["grep -n KEY .env .env.example", "ask"],
+      ["grep -n KEY .env config/.env.example", "ask"],
+      // A search term that merely contains `.env` is not a file read, and a bare
+      // term that reads like a file name is the searcher's pattern, so it is not
+      // a read of that file either.
+      ["grep process.env", "allow"],
+      ["rg -n process.env src/foo.ts", "allow"],
+      ["grep .env", "allow"],
+      ["rg .env", "allow"],
+      ["ag .env", "allow"],
+      // A last argument that only ends in `.env` is treated as a file name, so a
+      // search term in that position gets the same level; a path operand after it
+      // does not.
+      ["rg -n process.env", "ask"],
+      ["grep -rn process.env", "ask"],
+      // A stream filter's input redirect follows the same rule.
+      ["tr -d ',' < .env", "ask"],
+      ["tr -d ',' < .env.local", "ask"],
+      ["tr -d ','", "allow"],
+      ["tr -d ',' < notes.txt", "allow"],
+      // A process environment dump.
+      ["printenv", "ask"],
+      ["printenv HOME", "ask"],
+      // A git reader: the environment file sits in the revision spec, and the
+      // sample asks there too because a spec cannot be restricted to one operand.
+      ["git show HEAD:.env", "ask"],
+      ["git cat-file -p HEAD:.env", "ask"],
+      ["git diff HEAD~1 .env", "ask"],
+      ["git log -p -- .env", "ask"],
+      ["git blame .env", "ask"],
+      ["git diff .env README.md", "ask"],
+      ["git show HEAD -- .env src/index.ts", "ask"],
+      ["git log -p -- .env src/index.ts", "ask"],
+      ["git blame .env src/index.ts", "ask"],
+      ["git show HEAD:.env HEAD:.env.example", "ask"],
+      ["git show HEAD:.env.example", "ask"],
+      ["git diff HEAD~1 .env .env.example", "ask"],
+      ["git show HEAD", "allow"],
+      ["git diff HEAD~1", "allow"],
+      ["git log --oneline", "allow"],
+      ["git blame src/index.ts", "allow"],
+    ]
+
+    for (const [cmd, action] of cases) {
+      test(`"${cmd}" → ${action}`, () => {
+        expect(Permission.evaluate("bash", cmd, ruleset).action).toBe(action)
+      })
+    }
+
+    test("ordinary reads keep their allow", () => {
+      expect(Permission.evaluate("bash", "cat README.md", ruleset).action).toBe("allow")
+      expect(Permission.evaluate("bash", "diff a.txt b.txt", ruleset).action).toBe("allow")
+      // A search for the identifier is not a read of an environment file.
+      expect(Permission.evaluate("bash", "rg process.env", ruleset).action).toBe("allow")
+      expect(Permission.evaluate("bash", "grep -rn process.env src", ruleset).action).toBe("allow")
+    })
   })
 })
 

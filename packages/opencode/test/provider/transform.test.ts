@@ -5,7 +5,8 @@ import { LLMRequestPrep } from "@/session/llm/request"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { ModelsDev } from "@opencode-ai/core/models-dev"
-import { generateText, jsonSchema, type ModelMessage } from "ai"
+import { generateText, jsonSchema, tool, type ModelMessage } from "ai" // kilocode_change
+import { createGoogleGenerativeAI } from "@ai-sdk/google" // kilocode_change
 import { createAmazonBedrock, type AmazonBedrockLanguageModelOptions } from "@ai-sdk/amazon-bedrock"
 import { createAnthropic } from "@ai-sdk/anthropic"
 import { createVertexAnthropic } from "@ai-sdk/google-vertex/anthropic"
@@ -1441,9 +1442,9 @@ describe("ProviderTransform.schema - gemini type arrays", () => {
 
     const result = ProviderTransform.schema(geminiModel, schema) as any
 
-    expect(result.properties.maybe.type).toBeUndefined()
-    expect(result.properties.maybe.anyOf).toEqual([{ type: "string" }])
-    expect(result.properties.maybe.nullable).toBe(true)
+    // kilocode_change start - one non-null type lowers to a plain nullable type
+    expect(result.properties.maybe).toEqual({ type: "string", nullable: true, description: "nullable string" })
+    // kilocode_change end
   })
 
   test("collapses an all-null type array to type null", () => {
@@ -1485,6 +1486,191 @@ describe("ProviderTransform.schema - gemini type arrays", () => {
     expect(result.properties.status.type).toBeUndefined()
     expect(result.properties.hook_id.type).toBe("number")
   })
+
+  // kilocode_change start - Gemini rejects any key beside anyOf except nullable and description
+  const align = {
+    description: "Alignment of the column holding match_text; null clears it.",
+    type: ["string", "null"],
+    enum: ["left", "center", "right", null],
+  }
+
+  const pages = () =>
+    ({
+      type: "object",
+      properties: {
+        operations: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              op: { type: "string", enum: ["set_node", "replace_match"] },
+              attrs: {
+                type: "object",
+                properties: {
+                  align: structuredClone(align),
+                  level: { type: ["integer", "null"], enum: [1, 2, 3, null] },
+                  checked: { type: "boolean" },
+                },
+              },
+              title: { type: ["string", "null"], maxLength: 2048 },
+              value: {
+                type: ["string", "number", "null"],
+                enum: ["auto", 0, 1, null],
+                pattern: "^[a-z]+$",
+                minimum: 0,
+                description: "mixed value",
+              },
+              revision: {
+                type: ["string", "integer"],
+                format: "date-time",
+                pattern: "^r[0-9]+$",
+                minLength: 2,
+                minimum: 1,
+                maximum: 9,
+                title: "Revision",
+              },
+              target: {
+                type: ["object", "array", "null"],
+                properties: { id: { type: "string" } },
+                required: ["id"],
+                additionalProperties: false,
+                items: { type: "string" },
+              },
+            },
+          },
+        },
+      },
+    }) as any
+
+  const offenders = (node: unknown, path: string[] = []): string[] => {
+    if (node === null || typeof node !== "object") return []
+    if (Array.isArray(node)) return node.flatMap((item, i) => offenders(item, [...path, String(i)]))
+    const own =
+      "anyOf" in node ? Object.keys(node).filter((key) => !["anyOf", "nullable", "description"].includes(key)) : []
+    const here = own.map((key) => [...path, key].join("."))
+    return [...here, ...Object.entries(node).flatMap(([key, value]) => offenders(value, [...path, key]))]
+  }
+
+  test("keeps the nullable align enum flat with null out of the enum", () => {
+    const result = ProviderTransform.schema(geminiModel, pages()) as any
+
+    expect(result.properties.operations.items.properties.attrs.properties.align).toEqual({
+      type: "string",
+      nullable: true,
+      enum: ["left", "center", "right"],
+      description: "Alignment of the column holding match_text; null clears it.",
+    })
+  })
+
+  test("stringifies a nullable integer enum without the null value", () => {
+    const result = ProviderTransform.schema(geminiModel, pages()) as any
+
+    expect(result.properties.operations.items.properties.attrs.properties.level).toEqual({
+      type: "string",
+      nullable: true,
+      enum: ["1", "2", "3"],
+    })
+  })
+
+  test("moves type-specific keywords into the matching anyOf branches", () => {
+    const result = ProviderTransform.schema(geminiModel, pages()) as any
+    const props = result.properties.operations.items.properties
+
+    expect(props.revision).toEqual({
+      anyOf: [
+        { type: "string", title: "Revision", format: "date-time", pattern: "^r[0-9]+$", minLength: 2 },
+        { type: "integer", title: "Revision", format: "date-time", minimum: 1, maximum: 9 },
+      ],
+    })
+    expect(props.target).toEqual({
+      anyOf: [
+        {
+          type: "object",
+          properties: { id: { type: "string" } },
+          required: ["id"],
+          additionalProperties: false,
+        },
+        { type: "array", items: { type: "string" } },
+      ],
+      nullable: true,
+    })
+  })
+
+  test("splits enum values across branches by type", () => {
+    const result = ProviderTransform.schema(geminiModel, pages()) as any
+
+    expect(result.properties.operations.items.properties.value).toEqual({
+      anyOf: [
+        { type: "string", pattern: "^[a-z]+$", enum: ["auto"] },
+        { type: "string", minimum: 0, enum: ["0", "1"] },
+      ],
+      nullable: true,
+      description: "mixed value",
+    })
+  })
+
+  test("drops a type whose enum has no matching values", () => {
+    const schema = {
+      type: "object",
+      properties: { mode: { type: ["string", "number"], enum: ["a", "b"] } },
+    } as any
+
+    const result = ProviderTransform.schema(geminiModel, schema) as any
+
+    expect(result.properties.mode).toEqual({ type: "string", enum: ["a", "b"] })
+  })
+
+  test("leaves no generated anyOf next to keys other than nullable and description", () => {
+    const copilot = {
+      providerID: "github-copilot",
+      api: { id: "gemini-3.5-flash", npm: "@ai-sdk/github-copilot" },
+    } as any
+    const gateway = {
+      providerID: "kilo",
+      api: { id: "google/gemini-3-pro-image-preview", npm: "@kilocode/kilo-gateway" },
+    } as any
+    const native = { providerID: "google", api: { id: "gemini-3-pro", npm: "@ai-sdk/google" } } as any
+
+    for (const model of [geminiModel, copilot, gateway, native]) {
+      const result = ProviderTransform.schema(model, pages())
+      expect(offenders(result)).toEqual([])
+      expect(JSON.stringify(result)).not.toContain('"null"]')
+    }
+  })
+
+  test("keeps align nullable after @ai-sdk/google converts the schema", async () => {
+    const native = { providerID: "google", api: { id: "gemini-3-pro", npm: "@ai-sdk/google" } } as any
+    const sent = Promise.withResolvers<any>()
+    const google = createGoogleGenerativeAI({
+      apiKey: "test",
+      fetch: (async (_url: string, init: RequestInit) => {
+        sent.resolve(JSON.parse(String(init.body)))
+        return Response.json({
+          candidates: [{ content: { role: "model", parts: [{ text: "ok" }] }, finishReason: "STOP" }],
+        })
+      }) as unknown as typeof fetch,
+    })
+
+    await generateText({
+      model: google("gemini-3-pro"),
+      prompt: "hi",
+      tools: {
+        pages10_edit_page: tool({ inputSchema: jsonSchema(ProviderTransform.schema(native, pages()) as any) }),
+      },
+    })
+
+    const params = (await sent.promise).tools[0].functionDeclarations[0].parameters
+    const attrs = params.properties.operations.items.properties.attrs.properties
+    expect(attrs.align).toEqual({
+      description: "Alignment of the column holding match_text; null clears it.",
+      nullable: true,
+      type: "string",
+      enum: ["left", "center", "right"],
+    })
+    expect(params.properties.operations.items.properties.target.nullable).toBe(true)
+    expect(offenders(params)).toEqual([])
+  })
+  // kilocode_change end
 })
 
 describe("ProviderTransform.schema - gemini combiner nodes", () => {

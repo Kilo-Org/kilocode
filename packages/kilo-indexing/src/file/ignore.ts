@@ -50,6 +50,32 @@ export namespace FileIgnore {
 
   export const PATTERNS = [...files, ...folders]
 
+  const MAGIC = /[*!?[\]{}()]/
+
+  /**
+   * Expands the ignore list into glob patterns that prune whole directories.
+   *
+   * RATIONALE: Bare directory names like `node_modules` only match a path that
+   * is exactly that string. Glob and watcher engines never descend into a nested
+   * `packages/a/node_modules` unless the pattern is anchored to match at any
+   * depth and to match the directory contents. Passing the raw list therefore
+   * silently walks every ignored directory; the anchored variants let those
+   * engines skip the walk entirely.
+   */
+  export function globs(): string[] {
+    const result = new Set<string>()
+    for (const pattern of PATTERNS) {
+      result.add(pattern)
+      if (pattern.includes("/") || MAGIC.test(pattern)) {
+        continue
+      }
+      result.add(`${pattern}/**`)
+      result.add(`**/${pattern}`)
+      result.add(`**/${pattern}/**`)
+    }
+    return [...result]
+  }
+
   export function match(
     filePath: string,
     opts?: {

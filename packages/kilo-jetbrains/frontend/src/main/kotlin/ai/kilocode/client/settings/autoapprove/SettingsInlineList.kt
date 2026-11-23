@@ -3,9 +3,9 @@ package ai.kilocode.client.settings.autoapprove
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.settings.base.SettingsInlineListPanel
 import ai.kilocode.client.settings.base.SettingsToolbarAction
-import ai.kilocode.client.ui.list.ActiveListCell
-import ai.kilocode.client.ui.list.ActiveListConfig
-import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.active.ActiveCell
+import ai.kilocode.client.ui.active.ActiveConfig
+import ai.kilocode.client.ui.active.ActiveItem
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.ui.Messages
@@ -73,7 +73,7 @@ internal class SettingsInlineList(
     selectionMode: Int = ListSelectionModel.SINGLE_SELECTION,
 ) : SettingsInlineListPanel(
     empty,
-    ActiveListConfig.Equal,
+    ActiveConfig.Equal,
     selectionMode,
     showSearch = false,
 ) {
@@ -191,17 +191,17 @@ internal class SettingsInlineList(
         }
     }
 
-    private data class PermissionItem(val row: PermissionListRow) : ActiveListItem {
+    private data class PermissionItem(val row: PermissionListRow) : ActiveItem {
         override val key: String get() = row.key
         override val title: String get() = row.title
         override val description: String? get() = row.description
         override val doubleClick: String? get() = EDIT_CELL.takeIf { row.editable }
-        override val cells: List<ActiveListCell> = buildList {
-            if (row.editable) add(ActiveListCell(
+        override val cells: List<ActiveCell> = buildList {
+            if (row.editable) add(ActiveCell(
                 id = EDIT_CELL,
                 label = KiloBundle.message("settings.autoApprove.edit"),
             ))
-            add(ActiveListCell(
+            add(ActiveCell(
                 id = LEVEL_CELL,
                 label = if (row.inherited) KiloBundle.message(
                     "settings.autoApprove.default",
