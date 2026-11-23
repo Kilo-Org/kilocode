@@ -72,6 +72,31 @@ export const Transport = Schema.Union([
 ]).annotate({ identifier: "SessionHostTransport" })
 export type Transport = Schema.Schema.Type<typeof Transport>
 
+export const WorkspaceRepositoryFailureCode = Schema.Literals([
+  "hosted_workspace_repository_scope_required",
+  "hosted_workspace_repository_duplicate",
+  "hosted_workspace_repository_path_conflict",
+  "hosted_workspace_repository_access_denied",
+  "hosted_workspace_repository_unavailable",
+  "hosted_workspace_repository_integration_ambiguous",
+  "session_create_intent_conflict",
+  "hosted_workspace_repository_catalog_unavailable",
+  "hosted_workspace_repository_unsupported",
+])
+type WorkspaceRepositoryFailureCode = typeof WorkspaceRepositoryFailureCode.Type
+
+export const WorkspaceRepositoryFailures = {
+  hosted_workspace_repository_scope_required: 400,
+  hosted_workspace_repository_duplicate: 400,
+  hosted_workspace_repository_path_conflict: 400,
+  hosted_workspace_repository_access_denied: 403,
+  hosted_workspace_repository_unavailable: 404,
+  hosted_workspace_repository_integration_ambiguous: 409,
+  session_create_intent_conflict: 409,
+  hosted_workspace_repository_catalog_unavailable: 503,
+  hosted_workspace_repository_unsupported: 503,
+} as const satisfies Record<WorkspaceRepositoryFailureCode, number>
+
 export const FailureCode = Schema.Literals([
   "signed_out",
   "unauthorized",
@@ -107,7 +132,26 @@ export class HostedFailure extends Schema.TaggedErrorClass<HostedFailure>()("Ses
   message: Schema.String,
   retryable: Schema.Boolean,
   status: Schema.optional(Schema.Int),
+  reason: Schema.optional(WorkspaceRepositoryFailureCode),
 }) {}
+
+export function workspaceRepositoryFailure(reason: WorkspaceRepositoryFailureCode) {
+  const status = WorkspaceRepositoryFailures[reason]
+  const codes = {
+    400: "invalid_request",
+    403: "unauthorized",
+    404: "not_found",
+    409: "rejected",
+    503: "unavailable",
+  } as const
+  return new HostedFailure({
+    code: codes[status],
+    message: reason,
+    reason,
+    status,
+    retryable: reason === "hosted_workspace_repository_catalog_unavailable",
+  })
+}
 
 const DELETION_DISPATCHED = Symbol("workspace-deletion-dispatched")
 
@@ -858,6 +902,28 @@ export const WorkspaceProfileDefaultResult = Schema.Struct({
 }).annotate({ identifier: "SessionHostWorkspaceProfileDefaultResult" })
 export type WorkspaceProfileDefaultResult = Schema.Schema.Type<typeof WorkspaceProfileDefaultResult>
 
+export const GitHubRepositoryName = Schema.String.check(Schema.isPattern(/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/))
+export const WorkspaceIntegrationID = Schema.String.check(Schema.isUUID())
+const RepositoryID = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: Number.MAX_SAFE_INTEGER }))
+
+export const WorkspaceRepositoryListInput = Schema.Struct({
+  organizationID: Schema.String.check(Schema.isUUID()),
+  primaryRepo: GitHubRepositoryName,
+  integrationID: Schema.optional(WorkspaceIntegrationID),
+  page: Schema.optional(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 100 }))),
+})
+export type WorkspaceRepositoryListInput = Schema.Schema.Type<typeof WorkspaceRepositoryListInput>
+
+export const WorkspaceRepositoryPage = Schema.Struct({
+  hostedAdditionalRepositoriesVersion: Schema.Literal(1),
+  integrationID: WorkspaceIntegrationID,
+  repositories: Schema.Array(
+    Schema.Struct({ id: RepositoryID, fullName: GitHubRepositoryName, private: Schema.Boolean }),
+  ).check(Schema.isMaxLength(100)),
+  nextPage: WorkspaceRepositoryListInput.fields.page,
+}).annotate({ identifier: "SessionHostWorkspaceRepositoryPage" })
+export type WorkspaceRepositoryPage = Schema.Schema.Type<typeof WorkspaceRepositoryPage>
+
 export const WorkspaceListInput = Schema.Struct({
   limit: Schema.optional(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 50 }))),
   sessionLimit: Schema.optional(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 100 }))),
@@ -914,6 +980,8 @@ export const CreateWorkspaceInput = Schema.Struct({
   operationKey: Schema.String.check(Schema.isUUID()),
   messageID: Schema.optional(Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(255))),
   organizationID: Schema.optional(OrganizationID),
+  additionalRepositoryIDs: Schema.optional(Schema.Array(RepositoryID).check(Schema.isMaxLength(5))),
+  integrationID: Schema.optional(WorkspaceIntegrationID),
 })
   .check(
     Schema.makeFilter((input) =>
@@ -924,6 +992,28 @@ export const CreateWorkspaceInput = Schema.Struct({
   )
   .annotate({ identifier: "SessionHostCreateWorkspaceInput" })
 export type CreateWorkspaceInput = Schema.Schema.Type<typeof CreateWorkspaceInput>
+
+export function workspaceRepositorySelection(input: CreateWorkspaceInput) {
+  const ids = input.additionalRepositoryIDs
+  if (!ids?.length) return Effect.succeed(undefined)
+  if (
+    !input.integrationID ||
+    !Schema.is(WorkspaceRepositoryListInput.fields.organizationID)(input.organizationID) ||
+    input.repository.type !== "github" ||
+    !Schema.is(GitHubRepositoryName)(input.repository.repo)
+  ) {
+    return Effect.fail(workspaceRepositoryFailure("hosted_workspace_repository_scope_required"))
+  }
+  if (new Set(ids).size !== ids.length) {
+    return Effect.fail(workspaceRepositoryFailure("hosted_workspace_repository_duplicate"))
+  }
+  return Effect.succeed({
+    ids,
+    organizationID: input.organizationID,
+    integrationID: input.integrationID,
+    primaryRepo: input.repository.repo,
+  })
+}
 
 export const CreateWorkspaceResult = Schema.Struct({
   workspace: HostedWorkspaceID,
@@ -1146,6 +1236,10 @@ export interface Provider {
   ) => Effect.Effect<WorkspacePullRequestDiffFileResult, HostedFailure>
   readonly deleteWorkspace: (input: WorkspaceDeleteInput) => Effect.Effect<DeleteWorkspaceResult, HostedFailure>
   readonly createWorkspace: (input: CreateWorkspaceInput) => Effect.Effect<CreateWorkspaceResult, HostedFailure>
+  /** Advertises support for additional IDs at root creation; the provider must still verify deployed support. */
+  readonly listWorkspaceRepositories?: (
+    input: WorkspaceRepositoryListInput,
+  ) => Effect.Effect<WorkspaceRepositoryPage, HostedFailure>
   /**
    * Copy local root sessions into one hosted workspace. The input is the exact
    * Cloud body; the provider validates it, resolves auth without an

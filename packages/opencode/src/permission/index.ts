@@ -55,6 +55,8 @@ export const SaveAlwaysRulesInput = z.object({
   requestID: zod(PermissionV1.ID),
   approvedAlways: z.string().array().optional(),
   deniedAlways: z.string().array().optional(),
+  // Patterns whose saved rule the user cleared, so their config entry is deleted.
+  removedAlways: z.string().array().optional(),
 })
 
 export const AllowEverythingInput = z.object({
@@ -398,16 +400,57 @@ const layer = Layer.effect(
 
       const approvedSet = new Set(input.approvedAlways ?? [])
       const deniedSet = new Set(input.deniedAlways ?? [])
+      const removedSet = new Set(input.removedAlways ?? [])
       const newRules: Rule[] = []
       for (const pattern of validRules) {
         if (approvedSet.has(pattern)) newRules.push({ permission, pattern, action: "allow" })
         if (deniedSet.has(pattern)) newRules.push({ permission, pattern, action: "deny" })
       }
+      // A cleared pattern deletes its config entry. An explicit approval or denial
+      // for the same pattern in this response always wins over the deletion.
+      const removed = [...removedSet].filter(
+        (pattern) =>
+          validRules.has(pattern) &&
+          !approvedSet.has(pattern) &&
+          !deniedSet.has(pattern) &&
+          (!SCALAR_ONLY_PERMISSIONS.has(permission) || pattern === "*"),
+      )
       s.approved.push(...newRules)
       existing.saved = true
 
-      if (newRules.length > 0) {
-        yield* config.updateGlobal({ permission: toConfig(newRules) }, { dispose: false })
+      if (removed.length > 0) {
+        // The running instance resolves against its in-memory approvals as well as
+        // config, so drop the removed rules here and the next matching call is
+        // evaluated against the new state.
+        const drop = new Set(removed)
+        s.approved.splice(
+          0,
+          s.approved.length,
+          ...s.approved.filter((rule) => !(rule.permission === permission && drop.has(rule.pattern))),
+        )
+      }
+
+      if (newRules.length > 0 || removed.length > 0) {
+        // Start from what the additions can express, so a rule `toConfig` leaves out (a
+        // scalar-only permission with a concrete pattern) writes no entry, as before.
+        // Removals then add their delete sentinels.
+        const patch = toConfig(newRules)
+        if (removed.length > 0) {
+          if (SCALAR_ONLY_PERMISSIONS.has(permission)) patch[permission] = null
+          else {
+            const current = patch[permission]
+            const base: Record<string, ConfigPermissionV1.Action> =
+              current === undefined ? {} : typeof current === "string" ? { "*": current } : { ...current }
+            for (const pattern of removed) base[pattern] = null
+            // The patch only names the rows this prompt can change. Leaving the tool
+            // entry in place keeps every other saved pattern, and an entry that ends
+            // up holding only sentinels is inert: rule resolution ignores them.
+            patch[permission] = base
+          }
+        }
+        if (Object.keys(patch).length > 0) {
+          yield* config.updateGlobal({ permission: patch }, { dispose: false })
+        }
       }
 
       // kilocode_change - drain publishes replies through the same EventV2Bridge channel (was DeniedError)

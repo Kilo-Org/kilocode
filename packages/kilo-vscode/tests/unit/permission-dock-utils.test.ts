@@ -1,5 +1,10 @@
 import { describe, it, expect } from "bun:test"
-import { displayLines, displayText, savedRuleStates } from "../../webview-ui/src/components/chat/permission-dock-utils"
+import {
+  displayLines,
+  displayText,
+  removableRuleIndices,
+  savedRuleStates,
+} from "../../webview-ui/src/components/chat/permission-dock-utils"
 
 describe("displayText", () => {
   it("leaves ordinary commands, including astral characters, untouched", () => {
@@ -151,5 +156,363 @@ describe("savedRuleStates", () => {
   it("returns empty map for empty config object", () => {
     const result = savedRuleStates(["npm *"], {})
     expect(result).toEqual({})
+  })
+})
+
+describe("removableRuleIndices", () => {
+  const call = (input: {
+    rules: string[]
+    global?: Parameters<typeof savedRuleStates>[1]
+    target?: Parameters<typeof savedRuleStates>[1]
+    workspace?: Parameters<typeof savedRuleStates>[1]
+    effective: Record<number, "approved" | "denied">
+    home?: string
+  }) =>
+    removableRuleIndices({
+      ...input,
+      target: "target" in input ? input.target : input.global,
+    })
+
+  it("marks a row the global config tiles", () => {
+    expect(call({ rules: ["npm *", "git *"], global: { "npm *": "allow" }, effective: { 0: "approved" } })).toEqual(
+      new Set([0]),
+    )
+  })
+
+  it("marks a denied row the global config tiles", () => {
+    expect(call({ rules: ["rm *"], global: { "rm *": "deny" }, workspace: {}, effective: { 0: "denied" } })).toEqual(
+      new Set([0]),
+    )
+  })
+
+  it("leaves a row alone when the global config has no entry for it", () => {
+    expect(call({ rules: ["npm *"], global: { "git *": "allow" }, effective: { 0: "approved" } })).toEqual(new Set())
+  })
+
+  it("leaves a row alone when the effective state disagrees with the global entry", () => {
+    expect(call({ rules: ["npm *"], global: { "npm *": "allow" }, effective: { 0: "denied" } })).toEqual(new Set())
+  })
+
+  it("treats a scalar global rule as covering the wildcard row only", () => {
+    expect(call({ rules: ["*", "npm *"], global: "allow", effective: { 0: "approved" } })).toEqual(new Set([0]))
+  })
+
+  it("returns nothing for an absent global rule", () => {
+    expect(call({ rules: ["npm *"], effective: { 0: "approved" } })).toEqual(new Set())
+  })
+
+  it("leaves a row alone when the workspace scope supplies the same pattern", () => {
+    expect(
+      call({
+        rules: ["npm *"],
+        global: { "npm *": "allow" },
+        workspace: { "npm *": "allow" },
+        effective: { 0: "approved" },
+      }),
+    ).toEqual(new Set())
+  })
+
+  it("keeps other rows of the same tool in scope", () => {
+    expect(
+      call({
+        rules: ["npm *", "git *"],
+        global: { "npm *": "allow", "git *": "allow" },
+        workspace: { "git *": "allow" },
+        effective: { 0: "approved", 1: "approved" },
+      }),
+    ).toEqual(new Set([0]))
+  })
+
+  it("leaves a row alone when the workspace scope holds a catch-all", () => {
+    expect(
+      call({
+        rules: ["touch *"],
+        global: { "touch *": "allow" },
+        workspace: { "*": "allow" },
+        effective: { 0: "approved" },
+      }),
+    ).toEqual(new Set())
+  })
+
+  it("leaves a row alone when the workspace scope covers its pattern", () => {
+    expect(
+      call({
+        rules: ["touch"],
+        global: { touch: "allow" },
+        workspace: { "touch *": "allow" },
+        effective: { 0: "approved" },
+      }),
+    ).toEqual(new Set())
+  })
+
+  it("leaves every row alone when the workspace scope is a scalar rule", () => {
+    expect(
+      call({
+        rules: ["npm *", "git *"],
+        global: { "npm *": "allow", "git *": "allow" },
+        workspace: "deny",
+        effective: { 0: "approved", 1: "approved" },
+      }),
+    ).toEqual(new Set())
+  })
+
+  it("keeps a row in scope when the workspace catch-all only asks", () => {
+    expect(
+      call({
+        rules: ["touch *"],
+        global: { "touch *": "allow" },
+        workspace: { "*": "ask" },
+        effective: { 0: "approved" },
+      }),
+    ).toEqual(new Set([0]))
+  })
+
+  it("keeps a row in scope when the scalar workspace rule only asks", () => {
+    expect(
+      call({
+        rules: ["touch *"],
+        global: { "touch *": "allow" },
+        workspace: "ask",
+        effective: { 0: "approved" },
+      }),
+    ).toEqual(new Set([0]))
+  })
+
+  it("leaves a row alone when a workspace entry matches across separators", () => {
+    expect(
+      call({
+        rules: ["src\\foo.ts"],
+        global: { "src\\foo.ts": "allow" },
+        workspace: { "src/*": "allow" },
+        effective: { 0: "approved" },
+      }),
+    ).toEqual(new Set())
+  })
+
+  it("leaves a row alone when a workspace entry matches with different letter case", () => {
+    expect(
+      call({
+        rules: ["src/foo.ts"],
+        global: { "src/foo.ts": "allow" },
+        workspace: { "SRC/*": "allow" },
+        effective: { 0: "approved" },
+      }),
+    ).toEqual(new Set())
+  })
+
+  it("keeps an unrelated row in scope when the workspace scope covers another pattern", () => {
+    expect(
+      call({
+        rules: ["npm *"],
+        global: { "npm *": "allow" },
+        workspace: { "git *": "allow" },
+        effective: { 0: "approved" },
+      }),
+    ).toEqual(new Set([0]))
+  })
+
+  it("leaves a row alone when the merged global scope also holds a catch-all with the same action", () => {
+    expect(
+      call({
+        rules: ["touch *"],
+        global: { "touch *": "allow", "*": "allow" },
+        effective: { 0: "approved" },
+      }),
+    ).toEqual(new Set())
+  })
+
+  it("leaves a row alone when the merged global scope is a scalar with the same action", () => {
+    expect(call({ rules: ["touch *"], global: "allow", effective: { 0: "approved" } })).toEqual(new Set())
+  })
+
+  it("keeps rows in scope when the merged global catch-all only asks", () => {
+    expect(
+      call({
+        rules: ["touch *", "npm *"],
+        global: { "*": "ask", "touch *": "allow", "npm *": "allow" },
+        effective: { 0: "approved", 1: "approved" },
+      }),
+    ).toEqual(new Set([0, 1]))
+  })
+
+  it("leaves a denied row alone when the merged global scope also denies a broader pattern", () => {
+    expect(
+      call({
+        rules: ["rm *"],
+        global: { "*": "deny", "rm *": "deny" },
+        effective: { 0: "denied" },
+      }),
+    ).toEqual(new Set())
+  })
+
+  it("keeps a row in scope when the primary global file holds its pattern", () => {
+    expect(
+      call({
+        rules: ["touch *"],
+        global: { "*": "ask", "touch *": "allow" },
+        target: { "touch *": "allow" },
+        effective: { 0: "approved" },
+      }),
+    ).toEqual(new Set([0]))
+  })
+
+  it("keeps a named row in scope when only a lower global file holds its pattern", () => {
+    expect(
+      call({
+        rules: ["touch *"],
+        global: { "*": "ask", "touch *": "allow" },
+        target: { "*": "ask" },
+        effective: { 0: "approved" },
+      }),
+    ).toEqual(new Set([0]))
+  })
+
+  it("keeps a named row in scope when the primary global file has no entry for the tool", () => {
+    expect(
+      call({
+        rules: ["touch *"],
+        global: { "*": "ask", "touch *": "allow" },
+        target: undefined,
+        effective: { 0: "approved" },
+      }),
+    ).toEqual(new Set([0]))
+  })
+
+  it("leaves the wildcard row alone when the merged scalar comes from a lower global file", () => {
+    expect(
+      call({
+        rules: ["*"],
+        global: "allow",
+        target: {},
+        effective: { 0: "approved" },
+      }),
+    ).toEqual(new Set())
+  })
+
+  it("keeps the wildcard row in scope when the primary global file holds the scalar", () => {
+    expect(call({ rules: ["*"], global: "allow", target: "allow", effective: { 0: "approved" } })).toEqual(new Set([0]))
+  })
+
+  // A workspace entry written with a home prefix is expanded before it is compared, so
+  // the home directory the rules run in decides whether it covers the row.
+  it("leaves a row alone when a `~/` workspace entry covers it after expansion", () => {
+    expect(
+      call({
+        rules: ["/home/me/.ssh/id"],
+        global: { "/home/me/.ssh/id": "allow" },
+        workspace: { "~/.ssh/*": "allow" },
+        effective: { 0: "approved" },
+        home: "/home/me",
+      }),
+    ).toEqual(new Set())
+  })
+
+  it("keeps the row in scope when the same entry resolves to another home directory", () => {
+    expect(
+      call({
+        rules: ["/home/me/.ssh/id"],
+        global: { "/home/me/.ssh/id": "allow" },
+        workspace: { "~/.ssh/*": "allow" },
+        effective: { 0: "approved" },
+        home: "/srv",
+      }),
+    ).toEqual(new Set([0]))
+  })
+
+  it("resolves a bare `~` entry to the home directory", () => {
+    expect(
+      call({
+        rules: ["/home/me"],
+        global: { "/home/me": "allow" },
+        workspace: { "~": "allow" },
+        effective: { 0: "approved" },
+        home: "/home/me",
+      }),
+    ).toEqual(new Set())
+  })
+
+  it("resolves a `$HOME/` entry to the home directory", () => {
+    expect(
+      call({
+        rules: ["/home/me/proj/file"],
+        global: { "/home/me/proj/file": "allow" },
+        workspace: { "$HOME/proj/*": "allow" },
+        effective: { 0: "approved" },
+        home: "/home/me",
+      }),
+    ).toEqual(new Set())
+  })
+
+  it("resolves a `$HOME` entry without a separator to the home directory", () => {
+    expect(
+      call({
+        rules: ["/home/me"],
+        global: { "/home/me": "allow" },
+        workspace: { $HOME: "allow" },
+        effective: { 0: "approved" },
+        home: "/home/me",
+      }),
+    ).toEqual(new Set())
+  })
+
+  it("does not read a trailing separator as a directory prefix", () => {
+    // The evaluator anchors both ends and has no directory rule, so `$HOME/` matches
+    // only the home directory's own path and does not decide a path below it.
+    expect(
+      call({
+        rules: ["/home/me/proj/file"],
+        global: { "/home/me/proj/file": "allow" },
+        workspace: { "$HOME/": "allow" },
+        effective: { 0: "approved" },
+        home: "/home/me",
+      }),
+    ).toEqual(new Set([0]))
+  })
+
+  it("leaves a row alone when the home directory is unknown", () => {
+    expect(
+      call({
+        rules: ["/home/me/.ssh/id"],
+        global: { "/home/me/.ssh/id": "allow" },
+        workspace: { "~/.ssh/*": "allow" },
+        effective: { 0: "approved" },
+      }),
+    ).toEqual(new Set())
+  })
+
+  it("leaves a row alone when an unresolved `$HOME` entry may decide it", () => {
+    expect(
+      call({
+        rules: ["/home/me/.ssh/id"],
+        global: { "/home/me/.ssh/id": "allow" },
+        workspace: { $HOME: "allow" },
+        effective: { 0: "approved" },
+      }),
+    ).toEqual(new Set())
+  })
+
+  it("leaves a row alone when only a global entry written with a home prefix holds it", () => {
+    // The removal names request patterns, so an entry stored under a home prefix is not
+    // one this prompt can delete.
+    expect(
+      call({
+        rules: ["/home/me/.ssh/id"],
+        global: { "~/.ssh/id": "allow" },
+        effective: { 0: "approved" },
+        home: "/home/me",
+      }),
+    ).toEqual(new Set())
+  })
+
+  it("keeps a row in scope when an absolute workspace entry decides another path", () => {
+    expect(
+      call({
+        rules: ["/home/me/.ssh/id"],
+        global: { "/home/me/.ssh/id": "allow" },
+        workspace: { "/home/me/notes/*": "allow" },
+        effective: { 0: "approved" },
+        home: "/home/me",
+      }),
+    ).toEqual(new Set([0]))
   })
 })

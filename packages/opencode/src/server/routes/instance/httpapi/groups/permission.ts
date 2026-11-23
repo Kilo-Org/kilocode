@@ -19,6 +19,7 @@ const ReplyPayload = Schema.Struct({
 export const SaveAlwaysRulesBody = Schema.Struct({
   approvedAlways: Schema.Array(Schema.String).pipe(Schema.optional),
   deniedAlways: Schema.Array(Schema.String).pipe(Schema.optional),
+  removedAlways: Schema.Array(Schema.String).pipe(Schema.optional),
 })
 
 export const AllowEverythingBody = Schema.Struct({
@@ -66,7 +67,8 @@ export const PermissionApi = HttpApi.make("permission")
           OpenApi.annotations({
             identifier: "permission.saveAlwaysRules",
             summary: "Save always-allow/deny permission rules",
-            description: "Save approved/denied always-rules for a pending permission request.",
+            description:
+              "Save approved/denied always-rules for a pending permission request, and delete the rules named in removedAlways.",
           }),
         ),
         HttpApiEndpoint.post("allowEverything", `${root}/allow-everything`, {

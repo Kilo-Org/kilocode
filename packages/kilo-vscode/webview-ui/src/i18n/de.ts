@@ -333,6 +333,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "Aus der Erlaubt-Liste entfernen",
   "ui.permission.rule.addToDenied": "Zur Verweigert-Liste hinzufügen",
   "ui.permission.rule.removeFromDenied": "Aus der Verweigert-Liste entfernen",
+  "ui.permission.rule.fromConfig": "Verwaltet von einer Konfigurationsdatei",
   "ui.permission.toolLabel.read": "Lesen",
   "ui.permission.toolLabel.edit": "Bearbeiten",
   "ui.permission.toolLabel.write": "Schreiben",
@@ -1466,6 +1467,8 @@ export const dict = {
   "settings.saveBar.saveFailed": "Einstellungen konnten nicht gespeichert werden",
   "settings.saveBar.dismissError": "Verwerfen",
   "settings.saveBar.unconfirmedWrite": "„{{name}}“ wurde vom Erweiterungshost nicht bestätigt.",
+  "settings.saveBar.unconfirmedSave":
+    "Das Speichern wurde vom Erweiterungshost nicht bestätigt. Versuchen Sie es erneut.",
   "notifications.action.next": "Weiter",
   "notifications.action.close": "Schließen",
   "notifications.action.tryModel": "{{model}} ausprobieren",

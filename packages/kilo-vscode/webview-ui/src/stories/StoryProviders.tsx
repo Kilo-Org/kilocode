@@ -337,6 +337,7 @@ interface StoryProvidersProps {
   features?: Partial<FeatureFlags>
   globalConfig?: Config
   projectConfig?: Config
+  workspaceConfig?: Config
   onConfigChange?: (config: Config) => void
   onGlobalConfigChange?: (config: Config) => void
   onProjectConfigChange?: (config: Config) => void
@@ -356,6 +357,7 @@ const ConfigWrapper: ParentComponent<{
   features?: Partial<FeatureFlags>
   globalConfig?: Config
   projectConfig?: Config
+  workspaceConfig?: Config
   onConfigChange?: (config: Config) => void
   onGlobalConfigChange?: (config: Config) => void
   onProjectConfigChange?: (config: Config) => void
@@ -365,6 +367,9 @@ const ConfigWrapper: ParentComponent<{
     const [cfg, setCfg] = createSignal(props.config)
     const [global, setGlobal] = createSignal(props.globalConfig ?? props.config)
     const [project, setProject] = createSignal(props.projectConfig ?? props.config)
+    // An unscoped story has no workspace layer of its own, so it stays empty and
+    // no saved rule is presented as revocable.
+    const [workspace, setWorkspace] = createSignal(props.workspaceConfig ?? {})
     const [settings, setSettings] = createSignal<Record<string, unknown>>({})
     const [dirty, setDirty] = createSignal(false)
     const features = createMemo(() => {
@@ -383,8 +388,13 @@ const ConfigWrapper: ParentComponent<{
     const value = {
       config: createMemo(() => cfg()),
       globalConfig: createMemo(() => (scoped ? global() : cfg())),
+      mergedGlobalConfig: createMemo(() => (scoped ? global() : cfg())),
+      homeDir: () => undefined,
       globalDraft: () => ({}),
       projectConfig: createMemo(() => (scoped ? project() : cfg())),
+      // The workspace layer is its own scope: never fall back to the effective
+      // config, or a saved rule would look workspace-supplied.
+      workspaceConfig: createMemo(() => workspace()),
       collections: () => ({}),
       settings,
       shortcuts: () => ({ bindings: {}, selection: false }),
@@ -459,6 +469,7 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
             features={props.features}
             globalConfig={props.globalConfig}
             projectConfig={props.projectConfig}
+            workspaceConfig={props.workspaceConfig}
             onConfigChange={props.onConfigChange}
             onGlobalConfigChange={props.onGlobalConfigChange}
             onProjectConfigChange={props.onProjectConfigChange}

@@ -41,11 +41,17 @@ import {
   WorkspacePullRequestRefresh,
   WorkspacePullRequestResult,
   WorkspacePullRequestSummary,
+  WorkspaceRepositoryFailureCode,
+  WorkspaceRepositoryFailures,
+  WorkspaceRepositoryListInput,
+  WorkspaceRepositoryPage,
   WorkspaceSessionStartInput,
   WorkspaceStatusInput,
   markDeletionDispatched,
   pullRequestFailure,
   refreshState,
+  workspaceRepositoryFailure,
+  workspaceRepositorySelection,
   type Attachment,
   type Availability,
   type ContinueWorkspaceSession,
@@ -81,6 +87,13 @@ const MEMBERSHIP_PAGE_LIMIT = 20
 const MEMBERSHIP_SESSION_PAGE_LIMIT = 10
 
 const Envelope = z.object({ result: z.object({ data: z.unknown() }) })
+const WebRepositories = z.object({
+  integrationInstalled: z.boolean(),
+  partial: z.boolean().optional(),
+  errorMessage: z.string().optional(),
+  unavailableReason: z.string().optional(),
+  repositories: z.array(z.object({ fullName: z.string(), platformIntegrationId: z.uuid().optional() })),
+})
 
 const WorkspaceSessionSummary = z.object({
   kiloSessionId: z.string().min(1),
@@ -839,13 +852,122 @@ export function provider(options: Options): Provider {
       headers: headers(auth),
     }).pipe(Effect.flatMap(consume), Effect.flatMap(data))
 
-  const mutation = (auth: CloudAuth.Resolved, procedure: string, input: unknown) =>
+  const repositoryResponse = (response: Response, catalog = false) =>
+    Effect.gen(function* () {
+      if (response.ok) return yield* decodeBody(response).pipe(Effect.flatMap(data))
+      const body = yield* decodeBody(response).pipe(Effect.catch(() => Effect.succeed(undefined)))
+      for (const candidate of errorCandidates(body)) {
+        if (
+          Schema.is(WorkspaceRepositoryFailureCode)(candidate) &&
+          WorkspaceRepositoryFailures[candidate] === response.status
+        ) {
+          return yield* Effect.fail(workspaceRepositoryFailure(candidate))
+        }
+        if (
+          response.status === 409 &&
+          (candidate === "creation_in_progress" || candidate === "operation_key_reuse_mismatch")
+        ) {
+          return yield* Effect.fail(
+            new HostedFailure({
+              code: candidate,
+              message: candidate,
+              retryable: candidate === "creation_in_progress",
+              status: 409,
+            }),
+          )
+        }
+      }
+      if (catalog && response.status === 404) {
+        return yield* Effect.fail(workspaceRepositoryFailure("hosted_workspace_repository_unsupported"))
+      }
+      return yield* Effect.fail(failure(response, body))
+    })
+
+  const mutation = (auth: CloudAuth.Resolved, procedure: string, input: unknown, repositories = false) =>
     request(auth, {
       method: "POST",
       path: `/trpc/${procedure}`,
       headers: { ...headers(auth), "content-type": "application/json" },
       body: JSON.stringify(input),
-    }).pipe(Effect.flatMap(consume), Effect.flatMap(data))
+    }).pipe(
+      Effect.flatMap((response) =>
+        repositories ? repositoryResponse(response) : consume(response).pipe(Effect.flatMap(data)),
+      ),
+    )
+
+  const discoverIntegration = (auth: CloudAuth.Resolved, input: WorkspaceRepositoryListInput) =>
+    Effect.gen(function* () {
+      const base = yield* webOrigin
+      const payload = encodeURIComponent(JSON.stringify({ organizationId: input.organizationID }))
+      const response = yield* Effect.tryPromise({
+        try: () =>
+          createBearerHttpClient({
+            origin: base,
+            apiKey: Redacted.value(auth.token),
+            ...(options.fetch ? { fetch: options.fetch } : {}),
+          }).request({
+            method: "GET",
+            path: `/api/trpc/organizations.cloudAgentNext.listGitHubRepositories?input=${payload}`,
+            headers: headers(auth),
+          }),
+        catch: () => workspaceRepositoryFailure("hosted_workspace_repository_catalog_unavailable"),
+      })
+      const body = yield* repositoryResponse(response, true)
+      const wrapped = z.object({ json: z.unknown() }).safeParse(body)
+      const parsed = WebRepositories.safeParse(wrapped.success ? wrapped.data.json : body)
+      if (!parsed.success) return yield* Effect.fail(invalid("Kilo Cloud returned an unsupported repository inventory"))
+      const inventory = parsed.data
+      if (inventory.partial || inventory.errorMessage || inventory.unavailableReason) {
+        return yield* Effect.fail(workspaceRepositoryFailure("hosted_workspace_repository_catalog_unavailable"))
+      }
+      const matches = inventory.repositories.filter(
+        (repo) => repo.fullName.toLowerCase() === input.primaryRepo.toLowerCase(),
+      )
+      if (!inventory.integrationInstalled || !matches.length) {
+        return yield* Effect.fail(workspaceRepositoryFailure("hosted_workspace_repository_unavailable"))
+      }
+      const pins = new Set(matches.map((repo) => repo.platformIntegrationId?.toLowerCase()))
+      const pin = pins.values().next().value
+      if (pins.size !== 1 || !pin) {
+        return yield* Effect.fail(workspaceRepositoryFailure("hosted_workspace_repository_integration_ambiguous"))
+      }
+      return pin
+    })
+
+  const repositoryPage = (auth: CloudAuth.Resolved, input: WorkspaceRepositoryListInput, pin: string) =>
+    Effect.gen(function* () {
+      const payload = encodeURIComponent(
+        JSON.stringify({
+          organizationId: input.organizationID,
+          integrationId: pin,
+          primaryRepo: input.primaryRepo,
+          ...(input.page === undefined ? {} : { page: input.page }),
+        }),
+      )
+      const response = yield* request(auth, {
+        method: "GET",
+        path: `/trpc/listHostedWorkspaceRepositories?input=${payload}`,
+        headers: headers(auth),
+      })
+      const body = yield* repositoryResponse(response, true)
+      const version = z.looseObject({ hostedAdditionalRepositoriesVersion: z.literal(1) }).safeParse(body)
+      if (!version.success) {
+        return yield* Effect.fail(workspaceRepositoryFailure("hosted_workspace_repository_unsupported"))
+      }
+      return yield* decode(
+        WorkspaceRepositoryPage,
+        { ...version.data, integrationID: pin },
+        "Kilo Cloud returned an unsupported repository page",
+      )
+    })
+
+  const listWorkspaceRepositories = (raw: WorkspaceRepositoryListInput) =>
+    Effect.gen(function* () {
+      const input = yield* check(WorkspaceRepositoryListInput, raw)
+      const auth = yield* resolve(input.organizationID)
+      const pin = input.integrationID ?? (yield* discoverIntegration(auth, input))
+      return yield* repositoryPage(auth, input, pin)
+    })
 
   const continuationMutation = (auth: CloudAuth.Resolved, input: unknown) =>
     request(auth, {
@@ -1362,18 +1484,27 @@ export function provider(options: Options): Provider {
   const createWorkspace = (raw: CreateWorkspaceInput): Effect.Effect<CreateWorkspaceResult, HostedFailure> =>
     Effect.gen(function* () {
       const input = yield* check(CreateWorkspaceInput, raw)
+      const selection = yield* workspaceRepositorySelection(input)
       const auth = yield* resolve(input.organizationID)
-      const body = yield* mutation(auth, "createHostedWorkspace", {
+      if (selection) {
+        yield* repositoryPage(auth, { ...selection, page: 1 }, selection.integrationID)
+      }
+      const payload = {
         operationKey: input.operationKey,
         clientProvenance: "agent-manager",
-        repository: repositoryPayload(input.repository),
+        repository: {
+          ...repositoryPayload(input.repository),
+          ...(selection ? { githubIntegrationId: selection.integrationID } : {}),
+        },
+        ...(selection ? { additionalRepositoryIds: selection.ids } : {}),
         ...(input.profile === undefined ? {} : { profile: profilePayload(input.profile) }),
         ...(input.prompt === undefined || input.messageID === undefined
           ? {}
           : { message: { prompt: input.prompt, id: input.messageID } }),
         agent: agentPayload(input.agent),
         ...(auth.organizationID ? { options: { kilocodeOrganizationId: auth.organizationID } } : {}),
-      })
+      }
+      const body = yield* mutation(auth, "createHostedWorkspace", payload, selection !== undefined)
       const parsed = WorkspaceCreate.safeParse(body)
       if (!parsed.success) return yield* Effect.fail(invalid("Kilo Cloud returned an unsupported workspace result"))
       if (input.messageID !== undefined && parsed.data.messageId !== input.messageID) {
@@ -1595,6 +1726,7 @@ export function provider(options: Options): Provider {
     getWorkspacePullRequestDiffFile,
     deleteWorkspace,
     createWorkspace,
+    listWorkspaceRepositories,
     continueWorkspace,
     startWorkspaceSession,
     listWorkspaceProfiles,

@@ -40,6 +40,7 @@ import {
   patchConfigModel as patchKiloConfigModel,
   customProviderVariants,
   patchCustomLoaderResult,
+  resolveEndpointOptions,
   patchKiloProviderPrivacy,
   patchKiloProviderAuth,
   publicKiloProvider,
@@ -48,10 +49,16 @@ import {
   buildTimeoutSignal,
   requestTimeout,
   wrapFirstByte,
+  vertexAuthFetch,
 } from "@/kilocode/provider/provider"
 import * as ModelsRefresh from "@/kilocode/provider/models-refresh"
 import { bedrockAuth, providerKey, vertexAuth, vertexCredentials, vertexOptions } from "@/kilocode/provider/cloud-auth"
 import { AceCatalog } from "@/kilocode/provider/acedatacloud"
+import {
+  EndpointConfigError,
+  normalizeVertexLocation,
+  resolveVertexLocation,
+} from "@opencode-ai/core/kilocode/provider-endpoint" // kilocode_change
 // kilocode_change end
 import { ProviderError } from "./error"
 
@@ -550,14 +557,10 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         env["GCP_PROJECT"] ??
         env["GCLOUD_PROJECT"]
 
-      const location = String(
-        provider.options?.location ??
-          stored?.location ?? // kilocode_change
-          env["GOOGLE_VERTEX_LOCATION"] ??
-          env["GOOGLE_CLOUD_LOCATION"] ??
-          env["VERTEX_LOCATION"] ??
-          "us-central1",
-      )
+      // kilocode_change start - one region resolution, shared with the model-time validator
+      const raw = resolveVertexLocation(provider.options?.location ?? stored?.location, env, "google-vertex")
+      const location = normalizeVertexLocation(raw) ?? raw
+      // kilocode_change end
 
       const autoload = Boolean(project)
       if (!autoload) return { autoload: false }
@@ -574,22 +577,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
           project,
           location,
           ...(stored ? vertexCredentials(stored.credentials) : {}), // kilocode_change
-          fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
-            const { GoogleAuth } = await import("google-auth-library")
-            // kilocode_change start - authenticate OpenAI-compatible Vertex endpoints with stored credentials
-            const auth = new GoogleAuth({
-              scopes: ["https://www.googleapis.com/auth/cloud-platform"],
-              ...(stored ? { credentials: stored.credentials } : {}),
-            })
-            // kilocode_change end
-            const client = await auth.getClient()
-            const token = await client.getAccessToken()
-
-            const headers = new Headers(init?.headers)
-            headers.set("Authorization", `Bearer ${token.token}`)
-
-            return fetch(input, { ...init, headers })
-          },
+          fetch: vertexAuthFetch(stored?.credentials), // kilocode_change - token only for a Vertex API host
         },
         async getModel(sdk: any, modelID: string) {
           const id = String(modelID).trim()
@@ -597,19 +585,23 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         },
       }
     }),
-    "google-vertex-anthropic": Effect.fnUntraced(function* () {
+    // kilocode_change start - the configured project and region win over the environment
+    "google-vertex-anthropic": Effect.fnUntraced(function* (provider: Info) {
       const env = yield* dep.env()
-      const project = env["GOOGLE_CLOUD_PROJECT"] ?? env["GCP_PROJECT"] ?? env["GCLOUD_PROJECT"]
-      const location = env["GOOGLE_CLOUD_LOCATION"] ?? env["VERTEX_LOCATION"] ?? "global"
+      const project =
+        provider.options?.project ?? env["GOOGLE_CLOUD_PROJECT"] ?? env["GCP_PROJECT"] ?? env["GCLOUD_PROJECT"]
+      // one region resolution, shared with the model-time validator
+      const raw = resolveVertexLocation(provider.options?.location, env, "google-vertex-anthropic")
+      const location = normalizeVertexLocation(raw) ?? raw
+      // kilocode_change end
       const autoload = Boolean(project)
       if (!autoload) return { autoload: false }
-      const baseURL = googleVertexAnthropicBaseURL(project, location)
       return {
         autoload: true,
         options: {
           project,
           location,
-          ...(baseURL && { baseURL }),
+          // kilocode_change - the endpoint is built at model use from the validated location
         },
         async getModel(sdk: any, modelID) {
           const id = String(modelID).trim()
@@ -1847,8 +1839,13 @@ const layer = Layer.effect(
         const options = { ...provider.options }
         vertexOptions(model.providerID, model.api.npm, options) // kilocode_change - hydrate stored credentials
 
+        // kilocode_change start - validate the endpoint inputs of the provider model
+        resolveEndpointOptions(model.providerID, model.api.url, options, envs)
+        // kilocode_change end
+
+        // kilocode_change start - build the continental multi-region endpoint after the location is validated
         if (
-          model.providerID === "google-vertex" &&
+          (model.providerID === "google-vertex" || model.providerID === "google-vertex-anthropic") &&
           model.api.npm === "@ai-sdk/google-vertex/anthropic" &&
           !options.baseURL
         ) {
@@ -1858,6 +1855,7 @@ const layer = Layer.effect(
           )
           if (baseURL) options.baseURL = baseURL
         }
+        // kilocode_change end
 
         if (model.providerID === "google-vertex" && !model.api.npm.includes("@ai-sdk/openai-compatible")) {
           delete options.fetch
@@ -1991,6 +1989,7 @@ const layer = Layer.effect(
         s.sdk.set(key, loaded)
         return loaded as SDK
       } catch (e) {
+        if (e instanceof EndpointConfigError) throw e // kilocode_change - show the endpoint error itself
         throw new InitError({ providerID: model.providerID, cause: e })
       }
     }

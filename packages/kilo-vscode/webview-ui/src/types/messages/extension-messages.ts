@@ -223,6 +223,8 @@ export interface PermissionErrorMessage {
   type: "permissionError"
   permissionID: string
   stale?: boolean
+  /** User-facing reason, shown in place of the generic toast title. */
+  message?: string
 }
 
 export interface TodoUpdatedMessage {
@@ -789,8 +791,15 @@ export interface SettingsConfigBinding {
 export interface ConfigLoadedMessage {
   type: "configLoaded"
   config: Config
+  /** Raw primary global config file — the file a settings write targets. */
   globalConfig?: Config
+  /** Merged global scope: every global config file combined. */
+  mergedGlobalConfig?: Config
+  /** Home directory of the machine that runs the rules; a config entry may start with ~ or $HOME. */
+  homeDir?: string
   projectConfig?: Config
+  /** Merged workspace scope from the overlay, every project file combined. */
+  workspaceConfig?: Config
   bindings?: { global?: SettingsConfigBinding; project?: SettingsConfigBinding }
   collections?: ConfigCollections
   settings?: ExtensionSettings
@@ -800,12 +809,21 @@ export interface ConfigLoadedMessage {
 export interface ConfigUpdatedMessage {
   type: "configUpdated"
   config: Config
+  /** Raw primary global config file — the file a settings write targets. */
   globalConfig?: Config
+  /** Merged global scope: every global config file combined. */
+  mergedGlobalConfig?: Config
+  /** Home directory of the machine that runs the rules; a config entry may start with ~ or $HOME. */
+  homeDir?: string
   projectConfig?: Config
+  /** Merged workspace scope from the overlay, every project file combined. */
+  workspaceConfig?: Config
   bindings?: { global?: SettingsConfigBinding; project?: SettingsConfigBinding }
   collections?: ConfigCollections
   settings?: ExtensionSettings
   features: FeatureFlags
+  /** The `requestId` of the request this answers, when the request carried one. */
+  requestId?: string
 }
 
 export interface ConfigUpdateFailedMessage {
@@ -814,9 +832,16 @@ export interface ConfigUpdateFailedMessage {
   details?: string
   completedScopes?: Array<"global" | "project">
   config?: Config
+  /** Raw primary global config file — the file a settings write targets. */
   globalConfig?: Config
+  /** Merged global scope: every global config file combined. */
+  mergedGlobalConfig?: Config
+  /** Home directory of the machine that runs the rules; a config entry may start with ~ or $HOME. */
+  homeDir?: string
   projectConfig?: Config
   bindings?: { global?: SettingsConfigBinding; project?: SettingsConfigBinding }
+  /** The `requestId` of the request this answers, when the request carried one. */
+  requestId?: string
 }
 
 export interface ConfigBindingExpiredMessage {

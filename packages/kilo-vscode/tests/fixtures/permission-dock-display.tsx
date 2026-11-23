@@ -33,7 +33,13 @@ const labels: Record<string, string> = {
   "ui.permission.toolLabel.externalDirectory": "Access External Directory",
 }
 const language = { t: (key: string, params?: Record<string, string>) => resolveTemplate(labels[key] ?? key, params) }
-const config = { config: () => ({ permission: {} }) }
+const config = {
+  config: () => ({ permission: {} }),
+  globalConfig: () => ({ permission: {} }),
+  mergedGlobalConfig: () => ({ permission: {} }),
+  workspaceConfig: () => ({ permission: {} }),
+  homeDir: () => "/home/me",
+}
 Object.defineProperty(document, "hasFocus", { value: () => true })
 
 // U+202E is the sample format character: it must reach the card as the literal text "\u202e".
