@@ -239,17 +239,25 @@ function patchJsonc(input: string, patch: unknown, path: string[] = []): string 
   // add child keys to it. Detect this case and replace the whole node with
   // the patch object in a single modify() call instead of recursing.
   // For permission keys, promote the scalar to { "*": scalarValue } so the
-  // wildcard default is preserved. For other keys, replace directly.
+  // wildcard default is preserved, and carry only the patch entries that hold a
+  // value. For other keys, replace directly.
   if (path.length > 0) {
     const tree = parseTree(input)
     const node = tree && findNodeAtLocation(tree, path)
     if (node && node.type !== "object") {
-      const isPermissionKey = path[0] === "permission" && path.length === 2
-      const replacement = isPermissionKey ? { "*": node.value, ...patch } : patch
-      const edits = modify(input, path, replacement, {
+      const promoted = path[0] === "permission" && path.length === 2
+      // The promoted object holds the wildcard default plus the valued entries of the patch.
+      const kept = promoted
+        ? Object.entries({ "*": node.value, ...patch }).filter(([, value]) => value !== null && value !== undefined)
+        : []
+      const replacement = promoted ? Object.fromEntries(kept) : patch
+      // A promotion with nothing to carry removes the key instead of an empty object.
+      const cleared = promoted && kept.length === 0
+      const edits = modify(input, path, cleared ? undefined : replacement, {
         formattingOptions: { insertSpaces: true, tabSize: 2 },
       })
       return applyEdits(input, edits)
+      // kilocode_change end
     }
   }
   // kilocode_change end

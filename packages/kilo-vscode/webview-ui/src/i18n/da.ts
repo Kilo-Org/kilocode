@@ -313,6 +313,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "Fjern fra tilladelseslisten",
   "ui.permission.rule.addToDenied": "Tilføj til afvisningslisten",
   "ui.permission.rule.removeFromDenied": "Fjern fra afvisningslisten",
+  "ui.permission.rule.fromConfig": "Styret af en konfigurationsfil",
   "ui.permission.toolLabel.read": "Læs",
   "ui.permission.toolLabel.edit": "Rediger",
   "ui.permission.toolLabel.write": "Skriv",
@@ -1334,6 +1335,8 @@ export const dict = {
   "dialog.model.notSet": "Ikke angivet",
   "profile.personalAccount": "Personlig konto",
   "profile.switchingAccount": "Skifter konto…",
+  "profile.unavailableAccount": "Utilgængelig konto",
+  "profile.switchFailed": "Kunne ikke bekræfte kontoskiftet.",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/da.ts
 
@@ -1419,6 +1422,9 @@ export const dict = {
   "settings.saveBar.cancel": "Annuller",
   "settings.saveBar.saving": "Gemmer…",
   "settings.saveBar.saveFailed": "Kunne ikke gemme indstillinger",
+  "settings.saveBar.dismissError": "Afvis",
+  "settings.saveBar.unconfirmedWrite": "„{{name}}“ blev ikke bekræftet af udvidelsesværten.",
+  "settings.saveBar.unconfirmedSave": "Gemningen blev ikke bekræftet af udvidelsesværten. Prøv igen.",
   "notifications.action.next": "Næste",
   "notifications.action.close": "Luk",
   "notifications.action.tryModel": "Prøv {{model}}",

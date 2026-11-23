@@ -447,6 +447,8 @@ import type {
   SessionHostListResponses,
   SessionHostListWorkspaceProfilesErrors,
   SessionHostListWorkspaceProfilesResponses,
+  SessionHostListWorkspaceRepositoriesErrors,
+  SessionHostListWorkspaceRepositoriesResponses,
   SessionHostListWorkspacesErrors,
   SessionHostListWorkspaceSessionsErrors,
   SessionHostListWorkspaceSessionsResponses,
@@ -4050,7 +4052,7 @@ export class Permission extends HeyApiClient {
   /**
    * Save always-allow/deny permission rules
    *
-   * Save approved/denied always-rules for a pending permission request.
+   * Save approved/denied always-rules for a pending permission request, and delete the rules named in removedAlways.
    */
   public saveAlwaysRules<ThrowOnError extends boolean = false>(
     parameters: {
@@ -4059,6 +4061,7 @@ export class Permission extends HeyApiClient {
       workspace?: string
       approvedAlways?: Array<string>
       deniedAlways?: Array<string>
+      removedAlways?: Array<string>
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -4072,6 +4075,7 @@ export class Permission extends HeyApiClient {
             { in: "query", key: "workspace" },
             { in: "body", key: "approvedAlways" },
             { in: "body", key: "deniedAlways" },
+            { in: "body", key: "removedAlways" },
           ],
         },
       ],
@@ -9778,7 +9782,7 @@ export class SessionHost extends HeyApiClient {
   /**
    * Create a hosted workspace
    *
-   * Create a hosted workspace and, optionally, its root initial turn and explicit profile. Omit prompt and messageID to create an empty workspace; Cloud applies the effective default profile when profile is omitted. Reuse the same operation key and message ID to retry safely.
+   * Create a hosted workspace and, optionally, its initial turn, explicit profile, and additional repositories. For a nonempty selection, send the organization and integrationID from the repository catalog. Omit prompt and messageID to create an empty workspace. For a retryable create conflict, reuse the same operation key and unchanged intent.
    */
   public createWorkspace<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -9855,6 +9859,44 @@ export class SessionHost extends HeyApiClient {
       ThrowOnError
     >({
       url: "/kilocode/session-host/workspace/profiles",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * List eligible additional workspace repositories
+   *
+   * Passively list authorized repositories for a GitHub primary in the selected organization. Preserve the returned integrationID for subsequent pages and create. Only a successful supported catalog response enables additional repositories.
+   */
+  public listWorkspaceRepositories<ThrowOnError extends boolean = false>(
+    parameters: {
+      organizationID: string
+      primaryRepo: string
+      integrationID?: string
+      page?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "organizationID" },
+            { in: "query", key: "primaryRepo" },
+            { in: "query", key: "integrationID" },
+            { in: "query", key: "page" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      SessionHostListWorkspaceRepositoriesResponses,
+      SessionHostListWorkspaceRepositoriesErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/repositories",
       ...options,
       ...params,
     })
