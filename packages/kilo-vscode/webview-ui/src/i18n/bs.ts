@@ -181,6 +181,7 @@ export const dict = {
   "model.preview.label.pricing": "Trošak korištenja",
   "model.preview.value.usagePricing": "Nije procijenjen",
   "model.preview.label.tools": "Podrška za alate",
+  "model.preview.reference.rate": "{{price}} kredita / 1 milion tokena",
   "model.preview.reference.title": "Referentne cijene",
   "model.preview.reference.description":
     "Tokeni bez keša u običnom kontekstu. Korištenje keša i drugi nivoi konteksta naplaćuju se zasebno.",

@@ -182,6 +182,7 @@ export const dict = {
   "model.preview.label.pricing": "Gebruikskosten",
   "model.preview.value.usagePricing": "Niet geschat",
   "model.preview.label.tools": "Ondersteuning voor tools",
+  "model.preview.reference.rate": "{{price}} credits / 1 miljoen tokens",
   "model.preview.reference.title": "Referentietarieven",
   "model.preview.reference.description":
     "Tokens zonder cache in een normale context. Cachegebruik en andere contextniveaus worden apart geprijsd.",

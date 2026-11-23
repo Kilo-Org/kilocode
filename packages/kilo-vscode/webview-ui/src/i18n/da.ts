@@ -182,6 +182,7 @@ export const dict = {
   "model.preview.label.pricing": "Forbrugspris",
   "model.preview.value.usagePricing": "Ikke estimeret",
   "model.preview.label.tools": "Værktøjsunderstøttelse",
+  "model.preview.reference.rate": "{{price}} kreditter / 1 mio. tokens",
   "model.preview.reference.title": "Referencepriser",
   "model.preview.reference.description":
     "Tokens uden cache i almindelig kontekst. Cacheforbrug og andre kontekstniveauer prissættes særskilt.",

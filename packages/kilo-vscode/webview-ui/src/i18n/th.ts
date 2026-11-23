@@ -179,6 +179,7 @@ export const dict = {
   "model.preview.label.pricing": "ค่าใช้งาน",
   "model.preview.value.usagePricing": "ไม่ได้ประมาณการ",
   "model.preview.label.tools": "การรองรับเครื่องมือ",
+  "model.preview.reference.rate": "{{price}} เครดิต / 1 ล้านโทเค็น",
   "model.preview.reference.title": "ราคาอ้างอิง",
   "model.preview.reference.description": "ราคาโทเค็นที่ไม่ใช้แคชในบริบทปกติ การใช้แคชและระดับบริบทอื่นคิดราคาแยกกัน",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",

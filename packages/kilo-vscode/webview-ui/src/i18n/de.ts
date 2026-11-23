@@ -189,6 +189,7 @@ export const dict = {
   "model.preview.label.pricing": "Nutzungskosten",
   "model.preview.value.usagePricing": "Nicht geschätzt",
   "model.preview.label.tools": "Werkzeugunterstützung",
+  "model.preview.reference.rate": "{{price}} Credits / 1 Mio. Tokens",
   "model.preview.reference.title": "Referenzpreise",
   "model.preview.reference.description":
     "Ungecachte Tokens im normalen Kontext. Cache-Nutzung und andere Kontextstufen werden separat berechnet.",

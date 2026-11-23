@@ -181,6 +181,7 @@ export const dict = {
   "model.preview.label.pricing": "Kullanım maliyeti",
   "model.preview.value.usagePricing": "Tahmin edilmedi",
   "model.preview.label.tools": "Araç desteği",
+  "model.preview.reference.rate": "{{price}} kredi / 1 milyon token",
   "model.preview.reference.title": "Referans fiyatlar",
   "model.preview.reference.description":
     "Normal bağlamdaki önbelleksiz token fiyatlarıdır. Önbellek kullanımı ve diğer bağlam kademeleri ayrı fiyatlandırılır.",

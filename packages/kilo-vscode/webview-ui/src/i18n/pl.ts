@@ -182,6 +182,7 @@ export const dict = {
   "model.preview.label.pricing": "Koszt użycia",
   "model.preview.value.usagePricing": "Bez oszacowania",
   "model.preview.label.tools": "Obsługa narzędzi",
+  "model.preview.reference.rate": "{{price}} kredytów / 1 mln tokenów",
   "model.preview.reference.title": "Stawki referencyjne",
   "model.preview.reference.description":
     "Tokeny bez pamięci podręcznej w zwykłym kontekście. Pamięć podręczna i inne progi kontekstu mają osobne ceny.",

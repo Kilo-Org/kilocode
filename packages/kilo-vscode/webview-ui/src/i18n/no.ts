@@ -184,6 +184,7 @@ export const dict = {
   "model.preview.label.pricing": "Brukskostnad",
   "model.preview.value.usagePricing": "Ikke estimert",
   "model.preview.label.tools": "Verktøystøtte",
+  "model.preview.reference.rate": "{{price}} kreditter / 1 mill. tokener",
   "model.preview.reference.title": "Referansepriser",
   "model.preview.reference.description":
     "Tokens uten hurtigbuffer i vanlig kontekst. Hurtigbufferbruk og andre kontekstnivåer prises separat.",

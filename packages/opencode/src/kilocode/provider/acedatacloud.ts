@@ -11,6 +11,7 @@ const id = ProviderV2.ID.make("acedatacloud")
 const url = "https://platform.acedata.cloud/api/v1/models/catalog/"
 const origin = "https://api.acedata.cloud"
 const ttl = 5 * 60_000
+const maxBytes = 5_000_000
 const log = Log.create({ service: "acedatacloud-catalog" })
 
 const endpoint = z.object({
@@ -125,6 +126,28 @@ function parse(value: unknown) {
   return provider(models)
 }
 
+async function read(response: Response) {
+  const reader = response.body?.getReader()
+  try {
+    if (!response.ok) throw new Error(`Catalog HTTP ${response.status}`)
+    if (!reader) throw new Error("Catalog response is empty")
+    if (Number(response.headers.get("content-length")) > maxBytes) throw new Error("Catalog response is too large")
+    const decoder = new TextDecoder()
+    let bytes = 0
+    let text = ""
+    for (;;) {
+      const chunk = await reader.read()
+      if (chunk.done) return text + decoder.decode()
+      bytes += chunk.value.byteLength
+      if (bytes > maxBytes) throw new Error("Catalog response is too large")
+      text += decoder.decode(chunk.value, { stream: true })
+    }
+  } finally {
+    await reader?.cancel().catch((error) => log.debug("Could not cancel catalog response", { error }))
+    reader?.releaseLock()
+  }
+}
+
 export namespace AceCatalog {
   export function allowed(config: { enabled_providers?: readonly string[]; disabled_providers?: readonly string[] }) {
     return (
@@ -138,6 +161,7 @@ export namespace AceCatalog {
     let expires = 0
     let revision = ""
     let failure = false
+    let dirty = false
     let pending: Promise<{ provider: Provider.Info; changed: boolean }> | undefined
     const get = async () => {
       if (pending) return pending
@@ -151,12 +175,10 @@ export namespace AceCatalog {
             redirect: "error",
             signal: AbortSignal.timeout(10_000),
           })
-          if (!response.ok) throw new Error(`Catalog HTTP ${response.status}`)
-          const text = await response.text()
-          if (text.length > 5_000_000) throw new Error("Catalog response is too large")
-          const next = parse(JSON.parse(text))
+          const next = parse(JSON.parse(await read(response)))
           const hash = JSON.stringify(next)
-          const changed = revision !== "" && hash !== revision
+          const changed = failure || (revision !== "" && hash !== revision)
+          dirty ||= changed
           revision = hash
           value = next
           failure = false
@@ -180,7 +202,16 @@ export namespace AceCatalog {
       if (!allowed(config)) return providers
       if (!options.active) return { ...providers, [id]: provider({}) }
       const next = yield* Effect.promise(() => get())
-      if (options.notify && next.changed) yield* Refresh.notify()
+      if (options.notify) {
+        // A runtime lookup may recover the catalog before the picker next requests it.
+        yield* Effect.uninterruptible(
+          Effect.gen(function* () {
+            if (!dirty) return
+            dirty = false
+            yield* Refresh.notify()
+          }),
+        )
+      }
       return { ...providers, [id]: structuredClone(next.provider) }
     })
     return { get, overlay, failed: () => failure }

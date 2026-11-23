@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { createAnthropic } from "@ai-sdk/anthropic"
+import * as Refresh from "@opencode-ai/core/kilocode/models-refresh"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { generateText } from "ai"
 import { AceCatalog } from "@/kilocode/provider/acedatacloud"
@@ -192,6 +193,77 @@ describe("Ace live model catalog", () => {
     now = 1200000
     expect(Object.keys((await cache.get()).provider.models)).toEqual(["recovered"])
     expect(cache.failed()).toBe(false)
+  })
+
+  test("notifies once when the first successful fetch follows a failure", async () => {
+    let now = 0
+    let notices = 0
+    const cache = AceCatalog.create(
+      async () => (now === 0 ? new Response(null, { status: 503 }) : Response.json({ items: [item("recovered")] })),
+      () => now,
+    )
+    await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          yield* Refresh.watch(() =>
+            Effect.sync(() => {
+              notices++
+            }),
+          )
+          const failed = yield* cache.overlay({}, {}, { active: true, notify: true })
+          expect(Object.keys(failed.acedatacloud!.models)).toEqual([])
+          expect(notices).toBe(0)
+          now = 300000
+          yield* cache.overlay({}, {}, { active: true })
+          expect(notices).toBe(0)
+          const recovered = yield* cache.overlay({}, {}, { active: true, notify: true })
+          expect(Object.keys(recovered.acedatacloud!.models)).toEqual(["recovered"])
+          expect(notices).toBe(1)
+          yield* cache.overlay({}, {}, { active: true, notify: true })
+          expect(notices).toBe(1)
+        }),
+      ),
+    )
+  })
+
+  test("rejects and cancels an oversized streamed body by byte length", async () => {
+    const encoder = new TextEncoder()
+    let cancels = 0
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(encoder.encode('{"items":[{"name":"'))
+        controller.enqueue(encoder.encode("é".repeat(1_500_000)))
+        controller.enqueue(encoder.encode("é".repeat(1_500_000)))
+        controller.enqueue(encoder.encode('","id":"large","modality":"chat","capabilities":[],"endpoints":[]}]}'))
+        controller.close()
+      },
+      cancel() {
+        cancels++
+      },
+    })
+    const cache = AceCatalog.create(async () => new Response(body))
+    expect((await cache.get()).provider.models).toEqual({})
+    expect(cache.failed()).toBe(true)
+    expect(cancels).toBe(1)
+  })
+
+  test("cancels the body on an HTTP error or oversized content length", async () => {
+    let cancels = 0
+    for (const init of [{ status: 503 }, { headers: { "content-length": "5000001" } }]) {
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('{"items":[]}'))
+          controller.close()
+        },
+        cancel() {
+          cancels++
+        },
+      })
+      const cache = AceCatalog.create(async () => new Response(body, init))
+      expect((await cache.get()).provider.models).toEqual({})
+      expect(cache.failed()).toBe(true)
+    }
+    expect(cancels).toBe(2)
   })
 
   test("honors user metadata overrides without assigning them to unknown fields", async () => {

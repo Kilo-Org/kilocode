@@ -183,6 +183,7 @@ export const dict = {
   "model.preview.label.pricing": "هزینه استفاده",
   "model.preview.value.usagePricing": "برآورد نشده",
   "model.preview.label.tools": "پشتیبانی ابزار",
+  "model.preview.reference.rate": "{{price}} اعتبار / یک میلیون توکن",
   "model.preview.reference.title": "نرخ‌های مرجع",
   "model.preview.reference.description":
     "توکن‌های بدون حافظه نهان در زمینه معمولی. مصرف حافظه نهان و سایر سطوح زمینه جداگانه قیمت‌گذاری می‌شوند.",

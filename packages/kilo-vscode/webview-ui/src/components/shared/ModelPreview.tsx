@@ -4,6 +4,7 @@ import { SessionContext } from "../../context/session"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../context/language"
+import { localeToBcp47 } from "../../context/language-utils"
 import {
   autoChoices,
   autoSummary,
@@ -45,6 +46,8 @@ export const ModelPreview: Component<Props> = (props) => {
   const m = () => props.model
   const session = useContext(SessionContext)
   const language = useLanguage()
+  const rate = (price: number) =>
+    language.t("model.preview.reference.rate", { price: price.toLocaleString(localeToBcp47(language.locale())) })
 
   return (
     <div class="model-preview">
@@ -195,13 +198,9 @@ export const ModelPreview: Component<Props> = (props) => {
                   <div class="model-preview-group-title">{language.t("model.preview.reference.title")}</div>
                   <div class="model-preview-grid">
                     <span class="model-preview-label">{language.t("model.preview.label.input")}</span>
-                    <span class="model-preview-value">
-                      {model().referenceCost!.input.toLocaleString()} Credits / 1M
-                    </span>
+                    <span class="model-preview-value">{rate(model().referenceCost!.input)}</span>
                     <span class="model-preview-label">{language.t("model.preview.label.output")}</span>
-                    <span class="model-preview-value">
-                      {model().referenceCost!.output.toLocaleString()} Credits / 1M
-                    </span>
+                    <span class="model-preview-value">{rate(model().referenceCost!.output)}</span>
                   </div>
                   <p>{language.t("model.preview.reference.description")}</p>
                 </div>

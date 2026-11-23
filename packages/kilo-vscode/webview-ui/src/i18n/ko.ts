@@ -185,6 +185,7 @@ export const dict = {
   "model.preview.label.pricing": "사용 요금",
   "model.preview.value.usagePricing": "추정하지 않음",
   "model.preview.label.tools": "도구 지원",
+  "model.preview.reference.rate": "{{price}} 크레딧 / 100만 토큰",
   "model.preview.reference.title": "참고 단가",
   "model.preview.reference.description":
     "일반 컨텍스트의 캐시되지 않은 토큰 요금입니다. 캐시 사용량과 다른 컨텍스트 구간은 별도로 계산됩니다.",

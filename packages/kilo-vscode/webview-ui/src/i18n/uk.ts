@@ -182,6 +182,7 @@ export const dict = {
   "model.preview.label.pricing": "Вартість використання",
   "model.preview.value.usagePricing": "Не оцінено",
   "model.preview.label.tools": "Підтримка інструментів",
+  "model.preview.reference.rate": "{{price}} кредитів / 1 млн токенів",
   "model.preview.reference.title": "Довідкові тарифи",
   "model.preview.reference.description":
     "Некешовані токени зі звичайним контекстом. Кеш та інші рівні контексту тарифікуються окремо.",

@@ -182,6 +182,7 @@ export const dict = {
   "model.preview.label.pricing": "Custo de uso",
   "model.preview.value.usagePricing": "Não estimado",
   "model.preview.label.tools": "Suporte a ferramentas",
+  "model.preview.reference.rate": "{{price}} créditos / 1 milhão de tokens",
   "model.preview.reference.title": "Tarifas de referência",
   "model.preview.reference.description":
     "Tokens sem cache em contexto normal. O uso de cache e outras faixas de contexto têm preços separados.",

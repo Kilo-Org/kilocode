@@ -182,6 +182,7 @@ export const dict = {
   "model.preview.label.pricing": "使用料金",
   "model.preview.value.usagePricing": "未計算",
   "model.preview.label.tools": "ツール対応",
+  "model.preview.reference.rate": "{{price}} クレジット / 100万トークン",
   "model.preview.reference.title": "参考単価",
   "model.preview.reference.description":
     "通常のコンテキストでキャッシュを使わないトークンの料金です。キャッシュや他のコンテキスト区分は別料金です。",

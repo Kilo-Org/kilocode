@@ -181,6 +181,7 @@ export const dict = {
   "model.preview.label.pricing": "Стоимость использования",
   "model.preview.value.usagePricing": "Не оценена",
   "model.preview.label.tools": "Поддержка инструментов",
+  "model.preview.reference.rate": "{{price}} кредитов / 1 млн токенов",
   "model.preview.reference.title": "Справочные тарифы",
   "model.preview.reference.description":
     "Некэшированные токены при обычном контексте. Кэш и другие уровни контекста тарифицируются отдельно.",

@@ -175,6 +175,7 @@ export const dict = {
   "model.preview.label.pricing": "用量費用",
   "model.preview.value.usagePricing": "未估算",
   "model.preview.label.tools": "工具支援",
+  "model.preview.reference.rate": "{{price}} 點數 / 百萬 token",
   "model.preview.reference.title": "參考單價",
   "model.preview.reference.description": "一般上下文、未快取 token 的價格。快取用量及其他上下文級距另行計價。",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",

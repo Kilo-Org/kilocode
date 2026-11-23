@@ -176,6 +176,7 @@ export const dict = {
   "model.preview.label.pricing": "تكلفة الاستخدام",
   "model.preview.value.usagePricing": "غير مقدرة",
   "model.preview.label.tools": "دعم الأدوات",
+  "model.preview.reference.rate": "{{price}} رصيد / مليون رمز",
   "model.preview.reference.title": "أسعار مرجعية",
   "model.preview.reference.description":
     "رموز غير مخزنة مؤقتًا في سياق عادي. يُسعّر استخدام التخزين المؤقت ومستويات السياق الأخرى بشكل منفصل.",
