@@ -1,6 +1,9 @@
-import { test, expect, describe } from "bun:test"
+import { test, expect, describe, spyOn } from "bun:test"
 import { KilocodeConfigInjector } from "../../src/kilocode/config-injector"
+import { McpMigrator } from "../../src/kilocode/mcp-migrator"
+import { KilocodePaths } from "../../src/kilocode/paths"
 import { tmpdir } from "../fixture/fixture"
+import os from "os"
 import path from "path"
 import fs from "fs/promises"
 
@@ -37,6 +40,9 @@ describe("KilocodeConfigInjector", () => {
       expect(config.agent).toBeDefined()
       expect(config.agent.translate).toBeDefined()
       expect(config.agent.translate.mode).toBe("primary")
+      // A migrated mode carries no skill rule, so the injected config leaves the CLI default.
+      expect("skill" in config.agent.translate.permission).toBe(false)
+      expect(result.warnings).toEqual([])
     })
 
     test("adds warnings for skipped default modes", async () => {
@@ -279,6 +285,198 @@ describe("KilocodeConfigInjector", () => {
 
       expect(config.permission.read["*.env"]).toBe("deny")
       expect(config.permission.read[".env.example"]).toBe("allow")
+    })
+
+    test("grants the tools of every converted MCP server, project and global", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Bun.write(
+            path.join(dir, ".kilocodemodes"),
+            `customModes:
+  - slug: mcpmode
+    name: MCP mode
+    roleDefinition: You are an MCP helper
+    groups:
+      - read
+      - mcp`,
+          )
+          await fs.mkdir(path.join(dir, ".kilocode"), { recursive: true })
+          await Bun.write(
+            path.join(dir, ".kilocode", "mcp.json"),
+            JSON.stringify({ mcpServers: { projectserver: { command: "npx" } } }),
+          )
+        },
+      })
+      await using home = await tmpdir()
+
+      const homedir = spyOn(os, "homedir").mockReturnValue(home.path)
+      // Windows resolves the global storage path from APPDATA first, so point both at the temp home.
+      const appdata = process.env.APPDATA
+      process.env.APPDATA = home.path
+      try {
+        const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "mcp_settings.json")
+        await fs.mkdir(path.dirname(settings), { recursive: true })
+        await Bun.write(settings, JSON.stringify({ mcpServers: { otherserver: { command: "npx" } } }))
+
+        // A legacy mode's `mcp` group meant all MCP tools, so the grant follows every server
+        // the same migration converted, whether it came from a project file or a global store.
+        const result = await KilocodeConfigInjector.buildConfig({ projectDir: tmp.path })
+        const config = JSON.parse(result.configJson)
+        const permission = config.agent.mcpmode.permission
+
+        expect(permission["projectserver_*"]).toBe("allow")
+        expect(permission["otherserver_*"]).toBe("allow")
+        expect(Object.keys(permission).sort()).toEqual([
+          "bash",
+          "browser_open",
+          "edit",
+          "otherserver_*",
+          "projectserver_*",
+          "read",
+        ])
+      } finally {
+        homedir.mockRestore()
+        if (appdata === undefined) delete process.env.APPDATA
+        else process.env.APPDATA = appdata
+      }
+    })
+
+    test("loads the MCP store once on the default path", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Bun.write(
+            path.join(dir, ".kilocodemodes"),
+            `customModes:
+  - slug: mcpmode
+    name: MCP mode
+    roleDefinition: You are an MCP helper
+    groups:
+      - read
+      - mcp`,
+          )
+          await fs.mkdir(path.join(dir, ".kilocode"), { recursive: true })
+          await Bun.write(
+            path.join(dir, ".kilocode", "mcp.json"),
+            JSON.stringify({ mcpServers: { projectserver: { command: "npx" } } }),
+          )
+        },
+      })
+      await using home = await tmpdir()
+
+      const homedir = spyOn(os, "homedir").mockReturnValue(home.path)
+      const appdata = process.env.APPDATA
+      process.env.APPDATA = home.path
+      // Count the load passes: each pass re-reads the store and re-emits every MCP migration
+      // warning through the log, so one pass is what keeps each message to one line.
+      const real = McpMigrator.loadMcpConfig
+      let passes = 0
+      const spy = spyOn(McpMigrator, "loadMcpConfig").mockImplementation((dir: string, skip?: boolean) => {
+        passes++
+        return real(dir, skip)
+      })
+      try {
+        const result = await KilocodeConfigInjector.buildConfig({ projectDir: tmp.path })
+
+        expect(passes).toBe(1)
+        // The one pass still feeds the mode migration: the project server is granted.
+        const permission = JSON.parse(result.configJson).agent.mcpmode.permission
+        expect(permission["projectserver_*"]).toBe("allow")
+      } finally {
+        spy.mockRestore()
+        homedir.mockRestore()
+        if (appdata === undefined) delete process.env.APPDATA
+        else process.env.APPDATA = appdata
+      }
+    })
+
+    test("grants a server that only a global MCP store declared", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Bun.write(
+            path.join(dir, ".kilocodemodes"),
+            `customModes:
+  - slug: mcpmode
+    name: MCP mode
+    roleDefinition: You are an MCP helper
+    groups:
+      - read
+      - mcp`,
+          )
+        },
+      })
+      await using home = await tmpdir()
+
+      const homedir = spyOn(os, "homedir").mockReturnValue(home.path)
+      const appdata = process.env.APPDATA
+      process.env.APPDATA = home.path
+      try {
+        const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "mcp_settings.json")
+        await fs.mkdir(path.dirname(settings), { recursive: true })
+        await Bun.write(settings, JSON.stringify({ mcpServers: { globalserver: { command: "npx" } } }))
+
+        // The same migration writes the global server to `mcp`, so the mode's grant names it and
+        // there is nothing to report: the rule follows every converted server, not just project ones.
+        const result = await KilocodeConfigInjector.buildConfig({ projectDir: tmp.path })
+        const permission = JSON.parse(result.configJson).agent.mcpmode.permission
+
+        expect(permission["globalserver_*"]).toBe("allow")
+        expect(result.warnings.some((warning) => warning.includes("MCP access not migrated"))).toBe(false)
+      } finally {
+        homedir.mockRestore()
+        if (appdata === undefined) delete process.env.APPDATA
+        else process.env.APPDATA = appdata
+      }
+    })
+
+    test("does not warn about MCP access when the project has no MCP server", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Bun.write(
+            path.join(dir, ".kilocodemodes"),
+            `customModes:
+  - slug: mcpmode
+    name: MCP mode
+    roleDefinition: You are an MCP helper
+    groups:
+      - read
+      - mcp`,
+          )
+        },
+      })
+
+      const result = await KilocodeConfigInjector.buildConfig({ projectDir: tmp.path, skipGlobalPaths: true })
+
+      expect(result.warnings.some((warning) => warning.includes("MCP access not migrated"))).toBe(false)
+      const config = JSON.parse(result.configJson)
+      expect(Object.keys(config.agent.mcpmode.permission).some((key) => key.endsWith("_*"))).toBe(false)
+    })
+
+    test("warns about MCP access when the project's MCP server cannot be converted", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Bun.write(
+            path.join(dir, ".kilocodemodes"),
+            `customModes:
+  - slug: mcpmode
+    name: MCP mode
+    roleDefinition: You are an MCP helper
+    groups:
+      - read
+      - mcp`,
+          )
+          await fs.mkdir(path.join(dir, ".kilocode"), { recursive: true })
+          await Bun.write(
+            path.join(dir, ".kilocode", "mcp.json"),
+            JSON.stringify({ mcpServers: { broken: { args: ["--no-command"] } } }),
+          )
+        },
+      })
+
+      const result = await KilocodeConfigInjector.buildConfig({ projectDir: tmp.path, skipGlobalPaths: true })
+
+      expect(
+        result.warnings.filter((warning) => warning.includes("MCP access not migrated: no MCP server was migrated")),
+      ).toEqual(["Mode 'mcpmode': MCP access not migrated: no MCP server was migrated"])
     })
   })
 

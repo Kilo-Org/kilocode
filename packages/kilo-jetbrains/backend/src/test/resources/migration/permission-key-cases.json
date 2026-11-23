@@ -1,0 +1,12 @@
+[
+  { "server": "github", "key": "github_*" },
+  { "server": "my server", "key": "my_server_*" },
+  { "server": "a.b", "key": "a_b_*" },
+  { "server": "a_b", "key": "a_b_*" },
+  { "server": "srv/one", "key": "srv_one_*" },
+  { "server": "a-b_c", "key": "a-b_c_*" },
+  { "server": "s\u00e9rv", "key": "s_rv_*" },
+  { "server": "a\ud835\udd4fb", "key": "a_b_*" },
+  { "server": "x.y#z", "key": "x_y_z_*" },
+  { "server": "...", "key": "____*" }
+]

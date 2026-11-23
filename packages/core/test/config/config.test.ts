@@ -9,9 +9,11 @@ import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { ConfigMigrateV1 } from "@opencode-ai/core/v1/config/migrate"
 import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
+import { ConfigRecover } from "@opencode-ai/core/config/recover" // kilocode_change - decode a fixture as the loader does
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Global } from "@opencode-ai/core/global"
 import { Location } from "@opencode-ai/core/location"
+import { PermissionV2 } from "@opencode-ai/core/permission" // kilocode_change - assert migrated rules against the evaluator
 import { Policy } from "@opencode-ai/core/policy"
 import { Project } from "@opencode-ai/core/project"
 import { AbsolutePath } from "@opencode-ai/core/schema"
@@ -20,6 +22,14 @@ import { tmpdir } from "../fixture/tmpdir"
 import { testEffect } from "../lib/effect"
 
 const it = testEffect(Layer.empty)
+
+// kilocode_change start - the loader decodes a v1 document before migrating it, so a fixture does the same
+function v1(input: unknown) {
+  const recovered = ConfigRecover.recover(ConfigV1.Info, input)
+  if (recovered.type === "rejected") throw new Error("fixture must decode as a v1 document")
+  return ConfigMigrateV1.migrate(recovered.value)
+}
+// kilocode_change end
 
 function testLayer(
   directory: string,
@@ -115,6 +125,76 @@ describe("Config", () => {
     }),
   )
 
+  // kilocode_change start - request header placement in the v1 migration fallback
+  it.effect("places provider-level credentials and headers in request headers", () =>
+    Effect.sync(() => {
+      const migrated = ConfigMigrateV1.migrate({
+        provider: {
+          custom: {
+            options: { apiKey: "secret", headers: { "x-test": "1" }, region: "eu" },
+            models: {
+              chat: {
+                options: { authToken: "model-token", custom: "value" },
+              },
+            },
+          },
+        },
+      })
+
+      expect(migrated.providers?.custom?.request).toEqual({
+        headers: { "x-test": "1" },
+        body: { apiKey: "secret", region: "eu" },
+      })
+      expect(migrated.providers?.custom?.models?.chat?.request).toEqual({
+        headers: { Authorization: "Bearer model-token" },
+        body: { custom: "value" },
+      })
+    }),
+  )
+
+  it.effect("places model-level credentials and headers in request headers", () =>
+    Effect.sync(() => {
+      const migrated = ConfigMigrateV1.migrate({
+        provider: {
+          custom: {
+            npm: "custom-ai-sdk-package",
+            options: { apiKey: "secret" },
+            models: {
+              chat: { options: { apiKey: "model-secret", authToken: "token", custom: "value" } },
+              other: { options: { authToken: "token", custom: "value" }, headers: { "x-model": "1" } },
+            },
+          },
+        },
+      })
+
+      expect(migrated.providers?.custom?.request).toEqual({ headers: undefined, body: { apiKey: "secret" } })
+      expect(migrated.providers?.custom?.models?.chat?.request).toEqual({
+        headers: { Authorization: "Bearer token" },
+        body: { apiKey: "model-secret", custom: "value" },
+      })
+      expect(migrated.providers?.custom?.models?.other?.request).toEqual({
+        headers: { Authorization: "Bearer token", "x-model": "1" },
+        body: { custom: "value" },
+      })
+    }),
+  )
+  // kilocode_change end
+
+  // kilocode_change start - a bearer header from authToken is reported alongside the apiKey body option
+  it.effect("reports a bearer header alongside the apiKey body option", () =>
+    Effect.sync(() => {
+      const migrated = ConfigMigrateV1.migrate({
+        provider: { custom: { options: { apiKey: "secret", authToken: "token" } } },
+      })
+
+      expect(migrated.providers?.custom?.request).toEqual({
+        headers: { Authorization: "Bearer token" },
+        body: { apiKey: "secret" },
+      })
+    }),
+  )
+  // kilocode_change end
+
   it.effect("migrates v1 command configuration", () =>
     Effect.sync(() => {
       expect(
@@ -190,6 +270,140 @@ describe("Config", () => {
   )
   // kilocode_change end
 
+  // kilocode_change start - v1 write and patch permission keys reach the edit action every write tool asserts
+  it.effect("migrates v1 write and patch permission keys to the edit action", () =>
+    Effect.sync(() => {
+      expect(ConfigMigrateV1.migrate({ permission: { write: "deny" } }).permissions).toEqual([
+        { action: "edit", resource: "*", effect: "deny" },
+      ])
+      expect(ConfigMigrateV1.migrate({ permission: { patch: "ask" } }).permissions).toEqual([
+        { action: "edit", resource: "*", effect: "ask" },
+      ])
+
+      const write = ConfigMigrateV1.migrate({ permission: { write: "deny" } }).permissions ?? []
+      expect(PermissionV2.evaluate("edit", "src/index.ts", write).effect).toBe("deny")
+      const patch = ConfigMigrateV1.migrate({ permission: { patch: "ask" } }).permissions ?? []
+      expect(PermissionV2.evaluate("edit", "src/index.ts", patch).effect).toBe("ask")
+    }),
+  )
+
+  it.effect("migrates v1 tool toggles and permission effects to the same ruleset", () =>
+    Effect.sync(() => {
+      expect(ConfigMigrateV1.migrate({ permission: { write: "deny" } }).permissions).toEqual(
+        ConfigMigrateV1.migrate({ tools: { write: false } }).permissions,
+      )
+      expect(ConfigMigrateV1.migrate({ permission: { patch: "deny" } }).permissions).toEqual(
+        ConfigMigrateV1.migrate({ tools: { patch: false } }).permissions,
+      )
+    }),
+  )
+
+  // The deprecated toggle decides where the permission block maps onto its action.
+  it.effect("keeps the v1 tool toggle ahead of a permission key for the same capability", () =>
+    Effect.sync(() => {
+      const blocked = v1({ tools: { write: false }, permission: { write: "allow" } })
+      expect(PermissionV2.evaluate("edit", "src/index.ts", blocked.permissions ?? []).effect).toBe("deny")
+
+      const open = v1({ tools: { write: true }, permission: { write: "deny" } })
+      expect(PermissionV2.evaluate("edit", "src/index.ts", open.permissions ?? []).effect).toBe("allow")
+
+      // An agent entry converts its tool toggle into the current spelling, so it decides there too.
+      const agent = v1({ agent: { scoped: { tools: { write: false }, permission: { write: "allow" } } } })
+      const rules = agent.agents?.scoped?.permissions ?? []
+      expect(PermissionV2.evaluate("edit", "src/index.ts", rules).effect).toBe("deny")
+
+      // The permission block's own current spelling still decides over the toggle.
+      const current = v1({ tools: { write: true }, permission: { edit: "deny" } })
+      expect(PermissionV2.evaluate("edit", "src/index.ts", current.permissions ?? []).effect).toBe("deny")
+    }),
+  )
+
+  it.effect("migrates per-resource v1 write and patch permission maps to the edit action", () =>
+    Effect.sync(() => {
+      const expected = [
+        { action: "edit", resource: "*.md", effect: "allow" as const },
+        { action: "edit", resource: "*", effect: "deny" as const },
+      ]
+      expect(ConfigMigrateV1.migrate({ permission: { write: { "*.md": "allow", "*": "deny" } } }).permissions).toEqual(
+        expected,
+      )
+      expect(ConfigMigrateV1.migrate({ permission: { patch: { "*.md": "allow", "*": "deny" } } }).permissions).toEqual(
+        expected,
+      )
+
+      const rules =
+        ConfigMigrateV1.migrate({ permission: { write: { "*": "deny", "*.md": "allow" } } }).permissions ?? []
+      expect(PermissionV2.evaluate("edit", "README.md", rules).effect).toBe("allow")
+      expect(PermissionV2.evaluate("edit", "src/index.ts", rules).effect).toBe("deny")
+      // Rules apply in authored order and the last match wins, so the trailing wildcard denies markdown too.
+      const wildcardLast =
+        ConfigMigrateV1.migrate({ permission: { write: { "*.md": "allow", "*": "deny" } } }).permissions ?? []
+      expect(PermissionV2.evaluate("edit", "README.md", wildcardLast).effect).toBe("deny")
+    }),
+  )
+
+  it.effect("migrates a v1 agent write and patch permission to the edit action", () =>
+    Effect.sync(() => {
+      const write = ConfigMigrateV1.migrate({ agent: { custom: { permission: { write: "deny" } } } }).agents
+      expect(write?.custom?.permissions).toEqual([{ action: "edit", resource: "*", effect: "deny" }])
+      const patch = ConfigMigrateV1.migrate({ agent: { custom: { permission: { patch: "ask" } } } }).agents
+      expect(patch?.custom?.permissions).toEqual([{ action: "edit", resource: "*", effect: "ask" }])
+
+      const rules = ConfigMigrateV1.migrateAgent({ permission: { write: "deny" } }).permissions ?? []
+      expect(PermissionV2.evaluate("edit", "src/index.ts", rules).effect).toBe("deny")
+      const ask = ConfigMigrateV1.migrateAgent({ permission: { patch: "ask" } }).permissions ?? []
+      expect(PermissionV2.evaluate("edit", "src/index.ts", ask).effect).toBe("ask")
+    }),
+  )
+
+  // kilocode_change - a document authoring both spellings keeps the current spelling's effect
+  it.effect("keeps the authored edit permission ahead of a legacy write permission", () =>
+    Effect.sync(() => {
+      const rules = ConfigMigrateV1.migrate({ permission: { edit: "deny", write: "allow" } }).permissions ?? []
+      expect(rules).toEqual([
+        { action: "edit", resource: "*", effect: "allow" },
+        { action: "edit", resource: "*", effect: "deny" },
+      ])
+      expect(PermissionV2.evaluate("edit", "src/index.ts", rules).effect).toBe("deny")
+    }),
+  )
+
+  it.effect("keeps an authored edit allow ahead of a legacy write deny", () =>
+    Effect.sync(() => {
+      const rules = ConfigMigrateV1.migrate({ permission: { edit: "allow", write: "deny" } }).permissions ?? []
+      expect(rules).toEqual([
+        { action: "edit", resource: "*", effect: "deny" },
+        { action: "edit", resource: "*", effect: "allow" },
+      ])
+      expect(PermissionV2.evaluate("edit", "src/index.ts", rules).effect).toBe("allow")
+    }),
+  )
+
+  it.effect("keeps the authored edit permission ahead of a legacy patch permission", () =>
+    Effect.sync(() => {
+      const rules = ConfigMigrateV1.migrate({ permission: { edit: "deny", patch: "allow" } }).permissions ?? []
+      expect(rules).toEqual([
+        { action: "edit", resource: "*", effect: "allow" },
+        { action: "edit", resource: "*", effect: "deny" },
+      ])
+      expect(PermissionV2.evaluate("edit", "src/index.ts", rules).effect).toBe("deny")
+    }),
+  )
+
+  it.effect("keeps the authored agent edit permission ahead of a legacy write permission", () =>
+    Effect.sync(() => {
+      const agent = ConfigMigrateV1.migrate({
+        agent: { mixed: { permission: { edit: "deny", write: "allow" } } },
+      }).agents?.mixed
+      expect(agent?.permissions).toEqual([
+        { action: "edit", resource: "*", effect: "allow" },
+        { action: "edit", resource: "*", effect: "deny" },
+      ])
+      expect(PermissionV2.evaluate("edit", "src/index.ts", agent?.permissions ?? []).effect).toBe("deny")
+    }),
+  )
+  // kilocode_change end
+
   it.live("returns an empty configuration when directory files do not exist", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
@@ -245,7 +459,7 @@ describe("Config", () => {
       ),
     ),
   )
-            // kilocode_change end
+  // kilocode_change end
 
   it.live("loads opencode JSON and JSONC files from lowest to highest priority", () =>
     Effect.acquireRelease(
@@ -923,9 +1137,7 @@ describe("Config", () => {
             expect(info.permissions).toEqual([{ action: "bash", resource: "git push*", effect: "deny" }])
             expect(info.agents?.reviewer?.description).toBe("reviews changes")
             expect(info.agents?.reviewer?.steps).toBeUndefined()
-            expect(info.agents?.reviewer?.permissions).toEqual([
-              { action: "edit", resource: "*", effect: "deny" },
-            ])
+            expect(info.agents?.reviewer?.permissions).toEqual([{ action: "edit", resource: "*", effect: "deny" }])
             expect(info.experimental?.policies).toEqual([
               { effect: "deny", action: "provider.use", resource: "openai" },
             ])
@@ -950,11 +1162,9 @@ describe("Config", () => {
             const config = yield* Config.Service
             yield* config.entries()
             const skipped = reported(logs, "skipping invalid configuration value")
-            expect(skipped.map(([, context]) => context.path).toSorted((a, b) => String(a).localeCompare(String(b)))).toEqual([
-              "$.agents.reviewer.steps",
-              "$.autoupdate",
-              "$.share",
-            ])
+            expect(
+              skipped.map(([, context]) => context.path).toSorted((a, b) => String(a).localeCompare(String(b))),
+            ).toEqual(["$.agents.reviewer.steps", "$.autoupdate", "$.share"])
             for (const [, context] of skipped) {
               expect(context.source).toBe(file)
               expect(typeof context.message).toBe("string")
@@ -1010,9 +1220,9 @@ describe("Config", () => {
             const documents = (yield* config.entries()).filter((entry) => entry.type === "document")
             expect(documents).toHaveLength(1)
             expect(documents[0]?.info.permissions).toEqual([{ action: "bash", resource: "*", effect: "ask" }])
-            expect(logs.filter((item) => Array.isArray(item) && item[0] === "skipping invalid configuration value")).toEqual(
-              [],
-            )
+            expect(
+              logs.filter((item) => Array.isArray(item) && item[0] === "skipping invalid configuration value"),
+            ).toEqual([])
             expect(
               logs.filter((item) => Array.isArray(item) && item[0] === "skipping unparsable configuration file"),
             ).toEqual([])

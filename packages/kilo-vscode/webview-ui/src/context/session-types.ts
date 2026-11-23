@@ -216,6 +216,7 @@ export interface SessionContextValue {
     response: "once" | "always" | "reject",
     approvedAlways: string[],
     deniedAlways: string[],
+    removedAlways: string[],
     feedback?: string,
   ) => boolean
   replyToQuestion: (requestID: string, answers: string[][]) => boolean

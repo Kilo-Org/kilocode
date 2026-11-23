@@ -314,6 +314,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "허용 목록에서 제거",
   "ui.permission.rule.addToDenied": "거부 목록에 추가",
   "ui.permission.rule.removeFromDenied": "거부 목록에서 제거",
+  "ui.permission.rule.fromConfig": "구성 파일에서 관리됨",
   "ui.permission.toolLabel.read": "읽기",
   "ui.permission.toolLabel.edit": "편집",
   "ui.permission.toolLabel.write": "쓰기",
@@ -1312,6 +1313,8 @@ export const dict = {
   "dialog.model.notSet": "설정되지 않음",
   "profile.personalAccount": "개인 계정",
   "profile.switchingAccount": "계정 전환 중…",
+  "profile.unavailableAccount": "사용할 수 없는 계정",
+  "profile.switchFailed": "계정 전환을 확인하지 못했습니다.",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/ko.ts
 
   "question.summary": "{{total}}개 질문 중 {{n}}번째",
@@ -1396,6 +1399,9 @@ export const dict = {
   "settings.saveBar.cancel": "취소",
   "settings.saveBar.saving": "저장 중…",
   "settings.saveBar.saveFailed": "설정을 저장할 수 없습니다",
+  "settings.saveBar.dismissError": "닫기",
+  "settings.saveBar.unconfirmedWrite": "확장 프로그램 호스트가 “{{name}}”을(를) 확인하지 않았습니다.",
+  "settings.saveBar.unconfirmedSave": "확장 프로그램 호스트가 저장을 확인하지 않았습니다. 다시 시도하세요.",
   "notifications.action.next": "다음",
   "notifications.action.close": "닫기",
   "notifications.action.tryModel": "{{model}} 시도",
