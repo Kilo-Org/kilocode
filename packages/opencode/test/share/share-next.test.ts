@@ -6,7 +6,7 @@ import { httpClient } from "@opencode-ai/core/effect/app-node-platform"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
 
-import { AccessToken, AccountID, OrgID, RefreshToken } from "../../src/account/schema"
+import { AccessToken, OrgID, RefreshToken, RemoteID } from "../../src/account/schema" // kilocode_change
 import { AccountRepo } from "../../src/account/repo"
 import { EventV2Bridge } from "../../src/event-v2-bridge"
 import { Session } from "@/session/session"
@@ -67,7 +67,7 @@ const share = (id: SessionID) =>
 const seed = (url: string, org?: string) =>
   AccountRepo.Service.use((repo) =>
     repo.persistAccount({
-      id: AccountID.make("account-1"),
+      remoteID: RemoteID.make("account-1"), // kilocode_change
       email: "user@example.com",
       url,
       accessToken: AccessToken.make("st_test_token"),

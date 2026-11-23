@@ -12,6 +12,7 @@ export interface ProviderResult {
 export interface Lowerer {
   readonly provider: (options: Options) => ProviderResult
   readonly request: (options: Options) => Record<string, unknown>
+  readonly headers?: (options: Options) => Record<string, string> | undefined // kilocode_change
 }
 
 export function get(packageName?: string): Lowerer {
@@ -19,12 +20,32 @@ export function get(packageName?: string): Lowerer {
   return Object.hasOwn(lowerers, key) ? lowerers[key]! : raw
 }
 
+// kilocode_change start - the fallback reports the request headers its options describe
+/**
+ * Fallback for a provider entry with no package and for every package without a dedicated lowerer.
+ * With no package-specific knowledge the options become request parameters, and the ones that describe
+ * headers become request headers instead: `headers` passes through as headers, and `authToken` becomes a
+ * bearer authorization header. `apiKey` stays a request body option because the v2 runtime reads that key
+ * as the package credential, removes it before the request is sent and applies it as the package auth
+ * header. The package auth header is the one the package authenticates with, so a bearer header reported
+ * here stays usable alongside it.
+ */
+const requestHeaders = (options: Options) =>
+  compact({
+    Authorization: bearer(options.authToken),
+    ...headers(options.headers),
+  })
+
+const requestBody = (options: Options) => omit(options, ["authToken", "headers"])
+
 const raw: Lowerer = {
   provider(options) {
-    return { body: clone(options) }
+    return { headers: requestHeaders(options), body: requestBody(options) }
   },
-  request: clone,
+  request: requestBody,
+  headers: requestHeaders,
 }
+// kilocode_change end
 
 const openai: Lowerer = {
   provider(options) {

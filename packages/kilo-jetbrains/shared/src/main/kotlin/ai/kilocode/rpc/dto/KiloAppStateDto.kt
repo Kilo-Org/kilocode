@@ -241,6 +241,19 @@ data class ProfileDto(
     val currentOrgId: String? = null,
 )
 
+/**
+ * Result of a profile refresh that follows a completed account step (sign-in, organization switch).
+ *
+ * [profile] is the account, or null when the CLI reports that nobody is signed in.
+ * [error] is set when the profile could not be read; [profile] is then null and the caller must
+ * keep its current account state, because the step itself already succeeded.
+ */
+@Serializable
+data class ProfileSyncDto(
+    val profile: ProfileDto? = null,
+    val error: LoadErrorDto? = null,
+)
+
 @Serializable
 data class DeviceAuthDto(
     val code: String?,

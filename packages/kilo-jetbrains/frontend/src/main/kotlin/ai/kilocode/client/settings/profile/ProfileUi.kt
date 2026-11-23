@@ -6,10 +6,12 @@ import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
+import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.ProfileStatusDto
+import ai.kilocode.rpc.dto.ProfileSyncDto
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
@@ -51,6 +53,10 @@ internal class ProfileUi(
     private val timers: UiTimerSource = UiTimers,
 ) : JPanel(BorderLayout()) {
 
+    private companion object {
+        private val LOG = KiloLog.create(ProfileUi::class.java)
+    }
+
     private val cards = JPanel(CardLayout())
     private val cardLayout = cards.layout as CardLayout
 
@@ -59,6 +65,7 @@ internal class ProfileUi(
         retry = { app.retryAsync() },
         cancel = ::cancel,
         browse = browse,
+        refresh = ::refreshProfile,
         timers = timers,
     )
     private val account = LoggedInProfileUi(
@@ -83,6 +90,15 @@ internal class ProfileUi(
     private var status = status
     private var login: LoginState = LoginState.Idle
     private var attempt = 0
+
+    /** Whether an account step reported that its follow-up account read did not complete. */
+    private var unavailable = false
+
+    /**
+     * The account the notice was raised against. A read that completes and brings a different
+     * account clears the notice; a reload that republishes the held account changed nothing.
+     */
+    private var held: ProfileDto? = null
     private var shown: Card? = null
 
     init {
@@ -102,25 +118,40 @@ internal class ProfileUi(
     /**
      * Update from a full app state snapshot.
      *
-     * A null profile is only treated as transient (keep the logged-in card without updating
-     * account content) when [KiloAppStateDto.progress]`.profile` is [ProfileStatusDto.PENDING],
-     * meaning a switch or initial load is still in flight. Any other null (no progress,
-     * NOT_LOGGED_IN, etc.) clears the profile and shows the logged-out card.
+     * A null profile is treated as transient (keep the logged-in card without updating account
+     * content) when [KiloAppStateDto.progress]`.profile` is [ProfileStatusDto.PENDING], meaning a
+     * switch or initial load is still in flight. Otherwise a null clears the profile and shows the
+     * logged-out card, except while the account notice is up — see below.
+     *
+     * An emission that carries a different account than the one the notice was raised against proves
+     * a read completed, so it ends the notice. A reload that republishes the held account changed
+     * nothing: its own read did not produce a new account, so the notice stays.
+     *
+     * While the notice is up, an emission that carries no account keeps the account and the notice.
+     * The tolerant background refresh publishes no account for a read that could not complete and
+     * marks it [ProfileStatusDto.NOT_LOGGED_IN], the same state a definitive sign-out produces, so
+     * this emission cannot tell an outage from a sign-out. Dropping the account here would hide the
+     * failure the notice reports. The notice's own retry reports its read, and that answer decides.
+     * A logout clears both explicitly instead of going through this branch.
      */
     @RequiresEdt
     fun update(state: KiloAppStateDto) {
         checkEdt()
         this.status = state.status
-        val transient = state.profile == null && state.progress?.profile == ProfileStatusDto.PENDING
+        val fresh = state.profile
+        if (fresh != null && unavailable && fresh != held) clearUnavailable()
+        val transient = fresh == null && state.progress?.profile == ProfileStatusDto.PENDING
+        val keep = unavailable && fresh == null && !transient
         when {
-            state.profile != null -> {
-                prof = state.profile
+            fresh != null -> {
+                prof = fresh
                 login = LoginState.Idle
             }
             transient -> { /* keep existing prof and account UI untouched */ }
+            keep -> { /* the notice owns the account until its own retry answers */ }
             else -> prof = null
         }
-        sync(skipAccount = transient)
+        sync(skipAccount = transient || keep)
     }
 
     /**
@@ -212,13 +243,23 @@ internal class ProfileUi(
                     sync()
                     browse(next.verificationUrl)
                 }
-                val profile = app.completeLogin()
-                telemetry("Account Connect Success", mapOf("surface" to "settings", "hasOrganizations" to ((profile?.organizations?.isNotEmpty()) == true).toString()))
+                val result = app.completeLogin()
+                val error = result.error
+                if (error == null) {
+                    telemetry("Account Connect Success", mapOf("surface" to "settings", "hasOrganizations" to ((result.profile?.organizations?.isNotEmpty()) == true).toString()))
+                } else {
+                    telemetry("Account Connect Failed", mapOf("stage" to "profile", "errorClass" to accountErrorToken(error)))
+                    LOG.warn("account profile read failed resource=${error.resource} status=${error.status}")
+                }
                 val state = app.state.value
                 withContext(edt) {
                     if (id != attempt) return@withContext
                     login = LoginState.Idle
-                    update(profile ?: state.profile, state.status)
+                    if (error != null) showUnavailable(state.profile, state.status)
+                    else {
+                        clearUnavailable()
+                        update(result.profile ?: state.profile, state.status)
+                    }
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -249,6 +290,11 @@ internal class ProfileUi(
                 telemetry("Account Logout Success", mapOf("surface" to "settings"))
                 withContext(edt) {
                     login = LoginState.Idle
+                    // A logout is definitive and user-initiated, so it clears the account and the
+                    // notice outright. Relying on the next state emission would not do it: while the
+                    // notice is up, an account-less emission deliberately keeps the held account.
+                    clearUnavailable()
+                    prof = null
                     applyState()
                 }
             } catch (e: CancellationException) {
@@ -264,11 +310,21 @@ internal class ProfileUi(
     private fun organization(org: String?) {
         cs.launch {
             try {
-                val profile = app.setOrganization(org)
+                val result = app.setOrganization(org)
+                if (result.error != null) {
+                    val state = app.state.value
+                    withContext(edt) {
+                        // The switch itself finished, so the previous account stays: re-applying it
+                        // reverts the combo, and the notice keeps Refresh within reach.
+                        showUnavailable(state.profile, state.status)
+                    }
+                    return@launch
+                }
                 telemetry("Organization Switched", mapOf("target" to if (org == null) "personal" else "organization"))
                 val state = app.state.value
                 withContext(edt) {
-                    update(profile ?: state.profile, state.status)
+                    clearUnavailable()
+                    update(result.profile ?: state.profile, state.status)
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -280,13 +336,61 @@ internal class ProfileUi(
         }
     }
 
+    /**
+     * Report an account step whose follow-up profile read did not complete.
+     *
+     * A known account keeps its card and gains the notice that offers Refresh; without one the
+     * logged-out card shows the same text and offers Refresh itself.
+     */
+    @RequiresEdt
+    private fun showUnavailable(fallback: ProfileDto?, appStatus: KiloAppStatusDto) {
+        unavailable = true
+        val known = prof ?: fallback
+        held = known
+        if (known == null) {
+            login = LoginState.Error(accountUnavailable(), LoginState.Retry.PROFILE)
+            sync()
+            return
+        }
+        update(known, appStatus)
+        account.setNotice(accountUnavailable())
+    }
+
+    /**
+     * Clear the notice an account step left behind, now that a read completed. Only a completed
+     * read clears it: an unrelated state emission keeps the notice in place, and so does a reload
+     * that republishes the account the notice was raised against.
+     */
+    @RequiresEdt
+    private fun clearUnavailable() {
+        unavailable = false
+        held = null
+        val current = login
+        if (current is LoginState.Error && current.retry == LoginState.Retry.PROFILE) login = LoginState.Idle
+        account.setNotice(null)
+    }
+
+    private fun accountUnavailable(): String = KiloBundle.message("profile.notice.accountUnavailable")
+
+    /**
+     * Re-read the profile from the notice's Refresh action.
+     *
+     * The notice's retry reports its outcome, so a read that cannot complete keeps the account and
+     * the notice, while a plain refresh keeps its tolerant behaviour.
+     */
     private fun refreshProfile() {
         cs.launch {
             try {
-                val profile = app.refreshProfile()
-                val state = app.state.value
+                // `unavailable` is written only on the EDT, while this coroutine runs on
+                // Dispatchers.Default. Read it on the EDT so the retry reliably takes the strict read.
+                val strict = withContext(edt) { unavailable }
+                val result = if (strict) app.refreshAccount() else ProfileSyncDto(app.refreshProfile())
                 withContext(edt) {
-                    update(profile ?: state.profile, state.status)
+                    if (result.error != null) applyState()
+                    else {
+                        clearUnavailable()
+                        applyState()
+                    }
                     account.setRefreshing(false)
                 }
             } catch (e: CancellationException) {

@@ -1,4 +1,5 @@
-import type { KiloClient } from "@kilocode/sdk/v2/client"
+import { homedir } from "node:os"
+import type { Config, KiloClient } from "@kilocode/sdk/v2/client"
 import { configFeatures, serverFeatures } from "../features"
 import { retry } from "../services/cli-backend/retry"
 import type { ConfigTarget } from "./config-bindings"
@@ -23,6 +24,14 @@ export async function fetchSnapshot(client: Client, dir: string, settings: () =>
     config,
     globalConfig: global,
     targets: overlay?.targets as { global: ConfigTarget; project: ConfigTarget } | undefined,
+    // The overlay response carries the merged global scope as `global`; the config
+    // snapshot names the same data `mergedGlobal`.
+    mergedGlobal: (overlay?.global ?? global) as Config | undefined,
+    workspaceConfig: overlay?.project,
+    // The rules run in the `kilo serve` this extension host spawns, so its home directory
+    // is the one a config entry's `~` or `$HOME` prefix expands to. The webview compares
+    // saved entries against that directory and cannot read it itself.
+    homeDir: homedir(),
     collections: overlay?.collections,
     settings: settings(),
     features: configFeatures(config, capabilities),

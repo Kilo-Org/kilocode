@@ -311,6 +311,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "นำออกจากรายการที่อนุญาต",
   "ui.permission.rule.addToDenied": "เพิ่มไปยังรายการที่ถูกปฏิเสธ",
   "ui.permission.rule.removeFromDenied": "นำออกจากรายการที่ถูกปฏิเสธ",
+  "ui.permission.rule.fromConfig": "จัดการโดยไฟล์การตั้งค่า",
   "ui.permission.toolLabel.read": "อ่าน",
   "ui.permission.toolLabel.edit": "แก้ไข",
   "ui.permission.toolLabel.write": "เขียน",
@@ -1309,6 +1310,8 @@ export const dict = {
   "dialog.model.notSet": "ไม่ได้ตั้งค่า",
   "profile.personalAccount": "บัญชีส่วนตัว",
   "profile.switchingAccount": "กำลังสลับบัญชี…",
+  "profile.unavailableAccount": "บัญชีที่ใช้ไม่ได้",
+  "profile.switchFailed": "ยืนยันการสลับบัญชีไม่สำเร็จ",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/th.ts
 
   "question.summary": "{{n}} จาก {{total}} คำถาม",
@@ -1393,6 +1396,9 @@ export const dict = {
   "settings.saveBar.cancel": "ยกเลิก",
   "settings.saveBar.saving": "กำลังบันทึก…",
   "settings.saveBar.saveFailed": "ไม่สามารถบันทึกการตั้งค่าได้",
+  "settings.saveBar.dismissError": "ปิด",
+  "settings.saveBar.unconfirmedWrite": "โฮสต์ของส่วนขยายไม่ได้ยืนยัน “{{name}}”",
+  "settings.saveBar.unconfirmedSave": "โฮสต์ของส่วนขยายไม่ได้ยืนยันการบันทึก ลองอีกครั้ง",
   "notifications.action.next": "ถัดไป",
   "notifications.action.close": "ปิด",
   "notifications.action.tryModel": "ลองใช้ {{model}}",

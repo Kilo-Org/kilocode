@@ -488,7 +488,8 @@ describe("tool.task", () => {
   )
   // kilocode_change end
 
-  it.instance("execute asks by default and skips checks when bypassed", () =>
+  // kilocode_change start - the gate carries the agent names the user named this turn
+  it.instance("execute asks by default and skips the ask only for a user-named subagent", () =>
     Effect.gen(function* () {
       const { chat, assistant } = yield* seed()
       const tool = yield* TaskTool
@@ -496,10 +497,10 @@ describe("tool.task", () => {
       const calls: unknown[] = []
       const promptOps = stubOps()
 
-      const exec = (extra?: Record<string, any>) =>
+      const exec = (description: string, extra?: Record<string, any>) =>
         def.execute(
           {
-            description: "inspect bug",
+            description,
             prompt: "look into the cache key path",
             subagent_type: "general",
           },
@@ -518,21 +519,62 @@ describe("tool.task", () => {
           },
         )
 
-      yield* exec()
-      yield* exec({ bypassAgentCheck: true })
+      yield* exec("no list")
+      yield* exec("other agent named", { namedAgentTypes: ["explore"] })
+      yield* exec("same agent named", { namedAgentTypes: ["general"] })
 
-      expect(calls).toHaveLength(1)
+      const asked = calls.map((call) => {
+        if (call == null || typeof call !== "object" || !("metadata" in call)) return undefined
+        const meta = call.metadata
+        if (meta == null || typeof meta !== "object" || !("description" in meta)) return undefined
+        return meta.description
+      })
+      expect(asked).toEqual(["no list", "other agent named"])
+      expect(asked).not.toContain("same agent named")
       expect(calls[0]).toEqual({
         permission: "task",
         patterns: ["general"],
         always: ["*"],
         metadata: {
-          description: "inspect bug",
+          description: "no list",
           subagent_type: "general",
         },
       })
     }),
   )
+
+  it.instance("execute matches the named list against the requested subagent type", () =>
+    Effect.gen(function* () {
+      const { chat, assistant } = yield* seed()
+      const tool = yield* TaskTool
+      const def = yield* tool.init()
+      const calls: unknown[] = []
+
+      yield* def.execute(
+        {
+          description: "explore requested",
+          prompt: "inspect the tree",
+          subagent_type: "explore",
+        },
+        {
+          sessionID: chat.id,
+          messageID: assistant.id,
+          agent: "build",
+          abort: new AbortController().signal,
+          extra: { promptOps: stubOps(), namedAgentTypes: ["explore"] },
+          messages: [],
+          metadata: () => Effect.void,
+          ask: (input) =>
+            Effect.sync(() => {
+              calls.push(input)
+            }),
+        },
+      )
+
+      expect(calls).toHaveLength(0)
+    }),
+  )
+  // kilocode_change end
 
   it.instance("execute cancels child session when abort signal fires", () =>
     Effect.gen(function* () {

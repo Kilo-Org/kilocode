@@ -195,6 +195,110 @@ describe("GoogleVertexAnthropicPlugin", () => {
     }),
   )
 
+  // kilocode_change start - a blank endpoint option counts as unset
+  it.effect("treats a blank Anthropic endpoint as unset and builds the regional endpoint", () =>
+    withEnv({ GOOGLE_CLOUD_LOCATION: "europe-west4", VERTEX_LOCATION: undefined }, () =>
+      Effect.gen(function* () {
+        const plugin = yield* PluginV2.Service
+        const aisdk = yield* AISDK.Service
+        yield* addPlugin(GoogleVertexAnthropicPlugin)
+        const result = yield* aisdk.runSDK({
+          model: ModelV2.Info.make({
+            ...ModelV2.Info.empty(ProviderV2.ID.make("google-vertex"), ModelV2.ID.make("claude-sonnet-4-5")),
+            api: { id: ModelV2.ID.make("claude-sonnet-4-5"), type: "aisdk", package: "test-provider" },
+          }),
+          package: "@ai-sdk/google-vertex/anthropic",
+          options: { name: "google-vertex", project: "project", baseURL: "   " },
+        })
+        expect("baseURL" in result.options).toBe(false)
+        expect(result.sdk.languageModel("claude-sonnet-4-5").config.baseURL).toBe(
+          "https://europe-west4-aiplatform.googleapis.com/v1/projects/project/locations/europe-west4/publishers/anthropic/models",
+        )
+      }),
+    ),
+  )
+  // kilocode_change end
+
+  // kilocode_change start - the location is validated when the model is used
+  it.effect("requires a Google Cloud region for the Anthropic location", () =>
+    Effect.gen(function* () {
+      const plugin = yield* PluginV2.Service
+      const aisdk = yield* AISDK.Service
+      yield* addPlugin(GoogleVertexAnthropicPlugin)
+      const exit = yield* aisdk
+        .runSDK({
+          model: ModelV2.Info.make({
+            ...ModelV2.Info.empty(ProviderV2.ID.make("google-vertex"), ModelV2.ID.make("claude-sonnet-4-5")),
+            api: { id: ModelV2.ID.make("claude-sonnet-4-5"), type: "aisdk", package: "test-provider" },
+          }),
+          package: "@ai-sdk/google-vertex/anthropic",
+          options: { name: "google-vertex", project: "project", location: "proxy.example/x" },
+        })
+        .pipe(Effect.exit)
+      expect(exit._tag).toBe("Failure")
+      expect(String(exit)).toContain("Invalid Google Vertex location")
+    }),
+  )
+
+  it.effect("does not validate the location for an explicit non-Vertex endpoint", () =>
+    Effect.gen(function* () {
+      const plugin = yield* PluginV2.Service
+      const aisdk = yield* AISDK.Service
+      yield* addPlugin(GoogleVertexAnthropicPlugin)
+      const result = yield* aisdk.runSDK({
+        model: ModelV2.Info.make({
+          ...ModelV2.Info.empty(ProviderV2.ID.make("google-vertex"), ModelV2.ID.make("claude-sonnet-4-5")),
+          api: { id: ModelV2.ID.make("claude-sonnet-4-5"), type: "aisdk", package: "test-provider" },
+        }),
+        package: "@ai-sdk/google-vertex/anthropic",
+        options: {
+          name: "google-vertex",
+          project: "project",
+          location: "proxy.example/x",
+          baseURL: "https://proxy.example/v1",
+        },
+      })
+      expect(result.sdk.languageModel("claude-sonnet-4-5").config.baseURL).toBe("https://proxy.example/v1")
+    }),
+  )
+
+  it.effect("does not validate the location for a concrete Vertex endpoint", () =>
+    Effect.gen(function* () {
+      const plugin = yield* PluginV2.Service
+      const aisdk = yield* AISDK.Service
+      yield* addPlugin(GoogleVertexAnthropicPlugin)
+      const baseURL =
+        "https://us-central1-aiplatform.googleapis.com/v1/projects/project/locations/us-central1/publishers/anthropic/models"
+      const result = yield* aisdk.runSDK({
+        model: ModelV2.Info.make({
+          ...ModelV2.Info.empty(ProviderV2.ID.make("google-vertex"), ModelV2.ID.make("claude-sonnet-4-5")),
+          api: { id: ModelV2.ID.make("claude-sonnet-4-5"), type: "aisdk", package: "test-provider" },
+        }),
+        package: "@ai-sdk/google-vertex/anthropic",
+        options: { name: "google-vertex", project: "project", location: "proxy.example/x", baseURL },
+      })
+      expect(result.sdk.languageModel("claude-sonnet-4-5").config.baseURL).toBe(baseURL)
+    }),
+  )
+
+  it.effect("persists a padded location in lowercase for provider updates", () =>
+    Effect.gen(function* () {
+      const catalog = yield* Catalog.Service
+      yield* catalog.transform((catalog) =>
+        catalog.provider.update(ProviderV2.ID.make("google-vertex-anthropic"), (provider) => {
+          provider.api = { type: "aisdk", package: "@ai-sdk/google-vertex/anthropic" }
+          provider.request.body.project = "config-project"
+          provider.request.body.location = " US-CENTRAL1 "
+        }),
+      )
+      yield* addPlugin(GoogleVertexAnthropicPlugin)
+      expect((yield* catalog.provider.get(ProviderV2.ID.make("google-vertex-anthropic")))?.request.body.location).toBe(
+        "us-central1",
+      )
+    }),
+  )
+  // kilocode_change end
+
   it.effect("selects google-vertex Anthropic language models through V2 plugins", () =>
     Effect.gen(function* () {
       const plugin = yield* PluginV2.Service
