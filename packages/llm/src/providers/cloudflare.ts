@@ -1,6 +1,6 @@
-import type { Config, Redacted } from "effect"
+import { Effect, Option, Config, Redacted } from "effect" // kilocode_change
 import * as OpenAICompatibleChat from "../protocols/openai-compatible-chat"
-import { Auth } from "../route/auth"
+import { Auth, MissingCredentialError, type Credential } from "../route/auth" // kilocode_change
 import { AuthOptions, type AtLeastOne, type ProviderAuthOption } from "../route/auth-options"
 import type { RouteDefaultsInput } from "../route/client"
 import { ProviderID, type ModelID } from "../schema"
@@ -51,12 +51,38 @@ const isGatewayHost = (baseURL: string | null | undefined) => {
     return false
   }
 }
-// kilocode_change end
+
+// An unset or empty gateway environment variable is an absent credential, while a configured
+// value that cannot be resolved stays a configuration error.
+const gatewayEnv = (name: string) =>
+  Auth.effect(
+    Config.option(Config.redacted(name)).pipe(
+      Effect.flatMap((value) =>
+        Option.isNone(value) || Redacted.value(value.value) === ""
+          ? Effect.fail(new MissingCredentialError(name))
+          : Effect.succeed(value.value),
+      ),
+    ),
+  )
+
+// Only an absent credential falls through to the next source, so a `gatewayApiKey` that is
+// configured but cannot be resolved reports its own error instead of looking unset.
+const fallThrough =
+  (next: Credential) =>
+  (source: Credential): Credential =>
+    Auth.effect(
+      source.load.pipe(
+        Effect.catchIf(
+          (error) => error instanceof MissingCredentialError,
+          () => next.load,
+        ),
+      ),
+    )
 
 const aiGatewayAuth = (input: AIGatewayOptions) => {
   if ("auth" in input && input.auth) return input.auth
-  // kilocode_change start - resolve the environment gateway credential for a Cloudflare gateway endpoint;
-  // on any other host the credential comes from `gatewayApiKey`
+  // The environment token is sent only to a Cloudflare gateway endpoint; on any other host the
+  // gateway credential comes from `gatewayApiKey`.
   const gatewayHost = isGatewayHost(input.baseURL)
   const explicit = Auth.optional(
     input.gatewayApiKey,
@@ -64,17 +90,24 @@ const aiGatewayAuth = (input: AIGatewayOptions) => {
       ? "gatewayApiKey"
       : "gatewayApiKey (the environment token is sent only to gateway.ai.cloudflare.com; alternatively set a cf-aig-authorization header)",
   )
-  const source = gatewayHost
-    ? explicit.orElse(Auth.config("CLOUDFLARE_API_TOKEN")).orElse(Auth.config("CF_AIG_TOKEN"))
-    : explicit
-  const gateway = source.pipe(Auth.bearerHeader("cf-aig-authorization"))
-  // kilocode_change end
+  const environment = gatewayHost ? [gatewayEnv("CLOUDFLARE_API_TOKEN"), gatewayEnv("CF_AIG_TOKEN")] : []
+  const gateway = [explicit, ...environment]
+    .reduce((left, right) => fallThrough(right)(left))
+    .pipe(Auth.bearerHeader("cf-aig-authorization"))
   if (!("apiKey" in input) || input.apiKey === undefined) return gateway
-  // kilocode_change start - keep the resolved gateway credential next to the upstream key;
-  // `orElse(none)` keeps a gateway without its own authentication working
-  return gateway.orElse(Auth.none).andThen(Auth.bearer(input.apiKey))
-  // kilocode_change end
+  // `authorization` carries the provider key next to the gateway credential; an absent gateway
+  // credential is skipped, while a configured one that fails to resolve still reports its error.
+  const optional = Auth.custom((request) =>
+    Auth.toEffect(gateway)(request).pipe(
+      Effect.catchIf(
+        (error) => error.reason._tag === "Authentication" && error.reason.kind === "missing",
+        () => Effect.succeed(request.headers),
+      ),
+    ),
+  )
+  return optional.andThen(Auth.bearer(input.apiKey))
 }
+// kilocode_change end
 
 export const workersAIBaseURL = (input: WorkersAIURL) => {
   // kilocode_change start - a blank or whitespace-only baseURL is unset, so the derived endpoint applies
