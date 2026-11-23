@@ -2007,7 +2007,7 @@ export function schema(model: Provider.Model, schema: JSONSchema7): JSONSchema7 
           result.type = "null"
         } else {
           delete result.type
-          result.anyOf = nonNull.map((entry: unknown) => ({ type: entry }))
+          result.anyOf = nonNull.map((entry: unknown) => entry === "array" ? { type: entry, items: { type: "string" } } : { type: entry })
           if (hasNull) result.nullable = true
         }
       }
