@@ -48,10 +48,13 @@ export namespace McpApps {
       }
     })
 
-  /** Call a tool on a connected MCP server. Used by MCP Apps for widget-initiated tool calls. */
-  export const callTool = (mcp: MCP.Interface, flags: RuntimeFlags.Info) =>
+  /**
+   * Call a tool on a connected MCP server. Used by MCP Apps for widget-initiated tool calls, and by
+   * plugins that run a tool through the session's own MCP connection. Not gated by experimentalMcpApps:
+   * the route is protected by the server's auth, and an authenticated client can already run tools.
+   */
+  export const callTool = (mcp: MCP.Interface, _flags: RuntimeFlags.Info) =>
     Effect.fn("McpHttpApi.callTool")(function* (ctx: { payload: typeof CallToolPayload.Type }) {
-      if (!flags.experimentalMcpApps) return yield* Effect.fail(new HttpApiError.NotFound({}))
       const client = (yield* mcp.clients())[ctx.payload.server]
       if (!client) return yield* Effect.fail(new HttpApiError.NotFound({}))
       const result = yield* Effect.tryPromise(() =>
