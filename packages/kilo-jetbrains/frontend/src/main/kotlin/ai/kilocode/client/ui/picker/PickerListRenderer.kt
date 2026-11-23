@@ -43,7 +43,7 @@ internal abstract class PickerListRenderer<T>(
             return point.x in left..(left + size)
         }
 
-        private fun trailingInset(list: JList<*>): Int {
+        internal fun trailingInset(list: JList<*>): Int {
             if (!NewUI.isEnabled()) return 0
             val inner = JBUI.CurrentTheme.Popup.Selection.innerInsets()
             val edge = JBUI.CurrentTheme.Popup.Selection.LEFT_RIGHT_INSET.get()

@@ -47,6 +47,9 @@ describe("advertised tool schemas stay provider-compatible", () => {
               const combinator = (["anyOf", "oneOf", "allOf"] as const).find((key) => schema[key] !== undefined)
               if (schema.type !== "object") return [`${tool.id}: input_schema.type is ${String(schema.type)}`]
               if (combinator) return [`${tool.id}: input_schema has top-level ${combinator}`]
+              // zod 4.6+ emits non-standard string formats that strict providers reject.
+              const format = JSON.stringify(schema).match(/"format":"(starts_with|ends_with|includes)"/)
+              if (format) return [`${tool.id}: input_schema uses non-standard format ${format[1]}`]
               return []
             })
 

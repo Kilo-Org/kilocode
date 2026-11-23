@@ -12,6 +12,8 @@ import ai.kilocode.rpc.dto.AgentConfigPatchDto
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CompactionPatchDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
+import ai.kilocode.rpc.dto.HostedIDs
+import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.rpc.dto.RetentionPatchDto
 import ai.kilocode.rpc.dto.SessionActivityKindDto
 import ai.kilocode.rpc.dto.WatcherPatchDto
@@ -19,6 +21,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
@@ -34,6 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
@@ -346,6 +350,101 @@ class KiloBackendAppServiceTest {
     }
 
     @Test
+    fun `startup reads the telemetry opt-out from the config file`() = runBlocking {
+        mock.config = """{"experimental":{"openTelemetry":false}}"""
+        val svc = create()
+        svc.connect()
+
+        withTimeout(5_000) {
+            svc.appState.first { it is KiloAppState.Ready && it.data.config.telemetry == false }
+        }
+
+        assertEquals(false, svc.config?.telemetry)
+    }
+
+    @Test
+    fun `older CLI still reaches ready with telemetry settings unavailable`() = runBlocking {
+        mock.telemetryStatus = 404
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+        assertTrue(mock.awaitRequestCount("/telemetry/level", 1))
+        assertEquals(null, svc.config?.telemetry)
+        assertEquals(null, mock.lastTelemetryLevelBody)
+    }
+
+    @Test
+    fun `effective level stays off after saving and refreshing an opt-in under a host opt-out`() = runBlocking {
+        mock.telemetryAllowed = false
+        mock.config = """{"model":"initial","experimental":{"openTelemetry":true}}"""
+        val svc = create()
+        svc.connect()
+        withTimeout(5_000) {
+            svc.appState.first { it is KiloAppState.Ready && it.data.config.telemetry == false }
+        }
+
+        val state = svc.setTelemetryLevel(true)
+        assertEquals("""{"enabled":true}""", mock.lastTelemetryLevelBody)
+        assertEquals(false, appStateDto(state).config?.telemetry)
+        mock.awaitSseConnection()
+        mock.config = """{"model":"updated","experimental":{"openTelemetry":true}}"""
+        mock.pushEvent("global.config.updated", """{"type":"global.config.updated"}""")
+        val refreshed = withTimeout(5_000) {
+            svc.appState.first { it is KiloAppState.Ready && it.data.config.model == "updated" }
+        }
+        assertEquals(false, appStateDto(refreshed).config?.telemetry)
+    }
+
+    @Test
+    fun `core telemetry save updates state even when config reads fail`() = runBlocking {
+        mock.config = """{"model":"initial","experimental":{"openTelemetry":true}}"""
+        val svc = create()
+        svc.connect()
+        ready(svc)
+        mock.configStatus = 500
+        val reads = mock.requestCount("/global/config")
+
+        val state = svc.setTelemetryLevel(false)
+
+        assertEquals("""{"enabled":false}""", mock.lastTelemetryLevelBody)
+        assertEquals(false, appStateDto(state).config?.telemetry)
+        assertEquals(false, svc.config?.telemetry)
+        assertEquals("initial", svc.config?.model)
+        assertEquals(reads, mock.requestCount("/global/config"))
+    }
+
+    @Test
+    fun `telemetry save preserves config refreshed while the write was in flight`() = runBlocking {
+        mock.config = """{"model":"initial","experimental":{"openTelemetry":true}}"""
+        val svc = create()
+        svc.connect()
+        withTimeout(5_000) {
+            svc.appState.first { it is KiloAppState.Ready && it.data.config.telemetry == true }
+        }
+        mock.awaitSseConnection()
+        val gate = CountDownLatch(1)
+        mock.telemetryGate = gate
+        val requests = mock.requestCount("/telemetry/level")
+        val save = async(start = CoroutineStart.UNDISPATCHED) { svc.setTelemetryLevel(false) }
+
+        try {
+            assertTrue(mock.awaitRequestCount("/telemetry/level", requests + 1))
+            mock.config = """{"model":"updated","experimental":{"openTelemetry":true}}"""
+            mock.pushEvent("global.config.updated", """{"type":"global.config.updated"}""")
+            withTimeout(5_000) {
+                svc.appState.first { it is KiloAppState.Ready && it.data.config.model == "updated" }
+            }
+        } finally {
+            gate.countDown()
+        }
+
+        val cfg = appStateDto(save.await()).config
+        assertEquals("updated", cfg?.model)
+        assertEquals(false, cfg?.telemetry)
+    }
+
+    @Test
     fun `update config patches retention and reloads`() = runBlocking {
         val svc = create()
         svc.connect()
@@ -537,6 +636,41 @@ class KiloBackendAppServiceTest {
     }
 
     @Test
+    fun `config fetch failure logs the status and size`() = runBlocking {
+        mock.configStatus = 400
+        mock.config = """{"name":"ConfigJsonError","data":{"message":"marker-7f3a9c"}}"""
+        val svc = create()
+        svc.connect()
+
+        val state = assertNotNull(
+            withTimeoutOrNull(35_000) {
+                svc.appState.first { it is KiloAppState.Error }
+            },
+            "App startup did not fail in ${svc.appState.value}; logs=${log.messages}",
+        )
+        val err = assertIs<KiloAppState.Error>(state)
+
+        assertTrue(log.messages.none { it.contains("marker-7f3a9c") }, log.messages.toString())
+        assertTrue(
+            log.messages.any {
+                it.contains("Global config fetch failed: HTTP 400") &&
+                    it.contains("chars=") &&
+                    it.contains("ConfigJsonError")
+            },
+            log.messages.toString(),
+        )
+        val stateText = (listOf(err.message) + err.errors.mapNotNull { it.detail }).joinToString(" ")
+        assertFalse(stateText.contains("marker-7f3a9c"), stateText)
+        val detail = assertNotNull(err.errors.single { it.resource == "config" }.detail)
+        assertTrue(detail.startsWith("HTTP 400"), detail)
+        assertTrue(detail.contains("ConfigJsonError"), detail)
+        assertFalse(detail.contains("chars="), detail)
+        val lines = log.messages.count { it.contains("Global config fetch failed") }
+        assertEquals(mock.requestCount("/global/config"), lines, log.messages.toString())
+        assertTrue(log.messages.none { it.contains("response failed") }, log.messages.toString())
+    }
+
+    @Test
     fun `notifications failure transitions to Error`() = runBlocking {
         mock.notificationsStatus = 500
         mock.notifications = """{"error":"internal"}"""
@@ -549,6 +683,79 @@ class KiloBackendAppServiceTest {
 
         val err = svc.appState.value as KiloAppState.Error
         assertTrue(err.errors.any { it.resource == "notifications" })
+    }
+
+    @Test
+    fun `notification fetch failure logs the status and size`() = runBlocking {
+        mock.notificationsStatus = 500
+        mock.notifications = """{"message":"marker-7f3a9c"}"""
+        val svc = create()
+        svc.connect()
+
+        assertNotNull(
+            withTimeoutOrNull(35_000) {
+                svc.appState.first { it is KiloAppState.Error }
+            },
+            "App startup did not fail in ${svc.appState.value}; logs=${log.messages}",
+        )
+
+        assertTrue(log.messages.none { it.contains("marker-7f3a9c") }, log.messages.toString())
+        assertTrue(log.throwables.none { it.contains("marker-7f3a9c") }, log.throwables.toString())
+        assertTrue(
+            log.messages.any {
+                it.contains("Notifications fetch failed: HTTP 500:") && it.contains("chars=")
+            },
+            log.messages.toString(),
+        )
+    }
+
+    @Test
+    fun `fetch failure detail carries the error name without a size`() = runBlocking {
+        mock.notificationsStatus = 500
+        mock.notifications = """{"name":"ConfigJsonError"}"""
+        val svc = create()
+        svc.connect()
+
+        val state = assertNotNull(
+            withTimeoutOrNull(35_000) {
+                svc.appState.first { it is KiloAppState.Error }
+            },
+            "App startup did not fail in ${svc.appState.value}; logs=${log.messages}",
+        )
+        val err = assertIs<KiloAppState.Error>(state)
+        val detail = assertNotNull(err.errors.single { it.resource == "notifications" }.detail)
+
+        assertEquals("HTTP 500 ConfigJsonError", detail)
+        assertFalse(detail.contains("chars="), detail)
+        assertTrue(
+            log.messages.any { it.contains("Notifications fetch failed: HTTP 500:") && it.contains("chars=") },
+            log.messages.toString(),
+        )
+    }
+
+    @Test
+    fun `profile decode failure logs no payload`() = runBlocking {
+        mock.profile = """{"profile":"marker-7f3a9c"}"""
+        val svc = create()
+        svc.connect()
+
+        // The profile body cannot be decoded, so the load reports a profile load error.
+        assertNotNull(
+            withTimeoutOrNull(35_000) {
+                svc.appState.first { it is KiloAppState.Error }
+            },
+            "App startup did not fail in ${svc.appState.value}; logs=${log.messages}",
+        )
+
+        assertTrue(log.messages.none { it.contains("marker-7f3a9c") }, log.messages.toString())
+        assertTrue(log.throwables.none { it.contains("marker-7f3a9c") }, log.throwables.toString())
+        assertTrue(
+            log.messages.any { it.contains("Profile fetch failed: Response parse error") },
+            log.messages.toString(),
+        )
+        val err = assertIs<KiloAppState.Error>(svc.appState.value)
+        val detail = assertNotNull(err.errors.single { it.resource == "profile" }.detail)
+        assertTrue(detail.startsWith("Response parse error"), detail)
     }
 
     @Test
@@ -667,6 +874,39 @@ class KiloBackendAppServiceTest {
 
         assertNull(svc.profile)
         assertIs<KiloAppState.Ready>(svc.appState.value)
+        assertTrue(
+            log.messages.any {
+                it.contains("Profile fetch: server error — treating as unavailable: HTTP 500:") &&
+                    it.contains("chars=")
+            },
+            log.messages.toString(),
+        )
+        assertTrue(log.messages.none { it.contains("response failed") }, log.messages.toString())
+    }
+
+    @Test
+    fun `profile client failure logs one line without a second response line`() = runBlocking {
+        mock.profileStatus = 403
+        mock.profile = """{"name":"ForbiddenError"}"""
+        val svc = create()
+        svc.connect()
+
+        assertNotNull(
+            withTimeoutOrNull(35_000) {
+                svc.appState.first { it is KiloAppState.Error }
+            },
+            "App startup did not fail in ${svc.appState.value}; logs=${log.messages}",
+        )
+
+        val lines = log.messages.count { it.contains("Profile fetch failed") }
+        assertEquals(mock.requestCount("/kilo/profile"), lines, log.messages.toString())
+        assertTrue(
+            log.messages.any {
+                it.contains("Profile fetch failed: HTTP 403:") && it.contains("chars=")
+            },
+            log.messages.toString(),
+        )
+        assertTrue(log.messages.none { it.contains("response failed") }, log.messages.toString())
     }
 
     @Test
@@ -1094,6 +1334,288 @@ class KiloBackendAppServiceTest {
         assertNull(appStateDto(svc.appState.value).profile)
     }
 
+    private val hostedSession = HostedIDs.session("cloud", "wrk_1", "ses_cloud")
+    private val hostedNativeFeed = "/event?workspace=wrk_att_test"
+    private val hostedSystemFeed = "/cloud-agent/event?workspace=wrk_att_test"
+    private val hostedAttachPath = "/kilocode/session-host/session/cloud/ses_cloud/attach"
+
+    /** Opens both hosted SSE feeds for one retained session, so logout has live state to drop. */
+    private suspend fun hostedLive(svc: KiloBackendAppService) {
+        scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            svc.hosted.systemEvents(HostedWorkspaceRefDto("cloud", "wrk_1"), "ses_cloud", null).collect {}
+        }
+        svc.hosted.retain(hostedSession, null)
+        svc.hosted.messages(hostedSession, null)
+        assertTrue(mock.awaitFeed(hostedNativeFeed), "native stream did not open")
+        assertTrue(mock.awaitFeed(hostedSystemFeed), "system stream did not open")
+        assertTrue(mock.requestCount(hostedAttachPath) >= 1, "no attachment was minted")
+    }
+
+    @Test
+    fun `logout resets hosted session state and asks the CLI to rebuild`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+        ready(svc)
+        hostedLive(svc)
+
+        mock.authRemoveStatus = 200
+        val ok = svc.logout()
+
+        assertTrue(ok)
+        assertEquals("/auth/kilo", mock.lastAuthDeletePath)
+        assertEquals(1, mock.requestCount("/global/dispose"))
+        assertTrue(mock.awaitRequestCount("/kilocode/session-host/attachment/wrk_att_test", 1), "attachment was not detached")
+        assertTrue(svc.hosted.statuses.value.isEmpty(), "hosted statuses survived the sign-out")
+        // The manager cancelled both transports, so the mock observes the client closing each feed.
+        assertTrue(mock.awaitFeedClosed(hostedNativeFeed), "native stream stayed open")
+        assertTrue(mock.awaitFeedClosed(hostedSystemFeed), "system stream stayed open")
+        assertNull(svc.profile)
+        assertNull(appStateDto(svc.appState.value).profile)
+    }
+
+    @Test
+    fun `logout leaves the hosted manager usable for the next sign-in`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+        ready(svc)
+        hostedLive(svc)
+        val attaches = mock.requestCount(hostedAttachPath)
+
+        svc.logout()
+        assertTrue(mock.awaitFeedClosed(hostedNativeFeed), "native stream stayed open")
+
+        // A later sign-in is a different account: a fresh attachment must be minted through the
+        // restarted manager and stream from it, not from the signed-out one.
+        mock.hostedAttach =
+            """{"attachmentID":"wrk_att_next","session":{"providerID":"cloud","sessionID":"ses_cloud"},"expiresAt":${System.currentTimeMillis() + 600_000}}"""
+        svc.hosted.retain(hostedSession, null)
+        svc.hosted.messages(hostedSession, null)
+
+        assertTrue(mock.awaitFeed("/event?workspace=wrk_att_next"), "restarted manager did not open a native stream")
+        assertTrue(mock.lastHostedMessagePath.orEmpty().contains("workspace=wrk_att_next"))
+        assertEquals(attaches + 1, mock.requestCount(hostedAttachPath))
+        assertEquals(1, mock.feedCount(hostedNativeFeed), "signed-out native feed reopened")
+    }
+
+    @Test
+    fun `refused logout leaves hosted state and CLI untouched`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+        ready(svc)
+        hostedLive(svc)
+        val attaches = mock.requestCount(hostedAttachPath)
+
+        mock.authRemoveStatus = 200
+        mock.authRemoveBody = "false"
+        assertFalse(svc.logout())
+
+        assertEquals("/auth/kilo", mock.lastAuthDeletePath)
+        assertEquals(0, mock.requestCount("/global/dispose"))
+        assertEquals(0, mock.feedClosedCount(hostedNativeFeed))
+        assertEquals(0, mock.feedClosedCount(hostedSystemFeed))
+        // The still-valid attachment keeps serving the retained session.
+        svc.hosted.messages(hostedSession, null)
+        assertTrue(mock.lastHostedMessagePath.orEmpty().contains("workspace=wrk_att_test"))
+        assertEquals(attaches, mock.requestCount(hostedAttachPath))
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+    }
+
+    @Test
+    fun `logout completes while the CLI stalls the global dispose`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+        ready(svc)
+        hostedLive(svc)
+
+        // A stalled CLI must not hold sign-out open: the dispose call runs on a bounded client, so
+        // logout returns and the hosted state is dropped regardless.
+        val gate = CountDownLatch(1)
+        mock.disposeGate = gate
+        try {
+            assertTrue(
+                withTimeout(20_000) { svc.logout() },
+                "logout did not return while the CLI stalled the dispose",
+            )
+            assertTrue(mock.awaitFeedClosed(hostedNativeFeed), "native stream stayed open")
+            assertTrue(svc.hosted.statuses.value.isEmpty(), "hosted statuses survived the sign-out")
+            assertNull(svc.profile)
+        } finally {
+            gate.countDown()
+        }
+    }
+
+    @Test
+    fun `logout clears the signed-in snapshot before the global dispose`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+        ready(svc)
+        hostedLive(svc)
+
+        // The dispose is held open, so the snapshot must already be cleared by the time the CLI
+        // receives it: the rebuild is best-effort, the credential removal is final.
+        val gate = CountDownLatch(1)
+        mock.disposeGate = gate
+        val call = async(Dispatchers.IO) { svc.logout() }
+        try {
+            assertTrue(mock.awaitRequestCount("/global/dispose", 1), "the dispose request never arrived")
+            assertNull(svc.profile, "the signed-in profile survived the stalled dispose")
+            assertNull(appStateDto(svc.appState.value).profile, "the ready snapshot kept the profile")
+            assertTrue(svc.hosted.statuses.value.isEmpty(), "hosted statuses survived the sign-out")
+        } finally {
+            gate.countDown()
+        }
+        assertTrue(call.await(), "logout reported failure")
+    }
+
+    @Test
+    fun `logout propagates cancellation while the global dispose is stalled`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+        ready(svc)
+        hostedLive(svc)
+
+        // A cancelled caller must not be reported as a completed sign-out.
+        val gate = CountDownLatch(1)
+        mock.disposeGate = gate
+        val reached = CompletableDeferred<Boolean>()
+        val job = scope.launch {
+            svc.logout()
+            reached.complete(true)
+        }
+        try {
+            assertTrue(mock.awaitRequestCount("/global/dispose", 1), "the dispose request never arrived")
+            job.cancel()
+        } finally {
+            gate.countDown()
+        }
+        job.join()
+        assertFalse(reached.isCompleted, "sign-out swallowed the cancellation")
+        assertTrue(job.isCancelled, "sign-out swallowed the cancellation")
+    }
+
+    @Test
+    fun `logout clears hosted session state while a restart holds the lifecycle mutex`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+        ready(svc)
+        hostedLive(svc)
+        // A live status makes the "cleared" assertion below about state that really existed.
+        mock.pushFeed(
+            hostedNativeFeed,
+            """{"type":"session.status","properties":{"sessionID":"ses_cloud","status":{"type":"busy"}}}""",
+        )
+        withTimeout(10_000) { svc.hosted.statuses.first { it[hostedSession]?.type == "busy" } }
+
+        val profiles = mock.requestCount("/kilo/profile")
+        val gate = CountDownLatch(1)
+        var restarter: Job? = null
+        try {
+            // Park an app reload behind the gate. A reload already blocked in a CLI call cannot be
+            // cancelled, so the restart's cancelAndJoin keeps the lifecycle mutex held.
+            mock.responseGate = gate
+            mock.pushEvent("global.disposed", "{}")
+            assertTrue(mock.awaitRequestCount("/kilo/profile", profiles + 1), "the reload never reached the CLI")
+
+            restarter = scope.launch { svc.restart() }
+            val held = withTimeoutOrNull(10_000) {
+                while (log.messages.none { it.contains("restart: acquired lifecycle mutex") }) delay(10)
+                true
+            }
+            assertNotNull(held, "the restart never took the lifecycle mutex; logs=${log.messages}")
+
+            // Release the field only: the parked request keeps its latch, so the mutex stays held
+            // while sign-out's own calls are free to complete.
+            mock.responseGate = null
+            assertTrue(svc.logout(), "sign-out reported failure while the lifecycle was busy")
+            assertTrue(restarter.isActive, "the restart had already finished, so the mutex was not held")
+            assertTrue(
+                log.messages.any { it.contains("Sign-out: lifecycle busy") },
+                "sign-out waited for the mutex instead of dropping the hosted state",
+            )
+            assertNull(appStateDto(svc.appState.value).profile, "the signed-out snapshot kept the profile")
+            assertTrue(svc.hosted.statuses.value.isEmpty(), "hosted statuses survived the sign-out")
+            assertTrue(mock.awaitFeedClosed(hostedNativeFeed), "native stream stayed open")
+            assertTrue(mock.awaitFeedClosed(hostedSystemFeed), "system stream stayed open")
+            assertTrue(
+                mock.awaitRequestCount("/kilocode/session-host/attachment/wrk_att_test", 1),
+                "attachment was not detached",
+            )
+        } finally {
+            mock.responseGate = null
+            gate.countDown()
+            restarter?.let { withTimeoutOrNull(20_000) { it.join() } }
+        }
+    }
+
+    @Test
+    fun `successful organization switch starts a fresh hosted context`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+        ready(svc)
+        hostedLive(svc)
+        mock.pushFeed(
+            hostedNativeFeed,
+            """{"type":"session.status","properties":{"sessionID":"ses_cloud","status":{"type":"busy"}}}""",
+        )
+        withTimeout(10_000) { svc.hosted.statuses.first { it[hostedSession]?.type == "busy" } }
+        val attaches = mock.requestCount(hostedAttachPath)
+
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":"org_1"}"""
+        svc.setOrganization("org_1")
+
+        // A switch starts a fresh hosted context: the earlier streams stop and are not reused.
+        assertTrue(mock.awaitFeedClosed(hostedNativeFeed), "native stream stayed open")
+        assertTrue(mock.awaitFeedClosed(hostedSystemFeed), "system stream stayed open")
+        assertTrue(svc.hosted.statuses.value.isEmpty(), "hosted statuses survived the switch")
+        assertTrue(
+            mock.awaitRequestCount("/kilocode/session-host/attachment/wrk_att_test", 1),
+            "attachment was not detached",
+        )
+
+        svc.hosted.retain(hostedSession, "org_1")
+        svc.hosted.messages(hostedSession, "org_1")
+
+        assertEquals(attaches + 1, mock.requestCount(hostedAttachPath))
+        assertTrue(mock.lastHostedAttachPath.orEmpty().contains("organizationID=org_1"))
+    }
+
+    @Test
+    fun `refused organization switch leaves hosted state intact`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+        ready(svc)
+        hostedLive(svc)
+        mock.pushFeed(
+            hostedNativeFeed,
+            """{"type":"session.status","properties":{"sessionID":"ses_cloud","status":{"type":"busy"}}}""",
+        )
+        withTimeout(10_000) { svc.hosted.statuses.first { it[hostedSession]?.type == "busy" } }
+        val attaches = mock.requestCount(hostedAttachPath)
+
+        mock.organizationSetStatus = 500
+        var thrown = false
+        try {
+            svc.setOrganization("org_1")
+        } catch (_: Exception) {
+            thrown = true
+        }
+
+        assertTrue(thrown, "setOrganization with 500 should throw")
+        assertEquals(0, mock.feedClosedCount(hostedNativeFeed))
+        assertEquals(0, mock.feedClosedCount(hostedSystemFeed))
+        assertEquals("busy", svc.hosted.statuses.value[hostedSession]?.type)
+        assertEquals(attaches, mock.requestCount(hostedAttachPath))
+    }
+
     @Test
     fun `set organization failure leaves profile unchanged`() = runBlocking {
         mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
@@ -1163,5 +1685,298 @@ class KiloBackendAppServiceTest {
             thrown = true
         }
         assertTrue(thrown, "completeLogin with 500 callback status should throw")
+    }
+
+    // ------ Account step profile sync tests ------
+
+    @Test
+    fun `complete login keeps the account when the profile read fails`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        mock.profileStatus = 500
+        val failure = assertFailsWith<LoadFailure> { svc.completeLogin(null) }
+        assertEquals("profile", failure.error.resource)
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+        assertEquals("alice@test.com", appStateDto(svc.appState.value).profile?.email)
+    }
+
+    @Test
+    fun `set organization keeps the account when the profile read fails`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        mock.profileStatus = 500
+        val failure = assertFailsWith<LoadFailure> { svc.setOrganization("org_1") }
+        assertEquals("profile", failure.error.resource)
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+        assertEquals("alice@test.com", appStateDto(svc.appState.value).profile?.email)
+    }
+
+    @Test
+    fun `complete login keeps the account when the profile read returns 400`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        mock.profileStatus = 400
+        val failure = assertFailsWith<LoadFailure> { svc.completeLogin(null) }
+        assertEquals("profile", failure.error.resource)
+        assertEquals(400, failure.error.status)
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+        assertEquals("alice@test.com", appStateDto(svc.appState.value).profile?.email)
+    }
+
+    @Test
+    fun `set organization keeps the account when the profile read returns 400`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        mock.profileStatus = 400
+        val failure = assertFailsWith<LoadFailure> { svc.setOrganization("org_1") }
+        assertEquals("profile", failure.error.resource)
+        assertEquals(400, failure.error.status)
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+        assertEquals("alice@test.com", appStateDto(svc.appState.value).profile?.email)
+    }
+
+    @Test
+    fun `complete login clears the account when nobody is signed in`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        assertNotNull(svc.profile, "the account must be published before the step")
+        assertNotNull(appStateDto(svc.appState.value).profile, "the account must be published before the step")
+        mock.profileStatus = 401
+        assertNull(svc.completeLogin(null))
+        assertNull(svc.profile)
+        assertNull(appStateDto(svc.appState.value).profile)
+    }
+
+    @Test
+    fun `set organization clears the account when nobody is signed in`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        assertNotNull(svc.profile, "the account must be published before the step")
+        assertNotNull(appStateDto(svc.appState.value).profile, "the account must be published before the step")
+        mock.profileStatus = 401
+        assertNull(svc.setOrganization("org_1"))
+        assertNull(svc.profile)
+        assertNull(appStateDto(svc.appState.value).profile)
+    }
+
+    @Test
+    fun `refresh profile publishes no account when the profile read fails`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        mock.profileStatus = 500
+        assertNull(svc.refreshProfile())
+        assertNull(svc.profile)
+        assertNull(appStateDto(svc.appState.value).profile)
+    }
+
+    @Test
+    fun `startup keeps the app ready when the profile read fails`() = runBlocking {
+        mock.profileStatus = 500
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        assertNull(svc.profile)
+        assertNull(appStateDto(svc.appState.value).profile)
+    }
+
+    // ------ Reload after an account step ------
+
+    /**
+     * An account step is followed by a CLI instance disposal, and the reload it triggers re-reads
+     * the profile. A read that does not complete keeps the account the service already holds.
+     */
+    @Test
+    fun `reload after an account step keeps the account when the profile read fails`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+        assertEquals("alice@test.com", svc.profile?.profile?.email, "the account must be published before the reload")
+        mock.awaitSseConnection()
+
+        mock.profileStatus = 503
+        mock.pushEvent("global.disposed", """{"type":"global.disposed"}""")
+        awaitReload()
+
+        assertIs<KiloAppState.Ready>(svc.appState.value, "the reload must not fail the app; logs=${log.messages}")
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+        assertEquals("alice@test.com", appStateDto(svc.appState.value).profile?.email)
+    }
+
+    @Test
+    fun `reload after an account step keeps the account when the profile read returns 400`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+        assertEquals("alice@test.com", svc.profile?.profile?.email, "the account must be published before the reload")
+        mock.awaitSseConnection()
+
+        mock.profileStatus = 400
+        mock.pushEvent("global.disposed", """{"type":"global.disposed"}""")
+        awaitReload()
+
+        assertIs<KiloAppState.Ready>(svc.appState.value, "the reload must not fail the app; logs=${log.messages}")
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+        assertEquals("alice@test.com", appStateDto(svc.appState.value).profile?.email)
+    }
+
+    /**
+     * A read that reports an error is a read that could not complete, not a signed-out answer, so a
+     * reload keeps the account it holds instead of failing the whole load over an optional resource.
+     */
+    @Test
+    fun `reload after an account step keeps the account when the profile read reports an error`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+        assertEquals("alice@test.com", svc.profile?.profile?.email, "the account must be published before the reload")
+        mock.awaitSseConnection()
+
+        // A status the tolerant read does not map to a signed-out answer, so it reports an error.
+        mock.profileStatus = 429
+        mock.pushEvent("global.disposed", """{"type":"global.disposed"}""")
+        awaitReload()
+
+        assertIs<KiloAppState.Ready>(svc.appState.value, "the reload must not fail the app; logs=${log.messages}")
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+        assertEquals("alice@test.com", appStateDto(svc.appState.value).profile?.email)
+    }
+
+    /**
+     * A definitive 401 is a signed-out answer: the reload publishes no account.
+     */
+    @Test
+    fun `reload clears the account when the profile read answers signed out`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+        assertNotNull(svc.profile, "the account must be published before the reload")
+        mock.awaitSseConnection()
+
+        mock.profileStatus = 401
+        mock.pushEvent("global.disposed", """{"type":"global.disposed"}""")
+        awaitReload()
+
+        assertIs<KiloAppState.Ready>(svc.appState.value, "the reload must not fail the app; logs=${log.messages}")
+        assertNull(svc.profile)
+        assertNull(appStateDto(svc.appState.value).profile)
+    }
+
+    /**
+     * Wait for the reload a disposed event triggers. The completion log lands after Ready is
+     * published, so it also settles the state before a test reads it.
+     */
+    private suspend fun awaitReload() {
+        assertTrue(
+            log.awaitMessage(20_000, count = 2) { it == "INFO: Application started — config, profile, notifications loaded" },
+            "a disposed event must reload the app; logs=${log.messages}",
+        )
+    }
+
+    // ------ Refresh account tests ------
+
+    @Test
+    fun `refresh account keeps the account when the profile read fails`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+
+        mock.profileStatus = 500
+        val failure = assertFailsWith<LoadFailure> { svc.refreshAccount() }
+        assertEquals("profile", failure.error.resource)
+        assertEquals(500, failure.error.status)
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+        assertEquals("alice@test.com", appStateDto(svc.appState.value).profile?.email)
+    }
+
+    @Test
+    fun `refresh account keeps the account when the profile read returns 400`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+
+        mock.profileStatus = 400
+        val failure = assertFailsWith<LoadFailure> { svc.refreshAccount() }
+        assertEquals("profile", failure.error.resource)
+        assertEquals(400, failure.error.status)
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+        assertEquals("alice@test.com", appStateDto(svc.appState.value).profile?.email)
+    }
+
+    @Test
+    fun `refresh account clears the account when nobody is signed in`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        assertNotNull(svc.profile, "the account must be published before the refresh")
+        assertNotNull(appStateDto(svc.appState.value).profile, "the account must be published before the refresh")
+        mock.profileStatus = 401
+        assertNull(svc.refreshAccount())
+        assertNull(svc.profile)
+        assertNull(appStateDto(svc.appState.value).profile)
+    }
+
+    @Test
+    fun `refresh account publishes the account when the read succeeds`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        mock.profile = """{"profile":{"email":"bob@test.com","name":"Bob"},"balance":null,"currentOrgId":null}"""
+        val fresh = svc.refreshAccount()
+        assertNotNull(fresh)
+        assertEquals("bob@test.com", fresh.profile.email)
+        assertEquals("bob@test.com", svc.profile?.profile?.email)
+        assertEquals("bob@test.com", appStateDto(svc.appState.value).profile?.email)
     }
 }

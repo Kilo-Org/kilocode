@@ -55,6 +55,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     val diffs = mutableMapOf<String, MutableList<DiffFileDto>>()
     val diffSides = mutableMapOf<String, DiffFileDto>()
     var historyGate: CompletableDeferred<Unit>? = null
+    var historyThrows: Exception? = null
     var historyCalls = 0
         private set
 
@@ -100,6 +101,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
      * fetch and its EDT commit, then release the gate to observe whether the stale snapshot won.
      */
     var pendingGate: CompletableDeferred<Unit>? = null
+    var pendingError: Exception? = null
     var pendingPermissionCalls = 0
         private set
     var pendingQuestionCalls = 0
@@ -139,6 +141,10 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     val renames = mutableListOf<Triple<String, String, String>>()
     var renameThrows: Exception? = null
     val lists = mutableListOf<String>()
+    var listThrows: Exception? = null
+    val finds = mutableListOf<Pair<String, String>>()
+    val missing = mutableSetOf<String>()
+    var findThrows: Exception? = null
     val recentCalls = mutableListOf<Pair<String, Int>>()
     val cloudCalls = mutableListOf<CloudCall>()
     val imports = mutableListOf<Pair<String, String>>()
@@ -147,6 +153,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
 
     /** When set, [create] throws it after incrementing [creates] — simulates a paused backend. */
     var createThrows: Exception? = null
+    var createGate: CompletableDeferred<Unit>? = null
 
     /** Fork call tracking. [forked] is what [fork] returns; when null it derives one from the source. */
     val forks = java.util.concurrent.CopyOnWriteArrayList<ForkCall>()
@@ -168,6 +175,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     override suspend fun create(directory: String): SessionDto {
         assertNotEdt("create")
         creates++
+        createGate?.await()
         createThrows?.let { throw it }
         return session
     }
@@ -184,6 +192,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     override suspend fun list(directory: String): SessionListDto {
         assertNotEdt("list")
         lists.add(directory)
+        listThrows?.let { throw it }
         return SessionListDto(listed.toList(), emptyMap())
     }
 
@@ -201,6 +210,13 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     override suspend fun get(id: String, directory: String): SessionDto {
         assertNotEdt("get")
         return session
+    }
+
+    override suspend fun find(id: String, directory: String): SessionDto? {
+        assertNotEdt("find")
+        finds.add(id to directory)
+        findThrows?.let { throw it }
+        return session.takeUnless { id in missing }
     }
 
     override suspend fun delete(id: String, directory: String) {
@@ -330,6 +346,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
         assertNotEdt("messages")
         historyCalls++
         historyGate?.await()
+        historyThrows?.let { throw it }
         return histories[id]?.toList() ?: history.toList()
     }
 
@@ -364,24 +381,42 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
 
     var replyPermissionThrows: Exception? = null
 
+    /** Restricts [replyPermissionThrows] to these request ids; empty means every request. */
+    var replyPermissionThrowsFor: Set<String> = emptySet()
+
+    /** Every reply attempt, including the refused ones, in call order. */
+    val permissionReplyAttempts = mutableListOf<String>()
+
     override suspend fun replyPermission(requestId: String, directory: String, reply: PermissionReplyDto) {
         assertNotEdt("replyPermission")
-        replyPermissionThrows?.let { throw it }
+        permissionReplyAttempts.add(requestId)
+        replyPermissionThrows?.let { failure ->
+            if (replyPermissionThrowsFor.isEmpty() || requestId in replyPermissionThrowsFor) throw failure
+        }
         permissionReplies.add(Triple(requestId, directory, reply))
     }
 
+    var permissionRulesThrows: Exception? = null
+
     override suspend fun savePermissionRules(requestId: String, directory: String, rules: PermissionAlwaysRulesDto) {
         assertNotEdt("savePermissionRules")
+        permissionRulesThrows?.let { throw it }
         permissionRulesSaved.add(Triple(requestId, directory, rules))
     }
 
+    var replyQuestionThrows: Exception? = null
+
     override suspend fun replyQuestion(requestId: String, directory: String, answers: QuestionReplyDto) {
         assertNotEdt("replyQuestion")
+        replyQuestionThrows?.let { throw it }
         questionReplies.add(Triple(requestId, directory, answers))
     }
 
+    var rejectQuestionThrows: Exception? = null
+
     override suspend fun rejectQuestion(requestId: String, directory: String) {
         assertNotEdt("rejectQuestion")
+        rejectQuestionThrows?.let { throw it }
         questionRejects.add(requestId to directory)
     }
 
@@ -389,6 +424,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
         assertNotEdt("pendingPermissions")
         pendingPermissionCalls++
         pendingGate?.await()
+        pendingError?.let { throw it }
         return pendingPermissionList.toList()
     }
 
@@ -396,6 +432,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
         assertNotEdt("pendingQuestions")
         pendingQuestionCalls++
         pendingGate?.await()
+        pendingError?.let { throw it }
         return pendingQuestionList.toList()
     }
 

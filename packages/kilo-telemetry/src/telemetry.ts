@@ -90,10 +90,23 @@ export interface McpAuthCompletedProperties extends McpAuthStartedProperties {
   authHandler?: string
 }
 
+/** One marketplace item installed into, or removed from, one config scope. Never carries parameter values. */
+export interface MarketplaceItemProperties extends Record<string, unknown> {
+  itemId: string
+  itemType: string
+  itemName?: string
+  target: "project" | "global"
+  /** `custom` when `KILO_MARKETPLACE_BASE_URL` points at a non-public catalog. */
+  catalog: "public" | "custom"
+  hasParameters?: boolean
+  installationMethodName?: string
+}
+
 export namespace Telemetry {
   let initialized = false
   let startTime = 0
   let probe = 0
+  let host: boolean | undefined
   let props: TelemetryProperties = {
     appName: "kilo-cli",
     appVersion: "unknown",
@@ -122,8 +135,7 @@ export namespace Telemetry {
 
     Client.init(options.dataPath)
 
-    const level = process.env.KILO_TELEMETRY_LEVEL
-    const enabled = level ? level === "all" : options.enabled
+    const enabled = level(options.enabled)
     Client.setEnabled(enabled)
 
     await Promise.all([Identity.getMachineId(), enabled ? refreshConda() : Promise.resolve()])
@@ -132,12 +144,26 @@ export namespace Telemetry {
     startTime = Date.now()
   }
 
-  export function setEnabled(value: boolean) {
-    if (value === Client.isEnabled()) return
-    Client.setEnabled(value)
+  export function level(configured: boolean): boolean {
+    const env = process.env.KILO_TELEMETRY_LEVEL?.trim().toLowerCase()
+    const allowed = !env || env === "all" || env === "on" || env === "true" || env === "1"
+    return configured && allowed && (host ?? process.env.KILO_TELEMETRY_HOST_DISABLED !== "1")
+  }
+
+  // The editor can lift its own startup restriction, but not a config or environment opt-out.
+  export function setHostEnabled(enabled: boolean, configured: boolean) {
+    host = enabled
+    setEnabled(configured)
+  }
+
+  export function setEnabled(configured: boolean) {
+    const enabled = level(configured)
+    if (enabled === Client.isEnabled()) return enabled
+    Client.setEnabled(enabled)
     delete props.aauClientToken
-    if (value) void refreshConda()
+    if (enabled) void refreshConda()
     else probe++
+    return enabled
   }
 
   async function refreshConda() {
@@ -331,6 +357,15 @@ export namespace Telemetry {
 
   export function trackMcpAuthCompleted(properties: McpAuthCompletedProperties) {
     track(TelemetryEvent.MCP_AUTH_COMPLETED, properties)
+  }
+
+  // Marketplace
+  export function trackMarketplaceItemInstalled(properties: MarketplaceItemProperties) {
+    track(TelemetryEvent.MARKETPLACE_ITEM_INSTALLED, properties)
+  }
+
+  export function trackMarketplaceItemRemoved(properties: MarketplaceItemProperties) {
+    track(TelemetryEvent.MARKETPLACE_ITEM_REMOVED, properties)
   }
 
   // Remote

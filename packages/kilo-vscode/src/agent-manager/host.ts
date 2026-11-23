@@ -187,11 +187,22 @@ export interface Host {
   /** Show an info, warning, or error notification. */
   notify(kind: "info" | "warning" | "error", msg: string): void
 
+  /** Show a message with action buttons; resolves to the chosen action, or undefined when dismissed. */
+  choose(kind: "info" | "error", message: string, actions: readonly string[]): Promise<string | undefined>
+
   /** Reveal a path in the OS file manager. A no-op (logged) on a remote workspace. */
   revealInOS(path: string): void
 
-  /** Run a cancellable background task behind a progress notification. */
-  withProgress<T>(title: string, task: (cancelled: () => boolean) => Promise<T>): Promise<T>
+  /**
+   * Run a cancellable background task behind one progress notification. The
+   * report callback updates that same entry, so real stage events move one
+   * visible indicator instead of spawning new notifications.
+   */
+  withProgress<T>(
+    title: string,
+    task: (cancelled: () => boolean, report: (message: string) => void) => Promise<T>,
+    opts?: { cancellable?: boolean },
+  ): Promise<T>
 
   /** Open a text document in an editor (e.g. setup script). */
   openDocument(path: string): Promise<void>

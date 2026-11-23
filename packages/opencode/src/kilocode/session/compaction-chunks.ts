@@ -29,6 +29,43 @@ const UNKNOWN = 50_000
 export namespace KiloCompactionChunks {
   export const EMPTY_SUMMARY =
     "Compaction did not run: the model returned an empty summary. Retry with /compact. If it keeps failing, start a new session to continue."
+  export const TRUNCATED_SUMMARY =
+    "Compaction did not run: the summary was cut off at the output limit. Retry with /compact. If it keeps failing, start a new session to continue."
+
+  export function incomplete(
+    error: MessageV2.Assistant["error"],
+  ): error is Extract<NonNullable<MessageV2.Assistant["error"]>, { name: "APIError" }> {
+    return (
+      error?.name === "APIError" && (error.data.message === EMPTY_SUMMARY || error.data.message === TRUNCATED_SUMMARY)
+    )
+  }
+
+  export function recover(input: {
+    result: SessionProcessor.Result
+    message: MessageV2.Assistant
+    session: Pick<Session.Interface, "removePart" | "updateMessage">
+  }) {
+    return Effect.gen(function* () {
+      if (input.message.finish !== "length") return input.result
+      const parts = yield* MessageV2.parts(input.message.id)
+      for (const part of parts)
+        yield* input.session.removePart({
+          sessionID: input.message.sessionID,
+          messageID: input.message.id,
+          partID: part.id,
+        })
+      const stopped = input.result === "stop"
+      input.message.finish = stopped ? "error" : undefined
+      input.message.time.completed = stopped ? Date.now() : undefined
+      if (stopped && !input.message.error)
+        input.message.error = new MessageV2.APIError({
+          message: TRUNCATED_SUMMARY,
+          isRetryable: true,
+        }).toObject()
+      yield* input.session.updateMessage(input.message)
+      return stopped ? ("stop" as const) : ("compact" as const)
+    })
+  }
 
   type Chunk = {
     index: number
@@ -252,13 +289,17 @@ export namespace KiloCompactionChunks {
   function run(input: Input & { data: LLM.StreamInput["messages"]; text: string }) {
     return Effect.gen(function* () {
       const msg = yield* input.session.updateMessage(assistant({ base: input.target, sessionID: input.sessionID }))
-      const mdl = model(input.model, input.outputTokenMax)
-      const worker = yield* input.processors.create({ assistantMessage: msg, sessionID: input.sessionID, model: mdl })
-      const opts = input.agent.options
+      const worker = yield* input.processors.create({
+        assistantMessage: msg,
+        sessionID: input.sessionID,
+        model: input.model,
+      })
+      const opts = { ...input.agent.options }
       // agent.options feeds into providerOptions; strip maxOutputTokens
       // so it does not leak into the wire body. The output cap is enforced
-      // independently via the constrained model and llm.ts re-cap.
-      const agent = { ...input.agent, options: opts ?? {} }
+      // independently via the normal LLM request and remaining-window cap.
+      delete opts.maxOutputTokens
+      const agent = { ...input.agent, options: opts }
       const out = yield* Effect.gen(function* () {
         const result = yield* worker.process({
           user: input.user,
@@ -267,12 +308,13 @@ export namespace KiloCompactionChunks {
           tools: {},
           system: [],
           messages: [...input.data, { role: "user", content: [{ type: "text", text: input.text }] }],
-          model: mdl,
+          model: input.model,
         })
         const parts = yield* MessageV2.parts(worker.message.id)
         return {
           result,
           output: text(worker.message, parts),
+          finish: worker.message.finish,
           error: worker.message.error ?? worker.compactError?.(),
         }
       }).pipe(
@@ -282,17 +324,16 @@ export namespace KiloCompactionChunks {
       )
       const result = out.result
       const output = out.output
-      if (result !== "continue") return { result, output: undefined, error: out.error }
-      if (!output)
+      if (out.error || (result !== "continue" && out.finish !== "length"))
+        return { result, output: undefined, error: out.error }
+      if (!output || out.finish === "length")
         return {
           result: "stop" as const,
           output: undefined,
           error:
-            out.error ??
-            new MessageV2.APIError({
-              message: EMPTY_SUMMARY,
-              isRetryable: true,
-            }).toObject(),
+            out.finish === "length"
+              ? new MessageV2.APIError({ message: TRUNCATED_SUMMARY, isRetryable: true }).toObject()
+              : (out.error ?? new MessageV2.APIError({ message: EMPTY_SUMMARY, isRetryable: true }).toObject()),
         }
       return { result, output, error: undefined }
     })
@@ -350,7 +391,11 @@ export namespace KiloCompactionChunks {
   ): Effect.Effect<Output, never, Database.Service> {
     return Effect.gen(function* () {
       const result = yield* run({ ...input, data: [], text: input.prompt(context({ summaries: input.summaries })) })
-      if (result.result === "continue") return result
+      if (
+        result.result === "continue" ||
+        (result.error?.name === "APIError" && result.error.data.message === TRUNCATED_SUMMARY)
+      )
+        return result
       if (input.depth >= DEPTH || input.summaries.length <= 1) return result
 
       const size = Math.ceil(input.summaries.length / 2)

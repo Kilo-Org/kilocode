@@ -314,6 +314,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "許可リストから削除",
   "ui.permission.rule.addToDenied": "拒否リストに追加",
   "ui.permission.rule.removeFromDenied": "拒否リストから削除",
+  "ui.permission.rule.fromConfig": "構成ファイルで管理されています",
   "ui.permission.toolLabel.read": "読み取り",
   "ui.permission.toolLabel.edit": "編集",
   "ui.permission.toolLabel.write": "書き込み",
@@ -817,6 +818,7 @@ export const dict = {
 
   "dialog.model.noProviders": "プロバイダーなし",
   "dialog.model.unavailable": "Kilo モデルを利用できません",
+  "dialog.model.loadFailed": "このプロジェクトのプロバイダーを読み込めませんでした。",
 
   "prompt.placeholder.connecting": "サーバーに接続中...",
   "prompt.placeholder.error": "接続に失敗しました。出力パネルを確認するか、拡張機能を再起動してください。",
@@ -868,8 +870,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "テレメトリ",
   "settings.aboutKiloCode.telemetry.description":
-    "テレメトリは VS Code の組み込みテレメトリ設定によって制御されます。無効にするには、設定 > テレメトリ > Telemetry Level に移動して「off」に設定してください。変更を適用するには、VS Code を再起動してください。",
-  "settings.aboutKiloCode.telemetry.openSettings": "テレメトリ設定を開く",
+    "このスイッチで Kilo のテレメトリ設定を変更できます。VS Code や実行環境でテレメトリが無効になっている場合は、無効のままです。",
+  "settings.aboutKiloCode.telemetry.toggle": "テレメトリを有効にする",
+  "settings.aboutKiloCode.telemetry.saveFailed": "テレメトリ設定を更新できませんでした",
 
   "settings.agentBehaviour.subtab.agents": "エージェント",
   "settings.agentBehaviour.subtab.mcpServers": "MCPサーバー",
@@ -979,6 +982,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "会話ごとのプロンプト履歴",
   "settings.experimental.conversationPromptHistory.description":
     "プロンプト履歴 (ArrowUp/ArrowDown) をすべての会話で共有せず、会話ごとに分けて保持します。",
+  "settings.experimental.agentManagerSplash.title": "Agent Manager スプラッシュ画面",
+  "settings.experimental.agentManagerSplash.description":
+    "ワークフローの例を含む新しい Agent Manager の紹介画面を試せます。変更はすぐに適用されます。",
   "settings.experimental.claudeMigration.title": "Claude Code 移行",
   "settings.experimental.claudeMigration.description":
     "サポートされるグローバル CLAUDE.md 命令、簡単なスキル、無効化された MCP 定義を一度だけインポートします。元の Claude ファイルは変更されません。有効化後にバックエンドを再起動してください。",
@@ -1329,6 +1335,8 @@ export const dict = {
   "dialog.model.notSet": "未設定",
   "profile.personalAccount": "個人アカウント",
   "profile.switchingAccount": "アカウントを切り替え中…",
+  "profile.unavailableAccount": "利用できないアカウント",
+  "profile.switchFailed": "アカウントの切り替えを確認できませんでした。",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/ja.ts
 
   "question.summary": "{{total}} 問中 {{n}} 問目",
@@ -1413,6 +1421,9 @@ export const dict = {
   "settings.saveBar.cancel": "キャンセル",
   "settings.saveBar.saving": "保存中…",
   "settings.saveBar.saveFailed": "設定を保存できませんでした",
+  "settings.saveBar.dismissError": "閉じる",
+  "settings.saveBar.unconfirmedWrite": "「{{name}}」 は拡張機能ホストによって確認されませんでした。",
+  "settings.saveBar.unconfirmedSave": "保存は拡張機能ホストによって確認されませんでした。もう一度お試しください。",
   "notifications.action.next": "次へ",
   "notifications.action.close": "閉じる",
   "notifications.action.tryModel": "{{model}}を試す",

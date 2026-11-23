@@ -7,7 +7,6 @@ import { Octokit } from "@octokit/rest"
 import { graphql } from "@octokit/graphql"
 import * as core from "@actions/core"
 import * as github from "@actions/github"
-import type { Context } from "@actions/github/lib/context"
 import type {
   IssueCommentEvent,
   IssuesEvent,
@@ -35,6 +34,8 @@ import { parseGitHubRemote } from "@/util/repository"
 import { Effect } from "effect"
 import { GitHubSecurity } from "@/kilocode/security/github" // kilocode_change
 import { extractResponseText, formatPromptTooLargeError } from "./github.shared"
+
+type Context = typeof github.context // kilocode_change - @actions/github 9 no longer exports lib/context
 
 type GitHubAuthor = {
   login: string

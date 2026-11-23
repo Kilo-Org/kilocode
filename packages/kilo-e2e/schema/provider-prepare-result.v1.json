@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "number",
+      "const": 1
+    },
+    "operation": {
+      "type": "string",
+      "const": "prepare"
+    },
+    "runId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "descriptorPath": {
+      "type": "string",
+      "minLength": 1
+    },
+    "provider": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id",
+        "version"
+      ]
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "operation",
+    "runId",
+    "descriptorPath",
+    "provider"
+  ]
+}

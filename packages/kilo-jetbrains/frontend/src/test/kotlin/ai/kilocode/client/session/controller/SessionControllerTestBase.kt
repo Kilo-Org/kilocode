@@ -15,6 +15,7 @@ import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.SessionRef
+import ai.kilocode.client.app.HostedReadiness
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.AgentDto
 import ai.kilocode.rpc.dto.AgentsDto
@@ -114,6 +115,9 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
     /** Info balloons a controller raised, instead of real IDE notifications. */
     protected val infoNotifications = mutableListOf<Pair<String, String>>()
 
+    /** Action balloons a controller raised: the label, the text, and the action it offers. */
+    protected val actionNotifications = mutableListOf<Pair<Triple<String, String?, String>, () -> Unit>>()
+
     override fun setUp() {
         super.setUp()
         rpc = FakeSessionRpcApi()
@@ -122,6 +126,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         timers = TestUiTimers()
         notifications.clear()
         infoNotifications.clear()
+        actionNotifications.clear()
         // Application-level and shared across tests in a fixture, and it now seeds a new session's
         // mode, so a leftover pick from another test would decide this one's starting agent.
         KiloPluginSettings.unsetAgent()
@@ -155,8 +160,10 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         revertTimeoutMs: Long = SessionController.REVERT_TIMEOUT_MS,
         open: (SessionRef) -> Unit = {},
         log: KiloLog? = null,
+        ready: Boolean = true,
     ): SessionController {
-        return controller(id, flushMs, true, displayMs = displayMs, revertTimeoutMs = revertTimeoutMs, open = open, log = log)
+        return controller(id, flushMs, true, displayMs = displayMs, revertTimeoutMs = revertTimeoutMs, open = open, log = log,
+            ready = ready)
     }
 
     protected fun controller(
@@ -180,6 +187,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         open: (SessionRef) -> Unit = {},
         log: KiloLog? = null,
         ref: SessionRef? = if (session != null) SessionRef.Local(session) else SessionRef.from(id),
+        ready: Boolean = true,
     ): SessionController {
         val root = Root()
         val m = SessionController(
@@ -200,11 +208,13 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
             telemetry = { event, props -> appRpc.telemetry.add(TelemetryCaptureDto(event, props)) },
             notify = { title, body -> notifications.add(title to body) },
             notifyInfo = { title, body -> infoNotifications.add(title to body) },
+            notifyAction = { title, body, label, action -> actionNotifications.add(Triple(title, body, label) to action) },
             timers = timers,
             log = log ?: KiloLog.create(SessionController::class.java),
         )
         controllers.add(m)
         roots[m] = root
+        if (ref is SessionRef.Hosted && ready) edt { m.hostedPreparation(HostedReadiness.Ready) }
         return m
     }
 
@@ -397,13 +407,13 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         title = title,
     )
 
-    protected fun session(id: String, title: String = "Session $id", dir: String = "/test") = SessionDto(
+    protected fun session(id: String, title: String = "Session $id", dir: String = "/test", created: Double = 1.0) = SessionDto(
         id = id,
         projectID = "prj",
         directory = dir,
         title = title,
         version = "1",
-        time = SessionTimeDto(created = 1.0, updated = 2.0),
+        time = SessionTimeDto(created = created, updated = 2.0),
     )
 
     protected fun workspaceReady(

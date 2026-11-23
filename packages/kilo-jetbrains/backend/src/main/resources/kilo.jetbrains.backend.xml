@@ -11,6 +11,7 @@
         <platform.rpc.backend.remoteApiProvider implementation="ai.kilocode.backend.rpc.KiloProviderRpcApiProvider"/>
         <platform.rpc.backend.remoteApiProvider implementation="ai.kilocode.backend.rpc.KiloProjectRpcApiProvider"/>
         <platform.rpc.backend.remoteApiProvider implementation="ai.kilocode.backend.rpc.KiloSessionRpcApiProvider"/>
+        <platform.rpc.backend.remoteApiProvider implementation="ai.kilocode.backend.rpc.KiloHostedRpcApiProvider"/>
         <platform.rpc.backend.remoteApiProvider implementation="ai.kilocode.backend.rpc.KiloMigrationRpcApiProvider"/>
         <platform.rpc.backend.remoteApiProvider implementation="ai.kilocode.backend.rpc.KiloWorktreeRpcApiProvider"/>
         <platform.rpc.backend.remoteApiProvider implementation="ai.kilocode.backend.rpc.KiloRunRpcApiProvider"/>

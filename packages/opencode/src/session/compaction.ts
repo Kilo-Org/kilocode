@@ -530,8 +530,11 @@ const layer = Layer.effect(
             updatePart: session.updatePart,
           }).pipe(Effect.provideService(Database.Service, database)) // kilocode_change
 
+      const outcome = yield* KiloCompactionChunks.recover({ result, message: processor.message, session }).pipe(
+        Effect.provideService(Database.Service, database),
+      )
       let fallback = KiloCompactionChunks.eligible({
-        result,
+        result: outcome,
         error: processor.message.error ?? processor.compactError?.(),
       })
         ? yield* KiloCompactionChunks.process({
@@ -549,7 +552,7 @@ const layer = Layer.effect(
             updateMessage: session.updateMessage,
             updatePart: session.updatePart,
           }).pipe(Effect.provideService(Database.Service, database)) // kilocode_change
-        : result
+        : outcome
       if (fallback === "compact") {
         // kilocode_change end
         processor.message.error = new SessionV1.ContextOverflowError({
@@ -712,24 +715,24 @@ const layer = Layer.effect(
 
       // kilocode_change start - compaction already invalidates cache, so collapse stale tool outputs too
       if (processor.message.error) {
-        // The empty-summary copy is written only for the empty-summary failure:
+        // Empty or truncated summaries need a visible retryable failure:
         // a retryable failure with no rendered part is dropped by clients, so
         // surface it as a real text part before stopping. Other provider
         // failures must keep their own error.
         const error = processor.message.error
         const produced = yield* MessageV2.parts(msg.id).pipe(Effect.provideService(Database.Service, database))
         const visible = produced.some((part) => part.type === "text" && part.text.trim().length > 0)
-        const empty = error.name === "APIError" && error.data.message === KiloCompactionChunks.EMPTY_SUMMARY
-        if (empty && !visible) {
+        const incomplete = KiloCompactionChunks.incomplete(error)
+        if (incomplete && !visible) {
           yield* session.updatePart({
             id: PartID.ascending(),
             messageID: msg.id,
             sessionID: input.sessionID,
             type: "text",
-            text: KiloCompactionChunks.EMPTY_SUMMARY,
+            text: error.data.message,
           })
         }
-        if (empty) {
+        if (incomplete) {
           yield* Effect.logError("compaction failed", { "session.id": input.sessionID, error })
           yield* events.publish(Session.Event.Error, { sessionID: input.sessionID, error })
         }

@@ -17,12 +17,10 @@ export function createSidebarScrollPreserver(
     if (inner !== undefined) cancel(inner)
 
     const prior = active()
-    const scrolls: Entry[] = [...root.querySelectorAll<HTMLElement>(".am-worktree-list, .am-projects-list")].map(
-      (el) => ({
-        el,
-        top: el.scrollTop,
-      }),
-    )
+    // Live lists must stay under .am-sidebar so decorative previews are never captured.
+    const scrolls: Entry[] = [
+      ...root.querySelectorAll<HTMLElement>(".am-sidebar .am-worktree-list, .am-sidebar .am-projects-list"),
+    ].map((el) => ({ el, top: el.scrollTop }))
     fn()
     frame = schedule(() => {
       frame = undefined

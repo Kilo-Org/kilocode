@@ -322,6 +322,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "Aus der Erlaubt-Liste entfernen",
   "ui.permission.rule.addToDenied": "Zur Verweigert-Liste hinzufügen",
   "ui.permission.rule.removeFromDenied": "Aus der Verweigert-Liste entfernen",
+  "ui.permission.rule.fromConfig": "Verwaltet von einer Konfigurationsdatei",
   "ui.permission.toolLabel.read": "Lesen",
   "ui.permission.toolLabel.edit": "Bearbeiten",
   "ui.permission.toolLabel.write": "Schreiben",
@@ -834,6 +835,7 @@ export const dict = {
 
   "dialog.model.noProviders": "Keine Anbieter",
   "dialog.model.unavailable": "Kilo-Modelle nicht verfügbar",
+  "dialog.model.loadFailed": "Anbieter für dieses Projekt konnten nicht geladen werden.",
 
   "prompt.placeholder.connecting": "Verbindung zum Server wird hergestellt...",
   "prompt.placeholder.error":
@@ -888,8 +890,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "Telemetrie",
   "settings.aboutKiloCode.telemetry.description":
-    'Die Telemetrie wird durch die integrierte Telemetrie-Einstellung von VS Code gesteuert. Um sie zu deaktivieren, gehen Sie zu Einstellungen > Telemetrie > Telemetrie-Stufe und setzen Sie diese auf "off". Starten Sie VS Code neu, um die Änderung zu übernehmen.',
-  "settings.aboutKiloCode.telemetry.openSettings": "Telemetrie-Einstellungen öffnen",
+    "Mit diesem Schalter ändern Sie Ihre Telemetrie-Einstellung in Kilo. Wenn VS Code oder die Umgebung die Telemetrie deaktiviert, bleibt sie ausgeschaltet.",
+  "settings.aboutKiloCode.telemetry.toggle": "Telemetrie aktivieren",
+  "settings.aboutKiloCode.telemetry.saveFailed": "Die Telemetrie-Einstellung konnte nicht aktualisiert werden",
 
   "settings.agentBehaviour.subtab.agents": "Agenten",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-Server",
@@ -1005,6 +1008,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "Prompt-Verlauf pro Unterhaltung",
   "settings.experimental.conversationPromptHistory.description":
     "Den Prompt-Verlauf (ArrowUp/ArrowDown) für jede Unterhaltung getrennt halten, statt einen gemeinsamen Verlauf für alle Unterhaltungen zu nutzen.",
+  "settings.experimental.agentManagerSplash.title": "Agent Manager-Startbildschirm",
+  "settings.experimental.agentManagerSplash.description":
+    "Die neue Agent Manager-Einführung mit Workflow-Beispielen ausprobieren. Wird sofort angewendet.",
   "settings.experimental.claudeMigration.title": "Claude-Code-Migration",
   "settings.experimental.claudeMigration.description":
     "Unterstützte globale CLAUDE.md-Anweisungen, einfache Skills und deaktivierte MCP-Definitionen einmalig importieren. Originale Claude-Dateien bleiben unverändert; Backend nach dem Aktivieren neu starten.",
@@ -1365,6 +1371,8 @@ export const dict = {
   "dialog.model.notSet": "Nicht festgelegt",
   "profile.personalAccount": "Persönliches Konto",
   "profile.switchingAccount": "Konto wird gewechselt…",
+  "profile.unavailableAccount": "Nicht verfügbares Konto",
+  "profile.switchFailed": "Kontowechsel konnte nicht bestätigt werden.",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/de.ts
 
@@ -1451,6 +1459,10 @@ export const dict = {
   "settings.saveBar.cancel": "Abbrechen",
   "settings.saveBar.saving": "Speichern…",
   "settings.saveBar.saveFailed": "Einstellungen konnten nicht gespeichert werden",
+  "settings.saveBar.dismissError": "Verwerfen",
+  "settings.saveBar.unconfirmedWrite": "„{{name}}“ wurde vom Erweiterungshost nicht bestätigt.",
+  "settings.saveBar.unconfirmedSave":
+    "Das Speichern wurde vom Erweiterungshost nicht bestätigt. Versuchen Sie es erneut.",
   "notifications.action.next": "Weiter",
   "notifications.action.close": "Schließen",
   "notifications.action.tryModel": "{{model}} ausprobieren",

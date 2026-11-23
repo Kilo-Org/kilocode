@@ -9,6 +9,7 @@ import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.SessionDto
 import com.intellij.ui.CollectionListModel
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
@@ -26,6 +27,8 @@ class WorktreeSessionListController(
     private val telemetry: (String, Map<String, String>) -> Unit = { event, props -> Telemetry.send(event, props) },
 ) {
     val model = CollectionListModel<SessionDto>()
+    /** Successful passive reloads, including reconnects and changes from other surfaces. */
+    var onReload: (() -> Unit)? = null
 
     /** Coalescing hop: many session changes in, at most one reload per quiet period out. */
     private val pings = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
@@ -73,19 +76,37 @@ class WorktreeSessionListController(
     @RequiresEdt
     fun session(id: String): SessionDto? = sessions().firstOrNull { it.id == id }
 
-    fun reload(done: (() -> Unit)? = null) {
+    fun reload(failed: (() -> Unit)? = null, done: (() -> Unit)? = null) {
         cs.launch {
             try {
                 val result = service.sessionsFor(dir)
                 edt {
                     model.replaceAll(result.sessions)
                     capture("Worktree Session List Loaded", mapOf("count" to result.sessions.size.toString()))
-                    done?.invoke()
+                    (done ?: onReload)?.invoke()
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 LOG.warn("worktree session list failed dir=$dir message=${e.message}", e)
-                edt { done?.invoke() }
+                edt { (failed ?: done)?.invoke() }
             }
+        }
+    }
+
+    /** A successful null confirms absence; a failed lookup must not invalidate a saved binding. */
+    @Suppress("TooGenericExceptionCaught") // Preserve non-cancellation RPC failures for caller recovery.
+    fun get(id: String, done: (Result<SessionDto?>) -> Unit) {
+        cs.launch {
+            val result = try {
+                Result.success(service.find(id, dir))
+            } catch (err: CancellationException) {
+                throw err
+            } catch (err: Exception) {
+                LOG.warn("worktree session lookup failed id=$id dir=$dir message=${err.message}", err)
+                Result.failure(err)
+            }
+            edt { done(result) }
         }
     }
 

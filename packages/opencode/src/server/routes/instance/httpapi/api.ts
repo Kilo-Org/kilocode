@@ -31,6 +31,7 @@ import { AgentBuilderApi } from "@/kilocode/server/httpapi/groups/agent-builder"
 import { AgentUsageApi } from "@/kilocode/server/httpapi/groups/agent-usage"
 import { BranchNameApi } from "@/kilocode/server/httpapi/groups/branch-name"
 import { CommitMessageApi } from "@/kilocode/server/httpapi/groups/commit-message"
+import { CloudAgentApi } from "@/kilocode/server/httpapi/groups/cloud-agent"
 import { BackgroundProcessApi } from "@/kilocode/server/httpapi/groups/background-process"
 import { ConfigConsoleApi } from "@/kilocode/server/httpapi/groups/config-console"
 import { EnhancePromptApi } from "@/kilocode/server/httpapi/groups/enhance-prompt"
@@ -104,6 +105,7 @@ export const InstanceHttpApi = HttpApi.make("opencode-instance")
   .addHttpApi(BackgroundProcessApi)
   .addHttpApi(BranchNameApi)
   .addHttpApi(CommitMessageApi)
+  .addHttpApi(CloudAgentApi)
   .addHttpApi(ConfigConsoleApi)
   .addHttpApi(EnhancePromptApi)
   .addHttpApi(IndexingApi)

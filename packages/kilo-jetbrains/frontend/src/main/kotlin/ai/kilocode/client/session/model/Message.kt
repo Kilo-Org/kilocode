@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.model
 
 import ai.kilocode.rpc.dto.MessageDto
+import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.PartSourceDto
 import ai.kilocode.rpc.dto.PartTimeDto
 import ai.kilocode.rpc.dto.TodoDto
@@ -49,6 +50,7 @@ data class ModelLimitItem(
 /** A single message with its typed contents. */
 class Message(
     val info: MessageDto,
+    val terminal: ChatEventDto.MessageTerminal? = null,
 ) {
     val parts = LinkedHashMap<String, Content>()
 }
@@ -59,6 +61,8 @@ sealed class Content(val id: String)
 /** Streamed text content from the assistant. */
 class Text(id: String) : Content(id) {
     val content = StringBuilder()
+    /** Set when Kilo composed this prompt, e.g. "Update from main". */
+    var injectedTitle: String? = null
 }
 
 /**

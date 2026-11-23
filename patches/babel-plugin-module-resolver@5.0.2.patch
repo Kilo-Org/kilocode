@@ -1,0 +1,13 @@
+diff --git a/lib/normalizeOptions.js b/lib/normalizeOptions.js
+index 4dbea7af90d765166527de8185c58e84070a10b2..7c7ba07898a4a0043f9d3e87481faca6a84501df 100644
+--- a/lib/normalizeOptions.js
++++ b/lib/normalizeOptions.js
+@@ -6,7 +6,7 @@ var _fs = _interopRequireDefault(require("fs"));
+ var _path = _interopRequireDefault(require("path"));
+ var _reselect = require("reselect");
+ var _findBabelConfig = _interopRequireDefault(require("find-babel-config"));
+-var _glob = _interopRequireDefault(require("glob"));
++var _glob = { default: require("glob") };
+ var _pkgUp = _interopRequireDefault(require("pkg-up"));
+ var _utils = require("./utils");
+ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }

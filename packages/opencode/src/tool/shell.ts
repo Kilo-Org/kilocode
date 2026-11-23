@@ -14,6 +14,7 @@ import { Config } from "@/config/config"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { model as modelEnv } from "@/kilocode/process/env" // kilocode_change
 import { Shell } from "@opencode-ai/core/shell"
+import * as SpawnExit from "@opencode-ai/core/kilocode/spawn-exit" // kilocode_change
 import { ShellID } from "./shell/id"
 
 import * as Truncate from "./truncate"
@@ -33,6 +34,7 @@ import * as SandboxPolicy from "@/kilocode/sandbox/policy" // kilocode_change
 export { Parameters } from "./shell/prompt"
 
 const MAX_METADATA_LENGTH = 30_000
+const KILL_AFTER = "3 seconds" // kilocode_change
 const CWD = new Set(["cd", "chdir", "popd", "pushd", "push-location", "set-location"])
 const FILES = new Set([
   ...CWD,
@@ -485,6 +487,7 @@ function cmd(shell: string, command: string, cwd: string, env: NodeJS.ProcessEnv
       env,
       stdin: "ignore",
       detached: false,
+      forceKillAfter: KILL_AFTER, // kilocode_change
     })
   }
 
@@ -494,6 +497,7 @@ function cmd(shell: string, command: string, cwd: string, env: NodeJS.ProcessEnv
     env,
     stdin: "ignore",
     detached: process.platform !== "win32",
+    forceKillAfter: KILL_AFTER, // kilocode_change - also bound cleanup on fiber interruption
   })
 }
 const parser = lazy(async () => {
@@ -600,7 +604,10 @@ export const ShellTool = Tool.define(
       const code: number | null = yield* Effect.scoped(
         Effect.gen(function* () {
           yield* Effect.addFinalizer(closeSink)
-          const handle = yield* spawner.spawn(cmd(input.shell, input.command, input.cwd, input.env))
+          // kilocode_change start - POSIX provides an owned process group after the shell exits
+          const child = cmd(input.shell, input.command, input.cwd, input.env)
+          const handle = yield* spawner.spawn(process.platform === "win32" ? child : SpawnExit.attach(child))
+          // kilocode_change end
 
           const reader = yield* Effect.forkScoped(
             // kilocode_change - keep the fiber so trailing output can be drained
@@ -667,16 +674,15 @@ export const ShellTool = Tool.define(
 
           if (exit.kind === "abort") {
             aborted = true
-            yield* handle.kill({ forceKillAfter: "3 seconds" }).pipe(Effect.orDie)
+            yield* handle.kill({ forceKillAfter: KILL_AFTER }).pipe(Effect.orDie) // kilocode_change
           }
           if (exit.kind === "timeout") {
             expired = true
-            yield* handle.kill({ forceKillAfter: "3 seconds" }).pipe(Effect.orDie)
+            yield* handle.kill({ forceKillAfter: KILL_AFTER }).pipe(Effect.orDie) // kilocode_change
           }
 
-          // kilocode_change start - closing the scope interrupts the reader fiber, which can drop
-          // buffered output that arrived just before the process exited. Wait for the stream to
-          // finish (it ends once stdio closes) so fast commands do not lose their final chunks.
+          // kilocode_change start - drain buffered output after foreground exit, but do not
+          // keep waiting if a descendant still holds a pipe open.
           yield* Fiber.await(reader).pipe(Effect.timeout("3 seconds"), Effect.ignore)
           // kilocode_change end
 

@@ -129,6 +129,17 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
         assertEquals(1, rpc.compacts.size)
     }
 
+    fun `test compact button is absent when the host does not support compaction`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent, compactVisible = { false })
+
+        assertFalse(panel.compactButton().isVisible)
+        assertFalse(panel.compactButton().isEnabled)
+        panel.compactButton().doClick()
+        flush()
+        assertTrue(rpc.compacts.isEmpty())
+    }
+
     fun `test board button visibility follows the boardVisible callback`() {
         val c = promptedHeader()
         var visible = false

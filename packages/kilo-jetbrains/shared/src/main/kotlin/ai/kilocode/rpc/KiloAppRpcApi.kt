@@ -11,7 +11,11 @@ import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
 import ai.kilocode.rpc.dto.ModelStateDto
 import ai.kilocode.rpc.dto.ModelVariantUpdateDto
 import ai.kilocode.rpc.dto.ProfileDto
+import ai.kilocode.rpc.dto.ProfileSyncDto
 import ai.kilocode.rpc.dto.RetentionStatusDto
+import ai.kilocode.rpc.dto.SpeechModelDto
+import ai.kilocode.rpc.dto.SpeechRequestDto
+import ai.kilocode.rpc.dto.SpeechResultDto
 import ai.kilocode.rpc.dto.TelemetryCaptureDto
 import com.intellij.platform.rpc.RemoteApiProviderService
 import fleet.rpc.RemoteApi
@@ -83,6 +87,9 @@ interface KiloAppRpcApi : RemoteApi<Unit> {
     /** Patch global CLI config values. */
     suspend fun updateConfig(patch: ConfigPatchDto): KiloAppStateDto
 
+    /** Persist and apply telemetry consent through the CLI core. */
+    suspend fun setTelemetryLevel(enabled: Boolean): KiloAppStateDto
+
     /** Read the machine-wide session-retention policy, progress, and last run. */
     suspend fun retentionStatus(): RetentionStatusDto
 
@@ -108,6 +115,18 @@ interface KiloAppRpcApi : RemoteApi<Unit> {
     suspend fun refreshProfile(): ProfileDto?
 
     /**
+     * Re-read the account and report the outcome: the account, a definitive signed-out answer,
+     * or the reason the read did not complete. A failed read leaves the published account alone.
+     */
+    suspend fun refreshAccount(): ProfileSyncDto
+
+    /** Speech-to-text models available through the authenticated Kilo Gateway. */
+    suspend fun transcriptionModels(directory: String?): List<SpeechModelDto>
+
+    /** Transcribe an audio recording through the authenticated Kilo Gateway. */
+    suspend fun transcribe(directory: String?, request: SpeechRequestDto): SpeechResultDto
+
+    /**
      * Start the device auth login flow for Kilo Gateway.
      * Returns device auth details (verification URL and code) to show in the UI.
      */
@@ -115,9 +134,9 @@ interface KiloAppRpcApi : RemoteApi<Unit> {
 
     /**
      * Complete the device auth login flow. Blocks until the user completes authentication.
-     * Returns the fresh profile on success, null if aborted.
+     * Returns the fresh profile, or the reason a follow-up profile read did not complete.
      */
-    suspend fun completeLogin(directory: String?): ProfileDto?
+    suspend fun completeLogin(directory: String?): ProfileSyncDto
 
     /** Log out from Kilo Gateway. */
     suspend fun logout(): Boolean
@@ -125,9 +144,9 @@ interface KiloAppRpcApi : RemoteApi<Unit> {
     /**
      * Switch the active account context.
      * Pass null for personal account, or an organization ID for org context.
-     * Returns the updated profile, or null if not logged in.
+     * Returns the updated profile, or the reason a follow-up profile read did not complete.
      */
-    suspend fun setOrganization(organizationId: String?): ProfileDto?
+    suspend fun setOrganization(organizationId: String?): ProfileSyncDto
 
     /** Fire-and-forget behavior telemetry routed through the CLI server. */
     suspend fun captureTelemetry(capture: TelemetryCaptureDto)

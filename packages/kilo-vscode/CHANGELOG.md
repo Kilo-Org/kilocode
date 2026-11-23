@@ -1,5 +1,98 @@
 # kilo-code
 
+## 7.8.32
+
+### Patch Changes
+
+- [#14982](https://github.com/Kilo-Org/kilocode/pull/14982) [`fe67f44`](https://github.com/Kilo-Org/kilocode/commit/fe67f4478855977eeabd06b33c9f80c9b25b34a7) Thanks [@ykakade](https://github.com/ykakade)! - Prevent held keys and repeated close commands from confirming worktree deletion in Agent Manager. Use the Delete confirmation button or a separate Backspace or Delete press to confirm.
+
+## 7.8.31
+
+### Minor Changes
+
+- [#16342](https://github.com/Kilo-Org/kilocode/pull/16342) [`182a5f9`](https://github.com/Kilo-Org/kilocode/commit/182a5f9f501d4d2bff2b5a4372d6f06065cf9904) - Change the Kilo telemetry preference from VS Code's About tab or the core telemetry API. Telemetry stays off if Kilo config, VS Code, or the environment disables it.
+
+## 7.8.30
+
+### Minor Changes
+
+- [#16080](https://github.com/Kilo-Org/kilocode/pull/16080) [`54de37a`](https://github.com/Kilo-Org/kilocode/commit/54de37a85dfef8feb828382d8a71f84139857121) - Retire the Mercury Edit 2 autocomplete models and Next Edit. Codestral is now the default autocomplete model, and saved Mercury or Inception selections use Codestral. The SDK no longer has `client.kilo.edit`, and `@kilocode/kilo-gateway` no longer exports `./edit` or `./edit-prompt`.
+
+### Patch Changes
+
+- Updated dependencies [[`37b2900`](https://github.com/Kilo-Org/kilocode/commit/37b2900fcb6223fec33c2bd5f59263e93682c670), [`8a762f8`](https://github.com/Kilo-Org/kilocode/commit/8a762f8487734a5db566cbd8938f84dec9076379), [`54de37a`](https://github.com/Kilo-Org/kilocode/commit/54de37a85dfef8feb828382d8a71f84139857121)]:
+  - @kilocode/sdk@7.9.0
+  - @kilocode/kilo-gateway@7.9.0
+  - @kilocode/kilo-ui@7.8.29
+  - @kilocode/plugin@7.8.29
+  - @opencode-ai/ui@7.8.29
+  - @opencode-ai/core@7.8.29
+  - @kilocode/kilo-indexing@7.8.29
+
+## 7.8.28
+
+## 7.8.26
+
+### Minor Changes
+
+- [#15703](https://github.com/Kilo-Org/kilocode/pull/15703) [`15aded0`](https://github.com/Kilo-Org/kilocode/commit/15aded05573fce75b92d14b3c916d24a4a247ac9) - Continue a local worktree in Cloud from Agent Manager. Copy its open conversations after branch validation and acknowledged session sync. Open the Cloud workspace in a browser or copy its link. Retry balance and partial-creation failures with the same prepared request.
+
+- [#14782](https://github.com/Kilo-Org/kilocode/pull/14782) [`2311e3a`](https://github.com/Kilo-Org/kilocode/commit/2311e3a2d7d70a33e10531873958abd9cfb9b6a7) Thanks [@sylwester-liljegren](https://github.com/sylwester-liljegren)! - Add a "Kilo Code: Show Open Tabs" command that opens the open-tabs switcher in the chat.
+
+### Patch Changes
+
+- [#15776](https://github.com/Kilo-Org/kilocode/pull/15776) [`3723a99`](https://github.com/Kilo-Org/kilocode/commit/3723a995b24ff1177ebe7f3276ef55ff25b2dd5c) Thanks [@jeremy0dell](https://github.com/jeremy0dell)! - Offer the new Agent Manager splash as a default-off option in Experimental settings.
+
+- [#15830](https://github.com/Kilo-Org/kilocode/pull/15830) [`a89eab1`](https://github.com/Kilo-Org/kilocode/commit/a89eab14781fb7a35c75fd7b764fcded894d17f3) Thanks [@WebReflection](https://github.com/WebReflection)! - Update OpenTelemetry, several AI SDK providers, glob, minimatch, Babel, and esbuild to resolve the remaining moderate and low security advisories.
+
+- [#15821](https://github.com/Kilo-Org/kilocode/pull/15821) [`8f2c450`](https://github.com/Kilo-Org/kilocode/commit/8f2c450c6048dae2e6cb23644a4b6aa6c9f093a3) Thanks [@WebReflection](https://github.com/WebReflection)! - Update dependencies to resolve all remaining high-severity security advisories, including node-forge, brace-expansion, js-yaml, follow-redirects, body-parser, and zod.
+
+- [#15739](https://github.com/Kilo-Org/kilocode/pull/15739) [`f584c32`](https://github.com/Kilo-Org/kilocode/commit/f584c32d9d1fff3aa2def9f483b892c33bb3e1ea) - Update the bundled Playwright runtime and test tooling to 1.64.1.
+
+- [#15816](https://github.com/Kilo-Org/kilocode/pull/15816) [`aceb849`](https://github.com/Kilo-Org/kilocode/commit/aceb8497e6f375d0f5d03ec103507bdd4d0b6c7e) Thanks [@WebReflection](https://github.com/WebReflection)! - Update express, proxy-addr, and shell-quote to fix critical security issues flagged by Dependabot alerts.
+
+- [#15776](https://github.com/Kilo-Org/kilocode/pull/15776) [`3723a99`](https://github.com/Kilo-Org/kilocode/commit/3723a995b24ff1177ebe7f3276ef55ff25b2dd5c) Thanks [@jeremy0dell](https://github.com/jeremy0dell)! - Keep Agent Manager example previews fully visible at a stable height and simplify the thin layout by removing numbered badges and the feature stepper.
+
+- [#15811](https://github.com/Kilo-Org/kilocode/pull/15811) [`2358698`](https://github.com/Kilo-Org/kilocode/commit/2358698deed5669707dc437403d025008549cf7f) Thanks [@WebReflection](https://github.com/WebReflection)! - Update seroval to 1.6.12 to fix security issues flagged by Dependabot alerts.
+
+- [#15741](https://github.com/Kilo-Org/kilocode/pull/15741) [`56df553`](https://github.com/Kilo-Org/kilocode/commit/56df55386e94dab3c446c8ee9f4abdeb079c9dbb) Thanks [@WebReflection](https://github.com/WebReflection)! - Show images generated by image models such as Google Nano Banana and by the image generation tool inline in the chat.
+
+- Updated dependencies [[`f584c32`](https://github.com/Kilo-Org/kilocode/commit/f584c32d9d1fff3aa2def9f483b892c33bb3e1ea)]:
+  - @kilocode/kilo-ui@7.8.26
+
+## 7.8.25
+
+## 7.8.23
+
+### Patch Changes
+
+- Updated dependencies [[`0c1d8dd`](https://github.com/Kilo-Org/kilocode/commit/0c1d8dd89ee725e952ad402535c57447e098bb29)]:
+  - @kilocode/kilo-indexing@7.8.23
+  - @opencode-ai/core@7.8.23
+  - @kilocode/kilo-ui@7.8.23
+  - @opencode-ai/ui@7.8.23
+
+## 7.8.21
+
+## 7.8.20
+
+### Minor Changes
+
+- [#15482](https://github.com/Kilo-Org/kilocode/pull/15482) [`ab43c7d`](https://github.com/Kilo-Org/kilocode/commit/ab43c7d4ed670fb77302087d6e47ac1959f0e699) - Let agents choose the base branch when they start Agent Manager worktree sessions.
+
+### Patch Changes
+
+- [#15483](https://github.com/Kilo-Org/kilocode/pull/15483) [`f9e7774`](https://github.com/Kilo-Org/kilocode/commit/f9e77749281ede26a550149aff283fc0101a8143) - Upgrade zod in the VS Code extension to a patched release that fixes a memory-exhaustion advisory when validating oversized constrained collections.
+
+- [#15479](https://github.com/Kilo-Org/kilocode/pull/15479) [`ccf958a`](https://github.com/Kilo-Org/kilocode/commit/ccf958a1d2a4fa8b5136f228939daa975d0c8feb) - Fix auto-compaction starting well before the configured context threshold, and stop compaction from looping on models without a known context size or after you stop a compaction.
+
+- Updated dependencies [[`6c0d427`](https://github.com/Kilo-Org/kilocode/commit/6c0d4273f1b1b7fa85d562c699e7210f90b365b9)]:
+  - @kilocode/kilo-gateway@7.9.0
+  - @opencode-ai/core@7.8.19
+  - @kilocode/kilo-indexing@7.8.19
+  - @kilocode/kilo-ui@7.8.19
+  - @opencode-ai/ui@7.8.19
+
 ## 7.8.18
 
 ### Patch Changes

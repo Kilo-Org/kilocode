@@ -618,7 +618,7 @@ export function make(options: ClientOptions) {
             query: { location: input["location"] },
             body: { code: input["code"] },
             successStatus: 204,
-            declaredStatuses: [400, 401],
+            declaredStatuses: [400, 401, 404, 409],
             empty: true,
           },
           requestOptions,

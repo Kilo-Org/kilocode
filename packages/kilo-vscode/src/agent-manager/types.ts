@@ -791,6 +791,13 @@ interface OpenWorktreeIn {
   worktreeId: string
 }
 
+/** Copy one worktree's sessions into a new hosted workspace in Cloud. */
+interface ContinueInCloudIn {
+  type: "agentManager.continueInCloud"
+  projectId?: string
+  worktreeId: string
+}
+
 interface CopyToClipboardIn {
   type: "agentManager.copyToClipboard"
   text: string
@@ -1329,6 +1336,7 @@ export type AgentManagerInMessage =
   | ShowLocalTerminalIn
   | ShowWorktreeTerminalIn
   | OpenWorktreeIn
+  | ContinueInCloudIn
   | CopyToClipboardIn
   | ShowExistingLocalTerminalIn
   | RequestRepoInfoIn

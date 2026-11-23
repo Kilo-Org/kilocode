@@ -23,7 +23,23 @@ export type ModelOptions = AzureURL &
   }
 export type Config = ModelOptions
 
-const resourceBaseURL = (resourceName: string) => `https://${resourceName.trim()}.openai.azure.com/openai/v1`
+// kilocode_change start - a resource name must be one DNS label
+const resourceLabel = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/
+
+export const isResourceName = (value: string) => resourceLabel.test(value.trim())
+
+export const resourceNameError = (value: string) =>
+  `Invalid Azure resource name "${value}". Use the resource name alone, not a URL: for example, my-resource.`
+
+const parseResourceName = (value: string) => {
+  if (!isResourceName(value)) {
+    throw new Error(resourceNameError(value))
+  }
+  return value.trim()
+}
+// kilocode_change end
+
+const resourceBaseURL = (resourceName: string) => `https://${parseResourceName(resourceName)}.openai.azure.com/openai/v1` // kilocode_change
 
 const responsesRoute = OpenAIResponses.route.with({
   id: "azure-openai-responses",

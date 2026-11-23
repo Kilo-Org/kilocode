@@ -71,7 +71,7 @@ describe("Auto-Approve onboarding state", () => {
     expect(state.draft).toEqual({ permission: { edit: "allow" } })
 
     state.saveConfig()
-    state.handleConfigUpdated(state.config)
+    state.handleConfigUpdated(state.config, state.request)
     expect(effectiveConfigLevel(state.config.permission ?? {}, "edit")).toBe("allow")
     expect(state.dirty).toBe(false)
   })

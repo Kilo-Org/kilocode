@@ -4,8 +4,11 @@ import ai.kilocode.backend.testing.MockCliServer
 import ai.kilocode.backend.testing.TestLog
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
+import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
+import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
+import ai.kilocode.rpc.dto.QuestionReplyDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -49,6 +52,30 @@ class KiloBackendChatManagerTest {
         assertNotNull(mock.lastSummarizePath)
         assertTrue(mock.lastSummarizePath!!.startsWith("/session/ses_abc/summarize?directory="))
         assertEquals("""{"providerID":"anthropic","modelID":"claude-4"}""", mock.lastSummarizeBody)
+    }
+
+    @Test
+    fun `local command posts its durable message correlation and selected choices`() {
+        val port = mock.start()
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, MutableSharedFlow())
+        val prompt = PromptDto(
+            parts = emptyList(),
+            messageID = "msg_initial",
+            agent = "plan",
+            providerID = "kilo",
+            modelID = "gpt-5",
+            variant = "high",
+        )
+
+        chat.command("ses_cloud", "/test/project", "review", "src/", prompt)
+
+        assertEquals(1, mock.requestCount("/session/ses_cloud/command"))
+        assertTrue(mock.lastHostedCommandPath!!.startsWith("/session/ses_cloud/command?directory="))
+        assertEquals(
+            """{"command":"review","arguments":"src/","messageID":"msg_initial","agent":"plan","variant":"high","model":"kilo/gpt-5"}""",
+            mock.lastHostedCommandBody,
+        )
     }
 
     @Test
@@ -298,5 +325,85 @@ class KiloBackendChatManagerTest {
         assertTrue(event is ChatEventDto.SessionQueueChanged)
         assertEquals("ses_abc", event.sessionID)
         assertEquals(listOf("msg2"), event.queued)
+    }
+
+    @Test
+    fun `refused permission reply throws after sending the decision`() = runBlocking {
+        val port = mock.start()
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, MutableSharedFlow())
+        mock.permissionReplyStatus = 404
+
+        val error = assertFailsWith<RuntimeException> {
+            chat.replyPermission("per_1", "/test/project", PermissionReplyDto("once"))
+        }
+
+        assertEquals("replyPermission failed: HTTP 404", error.message)
+        assertEquals(1, mock.requestCount("/permission/per_1/reply"))
+        assertTrue(mock.lastPermissionReplyPath!!.startsWith("/permission/per_1/reply?directory="))
+        assertEquals("""{"reply":"once"}""", mock.lastPermissionReplyBody)
+    }
+
+    @Test
+    fun `refused always rules save throws after sending the rules`() {
+        val port = mock.start()
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, MutableSharedFlow())
+        mock.permissionRulesStatus = 409
+
+        val error = assertFailsWith<RuntimeException> {
+            chat.savePermissionRules("per_1", "/test/project", PermissionAlwaysRulesDto(approvedAlways = listOf("src/**")))
+        }
+
+        assertEquals("savePermissionRules failed: HTTP 409", error.message)
+        assertEquals(1, mock.requestCount("/permission/per_1/always-rules"))
+        assertTrue(mock.lastPermissionRulesPath!!.startsWith("/permission/per_1/always-rules?directory="))
+        assertEquals("""{"approvedAlways":["src/**"],"deniedAlways":[]}""", mock.lastPermissionRulesBody)
+    }
+
+    @Test
+    fun `refused question reply throws after sending the answers`() = runBlocking {
+        val port = mock.start()
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, MutableSharedFlow())
+        mock.questionReplyStatus = 404
+
+        val error = assertFailsWith<RuntimeException> {
+            chat.replyQuestion("que_1", "/test/project", QuestionReplyDto(listOf(listOf("Yes"))))
+        }
+
+        assertEquals("replyQuestion failed: HTTP 404", error.message)
+        assertEquals(1, mock.requestCount("/question/que_1/reply"))
+        assertTrue(mock.lastQuestionReplyPath!!.startsWith("/question/que_1/reply?directory="))
+        assertEquals("""{"answers":[["Yes"]]}""", mock.lastQuestionReplyBody)
+    }
+
+    @Test
+    fun `refused question reject throws after sending the rejection`() = runBlocking {
+        val port = mock.start()
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, MutableSharedFlow())
+        mock.questionRejectStatus = 500
+
+        val error = assertFailsWith<RuntimeException> {
+            chat.rejectQuestion("que_1", "/test/project")
+        }
+
+        assertEquals("rejectQuestion failed: HTTP 500", error.message)
+        assertEquals(1, mock.requestCount("/question/que_1/reject"))
+        assertTrue(mock.lastQuestionRejectPath!!.startsWith("/question/que_1/reject?directory="))
+        assertEquals("{}", mock.lastQuestionRejectBody)
+    }
+
+    @Test
+    fun `accepted permission reply sends the human interactive decision`() = runBlocking {
+        val port = mock.start()
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, MutableSharedFlow())
+
+        chat.replyPermission("per_1", "/test/project", PermissionReplyDto(reply = "once", interactive = true))
+
+        assertEquals(1, mock.requestCount("/permission/per_1/reply"))
+        assertEquals("""{"reply":"once","interactive":true}""", mock.lastPermissionReplyBody)
     }
 }

@@ -241,6 +241,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "Rimuovi dalla lista consentiti",
   "ui.permission.rule.addToDenied": "Aggiungi alla lista negati",
   "ui.permission.rule.removeFromDenied": "Rimuovi dalla lista negati",
+  "ui.permission.rule.fromConfig": "Gestita da un file di configurazione",
   "ui.permission.toolLabel.read": "Lettura",
   "ui.permission.toolLabel.edit": "Modifica",
   "ui.permission.toolLabel.write": "Scrittura",
@@ -683,6 +684,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Valutazione prossimi passi...",
   "dialog.model.noProviders": "Nessun provider",
   "dialog.model.unavailable": "Modelli Kilo non disponibili",
+  "dialog.model.loadFailed": "Impossibile caricare i provider di questo progetto.",
   "prompt.placeholder.connecting": "Connessione al server...",
   "prompt.placeholder.default":
     "Scrivi un messaggio, @ per menzionare i file... (Invio per inviare, Maiusc+Invio per nuova riga)",
@@ -728,8 +730,9 @@ export const dict = {
     "Impostazioni importate. Controlla le modifiche sopra, poi fai clic su Salva.",
   "settings.aboutKiloCode.telemetry.title": "Telemetria",
   "settings.aboutKiloCode.telemetry.description":
-    'La telemetria è controllata dall\'impostazione integrata di VS Code. Per disabilitarla, vai in Impostazioni > Telemetria > Livello telemetria e impostala su "off". Riavvia VS Code per applicare la modifica.',
-  "settings.aboutKiloCode.telemetry.openSettings": "Apri impostazioni telemetria",
+    "Usa questo interruttore per modificare la tua preferenza sulla telemetria di Kilo. La telemetria rimane disattivata se VS Code o l'ambiente la disattivano.",
+  "settings.aboutKiloCode.telemetry.toggle": "Attiva la telemetria",
+  "settings.aboutKiloCode.telemetry.saveFailed": "Impossibile aggiornare l'impostazione della telemetria",
   "settings.agentBehaviour.subtab.agents": "Agenti",
   "settings.agentBehaviour.subtab.mcpServers": "Server MCP",
   "settings.agentBehaviour.subtab.rules": "Regole",
@@ -823,6 +826,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "Cronologia dei prompt per conversazione",
   "settings.experimental.conversationPromptHistory.description":
     "Mantieni la cronologia dei prompt (ArrowUp/ArrowDown) separata per ogni conversazione invece di condividerne una sola tra tutte le conversazioni.",
+  "settings.experimental.agentManagerSplash.title": "Schermata iniziale di Agent Manager",
+  "settings.experimental.agentManagerSplash.description":
+    "Prova la nuova introduzione di Agent Manager con esempi di flussi di lavoro. Si applica immediatamente.",
   "settings.experimental.claudeMigration.title": "Migrazione Claude Code",
   "settings.experimental.claudeMigration.description":
     "Importa una volta le istruzioni globali CLAUDE.md supportate, le competenze semplici e le definizioni MCP disabilitate. I file Claude originali restano invariati; riavvia il backend dopo l'attivazione.",
@@ -1195,6 +1201,8 @@ export const dict = {
   "dialog.model.notSet": "Non impostato",
   "profile.personalAccount": "Account personale",
   "profile.switchingAccount": "Cambio account...",
+  "profile.unavailableAccount": "Account non disponibile",
+  "profile.switchFailed": "Impossibile confermare il cambio di account.",
   "question.summary": "{{n}} di {{total}} domande",
   "common.review": "Revisione",
   "settings.aboutKiloCode.rooImport.description":
@@ -1271,6 +1279,9 @@ export const dict = {
   "settings.saveBar.saveAnyway": "Salva comunque",
   "settings.saveBar.cancel": "Annulla",
   "settings.saveBar.saveFailed": "Impossibile salvare le impostazioni",
+  "settings.saveBar.dismissError": "Ignora",
+  "settings.saveBar.unconfirmedWrite": "L'host dell'estensione non ha confermato “{{name}}”.",
+  "settings.saveBar.unconfirmedSave": "L'host dell'estensione non ha confermato il salvataggio. Riprova.",
   "notifications.action.next": "Avanti",
   "notifications.action.close": "Chiudi",
   "notifications.action.tryModel": "Prova {{model}}",

@@ -124,7 +124,7 @@ export const DataBridge: Component<{ children: any }> = (props) => {
   }
 
   const respond = (input: { sessionID: string; permissionID: string; response: "once" | "always" | "reject" }) => {
-    session.respondToPermission(input.permissionID, input.response, [], [])
+    session.respondToPermission(input.permissionID, input.response, [], [], [])
   }
 
   const reply = (input: { requestID: string; answers: string[][] }) => {
@@ -293,7 +293,19 @@ const AppContent: Component = () => {
     setCurrentView("newTask")
   }
 
+  // Actions handled inside the chat view: show it, then notify its components.
+  const events = new Map([
+    ["focusSearch", "focusTranscriptSearch"],
+    ["showOpenTabs", "showOpenTabs"],
+  ])
+
   const handleViewAction = (action: string) => {
+    const event = events.get(action)
+    if (event) {
+      setCurrentView("newTask")
+      window.dispatchEvent(new CustomEvent(event))
+      return
+    }
     switch (action) {
       case "plusButtonClicked":
         newTask()
@@ -329,10 +341,6 @@ const AppContent: Component = () => {
         break
       case "tabNext":
         step(1)
-        break
-      case "focusSearch":
-        setCurrentView("newTask")
-        window.dispatchEvent(new CustomEvent("focusTranscriptSearch"))
         break
       case "focusSettingsSearch":
         setCurrentView("settings")

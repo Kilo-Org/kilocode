@@ -311,6 +311,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "นำออกจากรายการที่อนุญาต",
   "ui.permission.rule.addToDenied": "เพิ่มไปยังรายการที่ถูกปฏิเสธ",
   "ui.permission.rule.removeFromDenied": "นำออกจากรายการที่ถูกปฏิเสธ",
+  "ui.permission.rule.fromConfig": "จัดการโดยไฟล์การตั้งค่า",
   "ui.permission.toolLabel.read": "อ่าน",
   "ui.permission.toolLabel.edit": "แก้ไข",
   "ui.permission.toolLabel.write": "เขียน",
@@ -811,6 +812,7 @@ export const dict = {
 
   "dialog.model.noProviders": "ไม่มีผู้ให้บริการ",
   "dialog.model.unavailable": "ไม่สามารถใช้โมเดล Kilo ได้",
+  "dialog.model.loadFailed": "ไม่สามารถโหลดผู้ให้บริการสำหรับโปรเจกต์นี้ได้",
 
   "prompt.placeholder.connecting": "กำลังเชื่อมต่อกับเซิร์ฟเวอร์...",
   "prompt.placeholder.error": "การเชื่อมต่อล้มเหลว ตรวจสอบแผงเอาต์พุตหรือรีสตาร์ทส่วนขยาย",
@@ -859,8 +861,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "Telemetry",
   "settings.aboutKiloCode.telemetry.description":
-    'Telemetry ถูกควบคุมโดยการตั้งค่า Telemetry ในตัวของ VS Code หากต้องการปิดใช้งาน ให้ไปที่ Settings > Telemetry > Telemetry Level แล้วตั้งค่าเป็น "off" รีสตาร์ท VS Code เพื่อให้การเปลี่ยนแปลงมีผล',
-  "settings.aboutKiloCode.telemetry.openSettings": "เปิดการตั้งค่า Telemetry",
+    "ใช้สวิตช์นี้เพื่อเปลี่ยนการตั้งค่าการส่งข้อมูลเทเลเมทรีของ Kilo หาก VS Code หรือสภาพแวดล้อมปิดการส่งข้อมูลเทเลเมทรี การส่งข้อมูลจะยังคงปิดอยู่",
+  "settings.aboutKiloCode.telemetry.toggle": "เปิดการส่งข้อมูลเทเลเมทรี",
+  "settings.aboutKiloCode.telemetry.saveFailed": "ไม่สามารถอัปเดตการตั้งค่าการส่งข้อมูลเทเลเมทรีได้",
 
   "settings.agentBehaviour.subtab.agents": "ตัวแทน",
   "settings.agentBehaviour.subtab.mcpServers": "เซิร์ฟเวอร์ MCP",
@@ -969,6 +972,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "ประวัติพรอมต์แยกตามการสนทนา",
   "settings.experimental.conversationPromptHistory.description":
     "แยกประวัติพรอมต์ (ArrowUp/ArrowDown) ตามแต่ละการสนทนา แทนการใช้ประวัติเดียวร่วมกันในทุกการสนทนา",
+  "settings.experimental.agentManagerSplash.title": "หน้าต้อนรับ Agent Manager",
+  "settings.experimental.agentManagerSplash.description":
+    "ลองหน้าบทนำใหม่ของ Agent Manager พร้อมตัวอย่างเวิร์กโฟลว์ มีผลทันที",
   "settings.experimental.claudeMigration.title": "การย้าย Claude Code",
   "settings.experimental.claudeMigration.description":
     "นำเข้าคำสั่ง CLAUDE.md ระดับโลกที่รองรับ ทักษะอย่างง่าย และคำจำกัดความ MCP ที่ปิดใช้งานเพียงครั้งเดียว ไฟล์ Claude ต้นฉบับจะไม่ถูกแก้ไข ให้เริ่มแบ็กเอนด์ใหม่หลังเปิดใช้งาน",
@@ -1309,6 +1315,8 @@ export const dict = {
   "dialog.model.notSet": "ไม่ได้ตั้งค่า",
   "profile.personalAccount": "บัญชีส่วนตัว",
   "profile.switchingAccount": "กำลังสลับบัญชี…",
+  "profile.unavailableAccount": "บัญชีที่ใช้ไม่ได้",
+  "profile.switchFailed": "ยืนยันการสลับบัญชีไม่สำเร็จ",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/th.ts
 
   "question.summary": "{{n}} จาก {{total}} คำถาม",
@@ -1393,6 +1401,9 @@ export const dict = {
   "settings.saveBar.cancel": "ยกเลิก",
   "settings.saveBar.saving": "กำลังบันทึก…",
   "settings.saveBar.saveFailed": "ไม่สามารถบันทึกการตั้งค่าได้",
+  "settings.saveBar.dismissError": "ปิด",
+  "settings.saveBar.unconfirmedWrite": "โฮสต์ของส่วนขยายไม่ได้ยืนยัน “{{name}}”",
+  "settings.saveBar.unconfirmedSave": "โฮสต์ของส่วนขยายไม่ได้ยืนยันการบันทึก ลองอีกครั้ง",
   "notifications.action.next": "ถัดไป",
   "notifications.action.close": "ปิด",
   "notifications.action.tryModel": "ลองใช้ {{model}}",

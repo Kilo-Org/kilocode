@@ -14,6 +14,23 @@ type Target = { os: string; arch: string; abi?: string; avx2?: false }
 
 const run = promisify(execFile)
 const dirs = new Set<string>()
+const attempts = 3
+const timeout = 120_000
+const delay = 2_000
+
+async function download(url: string) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const response = await fetch(url, { redirect: "error", signal: AbortSignal.timeout(timeout) })
+      if (!response.ok) throw new Error(`Bun download failed: ${response.status} ${url}`)
+      return Buffer.from(await response.arrayBuffer())
+    } catch (err) {
+      if (attempt >= attempts) throw err
+      console.warn(`Bun download failed (attempt ${attempt}/${attempts}); retrying: ${err}`)
+      await new Promise((resolve) => setTimeout(resolve, delay))
+    }
+  }
+}
 
 process.once("exit", () => {
   for (const dir of dirs) rmSync(dir, { recursive: true, force: true })
@@ -73,9 +90,7 @@ export async function stage(input: Target): Promise<string> {
     bytes = undefined
   }
   if (!bytes) {
-    const response = await fetch(item.tarball, { redirect: "error", signal: AbortSignal.timeout(120_000) })
-    if (!response.ok) throw new Error(`Bun download failed: ${response.status} ${item.tarball}`)
-    bytes = Buffer.from(await response.arrayBuffer())
+    bytes = await download(item.tarball)
     if (!valid(bytes)) throw new Error(`Bun checksum mismatch: ${item.name}@${pin.version}`)
     const part = join(cache, `${item.name}.${randomUUID()}.tmp`)
     try {
