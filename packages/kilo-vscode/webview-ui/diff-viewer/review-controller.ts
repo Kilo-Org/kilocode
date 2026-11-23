@@ -17,7 +17,7 @@ import type { PRComment } from "../agent-manager/pr/pr-types"
 import { useLanguage } from "../src/context/language"
 import { useVSCode } from "../src/context/vscode"
 import type { WorktreeFileDiff } from "../src/types/messages"
-import { lineCount, sanitizeReviewComments, type ReviewComment } from "./review-comments"
+import { isReviewRangeValid, sanitizeReviewComments, type ReviewComment } from "./review-comments"
 import {
   buildFileAnnotations,
   buildReviewAnnotation,
@@ -145,11 +145,8 @@ export function createReviewController(props: Props) {
         if (!currentDraft) return
         const diff = diffs.find((item) => item.file === currentDraft.file)
         if (!diff) return cancelDraft()
-        const max = lineCount(currentDraft.side === "deletions" ? diff.before : diff.after)
         if (
-          currentDraft.line < 1 ||
-          currentDraft.line > max ||
-          (currentDraft.endLine !== undefined && currentDraft.endLine > max)
+          !isReviewRangeValid(diff, currentDraft.side, currentDraft.line, currentDraft.endLine ?? currentDraft.line)
         ) {
           cancelDraft()
         }
@@ -436,7 +433,8 @@ export function createReviewView(
   const handles = new Map<string, DiffHandle>()
   const reveal = (file: string) => {
     const diff = props.diffs.find((item) => item.file === file)
-    if (!diff || (props.markdownRender && isMarkdownFile(file)) || !shouldVirtualizeDiff(diff)) return true
+    if (!diff || (props.markdownRender && !diff.excerpt && isMarkdownFile(file)) || !shouldVirtualizeDiff(diff))
+      return true
     const target = props.focusedComment
     const anchor = target
       ? remote

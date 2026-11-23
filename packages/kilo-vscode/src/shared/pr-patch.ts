@@ -1,4 +1,4 @@
-type Range = { side: "LEFT" | "RIGHT"; start: number; end: number }
+export type Range = { side: "LEFT" | "RIGHT"; start: number; end: number }
 
 function header(line: string) {
   const match = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@(?: .*)?$/.exec(line)
