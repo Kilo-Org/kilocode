@@ -10,6 +10,45 @@ mock.module("../../../src/tree-sitter/languageParser", () => ({
 }))
 
 import { parseSourceCodeDefinitionsForFile } from "../../../src/tree-sitter/index"
+import { parseMarkdown } from "../../../src/tree-sitter/markdownParser"
+
+describe("parseMarkdown", () => {
+  test("ignores ATX and Setext headers inside fenced code blocks and YAML frontmatter", () => {
+    const markdown = [
+      "---",
+      "title: Example Doc",
+      "author: kilo",
+      "---",
+      "",
+      "# Real Heading",
+      "Intro paragraph.",
+      "",
+      "```bash",
+      "# shell comment that looks like h1",
+      "echo hello",
+      "---",
+      "```",
+      "",
+      "~~~python",
+      "## python comment that looks like h2",
+      "x = 1",
+      "===",
+      "~~~",
+      "",
+      "## Second Real Heading",
+      "Closing paragraph.",
+    ].join("\n")
+
+    const captures = parseMarkdown(markdown)
+    const names = captures.filter((item) => item.name.startsWith("name.definition.header."))
+
+    expect(names.map((item) => item.node.text)).toEqual(["Real Heading", "Second Real Heading"])
+    expect(names[0]?.node.startPosition.row).toBe(5)
+    expect(names[0]?.node.endPosition.row).toBe(19)
+    expect(names[1]?.node.startPosition.row).toBe(20)
+    expect(names[1]?.node.endPosition.row).toBe(21)
+  })
+})
 
 describe("parseSourceCodeDefinitionsForFile", () => {
   beforeEach(() => {
