@@ -261,11 +261,9 @@ Use it when agents can benefit from discoveries during work:
 
 Straightforward tasks can stay solo. Enabling the board does not mean agents are always running or that every task needs a team.
 
-`board_post` stores an `INFO`, `ASK`, `RESULT`, `HOLD`, or `VETO` message for one participant or `ALL`. `board_read` retrieves messages explicitly. Activity notices are best-effort: a stored message does not prove that a recipient was notified, read it, or acted on it. Posting does not start or resume an agent, and normal task completion still returns results to the parent.
+**Post message** (`board_post`) stores a message on the shared board. **Read messages** (`board_read`) retrieves messages from the board explicitly. Activity notices are best-effort: a stored message does not prove that a recipient was notified, read it, or acted on it. Posting does not start or resume an agent, and normal task completion still returns results to the parent.
 
 All participants can read the board history, including messages addressed to others. Recipient selection is not a privacy boundary. Peer messages do not grant user approval or change permissions; `HOLD` and `VETO` are advisory, not controls that pause or cancel work.
-
-Each message must fit in 4 KiB. A board holds up to 1,000 messages or 2 MiB; after that, posts fail until the board is reset.
 
 | Client | Viewing the board |
 |---|---|
