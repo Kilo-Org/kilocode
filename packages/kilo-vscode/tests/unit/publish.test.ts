@@ -7,7 +7,7 @@ const source = project.createSourceFile(
   await Bun.file(`${import.meta.dir}/../../script/publish.ts`).text(),
 )
 
-test.each(["vsce publish", "npx ovsx publish"])("%s retries the same package and skips duplicates", (command) => {
+test.each(["vsce publish", "${ovsx} publish"])("%s retries the same package and skips duplicates", (command) => {
   const retry = source
     .getDescendantsOfKind(SyntaxKind.CallExpression)
     .find(

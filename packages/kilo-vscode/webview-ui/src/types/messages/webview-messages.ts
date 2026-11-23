@@ -100,6 +100,8 @@ export interface PermissionResponseRequest {
   response: "once" | "always" | "reject"
   approvedAlways: string[]
   deniedAlways: string[]
+  /** Patterns whose saved rule the user cleared; the host deletes them. */
+  removedAlways?: string[]
   feedback?: string
 }
 
@@ -222,6 +224,11 @@ export interface CancelLoginRequest {
 export interface SetOrganizationRequest {
   type: "setOrganization"
   organizationId: string | null
+  /**
+   * Correlates the `organizationSwitchResult` reply with this request. The host
+   * supplies one when a caller omits it, so every dispatched request is answered.
+   */
+  requestID?: string
 }
 
 export interface WebviewReadyRequest {
@@ -537,6 +544,8 @@ export interface UpdateSettingRequest {
   type: "updateSetting"
   key: string
   value: unknown
+  /** Echoed unchanged on the outcome message so the sender can match it to this write. */
+  writeId?: string
 }
 
 export interface RequestTimelineSettingMessage {
@@ -650,6 +659,12 @@ export interface UpdateConfigMessage {
   projectUnset?: string[][]
   globalBindingId?: string
   projectBindingId?: string
+  /**
+   * Identifies this write so the host can echo it on the one message that answers it.
+   * A `configUpdated` or `configUpdateFailed` carrying this id is the answer to this write;
+   * one without it came from somewhere else.
+   */
+  requestId?: string
 }
 
 export interface RequestNotificationSettingsMessage {

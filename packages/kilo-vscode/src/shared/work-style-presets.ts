@@ -1,3 +1,5 @@
+import { envGuards } from "@opencode-ai/core/kilocode/shell-env-files"
+
 type PermissionLevel = "allow" | "ask" | "deny"
 type PermissionRule = PermissionLevel | null | Record<string, PermissionLevel | null>
 type PermissionConfig = Partial<Record<string, PermissionRule>>
@@ -30,8 +32,7 @@ export interface WorkStyleApplyPlan {
   settings: Partial<WorkStyleSettings>
 }
 
-const BASH: Record<string, PermissionLevel> = {
-  "*": "ask",
+const READERS: Record<string, PermissionLevel> = {
   "cat *": "allow",
   "head *": "allow",
   "tail *": "allow",
@@ -59,6 +60,14 @@ const BASH: Record<string, PermissionLevel> = {
   "cut *": "allow",
   "tr *": "allow",
   "jq *": "allow",
+}
+
+// The read rule asks before an environment file is opened, so the shell readers
+// apply the same level; see `envGuards`.
+const BASH: Record<string, PermissionLevel> = {
+  "*": "ask",
+  ...READERS,
+  ...envGuards(READERS),
   "*>*": "ask",
 }
 

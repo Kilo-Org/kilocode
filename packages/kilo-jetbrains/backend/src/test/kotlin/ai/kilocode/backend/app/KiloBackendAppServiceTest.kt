@@ -37,6 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
@@ -1554,6 +1555,68 @@ class KiloBackendAppServiceTest {
     }
 
     @Test
+    fun `successful organization switch starts a fresh hosted context`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+        ready(svc)
+        hostedLive(svc)
+        mock.pushFeed(
+            hostedNativeFeed,
+            """{"type":"session.status","properties":{"sessionID":"ses_cloud","status":{"type":"busy"}}}""",
+        )
+        withTimeout(10_000) { svc.hosted.statuses.first { it[hostedSession]?.type == "busy" } }
+        val attaches = mock.requestCount(hostedAttachPath)
+
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":"org_1"}"""
+        svc.setOrganization("org_1")
+
+        // A switch starts a fresh hosted context: the earlier streams stop and are not reused.
+        assertTrue(mock.awaitFeedClosed(hostedNativeFeed), "native stream stayed open")
+        assertTrue(mock.awaitFeedClosed(hostedSystemFeed), "system stream stayed open")
+        assertTrue(svc.hosted.statuses.value.isEmpty(), "hosted statuses survived the switch")
+        assertTrue(
+            mock.awaitRequestCount("/kilocode/session-host/attachment/wrk_att_test", 1),
+            "attachment was not detached",
+        )
+
+        svc.hosted.retain(hostedSession, "org_1")
+        svc.hosted.messages(hostedSession, "org_1")
+
+        assertEquals(attaches + 1, mock.requestCount(hostedAttachPath))
+        assertTrue(mock.lastHostedAttachPath.orEmpty().contains("organizationID=org_1"))
+    }
+
+    @Test
+    fun `refused organization switch leaves hosted state intact`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+        ready(svc)
+        hostedLive(svc)
+        mock.pushFeed(
+            hostedNativeFeed,
+            """{"type":"session.status","properties":{"sessionID":"ses_cloud","status":{"type":"busy"}}}""",
+        )
+        withTimeout(10_000) { svc.hosted.statuses.first { it[hostedSession]?.type == "busy" } }
+        val attaches = mock.requestCount(hostedAttachPath)
+
+        mock.organizationSetStatus = 500
+        var thrown = false
+        try {
+            svc.setOrganization("org_1")
+        } catch (_: Exception) {
+            thrown = true
+        }
+
+        assertTrue(thrown, "setOrganization with 500 should throw")
+        assertEquals(0, mock.feedClosedCount(hostedNativeFeed))
+        assertEquals(0, mock.feedClosedCount(hostedSystemFeed))
+        assertEquals("busy", svc.hosted.statuses.value[hostedSession]?.type)
+        assertEquals(attaches, mock.requestCount(hostedAttachPath))
+    }
+
+    @Test
     fun `set organization failure leaves profile unchanged`() = runBlocking {
         mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
         val svc = create()
@@ -1622,5 +1685,298 @@ class KiloBackendAppServiceTest {
             thrown = true
         }
         assertTrue(thrown, "completeLogin with 500 callback status should throw")
+    }
+
+    // ------ Account step profile sync tests ------
+
+    @Test
+    fun `complete login keeps the account when the profile read fails`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        mock.profileStatus = 500
+        val failure = assertFailsWith<LoadFailure> { svc.completeLogin(null) }
+        assertEquals("profile", failure.error.resource)
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+        assertEquals("alice@test.com", appStateDto(svc.appState.value).profile?.email)
+    }
+
+    @Test
+    fun `set organization keeps the account when the profile read fails`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        mock.profileStatus = 500
+        val failure = assertFailsWith<LoadFailure> { svc.setOrganization("org_1") }
+        assertEquals("profile", failure.error.resource)
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+        assertEquals("alice@test.com", appStateDto(svc.appState.value).profile?.email)
+    }
+
+    @Test
+    fun `complete login keeps the account when the profile read returns 400`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        mock.profileStatus = 400
+        val failure = assertFailsWith<LoadFailure> { svc.completeLogin(null) }
+        assertEquals("profile", failure.error.resource)
+        assertEquals(400, failure.error.status)
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+        assertEquals("alice@test.com", appStateDto(svc.appState.value).profile?.email)
+    }
+
+    @Test
+    fun `set organization keeps the account when the profile read returns 400`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        mock.profileStatus = 400
+        val failure = assertFailsWith<LoadFailure> { svc.setOrganization("org_1") }
+        assertEquals("profile", failure.error.resource)
+        assertEquals(400, failure.error.status)
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+        assertEquals("alice@test.com", appStateDto(svc.appState.value).profile?.email)
+    }
+
+    @Test
+    fun `complete login clears the account when nobody is signed in`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        assertNotNull(svc.profile, "the account must be published before the step")
+        assertNotNull(appStateDto(svc.appState.value).profile, "the account must be published before the step")
+        mock.profileStatus = 401
+        assertNull(svc.completeLogin(null))
+        assertNull(svc.profile)
+        assertNull(appStateDto(svc.appState.value).profile)
+    }
+
+    @Test
+    fun `set organization clears the account when nobody is signed in`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        assertNotNull(svc.profile, "the account must be published before the step")
+        assertNotNull(appStateDto(svc.appState.value).profile, "the account must be published before the step")
+        mock.profileStatus = 401
+        assertNull(svc.setOrganization("org_1"))
+        assertNull(svc.profile)
+        assertNull(appStateDto(svc.appState.value).profile)
+    }
+
+    @Test
+    fun `refresh profile publishes no account when the profile read fails`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        mock.profileStatus = 500
+        assertNull(svc.refreshProfile())
+        assertNull(svc.profile)
+        assertNull(appStateDto(svc.appState.value).profile)
+    }
+
+    @Test
+    fun `startup keeps the app ready when the profile read fails`() = runBlocking {
+        mock.profileStatus = 500
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        assertNull(svc.profile)
+        assertNull(appStateDto(svc.appState.value).profile)
+    }
+
+    // ------ Reload after an account step ------
+
+    /**
+     * An account step is followed by a CLI instance disposal, and the reload it triggers re-reads
+     * the profile. A read that does not complete keeps the account the service already holds.
+     */
+    @Test
+    fun `reload after an account step keeps the account when the profile read fails`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+        assertEquals("alice@test.com", svc.profile?.profile?.email, "the account must be published before the reload")
+        mock.awaitSseConnection()
+
+        mock.profileStatus = 503
+        mock.pushEvent("global.disposed", """{"type":"global.disposed"}""")
+        awaitReload()
+
+        assertIs<KiloAppState.Ready>(svc.appState.value, "the reload must not fail the app; logs=${log.messages}")
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+        assertEquals("alice@test.com", appStateDto(svc.appState.value).profile?.email)
+    }
+
+    @Test
+    fun `reload after an account step keeps the account when the profile read returns 400`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+        assertEquals("alice@test.com", svc.profile?.profile?.email, "the account must be published before the reload")
+        mock.awaitSseConnection()
+
+        mock.profileStatus = 400
+        mock.pushEvent("global.disposed", """{"type":"global.disposed"}""")
+        awaitReload()
+
+        assertIs<KiloAppState.Ready>(svc.appState.value, "the reload must not fail the app; logs=${log.messages}")
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+        assertEquals("alice@test.com", appStateDto(svc.appState.value).profile?.email)
+    }
+
+    /**
+     * A read that reports an error is a read that could not complete, not a signed-out answer, so a
+     * reload keeps the account it holds instead of failing the whole load over an optional resource.
+     */
+    @Test
+    fun `reload after an account step keeps the account when the profile read reports an error`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+        assertEquals("alice@test.com", svc.profile?.profile?.email, "the account must be published before the reload")
+        mock.awaitSseConnection()
+
+        // A status the tolerant read does not map to a signed-out answer, so it reports an error.
+        mock.profileStatus = 429
+        mock.pushEvent("global.disposed", """{"type":"global.disposed"}""")
+        awaitReload()
+
+        assertIs<KiloAppState.Ready>(svc.appState.value, "the reload must not fail the app; logs=${log.messages}")
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+        assertEquals("alice@test.com", appStateDto(svc.appState.value).profile?.email)
+    }
+
+    /**
+     * A definitive 401 is a signed-out answer: the reload publishes no account.
+     */
+    @Test
+    fun `reload clears the account when the profile read answers signed out`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+        assertNotNull(svc.profile, "the account must be published before the reload")
+        mock.awaitSseConnection()
+
+        mock.profileStatus = 401
+        mock.pushEvent("global.disposed", """{"type":"global.disposed"}""")
+        awaitReload()
+
+        assertIs<KiloAppState.Ready>(svc.appState.value, "the reload must not fail the app; logs=${log.messages}")
+        assertNull(svc.profile)
+        assertNull(appStateDto(svc.appState.value).profile)
+    }
+
+    /**
+     * Wait for the reload a disposed event triggers. The completion log lands after Ready is
+     * published, so it also settles the state before a test reads it.
+     */
+    private suspend fun awaitReload() {
+        assertTrue(
+            log.awaitMessage(20_000, count = 2) { it == "INFO: Application started — config, profile, notifications loaded" },
+            "a disposed event must reload the app; logs=${log.messages}",
+        )
+    }
+
+    // ------ Refresh account tests ------
+
+    @Test
+    fun `refresh account keeps the account when the profile read fails`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+
+        mock.profileStatus = 500
+        val failure = assertFailsWith<LoadFailure> { svc.refreshAccount() }
+        assertEquals("profile", failure.error.resource)
+        assertEquals(500, failure.error.status)
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+        assertEquals("alice@test.com", appStateDto(svc.appState.value).profile?.email)
+    }
+
+    @Test
+    fun `refresh account keeps the account when the profile read returns 400`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+
+        mock.profileStatus = 400
+        val failure = assertFailsWith<LoadFailure> { svc.refreshAccount() }
+        assertEquals("profile", failure.error.resource)
+        assertEquals(400, failure.error.status)
+        assertEquals("alice@test.com", svc.profile?.profile?.email)
+        assertEquals("alice@test.com", appStateDto(svc.appState.value).profile?.email)
+    }
+
+    @Test
+    fun `refresh account clears the account when nobody is signed in`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        assertNotNull(svc.profile, "the account must be published before the refresh")
+        assertNotNull(appStateDto(svc.appState.value).profile, "the account must be published before the refresh")
+        mock.profileStatus = 401
+        assertNull(svc.refreshAccount())
+        assertNull(svc.profile)
+        assertNull(appStateDto(svc.appState.value).profile)
+    }
+
+    @Test
+    fun `refresh account publishes the account when the read succeeds`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        mock.profile = """{"profile":{"email":"bob@test.com","name":"Bob"},"balance":null,"currentOrgId":null}"""
+        val fresh = svc.refreshAccount()
+        assertNotNull(fresh)
+        assertEquals("bob@test.com", fresh.profile.email)
+        assertEquals("bob@test.com", svc.profile?.profile?.email)
+        assertEquals("bob@test.com", appStateDto(svc.appState.value).profile?.email)
     }
 }

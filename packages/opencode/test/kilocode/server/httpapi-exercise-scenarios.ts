@@ -531,6 +531,15 @@ export const kiloScenarios: Scenario[] = [
     .get("/kilocode/session-host/workspace/profiles", "sessionHost.listWorkspaceProfiles")
     .probe({ path: "/path" })
     .status(401),
+  // A shared attachment selector must not route the catalog to a hosted session.
+  http.protected
+    .get("/kilocode/session-host/workspace/repositories", "sessionHost.listWorkspaceRepositories")
+    .probe({ path: "/kilocode/session-host/workspace/repositories" })
+    .at((ctx) => ({
+      path: "/kilocode/session-host/workspace/repositories?organizationID=22222222-2222-4222-8222-222222222222&primaryRepo=owner%2Frepo&page=1",
+      headers: ctx.headers({ "x-kilo-workspace": "wrk_att_0000000000000000000000000Z" }),
+    }))
+    .status(401),
   http.protected
     .post("/kilocode/session-host/workspace/profiles/personal-default", "sessionHost.setWorkspacePersonalDefaultProfile")
     .at((ctx) => ({

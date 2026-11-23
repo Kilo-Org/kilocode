@@ -33,10 +33,18 @@ object KiloNotifications {
     }
 
     fun warning(project: Project?, title: String, content: String? = null) {
-        val notification = NotificationGroupManager.getInstance()
-            .getNotificationGroup(GROUP)
-            ?.createNotification(title, content ?: "", NotificationType.WARNING)
-            ?: Notification(GROUP, title, content ?: "", NotificationType.WARNING)
+        build(title, content, NotificationType.WARNING).notify(project)
+    }
+
+    /** Warning notification with a single expiring action (e.g. open the page that can retry). */
+    fun warning(title: String, content: String?, actionLabel: String, action: () -> Unit) {
+        val project = ProjectManager.getInstance().openProjects.firstOrNull { !it.isDefault }
+        warning(project, title, content, actionLabel, action)
+    }
+
+    fun warning(project: Project?, title: String, content: String?, actionLabel: String, action: () -> Unit) {
+        val notification = build(title, content, NotificationType.WARNING)
+        notification.addAction(NotificationAction.createSimpleExpiring(actionLabel) { action() })
         notification.notify(project)
     }
 

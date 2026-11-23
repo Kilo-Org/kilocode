@@ -12,7 +12,9 @@ import { Flag } from "@opencode-ai/core/flag/flag"
 import { applyEdits, modify, parse as parseJsonc } from "jsonc-parser"
 import type { RuntimeFlags } from "@/effect/runtime-flags"
 import { BoardEnabled } from "@/kilocode/board/enabled"
+import { pattern } from "@/kilocode/mcp/tool-id"
 import { KilocodeConfigSources } from "../config/sources"
+import { envGuards } from "@opencode-ai/core/kilocode/shell-env-files"
 
 import PROMPT_DEBUG from "../../agent/prompt/debug.txt"
 import PROMPT_ORCHESTRATOR from "../../agent/prompt/orchestrator.txt"
@@ -55,6 +57,7 @@ const readable: Record<string, "allow"> = {
 export const bash: Record<string, "allow" | "ask" | "deny"> = {
   "*": "ask",
   ...readable,
+  ...envGuards(readable, "ask"),
   "touch *": "allow",
   "mkdir *": "allow",
   "cp *": "allow",
@@ -84,10 +87,10 @@ const gh: Record<string, "allow"> = {
   "gh search *": "allow",
 }
 
-export const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
-  "*": "deny",
-  ...readable,
-  "git *": "deny",
+// The git subcommands that only read. They are spread into `readOnlyBash` and
+// also handed to `envGuards`, which derives the git environment-file rules only
+// for a prefix the map allows.
+const gitReads: Record<string, "allow"> = {
   "git log *": "allow",
   "git show *": "allow",
   "git diff *": "allow",
@@ -108,6 +111,19 @@ export const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
   "git branch -a *": "allow",
   "git branch -r *": "allow",
   "git remote -v *": "allow",
+}
+
+// The commands `envGuards` derives from: the plain readers plus the git readers.
+const guardedReads: Record<string, "allow"> = { ...readable, ...gitReads }
+
+export const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
+  "*": "deny",
+  ...readable,
+  "git *": "deny",
+  ...gitReads,
+  // The git allows above would otherwise win by last match, so the environment
+  // file rules land after them. The same level the read rule applies.
+  ...envGuards(guardedReads, "ask"),
   "gh *": "ask",
   ...gh,
   // Everything below is a blocklist layered on the allowlist above: it catches ways
@@ -149,6 +165,9 @@ const exploreBash: Record<string, "allow" | "ask" | "deny"> = {
   "gh *": "deny",
   // `find` can mutate through `-delete` and `-exec`; use glob/list instead.
   "find *": "deny",
+  // A delegated agent cannot answer a prompt, so it refuses instead. The spread of
+  // `readOnlyBash` above carries the same rules at `ask`, so these land last.
+  ...envGuards(guardedReads, "deny"),
 }
 
 function board(enabled: boolean): Record<string, "allow"> {
@@ -359,8 +378,7 @@ function planGuard(worktree: string, mcp: Record<string, "allow" | "ask" | "deny
 export function getMcpRules(cfg: Config.Info): Record<string, "allow" | "ask" | "deny"> {
   const rules: Record<string, "allow" | "ask" | "deny"> = {}
   for (const key of Object.keys(cfg.mcp ?? {})) {
-    const sanitized = key.replace(/[^a-zA-Z0-9_-]/g, "_")
-    rules[sanitized + "_*"] = "ask"
+    rules[pattern(key)] = "ask"
   }
   return rules
 }
