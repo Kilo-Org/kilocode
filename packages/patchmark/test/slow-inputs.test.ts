@@ -203,7 +203,7 @@ describe("slow-input linear-time bounds", () => {
   })
   // kilocode_change end
 
-  test(
+  test( // kilocode_change
     // kilocode_change start - 256 KB instead of 1 MB: the work bound below is unchanged, but the smaller input
     // keeps the 15 s upstream default timeout out of reach on capped CI runners.
     "a long reply streamed 1 char at a time bounds scanning to the active line",

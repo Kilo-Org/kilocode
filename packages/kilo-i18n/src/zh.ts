@@ -206,4 +206,7 @@ export const dict = {
   // Session transcript export
   "session.export.success": "会话记录已导出为 Markdown。",
   "session.export.error": "导出会话记录失败",
+  // Herdr pane agent state reports.
+  "tui.herdr.permissionNeedsInput": "权限需要输入",
+  "tui.herdr.inputNeedsResponse": "输入需要响应",
 }

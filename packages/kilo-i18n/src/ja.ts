@@ -221,4 +221,7 @@ export const dict = {
   // Session transcript export
   "session.export.success": "セッション記録を Markdown としてエクスポートしました。",
   "session.export.error": "セッション記録をエクスポートできませんでした",
+  // Herdr pane agent state reports.
+  "tui.herdr.permissionNeedsInput": "権限の入力が必要です",
+  "tui.herdr.inputNeedsResponse": "入力への応答が必要です",
 }

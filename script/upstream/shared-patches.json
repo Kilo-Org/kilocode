@@ -1,9 +1,9 @@
 {
-  "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
+  "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away. Integration base efd2a06bb3 measures 167 files, 3032 marked and 561 unmarked lines against limits 167/3024/560; reconcile that inherited +8 marked/+1 unmarked drift. Herdr adds one shared flag-registry file and three marked lines (two TUI registration lines and one flag). The slow-input annotation reclassifies one line from unmarked to marked; the generated Herdr client flag adds one unmarked line. Final counts: 168 files, 3036 marked and 561 unmarked lines.",
   "limits": {
-    "files": 167,
-    "markedLines": 3024,
-    "unmarkedLines": 560,
+    "files": 168,
+    "markedLines": 3036,
+    "unmarkedLines": 561,
     "deletedFiles": 0
   },
   "files": {
@@ -122,7 +122,7 @@
     },
     "packages/client/src/promise/generated/types.ts": {
       "rung": 3,
-      "seam": "Generated client types for schema additions Kilo exposes: the optional command template and model metadata on the command list API, the optional PTY create size, the `hook` action variant of `Automation.Action` that lets a Kilo plugin own an automation row, and the optional `workspace` restoration outcome on `Session.Revert`. The client must be regenerated from the public schema. It also carries the optional `steer` query parameter of `session.interrupt`.",
+      "seam": "Generated client types for schema additions Kilo exposes: the optional command template and model metadata on the command list API, the optional PTY create size, the `hook` action variant of `Automation.Action` that lets a Kilo plugin own an automation row, the optional `workspace` restoration outcome on `Session.Revert`, and the experimental `herdr_agent_state` config flag type. The client must be regenerated from the public schema. It also carries the optional `steer` query parameter of `session.interrupt`.",
       "unmarked": "Generated TypeScript cannot retain manual marker comments; bun run generate owns this file."
     },
     "packages/protocol/openapi.json": {
@@ -146,6 +146,10 @@
     "packages/schema/src/automation.ts": {
       "rung": 3,
       "seam": "Add a generic hook-owned automation action alongside the native prompt and code actions, and widen only the service create input (`ServiceCreateInput`) so a plugin can write it; the public tool, RPC and OpenAPI create schemas stay prompt-and-code, without hook. The scheduler advances a hook row without native prompt admission even when its plugin owner is unavailable. A plugin hook cannot make the stored action safe before plugin activation, and host composition cannot persist ownership in the shared automation model."
+    },
+    "packages/schema/src/config/flag.ts": {
+      "rung": 4,
+      "seam": "Register the experimental `herdr_agent_state` flag in the shared schema registry so the TUI can read the public config and apply release-safe Herdr activation precedence. The registry is the shared schema boundary; neither the TUI plugin nor host composition can add a public flag key at runtime."
     },
     "packages/core/src/config/discovery.ts": {
       "rung": 3,

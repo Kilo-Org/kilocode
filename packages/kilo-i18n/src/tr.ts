@@ -225,4 +225,7 @@ export const dict = {
   // Session transcript export
   "session.export.success": "Oturum dökümü Markdown olarak dışa aktarıldı.",
   "session.export.error": "Oturum dökümü dışa aktarılamadı",
+  // Herdr pane agent state reports.
+  "tui.herdr.permissionNeedsInput": "İzin için giriş gerekiyor",
+  "tui.herdr.inputNeedsResponse": "Girdinin yanıtlanması gerekiyor",
 }

@@ -205,4 +205,7 @@ export const dict = {
   // Session transcript export
   "session.export.success": "工作階段記錄已匯出為 Markdown。",
   "session.export.error": "無法匯出工作階段記錄",
+  // Herdr pane agent state reports.
+  "tui.herdr.permissionNeedsInput": "權限需要輸入",
+  "tui.herdr.inputNeedsResponse": "輸入需要回應",
 }

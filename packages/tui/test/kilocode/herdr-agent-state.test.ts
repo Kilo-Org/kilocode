@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import { dict } from "@kilocode/kilo-i18n/en"
 import net from "node:net"
 import fs from "node:fs/promises"
 import os from "node:os"
@@ -8,8 +9,11 @@ import {
   buildRequest,
   createReporter,
   createSender,
+  herdrActivationEnabled,
+  loadHerdrTranslator,
   sendSocketRequest,
   status,
+  type HerdrConfigEntries,
   type HerdrMethod,
   type HerdrReport,
 } from "../../src/kilocode/herdr-agent-state"
@@ -38,7 +42,65 @@ function data(scene: Scene = {}): Data {
   } as unknown as Data
 }
 
+function entries(...experimental: Array<Record<string, boolean>>): HerdrConfigEntries {
+  return experimental.map((value) => ({ type: "document", info: { experimental: value } })) as HerdrConfigEntries
+}
+
 describe("herdr agent state", () => {
+  test("activates Herdr only with its environment and release-safe flag", () => {
+    expect(herdrActivationEnabled({ entries: [], channel: "release", herdrEnv: "1", overrides: "" })).toBe(false)
+    expect(herdrActivationEnabled({ entries: [], channel: "dev", herdrEnv: "1", overrides: "" })).toBe(true)
+    expect(herdrActivationEnabled({ entries: [], channel: "dev", overrides: "" })).toBe(false)
+    expect(
+      herdrActivationEnabled({ entries: [], channel: "release", herdrEnv: "1", overrides: "herdr_agent_state" }),
+    ).toBe(true)
+    expect(
+      herdrActivationEnabled({
+        entries: entries({ herdr_agent_state: true }),
+        channel: "release",
+        herdrEnv: "1",
+        overrides: "",
+      }),
+    ).toBe(true)
+    expect(
+      herdrActivationEnabled({
+        entries: entries({ herdr_agent_state: true }),
+        channel: "release",
+        herdrEnv: "1",
+        overrides: "-herdr_agent_state",
+      }),
+    ).toBe(false)
+  })
+
+  test("reports localized blocked state messages", async () => {
+    const translate = await loadHerdrTranslator("de-DE")
+    expect(status(data({ permissions: { ses_1: 1 } }), "ses_1", translate)).toEqual({
+      state: "blocked",
+      sessionID: "ses_1",
+      message: "Die Berechtigung benötigt eine Eingabe",
+    })
+    expect(status(data({ forms: { ses_1: 1 } }), "ses_1", translate)).toEqual({
+      state: "blocked",
+      sessionID: "ses_1",
+      message: "Die Eingabe benötigt eine Antwort",
+    })
+  })
+
+  test("maps traditional Chinese and Brazilian Portuguese locales", async () => {
+    for (const locale of ["zh-Hant", "zh-Hant-TW", "zh-TW"]) {
+      const translate = await loadHerdrTranslator(locale)
+      expect(status(data({ permissions: { ses_1: 1 } }), "ses_1", translate).message).toBe("權限需要輸入")
+      expect(status(data({ forms: { ses_1: 1 } }), "ses_1", translate).message).toBe("輸入需要回應")
+    }
+    const translate = await loadHerdrTranslator("pt-BR")
+    expect(status(data({ permissions: { ses_1: 1 } }), "ses_1", translate).message).toBe(
+      "A permissão precisa de uma entrada",
+    )
+    expect(status(data({ forms: { ses_1: 1 } }), "ses_1", translate).message).toBe(
+      "A entrada precisa de uma resposta",
+    )
+  })
+
   test("reports idle without a session", () => {
     expect(status(data(), undefined)).toEqual({ state: "idle" })
   })
@@ -73,12 +135,12 @@ describe("herdr agent state", () => {
     expect(status(data({ permissions: { ses_1: 1 } }), "ses_1")).toEqual({
       state: "blocked",
       sessionID: "ses_1",
-      message: "Permission needs input",
+      message: dict["tui.herdr.permissionNeedsInput"],
     })
     expect(status(data({ family: { ses_1: ["ses_1", "ses_2"] }, forms: { ses_2: 1 } }), "ses_1")).toEqual({
       state: "blocked",
       sessionID: "ses_1",
-      message: "Input needs response",
+      message: dict["tui.herdr.inputNeedsResponse"],
     })
   })
 
@@ -88,7 +150,7 @@ describe("herdr agent state", () => {
         method: "pane.report_agent",
         paneID: "wE:p5",
         seq: 42,
-        report: { state: "blocked", sessionID: "ses_1", message: "Permission needs input" },
+        report: { state: "blocked", sessionID: "ses_1", message: dict["tui.herdr.permissionNeedsInput"] },
       }),
     ).toEqual({
       id: "kilo2:42",
@@ -100,7 +162,7 @@ describe("herdr agent state", () => {
         seq: 42,
         state: "blocked",
         agent_session_id: "ses_1",
-        message: "Permission needs input",
+        message: dict["tui.herdr.permissionNeedsInput"],
       },
     })
 
@@ -213,7 +275,7 @@ describe("herdr agent state", () => {
     })
 
     send("pane.report_agent", 1, { state: "working", sessionID: "ses_1" })
-    send("pane.report_agent", 2, { state: "blocked", sessionID: "ses_1", message: "Permission needs input" })
+    send("pane.report_agent", 2, { state: "blocked", sessionID: "ses_1", message: dict["tui.herdr.permissionNeedsInput"] })
     send("pane.report_agent", 3, { state: "idle", sessionID: "ses_1" })
     send("pane.release_agent", 4)
 
@@ -240,7 +302,7 @@ describe("herdr agent state", () => {
 
     send("pane.report_agent", 1, { state: "working", sessionID: "ses_1" })
     send("pane.report_agent", 2, { state: "idle", sessionID: "ses_1" })
-    send("pane.report_agent", 3, { state: "blocked", sessionID: "ses_1", message: "Input needs response" })
+    send("pane.report_agent", 3, { state: "blocked", sessionID: "ses_1", message: dict["tui.herdr.inputNeedsResponse"] })
 
     await new Promise((resolve) => setTimeout(resolve, 80))
     expect(sent).toEqual([1, 3])

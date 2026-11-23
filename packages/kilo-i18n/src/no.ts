@@ -223,4 +223,7 @@ export const dict = {
   // Session transcript export
   "session.export.success": "Sesjonsutskriften ble eksportert som Markdown.",
   "session.export.error": "Eksport av sesjonsutskrift mislyktes",
+  // Herdr pane agent state reports.
+  "tui.herdr.permissionNeedsInput": "Tillatelsen krever inndata",
+  "tui.herdr.inputNeedsResponse": "Inndata krever et svar",
 }

@@ -216,4 +216,7 @@ export const dict = {
   // Session transcript export
   "session.export.success": "세션 기록을 Markdown으로 내보냈습니다.",
   "session.export.error": "세션 기록을 내보내지 못했습니다",
+  // Herdr pane agent state reports.
+  "tui.herdr.permissionNeedsInput": "권한 입력이 필요합니다",
+  "tui.herdr.inputNeedsResponse": "입력에 대한 응답이 필요합니다",
 }

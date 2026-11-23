@@ -228,4 +228,7 @@ export const dict = {
   // Session transcript export
   "session.export.success": "Transkript sesije je izvezen kao Markdown.",
   "session.export.error": "Izvoz transkripta sesije nije uspio",
+  // Herdr pane agent state reports.
+  "tui.herdr.permissionNeedsInput": "Dozvola zahtijeva unos",
+  "tui.herdr.inputNeedsResponse": "Unos zahtijeva odgovor",
 }

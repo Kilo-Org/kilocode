@@ -228,4 +228,7 @@ export const dict = {
   // Session transcript export
   "session.export.success": "Het sessietranscript is geëxporteerd als Markdown.",
   "session.export.error": "Exporteren van sessietranscript mislukt",
+  // Herdr pane agent state reports.
+  "tui.herdr.permissionNeedsInput": "Voor de toestemming is invoer nodig",
+  "tui.herdr.inputNeedsResponse": "Op de invoer moet worden gereageerd",
 }
