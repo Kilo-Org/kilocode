@@ -9,7 +9,6 @@ import { randomUUID } from "node:crypto"
 import { ProjectTable } from "@opencode/core/project/sql"
 import { SessionTable } from "@opencode/core/session/sql"
 import { SessionProjector } from "@opencode/core/session/projector"
-import { SessionEvent } from "@opencode/core/session/event"
 import { Database } from "@opencode/core/database/database"
 import { Bus } from "@opencode/core/bus"
 import { Credential } from "@opencode/core/credential"
@@ -17,9 +16,9 @@ import { IntegrationID } from "@opencode/schema/integration-id"
 import { AbsolutePath } from "@opencode/schema/schema"
 import { Project } from "@opencode/schema/project"
 import { Session } from "@opencode/schema/session"
-import { SessionMessage } from "@opencode/schema/session-message"
 import { Global } from "@opencode/util/global"
 import { LayerNode } from "@opencode/util/effect/layer-node"
+import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { makeGlobalNode } from "@opencode/util/effect/app-node"
 import { testEffect } from "../../core/test/lib/effect"
 import { SessionSync } from "../src/session-sync"
@@ -27,10 +26,6 @@ import { Store } from "../src/session-sync/store"
 import { digest, deletedMessage } from "../src/session-sync/protocol"
 
 const it = testEffect(Layer.empty)
-
-type WireEntity =
-  | { kind: string; id: string; revision: number; value: Schema.Json; sourceID?: string | null }
-  | { kind: string; id: string; revision: number; blob: { hash: string; bytes: number }; sourceID?: string | null }
 
 type WireSource = { sourceID: string; client: "cli" | "mobile" | "cloud-agent"; joinedAt: number }
 
@@ -52,6 +47,7 @@ const peer = () => {
   const grants = new Map<string, { userID: string; tenant: { type: "user" | "organization"; id: string } }>()
   const blobs = new Map<string, Uint8Array>()
   const bodies: string[] = []
+  const control = { deleteMode: "ok" as "ok" | "forbidden" | "retryable" | "invalid" }
   const putEntities = (sessionID: string, changes: readonly Record<string, Schema.Json>[]) => {
     const state = sessions.get(sessionID)!
     for (const change of changes) {
@@ -103,7 +99,9 @@ const peer = () => {
         if (request.method === "GET") {
           const bytes = blobs.get(`${sessionID}/${match[3]}`)
           if (!bytes) return error("blob_not_found", 404)
-          return new Response(bytes, { headers: { "content-type": "application/octet-stream" } })
+          // `Response` wants an ArrayBuffer; a byte-range slice of the stored copy is one.
+          const body = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
+          return new Response(body, { headers: { "content-type": "application/octet-stream" } })
         }
         const bytes = new Uint8Array(await request.arrayBuffer())
         if (digest(bytes) !== match[3]) return error("blob_hash_mismatch", 400)
@@ -166,6 +164,9 @@ const peer = () => {
       }
       if (request.method === "DELETE") {
         if (!existing) return error("session_not_found", 404)
+        if (control.deleteMode === "forbidden") return error("creator_mismatch", 403)
+        if (control.deleteMode === "retryable") return error("service_overloaded", 503)
+        if (control.deleteMode === "invalid") return Response.json({ version: 1, sessionID })
         existing.deleted = true
         return Response.json({ version: 1, sessionID, deleted: true, deletedAt: Date.now() })
       }
@@ -174,25 +175,35 @@ const peer = () => {
         return Response.json({ version: 1, sessionID, deleted: true, tenant: existing.tenant, deletedAt: Date.now() })
       if (match[2] === "entities") {
         const revision = url.searchParams.get("revision")
-        if (revision !== null && Number(revision) !== existing.revision)
-          return error("revision_changed", 409)
+        if (revision !== null && Number(revision) !== existing.revision) return error("revision_changed", 409)
         const limit = Math.min(Number(url.searchParams.get("limit") ?? 50), 100)
         const cursor = url.searchParams.get("cursor")
+        let after: { kind: string; id: string } | undefined
+        if (cursor) {
+          const decoded: unknown = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8"))
+          if (!Array.isArray(decoded) || typeof decoded[0] !== "string" || typeof decoded[1] !== "string")
+            return error("invalid_request", 400)
+          after = { kind: decoded[0], id: decoded[1] }
+        }
         const entries = [...existing.entities.entries()]
-          .map(([key, value]) => ({ key, value }))
-          .sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0))
-        const start = cursor ? entries.findIndex((entry) => entry.key > cursor) : 0
-        const page = entries.slice(start < 0 ? entries.length : start, (start < 0 ? entries.length : start) + limit)
-        const next = start >= 0 && start + limit < entries.length ? page[page.length - 1]!.key : null
+          .map(([key, value]) => ({ kind: key.slice(0, key.indexOf("/")), id: key.slice(key.indexOf("/") + 1), value }))
+          .filter((entry) => {
+            if (!after) return true
+            if (entry.kind !== after.kind) return entry.kind > after.kind
+            return entry.id > after.id
+          })
+          .sort((a, b) => (a.kind === b.kind ? (a.id < b.id ? -1 : a.id > b.id ? 1 : 0) : a.kind < b.kind ? -1 : 1))
+        const page = entries.slice(0, limit)
+        const next =
+          entries.length > page.length
+            ? Buffer.from(JSON.stringify([page[page.length - 1]!.kind, page[page.length - 1]!.id])).toString("base64url")
+            : null
         return Response.json({
           version: 1,
           sessionID,
           revision: existing.revision,
           position: existing.position,
-          entities: page.map(({ key, value }) => {
-            const [kind, id] = [key.slice(0, key.indexOf("/")), key.slice(key.indexOf("/") + 1)]
-            return { kind, id, revision: existing.revision, value }
-          }),
+          entities: page.map((entry) => ({ kind: entry.kind, id: entry.id, revision: existing.revision, value: entry.value })),
           next,
         })
       }
@@ -215,13 +226,27 @@ const peer = () => {
     sessions,
     blobs,
     bodies,
+    control,
     putEntities,
     url: server.url.origin,
     close: () => server.stop(true),
   }
 }
 
-const sessionEntity = (input: { id: string; title: string; created: number; updated: number; model?: unknown; agent?: string }) => ({
+const MessageData = Schema.Struct({
+  content: Schema.optional(Schema.Array(Schema.Struct({ text: Schema.optional(Schema.String) }))),
+  time: Schema.optional(Schema.Struct({ completed: Schema.optional(Schema.Number) })),
+  outcome: Schema.optional(Schema.String),
+})
+
+const sessionEntity = (input: {
+  id: string
+  title: string
+  created: number
+  updated: number
+  model?: Schema.Json
+  agent?: string
+}) => ({
   id: input.id,
   title: input.title,
   metadata: {},
@@ -267,37 +292,30 @@ const fixture = Effect.gen(function* () {
 const boot = (f: { root: string; backend: { url: string } }) =>
   Effect.gen(function* () {
     const context = yield* Layer.build(
-      makeGlobalNode({
-        service: KiloSessionSync.Service,
-        layer: Layer.effect(
-          KiloSessionSync.Service,
-          SessionSync.make({ background: false, destination: f.backend.url, organizationID: null }),
-        ),
-        deps: [
-          Database.node,
-          Bus.node,
-          SessionProjector.node,
-          Credential.node,
-          Global.node,
-        ],
-      }).pipe(
-        Layer.provideMerge(
-          Layer.mergeAll(
-            Database.node.replace(Database.configured({ path: path.join(f.root, "native.sqlite") })),
-            Global.node.replace(
-              Global.layerWith(
-                Object.fromEntries(
-                  ["home", "data", "cache", "config", "state", "tmp", "bin", "log", "repos"].map((name) => [
-                    name,
-                    path.join(f.root, name),
-                  ]),
-                ),
-              ),
+      AppNodeBuilder.build(LayerNode.group([SessionSync.node, Database.node, Bus.node, Credential.node, Global.node]), [
+        Global.node.replace(
+          Global.layerWith(
+            Object.fromEntries(
+              ["home", "data", "cache", "config", "state", "tmp", "bin", "log", "repos"].map((name) => [
+                name,
+                path.join(f.root, name),
+              ]),
             ),
-            SessionProjector.node.replace(SessionProjector.node.mapLayer(SessionSync.captureLayer)),
           ),
         ),
-      ).pipe(Layer.build),
+        Database.node.replace(Database.configured({ path: path.join(f.root, "native.sqlite") })),
+        SessionProjector.node.replace(SessionProjector.node.mapLayer(SessionSync.captureLayer)),
+        SessionSync.node.replace(
+          makeGlobalNode({
+            service: KiloSessionSync.Service,
+            layer: Layer.effect(
+              KiloSessionSync.Service,
+              SessionSync.make({ background: false, destination: f.backend.url, organizationID: null, flushTimeout: 5_000 }),
+            ),
+            deps: [Database.node, Bus.node, SessionProjector.node, Credential.node, Global.node],
+          }),
+        ),
+      ]),
     )
     return {
       db: Context.get(context, Database.Service).db,
@@ -309,10 +327,10 @@ const boot = (f: { root: string; backend: { url: string } }) =>
 const signIn = (credentials: Credential.Interface, user = "alice") =>
   credentials.create({ integrationID: IntegrationID.make("kilo"), value: { type: "key", key: `fixture:${user}` } })
 
-const allow = (db: Store.DB, directory: string) =>
+const allow = (db: Store.DB, directory: string, destination: string) =>
   Store.enable(db, {
     directory,
-    destination: "local",
+    destination,
     local: true,
     organizationID: null,
     tenant: { type: "user", id: "alice" },
@@ -324,7 +342,7 @@ it.live("pull imports a foreign session under the same id in sequence order and 
     const f = yield* fixture
     const s = yield* boot(f)
     yield* signIn(s.credentials)
-    yield* allow(s.db, f.directory)
+    yield* allow(s.db, f.directory, f.backend.url)
     const sessionID = Session.ID.make("ses_pull_import")
     const mobileSource = randomUUID()
     const state = {
@@ -381,7 +399,7 @@ it.live("pull seeds the acknowledgement so imported rows are never uploaded back
     const f = yield* fixture
     const s = yield* boot(f)
     yield* signIn(s.credentials)
-    yield* allow(s.db, f.directory)
+    yield* allow(s.db, f.directory, f.backend.url)
     const sessionID = Session.ID.make("ses_pull_no_reupload")
     f.backend.sessions.set(sessionID, {
       creatorID: "alice",
@@ -412,11 +430,11 @@ it.live("pull seeds the acknowledgement so imported rows are never uploaded back
     yield* s.db
       .run(sql`UPDATE session_message SET time_updated=time_updated WHERE session_id=${sessionID} AND id='msg_b'`)
       .pipe(Effect.orDie)
-    yield* Store.reconcile(s.db, f.directory, true)
+    yield* Store.reconcile(s.db, f.directory)
     expect((yield* Store.dirty(s.db, sessionID)).filter((row) => row.kind !== "session")).toEqual([])
     expect(f.backend.bodies).toEqual([])
     const flushed = yield* s.sync.flush({ directory: f.directory })
-    expect(flushed.pending).toBe(0)
+    expect({ pending: flushed.pending, code: flushed.error?.code }).toEqual({ pending: 0, code: undefined })
     expect(f.backend.bodies).toEqual([])
 
     // The side's own new message is authored here and uploads normally.
@@ -441,7 +459,7 @@ it.live("a position conflict fast-forwards when local messages are newer than th
     const f = yield* fixture
     const s = yield* boot(f)
     yield* signIn(s.credentials)
-    yield* allow(s.db, f.directory)
+    yield* allow(s.db, f.directory, f.backend.url)
     const sessionID = Session.ID.make("ses_pull_fast_forward")
     yield* s.db
       .insert(ProjectTable)
@@ -478,21 +496,7 @@ it.live("a position conflict fast-forwards when local messages are newer than th
       .run()
       .pipe(Effect.orDie)
     yield* s.db
-      .run(
-        sql`INSERT INTO _kilo_sync_session(id,directory,source_id,position,acknowledged) VALUES(${sessionID},${f.directory},'local-source',2,0)`,
-      )
-      .pipe(Effect.orDie)
-    yield* s.db
-      .run(
-        sql`INSERT INTO _kilo_sync_dirty(session_id,kind,id,position,op,value)
-          VALUES(${sessionID},'session',${sessionID},1,'put',${JSON.stringify(sessionEntity({ id: sessionID, title: "cli", created: 10, updated: 20 }))})`,
-      )
-      .pipe(Effect.orDie)
-    yield* s.db
-      .run(
-        sql`INSERT INTO _kilo_sync_dirty(session_id,kind,id,position,op,value)
-          VALUES(${sessionID},'message','msg_local',2,'put',${JSON.stringify({ seq: 9, message: userMessage("msg_local", "local", 30) })})`,
-      )
+      .run(sql`UPDATE _kilo_sync_session SET acknowledged=0,bootstrap_complete=1 WHERE id=${sessionID}`)
       .pipe(Effect.orDie)
     yield* s.db
       .run(
@@ -501,8 +505,8 @@ it.live("a position conflict fast-forwards when local messages are newer than th
       )
       .pipe(Effect.orDie)
 
-    const result = yield* s.sync.flush({ directory: f.directory })
-    expect(result.pending).toBe(0)
+    const flushed = yield* s.sync.flush({ directory: f.directory })
+    expect({ pending: flushed.pending, code: flushed.error?.code }).toEqual({ pending: 0, code: undefined })
     const remote = f.backend.sessions.get(sessionID)!
     expect(remote.entities.has(`message/msg_cloud`)).toBe(true)
     expect(remote.entities.has(`message/msg_local`)).toBe(true)
@@ -518,7 +522,7 @@ it.live("a position conflict with overlapping message sequences parks the sessio
     const f = yield* fixture
     const s = yield* boot(f)
     yield* signIn(s.credentials)
-    yield* allow(s.db, f.directory)
+    yield* allow(s.db, f.directory, f.backend.url)
     const sessionID = Session.ID.make("ses_pull_diverged")
     yield* s.db
       .insert(ProjectTable)
@@ -555,14 +559,11 @@ it.live("a position conflict with overlapping message sequences parks the sessio
       .pipe(Effect.orDie)
     yield* s.db
       .run(
-        sql`INSERT INTO _kilo_sync_session(id,directory,source_id,position,acknowledged) VALUES(${sessionID},${f.directory},'local-source',1,0)`,
+        sql`UPDATE _kilo_sync_session SET position=1,acknowledged=0,bootstrap_complete=1 WHERE id=${sessionID}`,
       )
       .pipe(Effect.orDie)
     yield* s.db
-      .run(
-        sql`INSERT INTO _kilo_sync_dirty(session_id,kind,id,position,op,value)
-          VALUES(${sessionID},'message','msg_local',1,'put',${JSON.stringify({ seq: 3, message: userMessage("msg_local", "local", 30) })})`,
-      )
+      .run(sql`UPDATE _kilo_sync_session SET acknowledged=0,bootstrap_complete=1 WHERE id=${sessionID}`)
       .pipe(Effect.orDie)
     yield* s.db
       .run(
@@ -572,7 +573,7 @@ it.live("a position conflict with overlapping message sequences parks the sessio
       .pipe(Effect.orDie)
 
     const result = yield* s.sync.flush({ directory: f.directory })
-    expect(result.pending).toBe(0)
+    expect(result.pending).toBeGreaterThan(0)
     expect(result.error?.code).toBe("diverged")
     expect(result.error?.message).toContain(`kilo2 sync pull ${sessionID} --replace-local`)
     const syncRow = yield* s.db.get<Store.SessionRow>(sql`SELECT * FROM _kilo_sync_session WHERE id=${sessionID}`).pipe(Effect.orDie)
@@ -581,6 +582,145 @@ it.live("a position conflict with overlapping message sequences parks the sessio
     expect(pull.outcome).toBe("updated")
     const remaining = yield* Store.dirty(s.db, sessionID)
     expect(remaining.filter((row) => row.id === "msg_local")).toEqual([])
+    const kept = yield* s.db
+      .all<{ id: string }>(sql`SELECT id FROM session_message WHERE session_id=${sessionID} ORDER BY seq`)
+      .pipe(Effect.orDie)
+    expect(kept.map((message) => message.id)).toEqual(["msg_cloud"])
+  }),
+)
+
+it.live("sync delete validates the tombstone and maps each failure state to a clear message", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f)
+    yield* signIn(s.credentials)
+    yield* allow(s.db, f.directory, f.backend.url)
+    const live = Session.ID.make("ses_delete_live")
+    f.backend.sessions.set(live, {
+      creatorID: "alice",
+      tenant: { type: "user", id: "alice" },
+      position: 0,
+      revision: 0,
+      lastReceipt: null,
+      entities: new Map<string, Schema.Json>(),
+      sources: [{ sourceID: randomUUID(), client: "mobile", joinedAt: Date.now() }],
+      deleted: false,
+    })
+    const deleted = yield* s.sync.deleteSession({ directory: f.directory, sessionID: live })
+    expect(deleted.deleted).toBe(true)
+    expect(deleted.message).toContain("deleted everywhere")
+    expect(f.backend.sessions.get(live)?.deleted).toBe(true)
+
+    // Already gone in the cloud: a second delete is a success, not a failure.
+    const again = yield* s.sync.deleteSession({ directory: f.directory, sessionID: live })
+    expect(again.deleted).toBe(true)
+
+    const missing = yield* s.sync
+      .deleteSession({ directory: f.directory, sessionID: Session.ID.make("ses_delete_absent") })
+      .pipe(Effect.result)
+    expect(missing).toMatchObject({
+      _tag: "Failure",
+      failure: { code: "session_not_found", message: expect.stringContaining("no synced copy") },
+    })
+
+    for (const [mode, code, text] of [
+      ["forbidden", "creator_mismatch", "belongs to another account"],
+      ["retryable", "service_overloaded", "cannot delete this session right now"],
+      ["invalid", "invalid_response", "did not confirm the session tombstone"],
+    ] as const) {
+      const sessionID = Session.ID.make(`ses_delete_${mode}`)
+      f.backend.sessions.set(sessionID, {
+        creatorID: "alice",
+        tenant: { type: "user", id: "alice" },
+        position: 0,
+        revision: 0,
+        lastReceipt: null,
+        entities: new Map<string, Schema.Json>(),
+        sources: [{ sourceID: randomUUID(), client: "mobile", joinedAt: Date.now() }],
+        deleted: false,
+      })
+      f.backend.control.deleteMode = mode
+      const result = yield* s.sync.deleteSession({ directory: f.directory, sessionID }).pipe(Effect.result)
+      if (result._tag === "Success") return yield* Effect.die("delete unexpectedly succeeded")
+      expect(result.failure).toMatchObject({ code, message: expect.stringContaining(text) })
+      f.backend.control.deleteMode = "ok"
+    }
+  }),
+)
+
+it.live("--replace-local keeps the local row identity, parent and fork linkage", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    const s = yield* boot(f)
+    yield* signIn(s.credentials)
+    yield* allow(s.db, f.directory, f.backend.url)
+    const parentID = Session.ID.make("ses_replace_parent")
+    const childID = Session.ID.make("ses_replace_child")
+    yield* s.db
+      .insert(ProjectTable)
+      .values({ id: Project.ID.global, worktree: AbsolutePath.make(f.directory), sandboxes: [] })
+      .onConflictDoNothing()
+      .run()
+    for (const id of [parentID, childID])
+      yield* s.db
+        .insert(SessionTable)
+        .values({
+          id,
+          project_id: Project.ID.global,
+          directory: AbsolutePath.make(f.directory),
+          slug: `fixture-${id}`,
+          version: "test",
+          title: "local",
+          time_created: 10,
+          time_updated: 20,
+        })
+        .run()
+        .pipe(Effect.orDie)
+    // Fork ancestry is raw SQL: the boundary brand is not constructible from a plain literal here.
+    yield* s.db
+      .run(
+        sql`UPDATE session_v2 SET parent_id=${parentID},fork_session_id=${parentID},
+          fork_boundary=${JSON.stringify({ messageID: "msg_parent", seq: 1 })} WHERE id=${childID}`,
+      )
+      .pipe(Effect.orDie)
+    yield* s.db
+      .run(
+        sql`INSERT INTO session_message(id,session_id,type,seq,time_created,time_updated,data)
+          VALUES('msg_stale',${childID},'user',1,10,10,${JSON.stringify(userMessage("msg_stale", "stale", 10))})`,
+      )
+      .pipe(Effect.orDie)
+    yield* s.db
+      .run(sql`UPDATE _kilo_sync_session SET acknowledged=0,bootstrap_complete=1 WHERE id=${childID}`)
+      .pipe(Effect.orDie)
+    f.backend.sessions.set(childID, {
+      creatorID: "alice",
+      tenant: { type: "user", id: "alice" },
+      position: 2,
+      revision: 1,
+      lastReceipt: null,
+      entities: new Map<string, Schema.Json>(),
+      sources: [{ sourceID: randomUUID(), client: "mobile", joinedAt: Date.now() }],
+      deleted: false,
+    })
+    f.backend.putEntities(childID, [
+      { op: "put", kind: "session", id: childID, value: sessionEntity({ id: childID, title: "cloud", created: 10, updated: 40 }) },
+      { op: "put", kind: "message", id: "msg_cloud", value: { seq: 1, message: userMessage("msg_cloud", "cloud", 40) } },
+    ])
+
+    const pulled = yield* s.sync.pull({ directory: f.directory, sessionID: childID, replaceLocal: true })
+    expect(pulled.outcome).toBe("updated")
+    const row = yield* s.db
+      .get<{ parent_id: string | null; fork_session_id: string | null; fork_boundary: unknown; title: string }>(
+        sql`SELECT parent_id,fork_session_id,fork_boundary,title FROM session_v2 WHERE id=${childID}`,
+      )
+      .pipe(Effect.orDie)
+    expect(row?.parent_id).toBe(parentID)
+    expect(row?.fork_session_id).toBe(parentID)
+    expect(row?.title).toBe("cloud")
+    const messages = yield* s.db
+      .all<{ id: string }>(sql`SELECT id FROM session_message WHERE session_id=${childID} ORDER BY seq`)
+      .pipe(Effect.orDie)
+    expect(messages.map((message) => message.id)).toEqual(["msg_cloud"])
   }),
 )
 
@@ -589,7 +729,7 @@ it.live("a tombstoned session refuses a pull with the exact message and --as-new
     const f = yield* fixture
     const s = yield* boot(f)
     yield* signIn(s.credentials)
-    yield* allow(s.db, f.directory)
+    yield* allow(s.db, f.directory, f.backend.url)
     const sessionID = Session.ID.make("ses_pull_tombstone")
     yield* s.db
       .insert(ProjectTable)
@@ -648,7 +788,7 @@ it.live("deleting locally then pulling restores the session from the synced copy
     const f = yield* fixture
     const s = yield* boot(f)
     yield* signIn(s.credentials)
-    yield* allow(s.db, f.directory)
+    yield* allow(s.db, f.directory, f.backend.url)
     const sessionID = Session.ID.make("ses_pull_restore")
     yield* s.db
       .insert(ProjectTable)
@@ -707,7 +847,7 @@ it.live("pull folds message parts into inline content and normalizes a stale unf
     const f = yield* fixture
     const s = yield* boot(f)
     yield* signIn(s.credentials)
-    yield* allow(s.db, f.directory)
+    yield* allow(s.db, f.directory, f.backend.url)
     const sessionID = Session.ID.make("ses_pull_parts")
     f.backend.sessions.set(sessionID, {
       creatorID: "alice",
@@ -728,7 +868,7 @@ it.live("pull folds message parts into inline content and normalizes a stale unf
         id: "msg_a",
         value: {
           seq: 2,
-          message: { ...assistantMessage("msg_a", "", 11), content: undefined },
+          message: (({ content: _content, ...rest }) => rest)(assistantMessage("msg_a", "", 11)),
           parts: { count: 2, through: 6 },
         },
       },
@@ -748,11 +888,14 @@ it.live("pull folds message parts into inline content and normalizes a stale unf
     const pulled = yield* s.sync.pull({ directory: f.directory, sessionID })
     expect(pulled.outcome).toBe("imported")
     const assistant = yield* s.db
-      .get<{ data: { content: { type: string; text?: string }[] } }>(
+      .get<{ data: unknown }>(
         sql`SELECT data FROM session_message WHERE session_id=${sessionID} AND id='msg_a'`,
       )
       .pipe(Effect.orDie)
-    expect(assistant?.data.content.map((part) => part.text)).toEqual(["streamed", " more"])
+    const assistantData = MessageData.make(
+      Schema.decodeUnknownSync(MessageData)(typeof assistant?.data === "string" ? JSON.parse(assistant.data) : assistant?.data),
+    )
+    expect(assistantData.content?.map((part) => part.text)).toEqual(["streamed", " more"])
     const [syncRow, rows] = yield* Effect.all([
       s.db.get<Store.SessionRow>(sql`SELECT * FROM _kilo_sync_session WHERE id=${sessionID}`).pipe(Effect.orDie),
       s.db
@@ -761,7 +904,21 @@ it.live("pull folds message parts into inline content and normalizes a stale unf
     ])
     expect(syncRow?.acknowledged).toBe(9)
     if (syncRow?.error_code) expect(syncRow.error_code).not.toBe("identity_conflict")
-    expect(rows.map((row) => row.type)).toEqual(["user", "assistant"])
+    expect(rows.map((row) => row.type)).toEqual(["user", "assistant", "idle"])
+    const idle = yield* s.db
+      .get<{ data: unknown }>(sql`SELECT data FROM session_message WHERE session_id=${sessionID} AND type='idle'`)
+      .pipe(Effect.orDie)
+    const idleData = Schema.decodeUnknownSync(MessageData)(
+      typeof idle?.data === "string" ? JSON.parse(idle.data) : idle?.data,
+    )
+    expect(idleData.outcome).toBe("interrupted")
+    const completed = yield* s.db
+      .get<{ data: unknown }>(sql`SELECT data FROM session_message WHERE session_id=${sessionID} AND id='msg_a'`)
+      .pipe(Effect.orDie)
+    const completedData = Schema.decodeUnknownSync(MessageData)(
+      typeof completed?.data === "string" ? JSON.parse(completed.data) : completed?.data,
+    )
+    expect(completedData.time?.completed).toBe(11)
     expect(yield* Store.foreign(s.db, sessionID)).toEqual(
       expect.arrayContaining([
         { kind: "message-part", id: "msg_a/0" },
@@ -776,7 +933,7 @@ it.live("pull drops an unknown model and agent and keeps a resolvable one", () =
     const f = yield* fixture
     const s = yield* boot(f)
     yield* signIn(s.credentials)
-    yield* allow(s.db, f.directory)
+    yield* allow(s.db, f.directory, f.backend.url)
     const unknownID = Session.ID.make("ses_pull_unknown_model")
     const knownID = Session.ID.make("ses_pull_known_model")
     yield* s.db
@@ -809,18 +966,19 @@ it.live("pull drops an unknown model and agent and keeps a resolvable one", () =
       yield* s.sync.pull({ directory: f.directory, sessionID })
     }
     const unknown = yield* s.db
-      .get<{ model: { providerID: string } | null; agent: string | null }>(
+      .get<{ model: unknown; agent: string | null }>(
         sql`SELECT model,agent FROM session_v2 WHERE id=${unknownID}`,
       )
       .pipe(Effect.orDie)
     expect(unknown?.model).toBeNull()
     expect(unknown?.agent).toBeNull()
     const known = yield* s.db
-      .get<{ model: { providerID: string; id: string }; agent: string | null }>(
-        sql`SELECT model,agent FROM session_v2 WHERE id=${knownID}`,
-      )
+      .get<{ model: unknown; agent: string | null }>(sql`SELECT model,agent FROM session_v2 WHERE id=${knownID}`)
       .pipe(Effect.orDie)
-    expect(known?.model).toMatchObject({ providerID: "kilo", id: "fixture-model" })
+    const knownModel = Schema.decodeUnknownSync(
+      Schema.Struct({ providerID: Schema.String, id: Schema.String }),
+    )(typeof known?.model === "string" ? JSON.parse(known.model) : known?.model)
+    expect(knownModel).toMatchObject({ providerID: "kilo", id: "fixture-model" })
     expect(known?.agent).toBe("build")
   }),
 )

@@ -30,6 +30,7 @@ import {
   AssetMapping,
   classifyConflict,
   decode,
+  DeletedState,
   deletedMessage,
   destination,
   digest,
@@ -818,12 +819,16 @@ export const make = Effect.fn("SessionSync.make")(function* (
         last.digest === pending.digest
       )
         return last
-      if (
-        state.position !== session.acknowledged ||
-        (session.acknowledged === 0
-          ? last !== null
-          : last === null || last.batchID !== session.ack_batch || last.digest !== session.ack_digest)
-      ) {
+      // A pulled session seeds its acknowledgement from the cloud position and has no local receipt lineage.
+      // That is consistent as long as the positions agree; anything else still parks instead of overwriting.
+      const seeded = session.ack_batch === null && session.ack_digest === null
+      const conflict = seeded
+        ? state.position !== session.acknowledged
+        : state.position !== session.acknowledged ||
+          (session.acknowledged === 0
+            ? last !== null
+            : last === null || last.batchID !== session.ack_batch || last.digest !== session.ack_digest)
+      if (conflict) {
         const downloaded = yield* downloadEntities(c, session.id, state).pipe(Effect.option)
         if (downloaded._tag === "None")
           return yield* fail(
@@ -1152,14 +1157,28 @@ export const make = Effect.fn("SessionSync.make")(function* (
       lock.withPermit(
         Effect.gen(function* () {
           const c = yield* consentFor(input.directory)
-          const deleted = yield* authenticated(c, sessionUrl(c, input.sessionID), "DELETE").pipe(
-            Effect.as(true),
-            Effect.catch((error) =>
-              error.code === "session_not_found" || error.code === "session_deleted"
-                ? Effect.succeed(false)
-                : Effect.fail(error),
-            ),
+          const outcome = yield* authenticated(c, sessionUrl(c, input.sessionID), "DELETE").pipe(
+            Effect.map((value) => ({ kind: "response" as const, value })),
+            Effect.catch((error) => {
+              if (error.code === "session_not_found")
+                return Effect.fail(fail("session_not_found", `Session ${input.sessionID} has no synced copy to delete.`))
+              if (error.code === "session_deleted") return Effect.succeed({ kind: "already" as const })
+              if (error.code === "creator_mismatch")
+                return Effect.fail(
+                  fail("creator_mismatch", `Session ${input.sessionID} belongs to another account and cannot be deleted here.`),
+                )
+              return Effect.fail(
+                error.retryable
+                  ? fail(error.code, "The sync service cannot delete this session right now; retry later", true, error.retryAt)
+                  : error,
+              )
+            }),
           )
+          if (outcome.kind === "response") {
+            const tombstone = Schema.decodeUnknownOption(DeletedState)(outcome.value)
+            if (tombstone._tag === "None")
+              return yield* fail("invalid_response", "The sync service did not confirm the session tombstone")
+          }
           yield* db
             .run(
               sql`UPDATE _kilo_sync_session SET error_code='session_deleted',error_message=${deletedMessage},retry_at=9007199254740991 WHERE id=${input.sessionID}`,
@@ -1168,10 +1187,8 @@ export const make = Effect.fn("SessionSync.make")(function* (
           verified.delete(input.sessionID)
           return KiloSessionSyncRpc.DeleteResult.make({
             sessionID: input.sessionID,
-            deleted,
-            message: deleted
-              ? `Session ${input.sessionID} deleted everywhere; the synced copy is gone.`
-              : `Session ${input.sessionID} has no synced copy to delete.`,
+            deleted: true,
+            message: `Session ${input.sessionID} deleted everywhere; the synced copy is gone.`,
           })
         }),
       ),

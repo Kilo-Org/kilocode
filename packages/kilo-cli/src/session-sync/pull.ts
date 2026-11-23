@@ -109,12 +109,13 @@ export const importSnapshot = Effect.fn("SessionSync.Pull.importSnapshot")(funct
           resolveModel: input.resolveModel,
           resolveAgent: input.resolveAgent,
         })
+        // --replace-local replaces the transcript and the cloud-owned session fields; the local row identity,
+        // parent and fork linkage stay, so a replace never relocates a child or rewrites fork ancestry.
         if (input.replaceLocal && existing) {
           yield* tx.delete(SessionPartTable).where(eq(SessionPartTable.session_id, Session.ID.make(input.sessionID))).run().pipe(Effect.orDie)
           yield* tx.delete(SessionMessageTable).where(eq(SessionMessageTable.session_id, Session.ID.make(input.sessionID))).run().pipe(Effect.orDie)
-          yield* tx.delete(SessionTable).where(eq(SessionTable.id, Session.ID.make(input.sessionID))).run().pipe(Effect.orDie)
         }
-        const fresh = !existing || Boolean(input.replaceLocal && existing)
+        const fresh = !existing
         const now = Date.now()
         if (fresh) {
           yield* tx
@@ -228,6 +229,9 @@ export const importSnapshot = Effect.fn("SessionSync.Pull.importSnapshot")(funct
                 return source !== null && source !== undefined && source !== input.sourceID
               }),
             ]
+        // --replace-local discards the local unsynced tail: its captured changes were never committed,
+        // so they are dropped rather than propagated as removals of entities the cloud never saw.
+        if (input.replaceLocal) yield* tx.run(sql`DELETE FROM _kilo_sync_dirty WHERE session_id=${input.sessionID}`).pipe(Effect.orDie)
         if (fresh) yield* tx.run(sql`DELETE FROM _kilo_sync_dirty WHERE session_id=${input.sessionID}`).pipe(Effect.orDie)
         yield* Store.seedImported(tx, {
           sessionID: input.sessionID,

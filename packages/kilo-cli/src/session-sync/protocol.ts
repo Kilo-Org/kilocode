@@ -406,6 +406,7 @@ export const decode = <A, I>(schema: Schema.Codec<A, I>, value: unknown) =>
 export const deletedMessage = "This session was deleted on another device; it is no longer synced."
 
 export const MessageEnvelope = Schema.Struct({ seq: Schema.Number, message: Schema.Json })
+export const DeletedState = Schema.Struct({ deleted: Schema.Literal(true), deletedAt: Schema.Number })
 export const AssetMapping = Schema.Struct({
   blob: Schema.Struct({ hash: Schema.String, bytes: Schema.Number }),
   entity: Schema.optional(Schema.Struct({ kind: Schema.String, id: Schema.String })),
