@@ -49,6 +49,9 @@
   --am-tab-width: clamp(72px, calc(100% / var(--tab-count, 1)), var(--am-tab-max-width));
   display: flex;
   align-items: stretch;
+  /* Definite width prevents flex-content reflow when terminal OSC 2 titles change length. */
+  width: calc(var(--tab-count, 1) * var(--am-tab-max-width));
+  max-width: 100%;
   flex: 0 1 calc(var(--tab-count, 1) * var(--am-tab-max-width));
   min-width: 0;
   height: 100%;

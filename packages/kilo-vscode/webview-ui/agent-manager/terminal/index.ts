@@ -1,5 +1,5 @@
 /**
- * xterm.js terminal tabs for the Agent Manager.
+ * libghostty terminal tabs for the Agent Manager.
  *
  * All user-visible feature code lives in this folder so it can be
  * removed as one unit if the feature is ever retired.
@@ -26,3 +26,4 @@ export { createSideTerminal } from "./side"
 export { TerminalTab } from "./TerminalTab"
 export { SortableTerminalTab } from "./SortableTerminalTab"
 export { createAmbientSetup, hasSetupTerminal, keepTerminalStack, showTerminalStack } from "./ambient"
+export { preloadGhostty } from "./ghostty"

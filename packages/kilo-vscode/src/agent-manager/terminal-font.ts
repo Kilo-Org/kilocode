@@ -3,7 +3,7 @@
  *
  * VS Code's integrated terminal falls back to the editor font family when
  * its own family is unset. Font size has a separate platform default. We
- * replicate those settings for Agent Manager xterm instances.
+ * replicate those settings for Agent Manager libghostty terminal instances.
  */
 
 import * as vscode from "vscode"

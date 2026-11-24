@@ -250,11 +250,11 @@ describe("Agent Manager terminal routing", () => {
       worktreeId: "wt-1",
       projectId: "prj-1",
     })
-    expect(envs[0]).toEqual({ KILO_UNICODE_LOGO: "0", KILO_TERMINAL_ACTIVITY: "1" })
+    expect(envs[0]).toEqual({ KILO_UNICODE_LOGO: "1", KILO_TERMINAL_ACTIVITY: "1" })
     expect(messages[0]).toMatchObject({ font })
     router.handle({ type: "agentManager.terminal.restart", terminalId: "side-1" })
     await wait()
-    expect(envs[1]).toEqual({ KILO_UNICODE_LOGO: "0", KILO_TERMINAL_ACTIVITY: "1" })
+    expect(envs[1]).toEqual({ KILO_UNICODE_LOGO: "1", KILO_TERMINAL_ACTIVITY: "1" })
 
     router.handle({
       type: "agentManager.terminal.create",

@@ -28,7 +28,7 @@ export type AmbientDecision = "wait" | "hide" | "keep"
  *  It shows for any selected context (local/worktree) and for an
  *  unassigned session, where `selection` is null but the context is not
  *  empty (a live session is showing). Keep it mounted under history when
- *  terminals exist; the caller hides it without disposing xterm sockets. */
+ *  terminals exist; the caller hides it without disposing terminal sockets. */
 export function showTerminalStack(history: boolean, selection: string | null, contextEmpty: boolean): boolean {
   return !history && (selection !== null || !contextEmpty)
 }
