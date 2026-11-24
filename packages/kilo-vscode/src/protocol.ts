@@ -1,6 +1,7 @@
 // Messages between the webview and the extension host. The webview has no server credentials: it sends HTTP
 // requests through the host (`fetch`), and the host streams each response back in order.
 import type { KiloIndexingRpc } from "@opencode/schema/kilocode/indexing"
+import type { AutoModelPreviewTelemetryPayload } from "./shared/auto-model-preview-telemetry"
 import type { ReviewCommentData, ReviewCommentEntry } from "./shared/review-comments"
 import type { WorkStyle, WorkStyleState } from "./shared/work-style-presets"
 
@@ -301,6 +302,7 @@ export type Ui =
   | { type: "syncDismissedNotifications"; ids: string[] }
   | ModelPreferenceMessage
   | { type: "trackCostSession"; sessionID: string }
+  | { type: "autoModelPreviewTelemetry"; event: AutoModelPreviewTelemetryPayload }
   | { type: "webviewFocusChanged"; focused: boolean }
   | { type: "setLanguage"; locale: string }
   | { type: "saveImage"; dataUrl: string; filename: string; sessionID?: string }

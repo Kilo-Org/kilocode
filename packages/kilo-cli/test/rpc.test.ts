@@ -467,6 +467,17 @@ test(
     expect(preview.recommendation?.suggestedProfile).toBe("frontier")
     expect(preview.illustrative).toBe(true)
 
+    // Repeating the same prompt + model returns the cached preview cleanly.
+    const repeated = await gateway.rpc["autoModel.preview"](
+      {
+        prompt: "  Refactor the authentication helper to handle expired tokens and add tests.  ",
+        agent: "code",
+        currentModel: { providerID: "kilo", id: "anthropic/claude-opus-4.6", name: "Claude Opus 4.6" },
+      },
+      gateway.options,
+    )
+    expect(repeated).toEqual(preview)
+
     await expect(gateway.rpc["autoModel.preview"]({ prompt: "   " }, gateway.options)).rejects.toMatchObject({
       type: "failed",
     })

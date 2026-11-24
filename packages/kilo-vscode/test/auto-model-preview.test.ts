@@ -27,9 +27,16 @@ import {
   createAutoModelPreview,
   formatEstimatedCost,
   isAutoModelRef,
+  modelKindOf,
   profileForAutoModel,
   type ComposerDraftState,
 } from "../webview-ui/src/v2/auto-model-preview-state"
+import {
+  AutoModelPreviewTelemetryEvent,
+  captureAutoModelPreviewTelemetry,
+  setAutoModelPreviewTelemetrySink,
+} from "../src/services/auto-model-preview-telemetry"
+import type { AutoModelPreviewTelemetryPayload } from "../src/shared/auto-model-preview-telemetry"
 
 const SAMPLE: KiloGatewayRpc.AutoModelPreviewResult = {
   profile: "efficient",
@@ -103,6 +110,14 @@ describe("auto-model preview visibility & formatting", () => {
     expect(canPreviewAutoModel({ text: "Refactor auth helper", goal: true, disabled: false })).toBe(false)
     expect(canPreviewAutoModel({ text: "Refactor auth helper", goal: false, disabled: true })).toBe(false)
     expect(canPreviewAutoModel({ text: "Refactor auth helper", goal: false, disabled: false })).toBe(true)
+  })
+
+  test("classifies privacy-safe model kinds for telemetry", () => {
+    expect(modelKindOf({ providerID: "kilo", id: "kilo-auto/efficient" })).toBe("auto_efficient")
+    expect(modelKindOf({ providerID: "kilo", id: "kilo-auto/frontier" })).toBe("auto_frontier")
+    expect(modelKindOf({ providerID: "kilo", id: "kilo-auto/free" })).toBe("auto_other")
+    expect(modelKindOf({ providerID: "kilo", id: "anthropic/claude-opus-4.6" })).toBe("explicit")
+    expect(modelKindOf(undefined)).toBe("unknown")
   })
 
   test("formats estimated cost values consistently", () => {
@@ -216,6 +231,299 @@ describe("createAutoModelPreview controller", () => {
     })
 
     dispose?.()
+  })
+
+  test("serves repeated clicks from cache with a single RPC while recording every click metric", async () => {
+    let calls = 0
+    const events: AutoModelPreviewTelemetryPayload[] = []
+    let dispose: (() => void) | undefined
+
+    await createRoot(async (cleanup) => {
+      dispose = cleanup
+      const controller = createAutoModelPreview({
+        request: async () => {
+          calls++
+          return SAMPLE
+        },
+        draft: () => ({ text: "Refactor authentication helper", goal: false }),
+        model: () => ({ providerID: "kilo", id: "kilo-auto/efficient" }),
+        models: () => [],
+        agent: () => "code",
+        disabled: () => false,
+        onTelemetry: (event) => events.push(event),
+      })
+
+      // First click hits network.
+      controller.toggle()
+      await flush()
+      expect(calls).toBe(1)
+
+      // Toggle closed & reopened 5 more times (12 clicks total): all subsequent opens hit local cache with 0 RPCs.
+      for (let i = 0; i < 5; i++) {
+        controller.toggle()
+        expect(controller.open()).toBe(false)
+        controller.toggle()
+        expect(controller.open()).toBe(true)
+        expect(controller.loading()).toBe(false)
+      }
+      controller.toggle()
+      expect(controller.open()).toBe(false)
+
+      expect(calls).toBe(1)
+
+      const clicks = events.filter((item) => item.kind === "clicked")
+      expect(clicks).toHaveLength(12)
+      expect(clicks[0]).toMatchObject({
+        action: "open",
+        source: "network",
+        modelKind: "auto_efficient",
+        clicksForDraft: 1,
+        clicksTotal: 1,
+        stale: false,
+      })
+      expect(clicks[1]).toMatchObject({ action: "close", source: "none", clicksForDraft: 2, clicksTotal: 2 })
+      expect(clicks[2]).toMatchObject({ action: "open", source: "cache", clicksForDraft: 3, clicksTotal: 3 })
+      expect(clicks.at(-1)).toMatchObject({ action: "close", source: "none", clicksForDraft: 12, clicksTotal: 12 })
+
+      const resolved = events.filter((item) => item.kind === "resolved")
+      expect(resolved).toHaveLength(1)
+      expect(resolved[0]).toMatchObject({
+        outcome: "success",
+        modelKind: "auto_efficient",
+        profile: "efficient",
+        illustrative: true,
+      })
+    })
+
+    dispose?.()
+  })
+
+  test("coalesces rapid clicks while a request is still in flight", async () => {
+    let calls = 0
+    const pending = Promise.withResolvers<KiloGatewayRpc.AutoModelPreviewResult>()
+    const events: AutoModelPreviewTelemetryPayload[] = []
+    let dispose: (() => void) | undefined
+
+    await createRoot(async (cleanup) => {
+      dispose = cleanup
+      const controller = createAutoModelPreview({
+        request: () => {
+          calls++
+          return pending.promise
+        },
+        draft: () => ({ text: "Fix race condition", goal: false }),
+        model: () => ({ providerID: "kilo", id: "kilo-auto/efficient" }),
+        models: () => [],
+        agent: () => "code",
+        disabled: () => false,
+        onTelemetry: (event) => events.push(event),
+      })
+
+      // Click 1: opens and starts network request.
+      controller.toggle()
+      expect(controller.open()).toBe(true)
+      expect(controller.loading()).toBe(true)
+
+      // Click 2: closes while still loading.
+      controller.toggle()
+      expect(controller.open()).toBe(false)
+
+      // Click 3: reopens while the same request is still pending -> joins in-flight instead of starting a 2nd RPC.
+      controller.toggle()
+      expect(controller.open()).toBe(true)
+      expect(controller.loading()).toBe(true)
+      expect(calls).toBe(1)
+
+      pending.resolve(SAMPLE)
+      await flush()
+      expect(controller.loading()).toBe(false)
+      expect(controller.result()).toEqual(SAMPLE)
+
+      const clicks = events.filter((item) => item.kind === "clicked")
+      expect(clicks.map((item) => [item.action, item.source])).toEqual([
+        ["open", "network"],
+        ["close", "none"],
+        ["open", "inflight"],
+      ])
+    })
+
+    dispose?.()
+  })
+
+  test("reuses cache on model flip-flop, undo-edit, and respects TTL and LRU bounds", async () => {
+    let calls = 0
+    let now = 1_000
+    let dispose: (() => void) | undefined
+
+    await createRoot(async (cleanup) => {
+      dispose = cleanup
+      const [draft, setDraft] = createSignal<ComposerDraftState>({ text: "Prompt A", goal: false })
+      const [model, setModel] = createSignal<ModelRef | undefined>({
+        providerID: "kilo",
+        id: "kilo-auto/efficient",
+      })
+      const controller = createAutoModelPreview({
+        request: async (payload) => {
+          calls++
+          return { ...SAMPLE, profile: payload.profile ?? "efficient" }
+        },
+        draft,
+        model,
+        models: () => [],
+        agent: () => "code",
+        disabled: () => false,
+        cacheMaxEntries: 2,
+        cacheTtlMs: 5_000,
+        now: () => now,
+      })
+
+      controller.toggle()
+      await flush()
+      expect(calls).toBe(1)
+
+      // Switch to Auto Frontier (new cache entry) and back to Auto Efficient (cache hit).
+      controller.close()
+      setModel({ providerID: "kilo", id: "kilo-auto/frontier" })
+      controller.toggle()
+      await flush()
+      expect(calls).toBe(2)
+      expect(controller.result()?.profile).toBe("frontier")
+
+      controller.close()
+      setModel({ providerID: "kilo", id: "kilo-auto/efficient" })
+      controller.toggle()
+      await flush()
+      expect(calls).toBe(2)
+      expect(controller.result()?.profile).toBe("efficient")
+
+      // Edit prompt to Prompt B (evicts Frontier because Efficient was just touched), then undo back to Prompt A (cache hit).
+      setDraft({ text: "Prompt B", goal: false })
+      controller.toggle()
+      await flush()
+      expect(calls).toBe(3)
+
+      setDraft({ text: "Prompt A", goal: false })
+      controller.toggle()
+      await flush()
+      expect(calls).toBe(3)
+
+      // Expire TTL -> next open fetches again.
+      controller.close()
+      now += 5_000
+      controller.toggle()
+      await flush()
+      expect(calls).toBe(4)
+    })
+
+    dispose?.()
+  })
+
+  test("tracks never-clicked and multi-click prompt submissions and resets per-draft click counters", async () => {
+    const events: AutoModelPreviewTelemetryPayload[] = []
+    let dispose: (() => void) | undefined
+
+    await createRoot(async (cleanup) => {
+      dispose = cleanup
+      const controller = createAutoModelPreview({
+        request: async () => SAMPLE,
+        draft: () => ({ text: "Write migration script", goal: false }),
+        model: () => ({ providerID: "kilo", id: "anthropic/claude-opus-4.6" }),
+        models: () => [],
+        agent: () => "code",
+        disabled: () => false,
+        onTelemetry: (event) => events.push(event),
+      })
+
+      // Submitting without ever clicking Preview reports 0 clicks.
+      controller.recordPromptSubmitted()
+      expect(events.at(-1)).toEqual({
+        kind: "prompt_submitted",
+        previewClicks: 0,
+        previewed: false,
+        modelKind: "explicit",
+      })
+
+      // Click Preview three times (open, close, reopen), then submit.
+      controller.toggle()
+      await flush()
+      controller.toggle()
+      controller.toggle()
+      controller.recordPromptSubmitted({ providerID: "kilo", id: "kilo-auto/efficient" })
+      expect(events.at(-1)).toEqual({
+        kind: "prompt_submitted",
+        previewClicks: 3,
+        previewed: true,
+        modelKind: "auto_efficient",
+      })
+
+      // Next draft starts with clicksForDraft reset to 1 while clicksTotal keeps incrementing.
+      controller.toggle()
+      const lastClick = events.filter((item) => item.kind === "clicked").at(-1)
+      expect(lastClick).toMatchObject({ clicksForDraft: 1, clicksTotal: 4 })
+    })
+
+    dispose?.()
+  })
+})
+
+describe("auto-model preview host telemetry sink", () => {
+  test("gates events on VS Code telemetry consent and forwards structured event names", () => {
+    const captured: Array<{ event: string; properties: Record<string, unknown> }> = []
+    setAutoModelPreviewTelemetrySink((event, properties) => captured.push({ event, properties }))
+
+    try {
+      const clicked: AutoModelPreviewTelemetryPayload = {
+        kind: "clicked",
+        action: "open",
+        source: "cache",
+        modelKind: "auto_efficient",
+        promptLength: 42,
+        clicksForDraft: 4,
+        clicksTotal: 9,
+        stale: false,
+        agent: "code",
+      }
+      const submitted: AutoModelPreviewTelemetryPayload = {
+        kind: "prompt_submitted",
+        previewClicks: 0,
+        previewed: false,
+        modelKind: "explicit",
+      }
+
+      // Blocked when telemetry is disabled.
+      captureAutoModelPreviewTelemetry(clicked, { telemetryEnabled: false })
+      expect(captured).toHaveLength(0)
+
+      // Forwarded when telemetry is enabled.
+      captureAutoModelPreviewTelemetry(clicked, { telemetryEnabled: true })
+      captureAutoModelPreviewTelemetry(submitted, { telemetryEnabled: true })
+
+      expect(captured).toEqual([
+        {
+          event: AutoModelPreviewTelemetryEvent.PREVIEW_CLICKED,
+          properties: {
+            action: "open",
+            source: "cache",
+            modelKind: "auto_efficient",
+            promptLength: 42,
+            clicksForDraft: 4,
+            clicksTotal: 9,
+            stale: false,
+            agent: "code",
+          },
+        },
+        {
+          event: AutoModelPreviewTelemetryEvent.PREVIEW_PROMPT_SUBMITTED,
+          properties: {
+            previewClicks: 0,
+            previewed: false,
+            modelKind: "explicit",
+          },
+        },
+      ])
+    } finally {
+      setAutoModelPreviewTelemetrySink(undefined)
+    }
   })
 })
 

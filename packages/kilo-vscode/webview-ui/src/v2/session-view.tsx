@@ -266,6 +266,8 @@ export function SessionView(props: {
     models: () => v2.data.location.model.list(),
     agent: () => selection.agent()?.id,
     disabled: () => v2.connection.status() !== "connected" || Boolean(v2.handshake()),
+    onTelemetry: (event) =>
+      getVSCodeAPI().postMessage({ type: "autoModelPreviewTelemetry", event } satisfies ToHost as never),
   })
   const preferences = useModelPreferences()
   const autoApprove = createAutoApprove()
@@ -441,6 +443,7 @@ export function SessionView(props: {
 
   // The prompt is admitted on the server; the Most used group counts sent prompts per model, as v1.
   const prompted = (id: string, text: string, used: ModelRef | undefined) => {
+    autoPreview.recordPromptSubmitted(used)
     if (used) preferences?.recordUsage(used.providerID, used.id)
     props.onPrompted?.(id, text, used)
     return true

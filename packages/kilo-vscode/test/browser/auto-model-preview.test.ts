@@ -156,6 +156,7 @@ test.skipIf(!executable)(
         const page = await context.newPage()
         page.setDefaultTimeout(5_000)
         const errors: string[] = []
+        let previewRequests = 0
         page.on("pageerror", (err) => errors.push(err.message))
         page.on("console", (msg) => {
           if (msg.type() === "error") errors.push(msg.text())
@@ -168,6 +169,7 @@ test.skipIf(!executable)(
             if (svg) return route.fulfill({ contentType: "image/svg+xml", body: svg })
           }
           if (url.pathname === "/api/rpc/kilocode.gateway/autoModel.preview") {
+            previewRequests++
             const parsed = JSON.parse(route.request().postData() ?? "{}") as { input?: KiloAutoPreview.PreviewInput }
             const req = parsed.input ?? { prompt: "" }
             const result = KiloAutoPreview.preview(req)
@@ -228,7 +230,7 @@ test.skipIf(!executable)(
           const hint = await page.locator(".prompt-input-hint").textContent().catch(() => null)
           throw new Error(`Hint=${JSON.stringify(hint)} errors=${JSON.stringify(errors)}: ${String(err)}`)
         }
-        return { context, page }
+        return { context, page, previewRequests: () => previewRequests }
       }
 
       // 1. Auto Efficient + empty prompt: Preview model button is visible and disabled until text is written.
@@ -315,11 +317,17 @@ test.skipIf(!executable)(
         await expect(trigger.isVisible()).resolves.toBe(true)
         await expect(trigger.isDisabled()).resolves.toBe(true)
 
-        // 7. Re-typing, opening, and pressing Escape closes the preview cleanly.
+        // 7. Re-typing the previously previewed prompt, toggling repeatedly, and pressing Escape hits the cache (no extra RPCs).
+        expect(auto.previewRequests()).toBe(2)
         await textarea.fill(PROMPT)
         await expect(trigger.isDisabled()).resolves.toBe(false)
         await trigger.click()
         await panel.waitFor({ state: "visible" })
+        await trigger.click()
+        await panel.waitFor({ state: "hidden" })
+        await trigger.click()
+        await panel.waitFor({ state: "visible" })
+        expect(auto.previewRequests()).toBe(2)
         await auto.page.keyboard.press("Escape")
         await panel.waitFor({ state: "hidden" })
       } finally {

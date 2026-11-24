@@ -216,7 +216,13 @@ export function handlers(input: HandlerInput): Pick<Methods, RouterMethod> {
       ),
     "routers.evalResult": (args, context) =>
       call(context, (account) => KiloCustomRouter.evalResult(account, args.result)),
-    ...GatewayAutoPreview.handlers({ models: input.models }),
+    ...GatewayAutoPreview.handlers({
+      models: input.models,
+      scope: () => {
+        const account = input.account()
+        return account ? `${account.server}:${account.organizationID ?? ""}:${account.token}` : "anonymous"
+      },
+    }),
   }
 }
 
