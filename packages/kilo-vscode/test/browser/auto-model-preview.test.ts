@@ -119,7 +119,7 @@ async function captureAndVerify(page: Page, name: string) {
 }
 
 test.skipIf(!executable)(
-  "Auto Model preview shows for explicit models after typing a prompt, renders all four outcomes, and stays accessible across dark and light themes",
+  "Auto Model preview button is always visible, disabled until a prompt is written, works for both Auto and explicit models, and stays accessible across dark and light themes",
   async () => {
     const root = path.resolve(import.meta.dir, "../..")
     const bundle = await build({
@@ -213,11 +213,16 @@ test.skipIf(!executable)(
         })
         await page.goto(`http://webview.test/${query}`, { waitUntil: "load" })
         await page.locator("textarea.prompt-input").waitFor({ state: "visible" })
-        // Wait for the model selector to resolve the fixture default model.
+        // Wait for the model selector to resolve the fixture default model and toolbar fold to settle.
         try {
           await page.waitForFunction(() => {
             const text = document.querySelector(".prompt-input-hint")?.textContent ?? ""
-            return text.includes("Claude Opus") || text.includes("Auto Efficient")
+            const hasModel =
+              text.includes("Auto Efficient") || text.includes("Auto Frontier") || text.includes("Claude Opus")
+            const triggerRect = document.querySelector('[data-action="auto-model-preview"]')?.getBoundingClientRect()
+            if (!hasModel || !triggerRect) return false
+            const actions = [...document.querySelectorAll(".prompt-action:not([data-folded])")]
+            return actions.every((node) => node.getBoundingClientRect().right <= triggerRect.left + 1)
           })
         } catch (err) {
           const hint = await page.locator(".prompt-input-hint").textContent().catch(() => null)
@@ -226,33 +231,27 @@ test.skipIf(!executable)(
         return { context, page }
       }
 
-      // 1. Explicit model + empty prompt: Preview model button is hidden.
-      const dark = await mount("?theme=dark&model=explicit")
+      // 1. Auto Efficient + empty prompt: Preview model button is visible and disabled until text is written.
+      const auto = await mount("?theme=dark&model=auto")
       try {
-        const trigger = dark.page.locator('[data-action="auto-model-preview"]')
-        const textarea = dark.page.locator("textarea.prompt-input")
-        await expect(trigger.count()).resolves.toBe(0)
-        await captureAndVerify(dark.page, "01-before-empty-prompt.png")
-
-        // 2. Typing a prompt reveals the Preview model button in the bottom-right toolbar.
-        await expect(dark.page.locator(".startup-error-banner").count()).resolves.toBe(0)
-        await textarea.fill(PROMPT)
+        const trigger = auto.page.locator('[data-action="auto-model-preview"]')
+        const textarea = auto.page.locator("textarea.prompt-input")
+        await expect(auto.page.locator(".startup-error-banner").count()).resolves.toBe(0)
         await trigger.waitFor({ state: "visible" })
-        // Let the toolbar's ResizeObserver settle the fold after the pinned Preview button mounts.
-        await dark.page.waitForFunction(() => {
-          const triggerRect = document.querySelector('[data-action="auto-model-preview"]')?.getBoundingClientRect()
-          if (!triggerRect) return false
-          const actions = [...document.querySelectorAll(".prompt-action:not([data-folded])")]
-          return actions.every((node) => node.getBoundingClientRect().right <= triggerRect.left + 1)
-        })
+        await expect(trigger.isDisabled()).resolves.toBe(true)
         await expect(trigger.textContent()).resolves.toContain("Preview model")
-        await captureAndVerify(dark.page, "02-after-button-ready.png")
+        await captureAndVerify(auto.page, "01-empty-prompt-disabled.png")
+
+        // 2. Typing a prompt enables the Preview model button.
+        await textarea.fill(PROMPT)
+        await expect(trigger.isDisabled()).resolves.toBe(false)
+        await captureAndVerify(auto.page, "02-prompt-ready-auto-efficient.png")
 
         // 3. Clicking Preview model opens the dock above the composer with all 4 outcomes.
         await trigger.click()
-        const panel = dark.page.locator('[data-component="auto-model-preview"]')
+        const panel = auto.page.locator('[data-component="auto-model-preview"]')
         await panel.waitFor({ state: "visible" })
-        await dark.page.locator(".auto-model-preview-task-title").waitFor({ state: "visible" })
+        await auto.page.locator(".auto-model-preview-task-title").waitFor({ state: "visible" })
 
         const panelText = (await panel.textContent()) ?? ""
         expect(panelText).toContain("Auto Model preview")
@@ -265,12 +264,12 @@ test.skipIf(!executable)(
         expect(panelText).toContain("Predicted")
         expect(panelText).toContain("~$0.04")
         expect(panelText).toContain("~$0.16")
-        expect(panelText).toContain("Current")
         expect(panelText).toContain("Consider Auto Frontier")
         expect(panelText).toContain("Illustrative classification")
+        expect(panelText).not.toContain("Current")
 
         // Verify geometry: panel sits strictly above the prompt composer without horizontal overflow.
-        const geometry = await dark.page.evaluate(() => {
+        const geometry = await auto.page.evaluate(() => {
           const preview = document.querySelector('[data-component="auto-model-preview"]')?.getBoundingClientRect()
           const composer = document.querySelector(".prompt-input-container")?.getBoundingClientRect()
           const triggerBox = document.querySelector('[data-action="auto-model-preview"]')?.getBoundingClientRect()
@@ -289,66 +288,78 @@ test.skipIf(!executable)(
         expect(geometry.previewBottom).toBeLessThanOrEqual(geometry.composerTop + 1)
         expect(geometry.triggerRight).toBeLessThanOrEqual(geometry.sendLeft + 1)
 
-        await assertAccessible(dark.page, '[data-component="auto-model-preview"]')
-        await captureAndVerify(dark.page, "03-after-preview-open-dark.png")
+        await assertAccessible(auto.page, '[data-component="auto-model-preview"]')
+        await captureAndVerify(auto.page, "03-preview-open-dark-auto-efficient.png")
 
         // 4. Collapsing Additional attributes hides the attribute list and flips aria-expanded.
-        const attrsToggle = dark.page.locator('[data-action="auto-model-preview-attributes"]')
+        const attrsToggle = auto.page.locator('[data-action="auto-model-preview-attributes"]')
         expect(await attrsToggle.getAttribute("aria-expanded")).toBe("true")
         await attrsToggle.click()
         expect(await attrsToggle.getAttribute("aria-expanded")).toBe("false")
-        await expect(dark.page.locator(".auto-model-preview-attrs-list").count()).resolves.toBe(0)
-        await captureAndVerify(dark.page, "04-after-preview-collapsed-dark.png")
+        await expect(auto.page.locator(".auto-model-preview-attrs-list").count()).resolves.toBe(0)
+        await captureAndVerify(auto.page, "04-preview-collapsed-dark.png")
         await attrsToggle.click()
         expect(await attrsToggle.getAttribute("aria-expanded")).toBe("true")
 
         // 5. Editing the prompt displays the stale hint; clicking Preview model refreshes.
         await textarea.fill("Explain how session inbox delivery works.")
-        await dark.page.locator(".auto-model-preview-stale").waitFor({ state: "visible" })
+        await auto.page.locator(".auto-model-preview-stale").waitFor({ state: "visible" })
         await trigger.click()
-        await dark.page.waitForFunction(() =>
+        await auto.page.waitForFunction(() =>
           document.querySelector(".auto-model-preview-task-title")?.textContent?.includes("Explanation & Q&A"),
         )
 
-        // 6. Clearing the prompt closes the open preview automatically and hides the button.
+        // 6. Clearing the prompt closes the open preview automatically and disables the button again.
         await textarea.fill("")
         await panel.waitFor({ state: "hidden" })
-        await expect(trigger.count()).resolves.toBe(0)
+        await expect(trigger.isVisible()).resolves.toBe(true)
+        await expect(trigger.isDisabled()).resolves.toBe(true)
 
         // 7. Re-typing, opening, and pressing Escape closes the preview cleanly.
         await textarea.fill(PROMPT)
-        await trigger.waitFor({ state: "visible" })
+        await expect(trigger.isDisabled()).resolves.toBe(false)
         await trigger.click()
         await panel.waitFor({ state: "visible" })
-        await dark.page.keyboard.press("Escape")
+        await auto.page.keyboard.press("Escape")
         await panel.waitFor({ state: "hidden" })
-      } finally {
-        await dark.context.close()
-      }
-
-      // 7. Auto model selected: Preview model button stays hidden even after typing a prompt.
-      const auto = await mount("?theme=dark&model=auto")
-      try {
-        await auto.page.locator("textarea.prompt-input").fill(PROMPT)
-        await expect(auto.page.locator('[data-action="auto-model-preview"]').count()).resolves.toBe(0)
-        await captureAndVerify(auto.page, "05-auto-model-hidden.png")
       } finally {
         await auto.context.close()
       }
 
-      // 8. Light Modern theme + missing attributes ("Not available.") + accessibility check.
-      const light = await mount("?theme=light&model=explicit&missing=1")
+      // 8. Explicit model (Claude Opus 4.6): also works and tags the current model in the cost comparison table.
+      const explicit = await mount("?theme=dark&model=explicit")
       try {
-        await light.page.locator("textarea.prompt-input").fill(PROMPT)
+        const trigger = explicit.page.locator('[data-action="auto-model-preview"]')
+        await expect(trigger.isDisabled()).resolves.toBe(true)
+        await explicit.page.locator("textarea.prompt-input").fill(PROMPT)
+        await expect(trigger.isDisabled()).resolves.toBe(false)
+        await trigger.click()
+        const panel = explicit.page.locator('[data-component="auto-model-preview"]')
+        await panel.waitFor({ state: "visible" })
+        await explicit.page.locator(".auto-model-preview-task-title").waitFor({ state: "visible" })
+        const text = (await panel.textContent()) ?? ""
+        expect(text).toContain("Current")
+        expect(text).toContain("Claude Opus")
+        await assertAccessible(explicit.page, '[data-component="auto-model-preview"]')
+        await captureAndVerify(explicit.page, "05-preview-open-dark-explicit-model.png")
+      } finally {
+        await explicit.context.close()
+      }
+
+      // 9. Light Modern theme + missing attributes ("Not available.") + accessibility check.
+      const light = await mount("?theme=light&model=auto&missing=1")
+      try {
         const trigger = light.page.locator('[data-action="auto-model-preview"]')
-        await trigger.waitFor({ state: "visible" })
+        await expect(trigger.isDisabled()).resolves.toBe(true)
+        await light.page.locator("textarea.prompt-input").fill(PROMPT)
+        await expect(trigger.isDisabled()).resolves.toBe(false)
         await trigger.click()
         const panel = light.page.locator('[data-component="auto-model-preview"]')
         await panel.waitFor({ state: "visible" })
         await light.page.locator(".auto-model-preview-task-title").waitFor({ state: "visible" })
         expect((await panel.textContent()) ?? "").toContain("Not available.")
         await assertAccessible(light.page, '[data-component="auto-model-preview"]')
-        await captureAndVerify(light.page, "06-after-preview-open-light.png")
+        await captureAndVerify(light.page, "06-preview-open-light-missing-attrs.png")
       } finally {
         await light.context.close()
       }

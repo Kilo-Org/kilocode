@@ -23,9 +23,20 @@
     color 120ms ease;
 }
 
-.auto-model-preview-trigger:hover {
+.auto-model-preview-trigger:hover:not(:disabled) {
   background: color-mix(in srgb, var(--vscode-focusBorder, var(--border-interactive-base)) 18%, transparent);
   border-color: color-mix(in srgb, var(--vscode-focusBorder, var(--border-interactive-base)) 70%, var(--border-base));
+}
+
+.auto-model-preview-trigger:disabled {
+  background: transparent;
+  border-color: var(--vscode-panel-border, var(--border-weak-base));
+  color: var(--vscode-disabledForeground, var(--text-weak));
+  cursor: not-allowed;
+}
+
+.auto-model-preview-trigger:disabled [data-component="icon"] {
+  color: inherit;
 }
 
 .auto-model-preview-trigger:focus-visible {

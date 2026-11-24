@@ -43,22 +43,21 @@ function textOrUnavailable(language: Language, value: string | null): string {
 export function AutoModelPreviewButton(props: { controller: AutoModelPreviewController }) {
   const language = useLanguage()
   return (
-    <Show when={props.controller.visible()}>
-      <Tooltip value={language.t("autoModel.preview.buttonTooltip")} placement="top">
-        <button
-          type="button"
-          class="auto-model-preview-trigger"
-          classList={{ "auto-model-preview-trigger--active": props.controller.open() }}
-          aria-expanded={props.controller.open()}
-          aria-controls="auto-model-preview-panel"
-          data-action="auto-model-preview"
-          onClick={() => props.controller.toggle()}
-        >
-          <Icon name="sparkle" size="small" />
-          <span class="auto-model-preview-trigger-label">{language.t("autoModel.preview.button")}</span>
-        </button>
-      </Tooltip>
-    </Show>
+    <Tooltip value={language.t("autoModel.preview.buttonTooltip")} placement="top">
+      <button
+        type="button"
+        class="auto-model-preview-trigger"
+        classList={{ "auto-model-preview-trigger--active": props.controller.open() }}
+        disabled={!props.controller.enabled()}
+        aria-expanded={props.controller.open()}
+        aria-controls="auto-model-preview-panel"
+        data-action="auto-model-preview"
+        onClick={() => props.controller.toggle()}
+      >
+        <Icon name="sparkle" size="small" />
+        <span class="auto-model-preview-trigger-label">{language.t("autoModel.preview.button")}</span>
+      </button>
+    </Tooltip>
   )
 }
 

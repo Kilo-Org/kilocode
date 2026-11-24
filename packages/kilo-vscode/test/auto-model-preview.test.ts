@@ -27,6 +27,7 @@ import {
   createAutoModelPreview,
   formatEstimatedCost,
   isAutoModelRef,
+  profileForAutoModel,
   type ComposerDraftState,
 } from "../webview-ui/src/v2/auto-model-preview-state"
 
@@ -88,22 +89,20 @@ describe("auto-model preview visibility & formatting", () => {
     expect(isAutoModelRef(undefined)).toBe(false)
   })
 
-  test("shows preview only for explicit non-auto models after typing a prompt", () => {
-    const explicit: ModelRef = { providerID: "kilo", id: "anthropic/claude-opus-4.6" }
-    const auto: ModelRef = { providerID: "kilo", id: "kilo-auto/efficient" }
+  test("derives frontier vs efficient profile for auto models", () => {
+    expect(profileForAutoModel({ providerID: "kilo", id: "kilo-auto/efficient" })).toBe("efficient")
+    expect(profileForAutoModel({ providerID: "kilo", id: "kilo-auto/frontier" })).toBe("frontier")
+    expect(profileForAutoModel({ providerID: "kilo", id: "kilo-auto/free" })).toBe("efficient")
+    expect(profileForAutoModel({ providerID: "kilo", id: "anthropic/claude-opus-4.6" })).toBeUndefined()
+    expect(profileForAutoModel(undefined)).toBeUndefined()
+  })
 
-    expect(canPreviewAutoModel({ model: explicit, text: "", goal: false, disabled: false })).toBe(false)
-    expect(canPreviewAutoModel({ model: explicit, text: "   \n ", goal: false, disabled: false })).toBe(false)
-    expect(canPreviewAutoModel({ model: auto, text: "Refactor auth helper", goal: false, disabled: false })).toBe(false)
-    expect(canPreviewAutoModel({ model: explicit, text: "Refactor auth helper", goal: true, disabled: false })).toBe(
-      false,
-    )
-    expect(canPreviewAutoModel({ model: explicit, text: "Refactor auth helper", goal: false, disabled: true })).toBe(
-      false,
-    )
-    expect(canPreviewAutoModel({ model: explicit, text: "Refactor auth helper", goal: false, disabled: false })).toBe(
-      true,
-    )
+  test("enables preview after typing a prompt regardless of whether an auto or explicit model is selected", () => {
+    expect(canPreviewAutoModel({ text: "", goal: false, disabled: false })).toBe(false)
+    expect(canPreviewAutoModel({ text: "   \n ", goal: false, disabled: false })).toBe(false)
+    expect(canPreviewAutoModel({ text: "Refactor auth helper", goal: true, disabled: false })).toBe(false)
+    expect(canPreviewAutoModel({ text: "Refactor auth helper", goal: false, disabled: true })).toBe(false)
+    expect(canPreviewAutoModel({ text: "Refactor auth helper", goal: false, disabled: false })).toBe(true)
   })
 
   test("formats estimated cost values consistently", () => {
@@ -116,7 +115,7 @@ describe("auto-model preview visibility & formatting", () => {
 })
 
 describe("createAutoModelPreview controller", () => {
-  test("fetches preview, marks stale when prompt edits, refreshes on toggle, and closes on auto model or clear", async () => {
+  test("fetches preview for both explicit and auto models, marks stale on edits, and disables when prompt is empty", async () => {
     const calls: KiloGatewayRpc.AutoModelPreviewInput[] = []
     let dispose: (() => void) | undefined
 
@@ -142,7 +141,7 @@ describe("createAutoModelPreview controller", () => {
         disabled: () => false,
       })
 
-      expect(controller.visible()).toBe(true)
+      expect(controller.enabled()).toBe(true)
       expect(controller.open()).toBe(false)
 
       controller.toggle()
@@ -154,6 +153,7 @@ describe("createAutoModelPreview controller", () => {
       expect(controller.result()?.selection.modelName).toBe("Claude Sonnet")
       expect(calls).toHaveLength(1)
       expect(calls[0]?.currentModel?.name).toBe("Claude Opus 4.6")
+      expect(calls[0]?.profile).toBeUndefined()
 
       // Editing the prompt marks the open preview stale; clicking toggle refreshes instead of closing.
       setDraft({ text: "Refactor authentication helper and add token rotation", goal: false })
@@ -168,15 +168,18 @@ describe("createAutoModelPreview controller", () => {
       controller.toggle()
       expect(controller.open()).toBe(false)
 
-      // Switching to an Auto model hides the preview trigger.
-      setModel({ providerID: "kilo", id: "kilo-auto/efficient" })
-      expect(controller.visible()).toBe(false)
+      // Switching to Auto Frontier keeps preview enabled and requests the frontier profile without a virtual currentModel.
+      setModel({ providerID: "kilo", id: "kilo-auto/frontier" })
+      expect(controller.enabled()).toBe(true)
+      controller.toggle()
+      await flush()
+      expect(calls).toHaveLength(3)
+      expect(calls[2]?.profile).toBe("frontier")
+      expect(calls[2]?.currentModel).toBeUndefined()
 
-      // Returning to an explicit model restores visibility; clearing prompt hides it again.
-      setModel({ providerID: "kilo", id: "anthropic/claude-opus-4.6" })
-      expect(controller.visible()).toBe(true)
+      // Clearing the prompt disables preview.
       setDraft({ text: "", goal: false })
-      expect(controller.visible()).toBe(false)
+      expect(controller.enabled()).toBe(false)
     })
 
     dispose?.()

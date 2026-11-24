@@ -13,7 +13,13 @@ import "../../webview-ui/src/styles/chat.css"
 
 const params = new URLSearchParams(location.search)
 const theme = params.get("theme") === "light" ? "light" : "dark"
-const initialModel = params.get("model") === "auto" ? "kilo/kilo-auto/efficient" : "kilo/anthropic/claude-opus-4.6"
+const modelParam = params.get("model")
+const initialModel =
+  modelParam === "explicit"
+    ? "kilo/anthropic/claude-opus-4.6"
+    : modelParam === "frontier"
+      ? "kilo/kilo-auto/frontier"
+      : "kilo/kilo-auto/efficient"
 
 const DARK_TOKENS: Record<string, string> = {
   "font-family": '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',

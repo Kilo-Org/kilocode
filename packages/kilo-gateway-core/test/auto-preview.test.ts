@@ -79,4 +79,24 @@ describe("KiloAutoPreview.preview", () => {
     expect(result.candidates.find((c) => c.predicted)?.modelName).toBe("Claude Opus")
     expect(result.recommendation?.suggestedProfile).toBe("efficient")
   })
+
+  test("derives profile from auto models and never appends virtual auto IDs as candidates", () => {
+    const efficient = KiloAutoPreview.preview({
+      prompt: "Refactor the authentication helper to handle expired tokens and add tests.",
+      currentModel: { providerID: "kilo", id: "kilo-auto/efficient", name: "Auto Efficient" },
+    })
+    expect(efficient.profile).toBe("efficient")
+    expect(efficient.candidates).toHaveLength(3)
+    expect(efficient.candidates.some((c) => c.current)).toBe(false)
+
+    const frontier = KiloAutoPreview.preview({
+      prompt: "Refactor the authentication helper to handle expired tokens and add tests.",
+      currentModel: { providerID: "kilo", id: "kilo-auto/frontier", name: "Auto Frontier" },
+    })
+    expect(frontier.profile).toBe("frontier")
+    expect(frontier.selection.modelName).toBe("Claude Opus")
+    expect(frontier.candidates).toHaveLength(3)
+    expect(frontier.candidates.some((c) => c.current)).toBe(false)
+    expect(frontier.recommendation?.suggestedProfile).toBe("efficient")
+  })
 })

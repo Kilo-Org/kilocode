@@ -311,6 +311,16 @@ function classify(prompt: string, agent?: string): Scenario {
   return generalScenario()
 }
 
+function isAutoModelID(id: string): boolean {
+  const lower = id.toLowerCase()
+  return lower.startsWith("kilo-auto/") || lower.startsWith("auto-")
+}
+
+function profileForModel(current: CurrentModel | undefined): Profile {
+  if (!current || !isAutoModelID(current.id)) return "efficient"
+  return current.id.toLowerCase().includes("frontier") ? "frontier" : "efficient"
+}
+
 function matchesCurrent(seed: CandidateSeed, current: CurrentModel | undefined): boolean {
   if (!current) return false
   const haystack = `${current.id} ${current.name ?? ""}`.toLowerCase()
@@ -337,25 +347,25 @@ function estimateFit(current: CurrentModel): TaskFit {
  * Will be backed by the Cloud auto-routing preview API once available.
  */
 export function preview(input: PreviewInput): PreviewResult {
-  const profile: Profile = input.profile ?? "efficient"
+  const profile: Profile = input.profile ?? profileForModel(input.currentModel)
+  const explicitCurrent = input.currentModel && !isAutoModelID(input.currentModel.id) ? input.currentModel : undefined
   const scenario = classify(input.prompt.trim(), input.agent)
   const predictedID = profile === "frontier" ? scenario.frontierID : scenario.efficientID
-  const matched = scenario.candidates.some((seed) => matchesCurrent(seed, input.currentModel))
+  const matched = scenario.candidates.some((seed) => matchesCurrent(seed, explicitCurrent))
   const candidates: PreviewCandidate[] = scenario.candidates.map((seed) => ({
     modelID: seed.modelID,
     modelName: seed.modelName,
     estimatedCostUsd: seed.estimatedCostUsd,
     taskFit: seed.taskFit,
     predicted: seed.modelID === predictedID,
-    ...(matchesCurrent(seed, input.currentModel) ? { current: true } : {}),
+    ...(matchesCurrent(seed, explicitCurrent) ? { current: true } : {}),
   }))
-  const current = input.currentModel
-  if (current && !matched) {
+  if (explicitCurrent && !matched) {
     candidates.push({
-      modelID: current.id,
-      modelName: current.name?.trim() || current.id,
-      estimatedCostUsd: estimateCost(current, scenario.tokens),
-      taskFit: estimateFit(current),
+      modelID: explicitCurrent.id,
+      modelName: explicitCurrent.name?.trim() || explicitCurrent.id,
+      estimatedCostUsd: estimateCost(explicitCurrent, scenario.tokens),
+      taskFit: estimateFit(explicitCurrent),
       predicted: false,
       current: true,
     })

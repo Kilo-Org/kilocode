@@ -20,7 +20,7 @@ export interface ComposerDraftState {
 }
 
 export interface AutoModelPreviewController {
-  readonly visible: Accessor<boolean>
+  readonly enabled: Accessor<boolean>
   readonly open: Accessor<boolean>
   readonly loading: Accessor<boolean>
   readonly error: Accessor<string | undefined>
@@ -36,14 +36,17 @@ export function isAutoModelRef(model: ModelRef | undefined): boolean {
   return isAuto(model) || model.id.startsWith("kilo-auto/") || model.id.startsWith("auto-")
 }
 
+export function profileForAutoModel(model: ModelRef | undefined): KiloGatewayRpc.AutoModelProfile | undefined {
+  if (!model || !isAutoModelRef(model)) return undefined
+  return model.id.toLowerCase().includes("frontier") ? "frontier" : "efficient"
+}
+
 export function canPreviewAutoModel(input: {
-  readonly model: ModelRef | undefined
   readonly text: string
   readonly goal: boolean
   readonly disabled: boolean
 }): boolean {
   if (input.disabled || input.goal) return false
-  if (!input.model || isAutoModelRef(input.model)) return false
   return input.text.trim().length > 0
 }
 
@@ -91,9 +94,8 @@ export function createAutoModelPreview(input: {
       })
     })
 
-  const visible = () =>
+  const enabled = () =>
     canPreviewAutoModel({
-      model: input.model(),
       text: input.draft().text,
       goal: input.draft().goal,
       disabled: input.disabled(),
@@ -110,22 +112,29 @@ export function createAutoModelPreview(input: {
 
   const run = () => {
     const prompt = untrack(() => input.draft().text.trim())
+    if (!prompt || !untrack(enabled)) return
     const current = untrack(input.model)
-    if (!prompt || !current || isAutoModelRef(current)) return
     const id = ++token
-    const currentName = modelNameOf(current, untrack(input.models))
     const currentAgent = untrack(input.agent)
+    const profile = profileForAutoModel(current)
+    const explicit = current && !isAutoModelRef(current) ? current : undefined
+    const explicitName = explicit ? modelNameOf(explicit, untrack(input.models)) : undefined
     setOpen(true)
     setLoading(true)
     setError(undefined)
     void request({
       prompt,
       ...(currentAgent ? { agent: currentAgent } : {}),
-      currentModel: {
-        providerID: current.providerID,
-        id: current.id,
-        ...(currentName ? { name: currentName } : {}),
-      },
+      ...(profile ? { profile } : {}),
+      ...(explicit
+        ? {
+            currentModel: {
+              providerID: explicit.providerID,
+              id: explicit.id,
+              ...(explicitName ? { name: explicitName } : {}),
+            },
+          }
+        : {}),
     }).then(
       (next) => {
         if (id !== token) return
@@ -143,7 +152,7 @@ export function createAutoModelPreview(input: {
   }
 
   const toggle = () => {
-    if (!visible()) return
+    if (!enabled()) return
     if (open() && !stale() && !error()) {
       close()
       return
@@ -152,14 +161,14 @@ export function createAutoModelPreview(input: {
   }
 
   createEffect(() => {
-    if (!visible() && untrack(open)) close()
+    if (!enabled() && untrack(open)) close()
   })
 
   createEffect(
     on(
       () => modelKey(input.model()),
       (nextKey) => {
-        if (!untrack(open) || !untrack(visible)) return
+        if (!untrack(open) || !untrack(enabled)) return
         if (!nextKey || nextKey === untrack(previewedModel)) return
         run()
       },
@@ -167,7 +176,7 @@ export function createAutoModelPreview(input: {
   )
 
   return {
-    visible,
+    enabled,
     open,
     loading,
     error,
