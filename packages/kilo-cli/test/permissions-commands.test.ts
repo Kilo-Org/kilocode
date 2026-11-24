@@ -11,7 +11,7 @@ import path from "node:path"
 import { KiloHost } from "../src/host"
 import { loadPlugins } from "./lib/plugins"
 
-// `kilo permissions list|reset` and `kilo debug permissions` run as the real CLI process against a real Kilo server:
+// `kilo debug permissions list|reset|check` run as the real CLI process against a real Kilo server:
 // the in-process routes behind an HTTP listener for --server, or a private server for --standalone.
 const host = path.dirname(import.meta.dir)
 const login = new Set(["KILO_API_KEY", "KILOCODE_TOKEN", "KILO_AUTH_CONTENT", "KILO_ORG_ID", "KILO_AI_GATEWAY_URL"])
@@ -119,7 +119,7 @@ async function temporary(prefix: string) {
   return realpath(await mkdtemp(path.join(os.tmpdir(), prefix)))
 }
 
-test("permissions list and reset resolve --directory and report through --server", async () => {
+test("debug permissions list and reset resolve --directory and report through --server", async () => {
   const root = await temporary("kilo-permissions-cmd-")
   const directory = await project(root, "typescript")
   try {
@@ -130,7 +130,7 @@ test("permissions list and reset resolve --directory and report through --server
       const resources = (await rpc.list({}, options)).applied[0]!.resources
 
       // A relative --directory resolves against the working directory.
-      const listed = await cli(root, root, "permissions", "list", "--server", url, "--directory", "typescript")
+      const listed = await cli(root, root, "debug", "permissions", "list", "--server", url, "--directory", "typescript")
       expect(listed.code, listed.stderr).toBe(0)
       expect(listed.stdout.split("\n").slice(0, 3)).toEqual([
         "permissions: 0 saved grants",
@@ -140,19 +140,30 @@ test("permissions list and reset resolve --directory and report through --server
       expect(listed.stdout).toContain('  "typescript-checks","bun run test *"\n')
 
       // Without --directory the command targets the working directory.
-      const reset = await cli(root, directory, "permissions", "reset", "--server", url)
+      const reset = await cli(root, directory, "debug", "permissions", "reset", "--server", url)
       expect(reset.code, reset.stderr).toBe(0)
       expect(reset.stdout).toBe(`permissions: reset ${directory}\n${help}`)
       expect(await rpc.list({}, options)).toMatchObject({ decision: null, applied: [{ id: "typescript-checks" }] })
 
-      const all = await cli(root, root, "permissions", "reset", "--all", "--server", url, "--directory", directory)
+      const all = await cli(
+        root,
+        root,
+        "debug",
+        "permissions",
+        "reset",
+        "--all",
+        "--server",
+        url,
+        "--directory",
+        directory,
+      )
       expect(all.code, all.stderr).toBe(0)
       expect(all.stdout).toBe(
         `permissions: reset-all ${directory} (removed ${resources.length} rules from applied sets)\n${help}`,
       )
       expect(await rpc.list({}, options)).toMatchObject({ decision: null, applied: [] })
 
-      const empty = await cli(root, directory, "permissions", "list", "--server", url)
+      const empty = await cli(root, directory, "debug", "permissions", "list", "--server", url)
       expect(empty.code, empty.stderr).toBe(0)
       expect(empty.stdout).toBe("permissions: 0 saved grants\nactive set: none\n")
     })
@@ -161,14 +172,14 @@ test("permissions list and reset resolve --directory and report through --server
   }
 }, 120_000)
 
-test("debug permissions checks a command file and reports RPC errors with exit status 1", async () => {
+test("debug permissions check checks a command file and reports RPC errors with exit status 1", async () => {
   const root = await temporary("kilo-permissions-debug-")
   const directory = await project(root, "typescript")
   const file = path.join(root, "commands.txt")
-  await writeFile(file, ["# install", "bun install 2>&1 | tail -30", "", "  git push  ", ""].join("\n"))
+  await writeFile(file, ["# install", "bun install --frozen-lockfile 2>&1", "", "  git push  ", ""].join("\n"))
   try {
     await withServer(root, [directory], undefined, async (url) => {
-      const checked = await cli(root, directory, "debug", "permissions", file, "--server", url)
+      const checked = await cli(root, directory, "debug", "permissions", "check", file, "--server", url)
       expect(checked.code, checked.stderr).toBe(0)
       expect(checked.stdout).toBe(
         "permissions: dependency-install, 2 commands: 1 allowed, 1 ask\nask  git push\n     not granted: git push\n",
@@ -180,6 +191,7 @@ test("debug permissions checks a command file and reports RPC errors with exit s
         root,
         "debug",
         "permissions",
+        "check",
         "commands.txt",
         "--preset",
         "typescript-checks",
@@ -196,6 +208,7 @@ test("debug permissions checks a command file and reports RPC errors with exit s
         directory,
         "debug",
         "permissions",
+        "check",
         file,
         "--preset",
         "kilo-bun-checks",
@@ -211,11 +224,20 @@ test("debug permissions checks a command file and reports RPC errors with exit s
   }
 }, 120_000)
 
-test("debug permissions fails on a missing file before it connects to a server", async () => {
+test("debug permissions check fails on a missing file before it connects to a server", async () => {
   const root = await temporary("kilo-permissions-missing-")
   try {
     // Nothing listens on port 1: connecting would fail with a different error.
-    const result = await cli(root, root, "debug", "permissions", "absent.txt", "--server", "http://127.0.0.1:1")
+    const result = await cli(
+      root,
+      root,
+      "debug",
+      "permissions",
+      "check",
+      "absent.txt",
+      "--server",
+      "http://127.0.0.1:1",
+    )
     expect(result.stdout).toBe("")
     expect(result.stderr).toContain(`error: file not found: ${path.join(root, "absent.txt")}\n`)
     expect(result.code).toBe(1)
@@ -229,11 +251,20 @@ test("rejects an unknown --preset and combined --server and --standalone", async
   const file = path.join(root, "commands.txt")
   await writeFile(file, "git push\n")
   try {
-    const preset = await cli(root, root, "debug", "permissions", file, "--preset", "everything")
+    const preset = await cli(root, root, "debug", "permissions", "check", file, "--preset", "everything")
     expect(preset.stdout).not.toContain("permissions:")
     expect(preset.code).not.toBe(0)
 
-    const combined = await cli(root, root, "permissions", "list", "--server", "http://127.0.0.1:1", "--standalone")
+    const combined = await cli(
+      root,
+      root,
+      "debug",
+      "permissions",
+      "list",
+      "--server",
+      "http://127.0.0.1:1",
+      "--standalone",
+    )
     expect(combined.stdout).toBe("")
     expect(combined.stderr).toContain("--server and --standalone cannot be combined")
     expect(combined.code).not.toBe(0)
@@ -242,20 +273,25 @@ test("rejects an unknown --preset and combined --server and --standalone", async
   }
 }, 60_000)
 
-test("reports disabled permission setup from list and debug", async () => {
+test("reports disabled permission setup from list, reset and check", async () => {
   const root = await temporary("kilo-permissions-disabled-")
   const directory = await project(root, "typescript")
   const file = path.join(root, "commands.txt")
   await writeFile(file, "git push\n")
   try {
     await withServer(root, [directory], "-permission_setup", async (url) => {
-      const listed = await cli(root, directory, "permissions", "list", "--server", url)
+      const listed = await cli(root, directory, "debug", "permissions", "list", "--server", url)
       expect(listed.code, listed.stderr).toBe(0)
       expect(listed.stdout).toBe(
         "permissions: 0 saved grants\nactive set: none (permission setup is disabled, flag permission_setup)\n",
       )
 
-      const checked = await cli(root, directory, "debug", "permissions", file, "--server", url)
+      const reset = await cli(root, directory, "debug", "permissions", "reset", "--server", url)
+      expect(reset.stdout).toBe("")
+      expect(reset.stderr).toContain("error: permission setup is disabled (flag permission_setup)\n")
+      expect(reset.code).toBe(1)
+
+      const checked = await cli(root, directory, "debug", "permissions", "check", file, "--server", url)
       expect(checked.stdout).toBe("")
       expect(checked.stderr).toContain("error: permission setup is disabled (flag permission_setup)\n")
       expect(checked.code).toBe(1)
@@ -265,17 +301,17 @@ test("reports disabled permission setup from list and debug", async () => {
   }
 }, 120_000)
 
-test("permissions list and debug permissions run on a private server with --standalone", async () => {
+test("debug permissions list and check run on a private server with --standalone", async () => {
   const root = await temporary("kilo-permissions-standalone-")
   const directory = await project(root, "typescript")
   const file = path.join(root, "commands.txt")
   await writeFile(file, "bun install\n")
   try {
-    const listed = await cli(root, root, "permissions", "list", "--standalone", "--directory", directory)
+    const listed = await cli(root, root, "debug", "permissions", "list", "--standalone", "--directory", directory)
     expect(listed.code, listed.stderr).toBe(0)
     expect(listed.stdout).toBe("permissions: 0 saved grants\nactive set: none\n")
 
-    const checked = await cli(root, directory, "debug", "permissions", file, "--standalone")
+    const checked = await cli(root, directory, "debug", "permissions", "check", file, "--standalone")
     expect(checked.code, checked.stderr).toBe(0)
     expect(checked.stdout).toBe("permissions: dependency-install, 1 commands: 1 allowed, 0 ask\n")
   } finally {

@@ -92,12 +92,13 @@ export const Definition = Rpc.define({
       errors: unavailable,
     },
     /**
-     * Testing reset, always available: clears the offer decision so it is offered again; `all` also removes the
+     * Testing reset, gated by the flag: clears the offer decision so it is offered again; `all` also removes the
      * applied sets. Saved permission grants are never touched.
      */
     reset: {
       input: portable(Schema.Struct({ all: optional(Schema.Boolean) })),
       output: portable(Schema.Struct({ removed: Schema.Number })),
+      errors: unavailable,
     },
     /** Reports which shell commands a set does not allow, as the plugin would evaluate them. */
     check: {
@@ -107,7 +108,7 @@ export const Definition = Rpc.define({
     },
   },
   events: {
-    /** The sets applied to the project changed. */
+    /** The sets applied to the project changed, or a reset cleared its offer decision. */
     updated: { schema: portable(Schema.Struct({ projectID: Project.ID, applied: Schema.Array(Preset) })) },
   },
 })

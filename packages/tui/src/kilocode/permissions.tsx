@@ -59,10 +59,14 @@ type ControllerLease = {
   readonly controller: Controller
   readonly [Symbol.dispose]: () => void
 }
-// Sets applied to each project, keyed by project ID; the sidebar shows them while any are applied.
+// Sets applied to each project, keyed by project ID; the sidebar shows them while any are applied. It also remembers
+// the projects that get no automatic offer (setup disabled, or a decision recorded), so their requests show the normal
+// prompt without another check.
 type Applied = {
   readonly get: (projectID: string) => readonly Preset[]
   readonly refresh: (location: LocationRef) => Promise<string | undefined>
+  readonly quiet: (directory: string) => boolean
+  readonly remember: (directory: string, projectID: string, quiet: boolean) => void
   readonly dispose: () => void
 }
 type Navigation = {
@@ -210,12 +214,25 @@ function createControllers(context: Plugin.Context, applied: Applied) {
 
 function createApplied(context: Plugin.Context): Applied {
   const [sets, setSets] = createStore<Record<string, readonly Preset[]>>({})
+  const projects = new Map<string, string>()
+  const quiet = new Set<string>()
+  // Every change to a project's sets or decision (including a reset) publishes `updated`; check it again next time.
   const dispose = context.client.rpc(KiloPermissionsRpc.Definition).events.on("updated", (event) => {
+    quiet.delete(event.data.projectID)
     setSets(event.data.projectID, [...event.data.applied])
   })
   return {
     dispose,
     get: (projectID) => sets[projectID] ?? [],
+    quiet: (directory) => {
+      const projectID = projects.get(directory)
+      return projectID !== undefined && quiet.has(projectID)
+    },
+    remember: (directory, projectID, value) => {
+      projects.set(directory, projectID)
+      if (value) quiet.add(projectID)
+      else quiet.delete(projectID)
+    },
     // A server without the permissions plugin answers with an error or no output, and the sidebar shows no sets.
     refresh: (location) =>
       context.client
@@ -270,6 +287,7 @@ function createController(context: Plugin.Context, applied: Applied): Controller
     try {
       const result = await context.client.rpc(KiloPermissionsRpc.Definition).list({}, { location })
       if (generation !== loads) return undefined
+      applied.remember(location.directory, result.projectID, !result.enabled || result.decision !== null)
       const normal = { status: "normal", projectID: result.projectID } as const
       if (!result.enabled) {
         setState(normal)
@@ -331,6 +349,7 @@ function createController(context: Plugin.Context, applied: Applied): Controller
       fail("tui.permissions.saveFailed", offer.projectID)
       return
     }
+    applied.remember(offer.location.directory, offer.projectID, true)
     if (decision !== "skip") await applied.refresh(offer.location)
     setState({ status: "normal", projectID: offer.projectID })
   }
@@ -340,6 +359,12 @@ function createController(context: Plugin.Context, applied: Applied): Controller
     ensure(request) {
       stopRetry()
       const generation = ++loads
+      // A project known to get no offer shows the normal prompt at once, without a check or a placeholder.
+      const known = context.data.session.get(request.sessionID)?.location
+      if (!operation && known && applied.quiet(known.directory)) {
+        setState({ status: "normal" })
+        return
+      }
       const waiting = operation
       const started = (async () => {
         // Finish any decision for the previous request before loading this request's location.
@@ -687,7 +712,6 @@ function PresetDetails(props: { readonly presets: readonly Preset[] }) {
           </>
         )}
       </For>
-      <text fg={theme.text.muted}>{t("tui.permissions.helpers")}</text>
       <text fg={theme.text.feedback.warning.base}>{t("tui.permissions.trust")}</text>
       <Show when={props.presets.some((preset) => preset.id.endsWith("-install"))}>
         <text fg={theme.text.feedback.warning.base}>{t("tui.permissions.installWarning")}</text>

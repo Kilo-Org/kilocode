@@ -6,11 +6,11 @@ import { ServerConnection } from "@opencode/cli/services/server-connection"
 import { KiloPermissionsRpc } from "@opencode/schema/kilocode/permissions"
 import { Effect, Option, Result } from "effect"
 import { resolve } from "node:path"
-import { KiloDebugCommands } from "./permissions"
+import { failure, PermissionsCommand } from "./permissions"
 
 export default Runtime.handler(
-  KiloDebugCommands.permissions,
-  Effect.fn("kilo.debug.permissions")(function* (input) {
+  PermissionsCommand.commands.check,
+  Effect.fn("kilo.debug.permissions.check")(function* (input) {
     const directory = resolve(Option.getOrElse(input.directory, () => process.cwd()))
     const file = Bun.file(resolve(input.file))
     if (!(yield* Effect.promise(() => file.exists()))) {
@@ -51,14 +51,3 @@ export default Runtime.handler(
     )
   }),
 )
-
-// The RPC rejects with `{ type, message }`, its error name and text; Effect.tryPromise keeps the rejection as the cause.
-function failure(error: unknown) {
-  const cause = error instanceof Error ? error.cause : error
-  const type = typeof cause === "object" && cause !== null && "type" in cause ? cause.type : undefined
-  if (type === "unavailable") return "permission setup is disabled (flag permission_setup)"
-  if (type === "not_applicable") return "the permission set does not apply to this project"
-  if (typeof cause === "object" && cause !== null && "message" in cause && typeof cause.message === "string")
-    return type === undefined ? cause.message : `${String(type)}: ${cause.message}`
-  return String(cause)
-}

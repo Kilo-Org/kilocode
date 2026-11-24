@@ -10,7 +10,7 @@ import { PermissionsCommand } from "./permissions"
 
 export default Runtime.handler(
   PermissionsCommand.commands.list,
-  Effect.fn("kilo.permissions.list")(function* (input) {
+  Effect.fn("kilo.debug.permissions.list")(function* (input) {
     const directory = resolve(Option.getOrElse(input.directory, () => process.cwd()))
     const server = yield* ServerConnection.resolve({
       server: Option.getOrUndefined(input.server),

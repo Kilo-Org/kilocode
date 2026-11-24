@@ -284,24 +284,44 @@ describe("KiloPermissionsPlugin", () => {
     }),
   )
 
-  it.effect("resets the decision, and with all the applied sets, without touching saved grants", () =>
-    Effect.gen(function* () {
-      const { call } = yield* setup()
-      const saved = yield* PermissionSaved.Service
-      const permission = yield* Permission.Service
-      yield* saved.add({ projectID: Project.ID.global, action: "shell", resources: ["make deploy"] })
-      const before = yield* saved.list()
-      yield* call("apply", { presetID: "typescript-checks" })
+  it.effect(
+    "resets the decision, and with all the applied sets, publishes each reset without touching saved grants",
+    () =>
+      Effect.scoped(
+        Effect.gen(function* () {
+          const { call } = yield* setup()
+          const rpc = yield* Rpc.Service
+          const saved = yield* PermissionSaved.Service
+          const permission = yield* Permission.Service
+          const updates = yield* rpc
+            .client(KiloPermissionsRpc.Definition)
+            .events.subscribe("updated")
+            .pipe(
+              Stream.map((event) => event.data),
+              Stream.take(3),
+              Stream.runCollect,
+              Effect.forkScoped({ startImmediately: true }),
+            )
+          yield* saved.add({ projectID: Project.ID.global, action: "shell", resources: ["make deploy"] })
+          const before = yield* saved.list()
+          yield* call("apply", { presetID: "typescript-checks" })
 
-      expect(yield* call("reset", {})).toEqual({ removed: 0 })
-      expect(yield* call("list")).toMatchObject({ decision: null, applied: [{ id: "typescript-checks" }] })
+          expect(yield* call("reset", {})).toEqual({ removed: 0 })
+          expect(yield* call("list")).toMatchObject({ decision: null, applied: [{ id: "typescript-checks" }] })
 
-      const reset = (yield* call("reset", { all: true })) as { removed: number }
-      expect(reset.removed).toBeGreaterThan(0)
-      expect(yield* call("list")).toMatchObject({ decision: null, applied: [] })
-      expect(yield* saved.list()).toEqual(before)
-      expect(yield* permission.ask(shell(["bun run test"]))).toMatchObject({ effect: "ask" })
-    }),
+          const reset = (yield* call("reset", { all: true })) as { removed: number }
+          expect(reset.removed).toBeGreaterThan(0)
+          expect(yield* call("list")).toMatchObject({ decision: null, applied: [] })
+          expect(yield* saved.list()).toEqual(before)
+          expect(yield* permission.ask(shell(["bun run test"]))).toMatchObject({ effect: "ask" })
+          // Clients remember a decided project, so a reset that keeps the sets still publishes.
+          expect(yield* Fiber.join(updates)).toMatchObject([
+            { projectID, applied: [{ id: "typescript-checks" }] },
+            { projectID, applied: [{ id: "typescript-checks" }] },
+            { projectID, applied: [] },
+          ])
+        }),
+      ),
   )
 
   it.effect("clears the applied sets, records the offer as skipped and publishes the change", () =>
@@ -345,6 +365,8 @@ describe("KiloPermissionsPlugin", () => {
       expect(yield* call("list")).toMatchObject({ enabled: false, presets: [] })
       const failed = yield* call("apply", { presetID: "typescript-checks" }).pipe(Effect.flip)
       expect(failed).toMatchObject({ type: "unavailable" })
+      expect(yield* call("reset", { all: true }).pipe(Effect.flip)).toMatchObject({ type: "unavailable" })
+      expect(store.has(`applied:${projectID}`)).toBe(true)
     }),
   )
 })

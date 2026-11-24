@@ -2,68 +2,17 @@ import { Permission } from "@opencode/core/permission"
 import { ShellParse } from "@opencode/core/shell/parse"
 import { ShellScan } from "@opencode/core/shell/scan"
 import { Effect } from "effect"
+import os from "os"
+import path from "path"
 
 // Redirections that write no file: descriptor duplication (`2>&1`, `>&2`) and discarding output to /dev/null.
 const harmless = /\d*>&\d+|(?:\d*|&)>>?\s*\/dev\/null(?![^\s;|&])/g
 
-/** Output helpers agents chain onto a check or install to trim or report its output. */
-export const helpers = ["tail", "head", "grep", "echo", "ls"] as const
-
-const helperPatterns = new Set<string>(helpers.map((helper) => `${helper} *`))
-// Any expansion except the last exit status (`echo "exit code: $?"`) could print a variable or run a command.
-const expansion = /`|\$(?!\?)/
-// Options of head and tail that take their value as the next word.
-const countOptions = new Set(["-n", "-c", "--lines", "--bytes"])
-// grep options that only shape how input is matched or printed. Everything else asks: recursion, pattern or exclude
-// files, directory and device actions, and abbreviated long options, which GNU grep expands (`--fil` is `--file`).
-const grepSafeFlags = /^[iyvwxcoqsnbHhEFGPaTUZzlLemABC]+$/
-const grepSafeOptions = new Set([
-  "--ignore-case",
-  "--no-ignore-case",
-  "--invert-match",
-  "--word-regexp",
-  "--line-regexp",
-  "--count",
-  "--only-matching",
-  "--quiet",
-  "--silent",
-  "--no-messages",
-  "--line-number",
-  "--byte-offset",
-  "--with-filename",
-  "--no-filename",
-  "--label",
-  "--color",
-  "--colour",
-  "--extended-regexp",
-  "--fixed-strings",
-  "--basic-regexp",
-  "--perl-regexp",
-  "--text",
-  "--binary-files",
-  "--null",
-  "--null-data",
-  "--line-buffered",
-  "--initial-tab",
-  "--files-with-matches",
-  "--files-without-match",
-  "--regexp",
-  "--max-count",
-  "--after-context",
-  "--before-context",
-  "--context",
-])
-// grep short options whose value is the rest of the word or the next word.
-const grepValueFlags = "emABC"
-const grepValueOptions = new Set([
-  "--regexp",
-  "--max-count",
-  "--after-context",
-  "--before-context",
-  "--context",
-  "--label",
-  "--binary-files",
-])
+// Any expansion could print a variable, run a command or name a path the set cannot check.
+const expansion = /`|\$/
+// Install subcommands a set allows only without a package argument, so they install from the lockfile. `add` always
+// names a package; it is listed so a set stored before `add` left the install set still asks.
+const installPattern = /^(?:bun|npm|pnpm|yarn) (?:install|i|ci|add) \*$/
 // Package-manager and runtime options that move the command to another directory, workspace or global prefix, load
 // other config, or run another program (`npm run test --prefix /elsewhere`, `--script-shell`, `bun --preload`).
 // npm and GNU-style parsers expand abbreviations, so any prefix of one of these names asks too.
@@ -107,19 +56,20 @@ const projectEscapeOptions = [
 const projectEscapeFlags = /[CwgFrcep]/
 
 /**
- * True when a set allows one shell command resource. The shell resource keeps its redirections, so `echo *` would
- * match `echo x > .git/hooks/pre-commit`; a set never allows a command that writes or reads a file through
- * redirection, runs a process substitution or reads a here-document, and that command asks as usual. The output
- * helpers only match forms that read no file and expand nothing (see `safeHelper`), so `head .env`,
- * `head < .env` or `echo $API_KEY` still ask.
+ * True when a set allows one shell command resource. The shell resource keeps its redirections, so `bun run test *`
+ * would match `bun run test > .git/hooks/pre-commit`; a set never allows a command that writes or reads a file through
+ * redirection, runs a process substitution or reads a here-document, and that command asks as usual. A covered
+ * command must also stay in the project (see `staysInProject`), and an install must name no package (see
+ * `lockfileInstall`).
  */
-export function covers(resource: string, resources: readonly string[]) {
+export function covers(resource: string, resources: readonly string[], directory: string) {
   const rest = resource.replace(harmless, "")
   if (rest.includes(">") || rest.includes("<")) return false
   return resources.some(
     (pattern) =>
       Permission.evaluate("shell", resource, [rule(pattern)]).effect === "allow" &&
-      (helperPatterns.has(pattern) ? safeHelper(resource) : staysInProject(resource)),
+      staysInProject(resource, directory) &&
+      (!installPattern.test(pattern) || lockfileInstall(resource)),
   )
 }
 
@@ -129,10 +79,12 @@ export function allowsRequest(input: {
   readonly resources: readonly string[]
   readonly rules: Permission.Ruleset
   readonly applied: readonly string[]
+  readonly directory: string
 }) {
   return input.resources.every(
     (resource) =>
-      Permission.evaluate(input.action, resource, input.rules).effect === "allow" || covers(resource, input.applied),
+      Permission.evaluate(input.action, resource, input.rules).effect === "allow" ||
+      covers(resource, input.applied, input.directory),
   )
 }
 
@@ -140,7 +92,7 @@ export function allowsRequest(input: {
 export function missing(command: string, directory: string, resources: readonly string[]) {
   return ShellParse.scan(command, "bash", directory).pipe(
     Effect.map((parsed) =>
-      parsed.commands.map((item) => item.resource).filter((resource) => !covers(resource, resources)),
+      parsed.commands.map((item) => item.resource).filter((resource) => !covers(resource, resources, directory)),
     ),
     // A command the scanner cannot analyze asks as a whole.
     Effect.catch((error) => Effect.succeed([`${command} (${error.message})`])),
@@ -148,34 +100,47 @@ export function missing(command: string, directory: string, resources: readonly 
 }
 
 /**
- * True when an output helper only works on its input: head, tail and grep name no file, grep uses only options that
- * shape matching or output (no recursion, pattern or exclude file), and no word expands a variable or a command. ls may
- * still list any directory.
+ * True when a project script or install runs in this project: no expansion, no option before `--` that points it at
+ * another directory, workspace, config or program, and no path before `--` that resolves outside the project
+ * (`bun test /tmp/evil.test.ts`, `bun run test ../other-repo`). Arguments after `--` go to the script itself. The
+ * request does not carry the command's working directory, so paths resolve against the project root.
  */
-function safeHelper(resource: string) {
-  const scanned = ShellScan.scan(resource, "bash")
-  if (scanned.kind === "opaque" || scanned.commands.length !== 1) return false
-  const command = scanned.commands[0]!
-  if (command.rawWords.some((word) => expansion.test(word))) return false
-  const args = command.words.slice(1)
-  if (command.words[0] === "head" || command.words[0] === "tail") return countArgs(args)
-  if (command.words[0] === "grep") return grepArgs(args)
-  return command.words[0] === "echo" || command.words[0] === "ls"
-}
-
-/**
- * True when a project script or install runs in this project: no expansion, and no option before `--` that points it
- * at another directory, workspace, config or program. Arguments after `--` go to the script itself.
- */
-function staysInProject(resource: string) {
-  const scanned = ShellScan.scan(resource, "bash")
-  if (scanned.kind === "opaque" || scanned.commands.length !== 1) return false
-  const command = scanned.commands[0]!
-  if (command.rawWords.some((word) => expansion.test(word))) return false
+function staysInProject(resource: string, directory: string) {
+  const command = scanOne(resource)
+  if (command === undefined) return false
   const end = command.words.indexOf("--")
   return command.words
     .slice(1, end === -1 ? undefined : end)
-    .every((arg) => !escapesProject(arg))
+    .every((arg) => !escapesProject(arg) && insideProject(arg, directory))
+}
+
+// `bun install`, `npm ci --omit=dev`: options only, never a package, URL or tarball. An option whose value is the next
+// word (`--omit dev`) asks too, since that word looks like a package.
+function lockfileInstall(resource: string) {
+  const command = scanOne(resource)
+  return command !== undefined && command.words.slice(2).every((arg) => arg.startsWith("-"))
+}
+
+function scanOne(resource: string) {
+  const scanned = ShellScan.scan(resource, "bash")
+  if (scanned.kind === "opaque" || scanned.commands.length !== 1) return
+  const command = scanned.commands[0]!
+  if (command.rawWords.some((word) => expansion.test(word))) return
+  return command
+}
+
+// A positional argument, or the value of `--option=value`, that looks like a path must resolve inside the project.
+function insideProject(arg: string, directory: string) {
+  if (arg.startsWith("-") && !arg.includes("=")) return true
+  const value = arg.startsWith("-") ? arg.slice(arg.indexOf("=") + 1) : arg
+  if (!pathLike(value)) return true
+  const resolved = path.resolve(directory, value.startsWith("~") ? path.join(os.homedir(), value.slice(1)) : value)
+  const relative = path.relative(directory, resolved)
+  return relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative)
+}
+
+function pathLike(value: string) {
+  return value.includes("/") || value.startsWith("~") || value === "." || value === ".."
 }
 
 function escapesProject(arg: string) {
@@ -186,52 +151,6 @@ function escapesProject(arg: string) {
     )
   }
   return arg.startsWith("-") && projectEscapeFlags.test(arg.slice(1))
-}
-
-// `tail -30`, `tail -n 30`, `head --lines=5`: options and their counts only, never a file operand.
-function countArgs(args: readonly string[]) {
-  return args.every(
-    (arg, index) => arg.startsWith("-") || (countOptions.has(args[index - 1] ?? "") && /^[+-]?\d+[a-zA-Z]*$/.test(arg)),
-  )
-}
-
-// `grep -iE "error|warn"` or `grep -e foo`: a pattern but no file operand, recursion or pattern file.
-function grepArgs(args: readonly string[]) {
-  const state = { positional: 0, explicit: false, value: false }
-  for (const arg of args) {
-    if (state.value) {
-      state.value = false
-      continue
-    }
-    if (arg === "--") return false
-    if (arg.startsWith("--")) {
-      if (!grepLongOption(arg, state)) return false
-      continue
-    }
-    if (arg.startsWith("-") && arg.length > 1) {
-      if (!grepShortOptions(arg.slice(1), state)) return false
-      continue
-    }
-    state.positional++
-  }
-  return state.positional <= (state.explicit ? 0 : 1)
-}
-
-function grepLongOption(arg: string, state: { explicit: boolean; value: boolean }) {
-  const name = arg.split("=")[0]!
-  if (!grepSafeOptions.has(name)) return false
-  if (name === "--regexp") state.explicit = true
-  state.value = grepValueOptions.has(name) && !arg.includes("=")
-  return true
-}
-
-function grepShortOptions(flags: string, state: { explicit: boolean; value: boolean }) {
-  const index = [...flags].findIndex((flag) => grepValueFlags.includes(flag))
-  const options = index === -1 ? flags : flags.slice(0, index + 1)
-  if (!grepSafeFlags.test(options)) return false
-  if (index !== -1 && flags[index] === "e") state.explicit = true
-  state.value = index === flags.length - 1
-  return true
 }
 
 function rule(resource: string): Permission.Rule {

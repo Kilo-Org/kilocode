@@ -37,7 +37,7 @@ const kiloChecks = [
 const presets = [
   { id: "kilo-bun-checks", resources: kiloChecks },
   { id: "typescript-checks", resources: ["bun run test *"] },
-  { id: "dependency-install", resources: ["bun install *", "bun add *", "bun i *", "tail *", "head *"] },
+  { id: "dependency-install", resources: ["bun install *", "bun i *"] },
 ] as const
 
 type State = {
@@ -53,6 +53,8 @@ type State = {
   /** The sets that match the project now; every set by default. */
   readonly presets?: readonly (typeof presets)[number][]
   readonly unidentified?: boolean
+  /** False when the server has permission setup off. */
+  readonly enabled?: boolean
   readonly applied: string[]
   skipped: number
   cleared: number
@@ -141,7 +143,7 @@ function fixtureFetch(
         }
         return json({
           output: {
-            enabled: true,
+            enabled: current.enabled ?? true,
             projectID: url.search.includes("child") ? "child-project" : sessionLocation.project.id,
             unidentified: current.unidentified ?? false,
             decision: current.decision,
@@ -252,8 +254,8 @@ test("offers every preset as a checkbox, pages the bounded preview, and applies 
   await until(app, "install preset", (frame) => frame.includes("› [ ] Dependency installs"))
   app.mockInput.pressKey(" ")
   await until(app, "install checked", (frame) => frame.includes("› [✓] Dependency installs"))
-  const final = await pageUntil(app, "bun add *", pageDown)
-  expect(final).toContain("bun add *")
+  const final = await pageUntil(app, "bun i *", pageDown)
+  expect(final).toContain("bun i *")
   const trust = await pageUntil(
     app,
     "Project scripts can execute repository code. Existing deny rules still apply.",
@@ -267,8 +269,8 @@ test("offers every preset as a checkbox, pages the bounded preview, and applies 
 
   const previous = await pageUntil(app, "bun install *", pageUp)
   expect(previous).toContain("bun install *")
-  const finalAgain = await pageUntil(app, "bun add *", pageDown)
-  expect(finalAgain).toContain("bun add *")
+  const finalAgain = await pageUntil(app, "bun i *", pageDown)
+  expect(finalAgain).toContain("bun i *")
 
   app.mockInput.pressEnter()
   // One review covers every newly checked set.
@@ -410,7 +412,7 @@ test("accepted projects bypass the automatic offer, while /permissions reopens t
   const reopened = await until(manualApp, "manual permission chooser again", (frame) =>
     frame.includes("[ ] Kilo / Bun checks"),
   )
-  expect(reopened).toContain("Install and add package dependencies")
+  expect(reopened).toContain("Install dependencies from the lockfile; adding a package always asks")
 })
 
 test("an uncovered apply keeps the authoritative normal prompt and reports RPC failure without replying", async () => {
@@ -550,9 +552,16 @@ test("releasing a prompt forgets its old decision before a new request after a r
   emitReplied(app)
   await until(app, "prompt released", (frame) => frame.includes("ctrl+p commands"))
 
-  // A reset outside this TUI must not leave a discarded controller suppressing the next offer.
+  // A reset outside this TUI must not leave a discarded controller suppressing the next offer. The reset publishes
+  // `updated`, which drops the remembered decision.
   current.decision = null
   current.pending = true
+  app.events.emit({
+    id: "evt_reset",
+    created: Date.now(),
+    type: "rpc.kilocode.permissions.updated",
+    data: { projectID: location.project.id, applied: [] },
+  } as unknown as OpenCodeEvent)
   app.events.emit({
     id: "evt_after_reset",
     created: Date.now(),
@@ -562,6 +571,38 @@ test("releasing a prompt forgets its old decision before a new request after a r
   await until(app, "fresh permission offer", (frame) => frame.includes("Set up project permissions"))
   expect(current.skipped).toBe(1)
 })
+
+for (const variant of ["decided", "disabled"] as const) {
+  test(`a ${variant} project shows later requests the normal prompt without another check`, async () => {
+    const current = state(variant === "decided" ? { decision: "skipped" } : { enabled: false })
+    await using app = await createAppFixture({
+      width: 100,
+      height: 34,
+      args: { sessionID },
+      config: { animations: false, tabs: { mode: "off" } },
+      fetch: fixtureFetch(current),
+    })
+    await app.ready
+    await until(app, "normal prompt", (frame) => frame.includes("Permission required"))
+    current.pending = false
+    emitReplied(app)
+    await until(app, "prompt released", (frame) => frame.includes("ctrl+p commands"))
+    const checks = current.listLocations.length
+
+    current.pending = true
+    app.events.emit({
+      id: "evt_second_request",
+      created: Date.now(),
+      type: "permission.asked",
+      data: permissionRequest(sessionID, "per_second"),
+    })
+    const frame = await until(app, "second normal prompt", (value) => value.includes("Permission required"))
+    expect(frame).not.toContain("Checking project permissions")
+    await Bun.sleep(100)
+    expect(current.listLocations.length).toBe(checks)
+    expect(app.captureCharFrame()).not.toContain("Set up project permissions")
+  })
+}
 
 test("does not start a second decision when the original request disappears during apply", async () => {
   const apply = Promise.withResolvers<void>()
@@ -789,7 +830,7 @@ test("/permissions shows a set's shell patterns and warnings before applying, an
   )
   expect(review).toContain("Apply Kilo / Bun checks")
   expect(review).toContain("bun run check:architecture *")
-  expect(review).toContain("tail, head and grep only filter command output")
+  expect(review).not.toContain("tail *")
   expect(review).toContain("Cancel")
   app.mockInput.pressEscape()
   await until(app, "review closed", (value) => !value.includes("Project scripts can execute repository code"))

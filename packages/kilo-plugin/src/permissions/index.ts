@@ -69,7 +69,7 @@ export const installPermissionSets = Effect.fn("KiloPermissionsPlugin")(function
     const rules = (yield* applied()).flatMap((set) => set.resources)
     for (const request of yield* permission.value.list()) {
       if (request.action !== "shell" || KiloPermission.requiresPerson(request.metadata)) continue
-      if (!request.resources.every((resource) => covers(resource, rules))) continue
+      if (!request.resources.every((resource) => covers(resource, rules, directory))) continue
       const allowed = yield* permission.value
         .allows({ ...request })
         .pipe(Effect.catchTag("Session.NotFoundError", () => Effect.succeed(false)))
@@ -107,6 +107,7 @@ export const installPermissionSets = Effect.fn("KiloPermissionsPlugin")(function
           resources: event.resources,
           rules: event.rules ?? [],
           applied: sets.flatMap((set) => set.resources),
+          directory,
         })
         if (covered) event.effect = "allow"
       }),
@@ -169,10 +170,14 @@ export const installPermissionSets = Effect.fn("KiloPermissionsPlugin")(function
           if (!unidentified) yield* ctx.storage.set(decisionKey, "skipped")
           return {}
         }),
-      reset: (input) =>
+      reset: (input, context) =>
         Effect.gen(function* () {
+          if (!enabled) return yield* Effect.fail(context.error("unavailable", "Permission setup is disabled"))
           yield* ctx.storage.remove(decisionKey)
-          return { removed: input.all ? yield* removeApplied : 0 }
+          const removed = input.all ? yield* removeApplied : 0
+          // Clients remember a decided project; tell them to check it again.
+          if (!input.all) yield* publish
+          return { removed }
         }),
       check: (input, context) =>
         Effect.gen(function* () {
