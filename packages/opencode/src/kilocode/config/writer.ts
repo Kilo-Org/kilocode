@@ -122,11 +122,18 @@ export namespace KilocodeConfigWriter {
       const tree = parseTree(input)
       const node = tree && findNodeAtLocation(tree, parts)
       if (node && node.type !== "object") {
-        const replacement = parts[0] === "permission" && parts.length === 2 ? { "*": node.value, ...patch } : patch
-        return applyEdits(
-          input,
-          modify(input, parts, replacement, { formattingOptions: { insertSpaces: true, tabSize: 2 } }),
-        )
+        const promotion = parts[0] === "permission" && parts.length === 2
+        // The promoted object holds the wildcard default plus the valued entries of the patch.
+        const kept = promotion
+          ? Object.entries({ "*": node.value, ...patch }).filter(([, value]) => value !== null && value !== undefined)
+          : []
+        const replacement = promotion ? Object.fromEntries(kept) : patch
+        // A promotion with nothing to carry removes the key instead of an empty object.
+        const cleared = promotion && kept.length === 0
+        const edits = modify(input, parts, cleared ? undefined : replacement, {
+          formattingOptions: { insertSpaces: true, tabSize: 2 },
+        })
+        return applyEdits(input, edits)
       }
     }
     return Object.entries(patch).reduce((text, [key, value]) => patchJsonc(text, value, [...parts, key]), input)

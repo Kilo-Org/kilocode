@@ -55,6 +55,7 @@ export const permissionHandlers = HttpApiBuilder.group(InstanceHttpApi, "permiss
           requestID: ctx.params.requestID,
           approvedAlways: ctx.payload.approvedAlways ? [...ctx.payload.approvedAlways] : undefined,
           deniedAlways: ctx.payload.deniedAlways ? [...ctx.payload.deniedAlways] : undefined,
+          removedAlways: ctx.payload.removedAlways ? [...ctx.payload.removedAlways] : undefined,
         })
         .pipe(
           Effect.catchTag("Permission.NotFoundError", (error) =>

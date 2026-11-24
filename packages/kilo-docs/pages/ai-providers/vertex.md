@@ -62,6 +62,18 @@ export GOOGLE_CLOUD_LOCATION="us-east5"
 }
 ```
 
+A `location` or `project` set in the provider `options` takes precedence over the environment variable. The environment variable is the fallback:
+
+```jsonc
+{
+  "provider": {
+    "google-vertex": {
+      "options": { "location": "europe-west4" },
+    },
+  },
+}
+```
+
 Then set your default model:
 
 ```jsonc

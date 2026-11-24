@@ -56,7 +56,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   model: Provider.Model
   session: Session.Info
   processor: Pick<SessionProcessor.Handle, "message" | "metadata" | "completeToolCall"> // kilocode_change
-  bypassAgentCheck: boolean
+  namedAgentTypes: string[] // kilocode_change
   messages: SessionV1.WithParts[]
   promptOps: TaskPromptOps
   goalOps?: Goal.Ops // kilocode_change
@@ -101,7 +101,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   const context = (args: Record<string, unknown>, options: ToolExecutionOptions): Tool.Context => {
     const extra = {
       model: input.model,
-      bypassAgentCheck: input.bypassAgentCheck,
+      namedAgentTypes: input.namedAgentTypes, // kilocode_change
       promptOps: input.promptOps,
       goalOps: input.goalOps, // kilocode_change
       sandboxed, // kilocode_change

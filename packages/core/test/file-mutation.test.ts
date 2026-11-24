@@ -1,7 +1,7 @@
 import fs from "fs/promises"
 import path from "path"
 import { describe, expect } from "bun:test"
-import { Deferred, Effect, Fiber, Layer } from "effect"
+import { Deferred, Effect, FileSystem, Fiber, Layer, Option } from "effect" // kilocode_change - Option and File.Info for the missing-inode layer
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { FileMutation } from "@opencode-ai/core/file-mutation"
@@ -80,14 +80,145 @@ describe("FileMutation", () => {
         const created = yield* (yield* LocationMutation.Service).resolve({ path: "created.txt" })
         const files = yield* FileMutation.Service
 
-        yield* files.writeTextPreservingBom({ target: preserved, content: "\uFEFFafter" })
-        yield* files.writeTextPreservingBom({ target: created, content: "\uFEFF\uFEFF\uFEFFcreated" })
+        // kilocode_change start - bind the write to the approved target identity
+        yield* files.writeTextPreservingBom({
+          target: preserved,
+          approved: yield* files.inspect(preserved),
+          content: "\uFEFFafter",
+        })
+        yield* files.writeTextPreservingBom({
+          target: created,
+          approved: yield* files.inspect(created),
+          content: "\uFEFF\uFEFF\uFEFFcreated",
+        })
+        // kilocode_change end
 
         expect(yield* Effect.promise(() => fs.readFile(preservedPath, "utf8"))).toBe("\uFEFFafter")
         expect(yield* Effect.promise(() => fs.readFile(created.canonical, "utf8"))).toBe("\uFEFFcreated")
       }).pipe(provide(directory)),
     ),
   )
+
+  // kilocode_change start - reject a write whose approved target changed
+  it.live("refuses a text write whose approved identity no longer matches the target", () =>
+    withTmp((directory) =>
+      Effect.gen(function* () {
+        const targetPath = path.join(directory, "replaced.txt")
+        yield* Effect.promise(() => fs.writeFile(targetPath, "original"))
+        const target = yield* (yield* LocationMutation.Service).resolve({ path: "replaced.txt" })
+        const files = yield* FileMutation.Service
+        const approved = yield* files.inspect(target)
+        yield* Effect.promise(() => fs.writeFile(`${targetPath}.next`, "later"))
+        yield* Effect.promise(() => fs.rm(targetPath))
+        yield* Effect.promise(() => fs.rename(`${targetPath}.next`, targetPath))
+
+        expect(
+          yield* files.writeTextPreservingBom({ target, approved, content: "replacement" }).pipe(Effect.flip),
+        ).toMatchObject({ _tag: "FileMutation.TargetChangedError", path: target.canonical })
+        expect(yield* Effect.promise(() => fs.readFile(targetPath, "utf8"))).toBe("later")
+      }).pipe(provide(directory)),
+    ),
+  )
+
+  it.live("refuses an absent-approved text write when the file appeared before the write", () =>
+    withTmp((directory) =>
+      Effect.gen(function* () {
+        const targetPath = path.join(directory, "late.txt")
+        const target = yield* (yield* LocationMutation.Service).resolve({ path: "late.txt" })
+        const files = yield* FileMutation.Service
+        const approved = yield* files.inspect(target)
+        yield* Effect.promise(() => fs.writeFile(targetPath, "later"))
+
+        expect(
+          yield* files.writeTextPreservingBom({ target, approved, content: "replacement" }).pipe(Effect.flip),
+        ).toMatchObject({ _tag: "FileMutation.TargetChangedError", path: target.canonical })
+        expect(yield* Effect.promise(() => fs.readFile(targetPath, "utf8"))).toBe("later")
+      }).pipe(provide(directory)),
+    ),
+  )
+
+  it.live("refuses a text write when the approved file is gone before the write", () =>
+    withTmp((directory) =>
+      Effect.gen(function* () {
+        const targetPath = path.join(directory, "gone.txt")
+        yield* Effect.promise(() => fs.writeFile(targetPath, "original"))
+        const target = yield* (yield* LocationMutation.Service).resolve({ path: "gone.txt" })
+        const files = yield* FileMutation.Service
+        const approved = yield* files.inspect(target)
+        yield* Effect.promise(() => fs.rm(targetPath))
+
+        expect(
+          yield* files.writeTextPreservingBom({ target, approved, content: "replacement" }).pipe(Effect.flip),
+        ).toMatchObject({ _tag: "FileMutation.TargetChangedError", path: target.canonical })
+        expect(yield* Effect.promise(() => fs.access(targetPath).then(() => true, () => false))).toBe(false)
+      }).pipe(provide(directory)),
+    ),
+  )
+
+  it.live("fails inspect when the filesystem reports no inode for an existing regular file", () =>
+    withTmp((directory) =>
+      Effect.gen(function* () {
+        const stripped = path.join(directory, "no-inode.txt")
+        const kept = path.join(directory, "with-inode.txt")
+        yield* Effect.promise(() => Promise.all([fs.writeFile(stripped, "content"), fs.writeFile(kept, "content")]))
+        const real = yield* Effect.promise(() => fs.stat(kept))
+        const filesystem = instrumentStat(
+          (target) => target === stripped,
+          (info) => (info.type === "File" ? { ...info, ino: Option.none<number>() } : info),
+        )
+
+        yield* Effect.gen(function* () {
+          const mutation = yield* LocationMutation.Service
+          const files = yield* FileMutation.Service
+          const bare = yield* mutation.resolve({ path: "no-inode.txt" })
+          const whole = yield* mutation.resolve({ path: "with-inode.txt" })
+
+          expect(yield* files.inspect(bare).pipe(Effect.flip)).toMatchObject({
+            _tag: "FileMutation.TargetKindError",
+            path: bare.canonical,
+          })
+          expect(yield* files.inspect(whole)).toEqual({
+            type: "file",
+            dev: real.dev,
+            ino: real.ino,
+          })
+        }).pipe(provide(directory, filesystem))
+      }),
+    ),
+  )
+
+  it.live("fails inspect when the filesystem reports a zero inode for an existing regular file", () =>
+    withTmp((directory) =>
+      Effect.gen(function* () {
+        const zeroed = path.join(directory, "zero-inode.txt")
+        const kept = path.join(directory, "some-inode.txt")
+        yield* Effect.promise(() => Promise.all([fs.writeFile(zeroed, "content"), fs.writeFile(kept, "content")]))
+        const real = yield* Effect.promise(() => fs.stat(kept))
+        const filesystem = instrumentStat(
+          (target) => target === zeroed,
+          (info) => (info.type === "File" ? { ...info, ino: Option.some(0) } : info),
+        )
+
+        yield* Effect.gen(function* () {
+          const mutation = yield* LocationMutation.Service
+          const files = yield* FileMutation.Service
+          const zero = yield* mutation.resolve({ path: "zero-inode.txt" })
+          const whole = yield* mutation.resolve({ path: "some-inode.txt" })
+
+          expect(yield* files.inspect(zero).pipe(Effect.flip)).toMatchObject({
+            _tag: "FileMutation.TargetKindError",
+            path: zero.canonical,
+          })
+          expect(yield* files.inspect(whole)).toEqual({
+            type: "file",
+            dev: real.dev,
+            ino: real.ino,
+          })
+        }).pipe(provide(directory, filesystem))
+      }),
+    ),
+  )
+  // kilocode_change end
 
   it.live("rejects create when a prospective target appears after resolution", () =>
     withTmp((directory) =>
@@ -366,3 +497,21 @@ function instrumentWrites(run: <E>(write: Effect.Effect<void, E>, target: string
     }),
   ).pipe(Layer.provide(LayerNode.compile(FSUtil.node)))
 }
+
+// kilocode_change start - override reported stat info for the missing-inode branch
+function instrumentStat(
+  match: (target: string) => boolean,
+  override: (info: FileSystem.File.Info) => FileSystem.File.Info,
+) {
+  return Layer.effect(
+    FSUtil.Service,
+    Effect.gen(function* () {
+      const filesystem = yield* FSUtil.Service
+      return FSUtil.Service.of({
+        ...filesystem,
+        stat: (target) => filesystem.stat(target).pipe(Effect.map((info) => (match(target) ? override(info) : info))),
+      })
+    }),
+  ).pipe(Layer.provide(LayerNode.compile(FSUtil.node)))
+}
+// kilocode_change end

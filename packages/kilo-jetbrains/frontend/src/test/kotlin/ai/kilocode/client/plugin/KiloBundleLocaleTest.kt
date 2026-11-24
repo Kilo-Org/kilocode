@@ -429,6 +429,10 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
             "settings.checkpoints.cleanup.confirm.message",
             "settings.checkpoints.cleanup.error.title",
             "settings.checkpoints.cleanup.error.message",
+            "settings.checkpoints.cleanup.status.unrestored",
+            "settings.checkpoints.cleanup.unrestored.title",
+            "settings.checkpoints.cleanup.unrestored.message",
+            "settings.checkpoints.cleanup.unrestored.notRun.message",
         )
 
         val COMMANDS_AND_INFO = listOf(

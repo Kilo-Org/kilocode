@@ -1,7 +1,10 @@
 name: nix-hashes
 
+# kilocode_change start
+# Default is read; each job widens only what it uses.
 permissions:
-  contents: write
+  contents: read
+# kilocode_change end
 
 on:
   workflow_dispatch:
@@ -40,9 +43,18 @@ jobs:
             runner: macos-latest
     runs-on: ${{ matrix.runner }}
 
+    # kilocode_change start
+    permissions:
+      contents: read
+    # kilocode_change end
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        # kilocode_change start
+        with:
+          persist-credentials: false
+        # kilocode_change end
 
       - name: Setup Nix
         uses: nixbuild/nix-quick-install-action@2c9db80fb984ceb1bcaa77cdda3fdf8cfba92035 # v34
@@ -93,6 +105,11 @@ jobs:
     needs: compute-hash
     if: github.repository == 'Kilo-Org/kilocode' && github.event_name != 'pull_request'
     runs-on: blacksmith-4vcpu-ubuntu-2404
+
+    # kilocode_change start
+    permissions:
+      contents: write
+    # kilocode_change end
 
     steps:
       - name: Checkout repository

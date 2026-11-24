@@ -4,6 +4,9 @@ import type * as HttpClientError from "effect/unstable/http/HttpClientError"
 export const AccountID = Schema.String.pipe(Schema.brand("AccountID"))
 export type AccountID = Schema.Schema.Type<typeof AccountID>
 
+export const RemoteID = Schema.String.pipe(Schema.brand("RemoteID")) // kilocode_change
+export type RemoteID = Schema.Schema.Type<typeof RemoteID> // kilocode_change
+
 export const OrgID = Schema.String.pipe(Schema.brand("OrgID"))
 export type OrgID = Schema.Schema.Type<typeof OrgID>
 

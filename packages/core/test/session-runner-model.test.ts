@@ -1,9 +1,10 @@
 import { describe, expect } from "bun:test"
 import { LLM } from "@opencode-ai/llm"
-import { LLMClient } from "@opencode-ai/llm/route"
-import { DateTime, Effect } from "effect"
-import { Headers } from "effect/unstable/http"
+import { LLMClient, RequestExecutor } from "@opencode-ai/llm/route" // kilocode_change
+import { DateTime, Effect, Layer, Stream } from "effect" // kilocode_change
+import { Headers, HttpClient, HttpClientResponse } from "effect/unstable/http" // kilocode_change
 import { Credential } from "@opencode-ai/core/credential"
+import { ConfigMigrateV1 } from "@opencode-ai/core/v1/config/migrate" // kilocode_change
 import { Integration } from "@opencode-ai/core/integration"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderV2 } from "@opencode-ai/core/provider"
@@ -12,6 +13,13 @@ import { SessionRunnerModel } from "@opencode-ai/core/session/runner/model"
 import { SessionV2 } from "@opencode-ai/core/session"
 import { AbsolutePath } from "@opencode-ai/core/schema"
 import { it } from "./lib/effect"
+
+// kilocode_change start
+function required<T>(value: T | undefined): T {
+  if (value === undefined) throw new Error("Expected value")
+  return value
+}
+// kilocode_change end
 
 type Api =
   | {
@@ -40,6 +48,33 @@ const model = (api: Api, variants: ModelV2.Info["variants"] = []) =>
     enabled: true,
     limit: { context: 100, output: 20 },
   })
+
+// kilocode_change start - run one turn and record the payload the transport sends
+type Wire = { readonly headers: Record<string, string>; readonly body: unknown }
+
+function capture(model: Parameters<typeof LLM.request>[0]["model"], sent: Wire[]) {
+  const http = Layer.succeed(
+    HttpClient.HttpClient,
+    HttpClient.make((request) =>
+      Effect.sync(() => {
+        sent.push({
+          headers: { ...request.headers },
+          body:
+            request.body && "body" in request.body && request.body.body instanceof Uint8Array
+              ? JSON.parse(new TextDecoder().decode(request.body.body))
+              : request.body,
+        })
+        return HttpClientResponse.fromWeb(request, new Response("", { status: 200 }))
+      }),
+    ),
+  )
+  return LLMClient.stream(LLM.request({ model, prompt: "Hello" })).pipe(
+    Stream.runDrain,
+    Effect.catchCause(() => Effect.void),
+    Effect.provide(LLMClient.layer.pipe(Layer.provide(RequestExecutor.layer.pipe(Layer.provide(http))))),
+  )
+}
+// kilocode_change end
 
 describe("SessionRunnerModel", () => {
   it.effect("maps catalog OpenAI AI SDK models into native Responses routes", () =>
@@ -72,6 +107,76 @@ describe("SessionRunnerModel", () => {
       expect(JSON.stringify(prepared.body)).not.toContain("secret")
     }),
   )
+
+  // kilocode_change start - fallback options report request headers
+  it.effect("lowers fallback options into the sent request", () =>
+    Effect.gen(function* () {
+      const migrated = ConfigMigrateV1.migrate({
+        provider: {
+          keyed: {
+            options: { apiKey: "migrated-key", authToken: "migrated-token", headers: { "x-tenant": "acme" } },
+            models: { chat: { options: { customField: "value" } } },
+          },
+          tokenonly: {
+            options: { authToken: "only-token", headers: { "x-tenant": "beta" } },
+            models: { chat: { options: { customField: "value" } } },
+          },
+        },
+      })
+
+      const sent: Wire[] = []
+      for (const id of ["keyed", "tokenonly"]) {
+        const entry = required(migrated.providers?.[id])
+        const config = required(entry.models?.["chat"]?.request)
+        const resolved = yield* SessionRunnerModel.fromCatalogModel(
+          ModelV2.Info.make({
+            ...model({ type: "aisdk", package: "@ai-sdk/openai-compatible", url: "https://custom.example/v1" }),
+            request: {
+              headers: { ...entry.request?.headers, ...config.headers },
+              body: { ...entry.request?.body, ...config.body },
+            },
+          }),
+        )
+        yield* capture(resolved, sent)
+      }
+
+      const [keyed, tokenonly] = sent.map((item) => required(item))
+      const protocol = ["messages", "model", "stream", "stream_options"]
+      expect(Object.keys(keyed.body as object).sort()).toEqual([...protocol, "customField"].sort())
+      expect((keyed.body as Record<string, unknown>).customField).toBe("value")
+      expect(keyed.headers["x-tenant"]).toBe("acme")
+      expect(keyed.headers.authorization).toBe("Bearer migrated-key")
+
+      expect(Object.keys(tokenonly.body as object).sort()).toEqual([...protocol, "customField"].sort())
+      expect((tokenonly.body as Record<string, unknown>).customField).toBe("value")
+      expect(tokenonly.headers["x-tenant"]).toBe("beta")
+      expect(tokenonly.headers.authorization).toBe("Bearer only-token")
+    }),
+  )
+
+  it.effect("lowers fallback options for a package with its own header", () =>
+    Effect.gen(function* () {
+      const migrated = ConfigMigrateV1.migrate({
+        provider: { both: { options: { apiKey: "both-key", authToken: "both-token" } } },
+      })
+      const entry = required(migrated.providers?.["both"])
+      const resolved = yield* SessionRunnerModel.fromCatalogModel(
+        ModelV2.Info.make({
+          ...model({ type: "aisdk", package: "@ai-sdk/anthropic", url: "https://anthropic.example/v1" }),
+          request: { headers: { ...entry.request?.headers }, body: { ...entry.request?.body } },
+        }),
+      )
+
+      const sent: Wire[] = []
+      yield* capture(resolved, sent)
+
+      const wire = required(sent[0])
+      expect(wire.headers["x-api-key"]).toBe("both-key")
+      expect(wire.headers.authorization).toBe("Bearer both-token")
+      expect(Object.keys(wire.body as object).sort()).toEqual(["max_tokens", "messages", "model", "stream"])
+    }),
+  )
+  // kilocode_change end
 
   it.effect("uses merged API settings for OpenAI-compatible auth and request defaults", () =>
     Effect.gen(function* () {

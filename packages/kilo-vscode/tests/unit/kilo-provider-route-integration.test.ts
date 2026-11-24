@@ -4,6 +4,7 @@ import * as fs from "fs/promises"
 import * as os from "os"
 import * as path from "path"
 import { ProjectRouteService } from "../../src/agent-manager/project/route"
+import { SESSION_ROUTE_UNRESOLVED } from "../../src/shared/session-route-error"
 import type { DiffViewerProvider } from "../../src/diff/DiffViewerProvider"
 import type { PRReviewCommentData } from "../../src/shared/review-comments"
 
@@ -20,6 +21,13 @@ type SessionGetParams = { sessionID: string; directory: string }
 function mockConnection(getImpl?: (p: SessionGetParams) => Promise<unknown>, vcs = "git") {
   const calls: SessionGetParams[] = []
   const projectCalls: string[] = []
+  const revertCalls: Array<{ sessionID: string; messageID: string; directory?: string }> = []
+  const unrevertCalls: Array<{ sessionID: string; directory?: string }> = []
+  const deleteCalls: Array<{ sessionID: string; messageID: string; directory?: string }> = []
+  const sessionDeleteCalls: Array<{ sessionID: string; directory?: string }> = []
+  const sessionUpdateCalls: Array<{ sessionID: string; directory?: string; title?: string }> = []
+  const summarizeCalls: Array<{ sessionID: string; directory?: string; providerID?: string; modelID?: string }> = []
+  const abortCalls: Array<{ sessionID: string; directory?: string; scope?: string }> = []
   const client = {
     session: {
       get: async (p: SessionGetParams) => {
@@ -37,6 +45,64 @@ function mockConnection(getImpl?: (p: SessionGetParams) => Promise<unknown>, vcs
           },
         }
       },
+      revert: async (p: { sessionID: string; messageID: string; directory?: string }) => {
+        revertCalls.push(p)
+        return {
+          data: {
+            id: p.sessionID,
+            slug: p.sessionID,
+            projectID: "prj-test",
+            directory: p.directory,
+            title: "s",
+            version: "1",
+            time: { created: 1, updated: 1 },
+          },
+        }
+      },
+      unrevert: async (p: { sessionID: string; directory?: string }) => {
+        unrevertCalls.push(p)
+        return {
+          data: {
+            id: p.sessionID,
+            slug: p.sessionID,
+            projectID: "prj-test",
+            directory: p.directory,
+            title: "s",
+            version: "1",
+            time: { created: 1, updated: 1 },
+          },
+        }
+      },
+      deleteMessage: async (p: { sessionID: string; messageID: string; directory?: string }) => {
+        deleteCalls.push(p)
+        return { data: true }
+      },
+      delete: async (p: { sessionID: string; directory?: string }) => {
+        sessionDeleteCalls.push(p)
+        return { data: true }
+      },
+      update: async (p: { sessionID: string; directory?: string; title?: string }) => {
+        sessionUpdateCalls.push(p)
+        return {
+          data: {
+            id: p.sessionID,
+            slug: p.sessionID,
+            projectID: "prj-test",
+            directory: p.directory,
+            title: p.title ?? "s",
+            version: "1",
+            time: { created: 1, updated: 1 },
+          },
+        }
+      },
+      abort: async (p: { sessionID: string; directory?: string; scope?: string }) => {
+        abortCalls.push(p)
+        return { data: true }
+      },
+      summarize: async (p: { sessionID: string; directory?: string; providerID?: string; modelID?: string }) => {
+        summarizeCalls.push(p)
+        return { data: true }
+      },
       list: async () => ({ data: [] }),
       status: async () => ({ data: {} }),
     },
@@ -47,6 +113,7 @@ function mockConnection(getImpl?: (p: SessionGetParams) => Promise<unknown>, vcs
       },
     },
     provider: { list: async () => ({ data: { all: [], connected: {}, default: {} } }) },
+    backgroundProcess: { stopSession: async () => ({ data: true }) },
     app: {
       agents: async () => ({ data: [] }),
       skills: async () => ({ data: [] }),
@@ -62,6 +129,13 @@ function mockConnection(getImpl?: (p: SessionGetParams) => Promise<unknown>, vcs
   return {
     calls,
     projectCalls,
+    revertCalls,
+    unrevertCalls,
+    deleteCalls,
+    sessionDeleteCalls,
+    sessionUpdateCalls,
+    summarizeCalls,
+    abortCalls,
     connection: {
       connect: async () => {
         current = client
@@ -80,6 +154,8 @@ function mockConnection(getImpl?: (p: SessionGetParams) => Promise<unknown>, vcs
       onModelSelectorExpandedChanged: () => () => undefined,
       onClearPendingPrompts: () => () => undefined,
       registerDirectoryProvider: () => () => undefined,
+      clearPermissionSession: () => undefined,
+      pruneSession: () => undefined,
       unregisterVisible: () => undefined,
       unregisterAttached: () => undefined,
       getServerInfo: () => ({ port: 12345 }),
@@ -124,6 +200,13 @@ type ProviderInternals = {
   refreshGitStatus: (directory?: string, sessionID?: string) => Promise<void>
   refreshGitStatusFromParts: (parts: unknown[], sessionID?: string) => Promise<boolean>
   refreshSessionDetails: (sessionID: string, dir: string) => void
+  handleRevertSession: (sessionID: string, messageID: string, partID?: string) => Promise<void>
+  handleUnrevertSession: (sessionID: string) => Promise<void>
+  handleDeleteMessage: (sessionID: string, messageID: string, requestID?: string) => Promise<void>
+  handleDeleteSession: (sessionID: string) => Promise<void>
+  handleRenameSession: (sessionID: string, title: string) => Promise<void>
+  handleCompact: (sessionID?: string, providerID?: string, modelID?: string) => Promise<void>
+  handleAbort: (sessionID?: string, scope?: "session" | "tree") => Promise<void>
   handleSendCommand: (
     command: string,
     args: string,
@@ -800,5 +883,255 @@ describe("KiloProvider route integration", () => {
     expect(commandCalls[0]!.command).toBe("share")
     // No fallback to the active root anywhere.
     expect(calls.every((c) => c.directory !== "/active/root")).toBe(true)
+  })
+
+  const refusal = (sessionID: string) => ({
+    type: "error",
+    sessionID,
+    message: SESSION_ROUTE_UNRESOLVED,
+  })
+
+  function ambiguousRoutes(): ProjectRouteService {
+    const routes = new ProjectRouteService()
+    routes.registerProject("a", "/repo/a", 1)
+    routes.registerProject("b", "/repo/b", 1)
+    // Same raw session id registered in two projects — ambiguous.
+    routes.registerSession({ projectId: "a", sessionId: "same" }, "/repo/a", 1)
+    routes.registerSession({ projectId: "b", sessionId: "same" }, "/repo/b", 1)
+    return routes
+  }
+
+  it("reports a revert when the session maps to more than one project", async () => {
+    const { connection, revertCalls } = mockConnection()
+    const provider = new KiloProvider({} as never, connection, undefined, {
+      routeService: ambiguousRoutes(),
+      rootDirectory: () => "/active/root",
+    })
+    const internal = provider as unknown as ProviderInternals
+    connect(internal)
+    const posted: unknown[] = []
+    internal.webview = { postMessage: async (message) => posted.push(message) }
+
+    await internal.handleRevertSession("same", "msg-1")
+
+    expect(revertCalls).toEqual([])
+    expect(posted).toContainEqual(refusal("same"))
+  })
+
+  it("reports a message delete when the session maps to more than one project and settles the webview", async () => {
+    const { connection, deleteCalls } = mockConnection()
+    const provider = new KiloProvider({} as never, connection, undefined, {
+      routeService: ambiguousRoutes(),
+      rootDirectory: () => "/active/root",
+    })
+    const internal = provider as unknown as ProviderInternals
+    connect(internal)
+    const posted: unknown[] = []
+    internal.webview = { postMessage: async (message) => posted.push(message) }
+
+    await internal.handleDeleteMessage("same", "msg-1", "req-1")
+
+    expect(deleteCalls).toEqual([])
+    expect(posted).toContainEqual(refusal("same"))
+    expect(posted).toContainEqual({
+      type: "deleteMessageResult",
+      sessionID: "same",
+      messageID: "msg-1",
+      requestID: "req-1",
+      success: false,
+    })
+  })
+
+  it("reports an abort when the session maps to more than one project", async () => {
+    const { connection, abortCalls } = mockConnection()
+    const provider = new KiloProvider({} as never, connection, undefined, {
+      routeService: ambiguousRoutes(),
+      rootDirectory: () => "/active/root",
+    })
+    const internal = provider as unknown as ProviderInternals
+    connect(internal)
+    const posted: unknown[] = []
+    internal.webview = { postMessage: async (message) => posted.push(message) }
+    // A queued retry loop keeps its controller here; the refusal must still settle it locally.
+    const controller = new AbortController()
+    internal.retryAbortControllers.set("same", controller)
+
+    await internal.handleAbort("same")
+    await internal.handleAbort("same")
+
+    expect(controller.signal.aborted).toBe(true)
+    const idle = posted.filter((message) => {
+      if (typeof message !== "object" || message === null || !("type" in message)) return false
+      return message.type === "sessionStatus"
+    })
+    expect(idle).toEqual([{ type: "sessionStatus", sessionID: "same", status: "idle" }])
+    expect(abortCalls).toEqual([])
+    expect(posted).toContainEqual(refusal("same"))
+  })
+
+  it("aborts nothing on panel close when the session maps to more than one project", async () => {
+    const { connection, abortCalls } = mockConnection()
+    const provider = new KiloProvider({} as never, connection, undefined, {
+      routeService: ambiguousRoutes(),
+      rootDirectory: () => "/active/root",
+    })
+    const internal = provider as unknown as ProviderInternals
+    connect(internal)
+    const posted: unknown[] = []
+    internal.webview = { postMessage: async (message) => posted.push(message) }
+
+    await provider.abortSessions(["same"])
+
+    expect(abortCalls).toEqual([])
+    expect(posted).toEqual([])
+  })
+
+  it("reports a session delete when the session maps to more than one project", async () => {
+    const { connection, sessionDeleteCalls } = mockConnection()
+    const provider = new KiloProvider({} as never, connection, undefined, {
+      routeService: ambiguousRoutes(),
+      rootDirectory: () => "/active/root",
+    })
+    const internal = provider as unknown as ProviderInternals
+    connect(internal)
+    const posted: unknown[] = []
+    internal.webview = { postMessage: async (message) => posted.push(message) }
+
+    await internal.handleDeleteSession("same")
+
+    expect(sessionDeleteCalls).toEqual([])
+    expect(posted).toContainEqual(refusal("same"))
+  })
+
+  it("reports a session rename when the session maps to more than one project", async () => {
+    const { connection, sessionUpdateCalls } = mockConnection()
+    const provider = new KiloProvider({} as never, connection, undefined, {
+      routeService: ambiguousRoutes(),
+      rootDirectory: () => "/active/root",
+    })
+    const internal = provider as unknown as ProviderInternals
+    connect(internal)
+    const posted: unknown[] = []
+    internal.webview = { postMessage: async (message) => posted.push(message) }
+
+    await internal.handleRenameSession("same", "New title")
+
+    expect(sessionUpdateCalls).toEqual([])
+    expect(posted).toContainEqual(refusal("same"))
+  })
+
+  it("deletes a session on its one exact route", async () => {
+    const routes = new ProjectRouteService()
+    routes.registerProject("a", "/repo/a", 1)
+    routes.registerSession({ projectId: "a", sessionId: "ses-a" }, "/repo/a", 1)
+    const { connection, sessionDeleteCalls } = mockConnection()
+    const provider = new KiloProvider({} as never, connection, undefined, {
+      routeService: routes,
+      rootDirectory: () => "/active/root",
+    })
+    const internal = provider as unknown as ProviderInternals
+    connect(internal)
+    internal.webview = { postMessage: async () => undefined }
+
+    await internal.handleDeleteSession("ses-a")
+
+    expect(sessionDeleteCalls).toHaveLength(1)
+    expect(sessionDeleteCalls[0]).toMatchObject({ sessionID: "ses-a", directory: "/repo/a" })
+  })
+
+  it("renames a session on its one exact route", async () => {
+    const routes = new ProjectRouteService()
+    routes.registerProject("a", "/repo/a", 1)
+    routes.registerSession({ projectId: "a", sessionId: "ses-a" }, "/repo/a", 1)
+    const { connection, sessionUpdateCalls } = mockConnection()
+    const provider = new KiloProvider({} as never, connection, undefined, {
+      routeService: routes,
+      rootDirectory: () => "/active/root",
+    })
+    const internal = provider as unknown as ProviderInternals
+    connect(internal)
+    internal.webview = { postMessage: async () => undefined }
+
+    await internal.handleRenameSession("ses-a", "New title")
+
+    expect(sessionUpdateCalls).toHaveLength(1)
+    expect(sessionUpdateCalls[0]).toMatchObject({ sessionID: "ses-a", directory: "/repo/a", title: "New title" })
+  })
+
+  it("reports a compact when the session maps to more than one project", async () => {
+    const { connection, summarizeCalls } = mockConnection()
+    const provider = new KiloProvider({} as never, connection, undefined, {
+      routeService: ambiguousRoutes(),
+      rootDirectory: () => "/active/root",
+    })
+    const internal = provider as unknown as ProviderInternals
+    connect(internal)
+    const posted: unknown[] = []
+    internal.webview = { postMessage: async (message) => posted.push(message) }
+
+    await internal.handleCompact("same", "prov", "model")
+
+    expect(summarizeCalls).toEqual([])
+    expect(posted).toContainEqual(refusal("same"))
+  })
+
+  it("compacts a session on its one exact route", async () => {
+    const routes = new ProjectRouteService()
+    routes.registerProject("a", "/repo/a", 1)
+    routes.registerSession({ projectId: "a", sessionId: "ses-a" }, "/repo/a", 1)
+    const { connection, summarizeCalls } = mockConnection()
+    const provider = new KiloProvider({} as never, connection, undefined, {
+      routeService: routes,
+      rootDirectory: () => "/active/root",
+    })
+    const internal = provider as unknown as ProviderInternals
+    connect(internal)
+    internal.webview = { postMessage: async () => undefined }
+
+    await internal.handleCompact("ses-a", "prov", "model")
+
+    expect(summarizeCalls).toHaveLength(1)
+    expect(summarizeCalls[0]).toMatchObject({
+      sessionID: "ses-a",
+      directory: "/repo/a",
+      providerID: "prov",
+      modelID: "model",
+    })
+  })
+
+  it("reports an unrevert when the session maps to more than one project", async () => {
+    const { connection, unrevertCalls } = mockConnection()
+    const provider = new KiloProvider({} as never, connection, undefined, {
+      routeService: ambiguousRoutes(),
+      rootDirectory: () => "/active/root",
+    })
+    const internal = provider as unknown as ProviderInternals
+    connect(internal)
+    const posted: unknown[] = []
+    internal.webview = { postMessage: async (message) => posted.push(message) }
+
+    await internal.handleUnrevertSession("same")
+
+    expect(unrevertCalls).toEqual([])
+    expect(posted).toContainEqual(refusal("same"))
+  })
+
+  it("reverts a message on a session with one exact route", async () => {
+    const routes = new ProjectRouteService()
+    routes.registerProject("a", "/repo/a", 1)
+    routes.registerSession({ projectId: "a", sessionId: "ses-a" }, "/repo/a", 1)
+    const { connection, revertCalls } = mockConnection()
+    const provider = new KiloProvider({} as never, connection, undefined, {
+      routeService: routes,
+      rootDirectory: () => "/active/root",
+    })
+    const internal = provider as unknown as ProviderInternals
+    connect(internal)
+    internal.webview = { postMessage: async () => undefined }
+
+    await internal.handleRevertSession("ses-a", "msg-1")
+
+    expect(revertCalls).toHaveLength(1)
+    expect(revertCalls[0]).toMatchObject({ sessionID: "ses-a", messageID: "msg-1", directory: "/repo/a" })
   })
 })

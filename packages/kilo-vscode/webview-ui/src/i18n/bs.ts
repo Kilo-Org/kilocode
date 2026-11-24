@@ -314,6 +314,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "Ukloni sa liste dozvoljenih",
   "ui.permission.rule.addToDenied": "Dodaj na listu odbijenih",
   "ui.permission.rule.removeFromDenied": "Ukloni sa liste odbijenih",
+  "ui.permission.rule.fromConfig": "Upravlja se konfiguracijskom datotekom",
   "ui.permission.toolLabel.read": "Čitaj",
   "ui.permission.toolLabel.edit": "Uredi",
   "ui.permission.toolLabel.write": "Piši",
@@ -817,6 +818,7 @@ export const dict = {
 
   "dialog.model.noProviders": "Nema pružatelja",
   "dialog.model.unavailable": "Kilo modeli nisu dostupni",
+  "dialog.model.loadFailed": "Nije moguće učitati pružatelje za ovaj projekat.",
 
   "prompt.placeholder.connecting": "Povezivanje na server...",
   "prompt.placeholder.error": "Povezivanje nije uspjelo. Provjerite panel za izlaz ili ponovo pokrenite ekstenziju.",
@@ -1339,6 +1341,8 @@ export const dict = {
   "dialog.model.notSet": "Nije postavljeno",
   "profile.personalAccount": "Osobni račun",
   "profile.switchingAccount": "Prebacivanje računa…",
+  "profile.unavailableAccount": "Nedostupan račun",
+  "profile.switchFailed": "Nije moguće potvrditi promjenu računa.",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/bs.ts
 
@@ -1424,6 +1428,9 @@ export const dict = {
   "settings.saveBar.cancel": "Otkaži",
   "settings.saveBar.saving": "Spremanje…",
   "settings.saveBar.saveFailed": "Postavke nije moguće spremiti",
+  "settings.saveBar.dismissError": "Odbaci",
+  "settings.saveBar.unconfirmedWrite": "Host ekstenzije nije potvrdio „{{name}}”.",
+  "settings.saveBar.unconfirmedSave": "Host ekstenzije nije potvrdio spremanje. Pokušaj ponovo.",
   "notifications.action.next": "Sljedeći",
   "notifications.action.close": "Zatvori",
   "notifications.action.tryModel": "Probaj {{model}}",

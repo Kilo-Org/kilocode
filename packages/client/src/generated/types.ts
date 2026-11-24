@@ -74,6 +74,14 @@ export type ProviderNotFoundError = {
 export const isProviderNotFoundError = (value: unknown): value is ProviderNotFoundError =>
   typeof value === "object" && value !== null && "_tag" in value && value["_tag"] === "ProviderNotFoundError"
 
+export type AttemptNotFoundError = {
+  readonly _tag: "AttemptNotFoundError"
+  readonly attemptID: string
+  readonly message: string
+}
+export const isAttemptNotFoundError = (value: unknown): value is AttemptNotFoundError =>
+  typeof value === "object" && value !== null && "_tag" in value && value["_tag"] === "AttemptNotFoundError"
+
 export type PermissionNotFoundError = {
   readonly _tag: "PermissionNotFoundError"
   readonly requestID: string
@@ -2310,6 +2318,14 @@ export type IntegrationsAttemptStatusOutput = {
           readonly expires: number | "Infinity" | "-Infinity" | "NaN"
         }
       }
+    | {
+        readonly status: "cancelled"
+        readonly time: {
+          readonly created: number | "Infinity" | "-Infinity" | "NaN"
+          readonly expires: number | "Infinity" | "-Infinity" | "NaN"
+        }
+      }
+    | { readonly status: "unknown" }
 }
 
 export type IntegrationsAttemptCompleteInput = {

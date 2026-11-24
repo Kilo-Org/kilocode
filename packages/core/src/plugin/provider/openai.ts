@@ -30,6 +30,13 @@ type TokenResponse = {
   expires_in?: number
 }
 
+// kilocode_change start - a refresh response may omit refresh_token or id_token; sign-in keeps the full shape
+type RefreshResponse = Omit<TokenResponse, "id_token" | "refresh_token"> & {
+  id_token?: string
+  refresh_token?: string
+}
+// kilocode_change end
+
 type Claims = {
   chatgpt_account_id?: string
   organizations?: Array<{ id: string }>
@@ -214,8 +221,9 @@ function exchange(code: string, redirect: string, pkce: Pkce) {
   })
 }
 
+// kilocode_change start - a refresh response may omit refresh_token or id_token, so it keeps the stored ones
 function refresh(methodID: Integration.MethodID, value: Pick<Credential.OAuth, "refresh" | "metadata">) {
-  return request<TokenResponse>(`${issuer}/oauth/token`, {
+  return request<RefreshResponse>(`${issuer}/oauth/token`, {
     method: "POST",
     headers: headers("application/x-www-form-urlencoded"),
     body: new URLSearchParams({
@@ -225,11 +233,16 @@ function refresh(methodID: Integration.MethodID, value: Pick<Credential.OAuth, "
     }).toString(),
   }).pipe(
     Effect.map((tokens) => {
-      const next = credential(methodID, tokens)
+      const next = credential(methodID, {
+        ...tokens,
+        id_token: tokens.id_token ?? "",
+        refresh_token: tokens.refresh_token ?? value.refresh,
+      })
       return Credential.OAuth.make({ ...next, metadata: next.metadata ?? value.metadata })
     }),
   )
 }
+// kilocode_change end
 
 function request<A>(url: string, init: RequestInit) {
   return Effect.tryPromise({

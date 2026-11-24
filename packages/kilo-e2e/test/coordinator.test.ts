@@ -289,6 +289,15 @@ describe("coordinator rejection paths", () => {
     })
   })
 
+  test("rejects a hand-written manifest for a lane its scenario does not support", async () => {
+    await sandbox(async (dir) => {
+      const error = await rejected(
+        run(options(dir, { manifest: { ...manifest("followup.new-session", "local"), lane: "cloud" } })),
+      )
+      expect(error.code).toBe("config")
+    })
+  })
+
   test("rejects a reused run directory instead of reading stale results", async () => {
     await sandbox(async (dir) => {
       const first = await run(options(dir))

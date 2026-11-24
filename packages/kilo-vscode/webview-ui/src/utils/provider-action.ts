@@ -42,6 +42,8 @@ export function createProviderAction(vscode: Transport) {
   const pending = new Map<string, Handlers>()
   const unsubscribe = vscode.onMessage((message) => {
     if (!("requestId" in message)) return
+    // Another message type may carry an optional `requestId`; only a string names a request.
+    if (typeof message.requestId !== "string") return
 
     const item = pending.get(message.requestId)
     if (!item) return
