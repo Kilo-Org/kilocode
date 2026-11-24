@@ -7,9 +7,10 @@ export interface IEmbedder {
    * Creates embeddings for the given texts.
    * @param texts Array of text strings to create embeddings for
    * @param model Optional model ID to use for embeddings
+   * @param purpose Whether the inputs are indexed documents or search queries (defaults to document)
    * @returns Promise resolving to an EmbeddingResponse
    */
-  createEmbeddings(texts: string[], model?: string): Promise<EmbeddingResponse>
+  createEmbeddings(texts: string[], model?: string, purpose?: "document" | "query"): Promise<EmbeddingResponse>
 
   /**
    * Validates the embedder configuration by testing connectivity and credentials.

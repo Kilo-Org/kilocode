@@ -18,7 +18,12 @@ import { loadIgnore } from "../../../../src/indexing/shared/load-ignore"
 import { DirectoryScanner } from "../../../../src/indexing/processors/scanner"
 
 class Emb implements IEmbedder {
-  public async createEmbeddings(texts: string[]): Promise<{ embeddings: number[][] }> {
+  public async createEmbeddings(
+    texts: string[],
+    _model?: string,
+    purpose?: "document" | "query",
+  ): Promise<{ embeddings: number[][] }> {
+    expect(purpose).toBe("document")
     return {
       embeddings: texts.map(() => [0.1]),
     }

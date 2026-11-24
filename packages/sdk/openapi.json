@@ -38415,6 +38415,12 @@
               },
               "apiKey": {
                 "type": "string"
+              },
+              "documentPrompt": {
+                "type": "string"
+              },
+              "queryPrompt": {
+                "type": "string"
               }
             },
             "additionalProperties": false
