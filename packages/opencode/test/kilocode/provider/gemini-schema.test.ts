@@ -127,6 +127,20 @@ describe("ProviderTransform.schema - gemini empty enum values", () => {
     expect("enum" in result.properties.blank).toBe(false)
   })
 
+  test("removes an enum that arrives already empty", () => {
+    const schema = {
+      type: "object",
+      properties: {
+        blank: { type: "string", enum: [] },
+      },
+    } as any
+
+    const result = ProviderTransform.schema(geminiModel, schema) as any
+
+    expect(result.properties.blank.type).toBe("string")
+    expect("enum" in result.properties.blank).toBe(false)
+  })
+
   test.each([{ values: [""] }, { values: [] }])("omits an invalid enum inside anyOf: $values", ({ values }) => {
     const schema = {
       type: "object",
