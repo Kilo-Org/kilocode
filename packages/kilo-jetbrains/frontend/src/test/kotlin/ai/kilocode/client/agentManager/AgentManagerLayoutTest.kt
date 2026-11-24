@@ -470,6 +470,24 @@ class AgentManagerLayoutTest : BasePlatformTestCase() {
         assertEquals(listOf(current.key, local.key), restored.neighbors(cloud.key))
     }
 
+    fun `test repeated rows and a repeated persisted section keep one node per key`() = edtWait {
+        val section = layout.create("Planning")
+        layout.nodes(items)
+        layout.move(local.key, section.key)
+
+        val nodes = layout.nodes(items + items + local)
+
+        assertEquals(listOf(current.key, cloud.key, section.key), keys(nodes))
+        assertEquals(listOf(local.key), keys(children(nodes, section)))
+
+        val props = PropertiesComponent.getInstance(project)
+        props.setValue(STORAGE, """{
+            "sections":[{"key":"one","title":"One"},{"key":"one","title":"One"}],
+            "membership":{},"order":{}
+        }""")
+        assertEquals(listOf("one"), keys(AgentManagerLayout(props).nodes(emptyList())))
+    }
+
     fun `test pinning repairs persisted primary membership and duplicate orders without losing other layout data`() = edtWait {
         val props = PropertiesComponent.getInstance(project)
         props.setValue(STORAGE, """{

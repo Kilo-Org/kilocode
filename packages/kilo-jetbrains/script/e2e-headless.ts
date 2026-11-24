@@ -20,6 +20,7 @@ import {
   ensureDir,
   EvidenceReport,
   RunError,
+  supportsLane,
   type Lane,
   type ScenarioID,
 } from "../../kilo-e2e/src/index"
@@ -120,6 +121,14 @@ async function main(): Promise<number> {
   const kiloCommit = gitCommit(root)
   const cloudCommit = options.cloud ? gitCommit(options.cloud) : null
   const cells: CellResult[] = []
+  // Only supported scenario/lane pairs are cells at all: the lane declares which flow a scenario
+  // drives, not which stack its fixture provider needs.
+  const requested = options.scenarios.flatMap((scenario) =>
+    options.lanes.filter((lane) => supportsLane(scenario, lane)).map((lane) => ({ scenario, lane })),
+  )
+  const skipped = options.scenarios.flatMap((scenario) =>
+    options.lanes.filter((lane) => !supportsLane(scenario, lane)).map((lane) => ({ scenario, lane })),
+  )
   const controller = new AbortController()
   const abort = () => {
     if (controller.signal.aborted) return
@@ -141,22 +150,25 @@ async function main(): Promise<number> {
     display = await startDisplay(options)
     console.log(`[headless] display: ${display.label}`)
 
+    for (const cell of skipped) {
+      console.log(`[headless] ${cell.scenario}/${cell.lane}: skipped, the scenario does not run on the ${cell.lane} lane`)
+    }
+
     stack = new Stack(options.cloud)
+    // Every cell, whatever its lane, runs through the C1 fixture provider, which resolves the
+    // local Cloud stack during prepare. So the stack is required whenever a cell runs.
     await ensureStack(options, stack, controller.signal)
     console.log(`[headless] cloud stack: ${stack.label}`)
 
-    for (const scenario of options.scenarios) {
-      for (const lane of options.lanes) {
-        if (controller.signal.aborted) {
-          cancelled = true
-          break
-        }
-        const cell = await runOne(options, runRoot, runId, scenario, lane, kiloCommit, cloudCommit, controller.signal)
-        cells.push(cell)
-        printCell(cell, runRoot)
-        if (cell.outcome === "cancelled") cancelled = true
+    for (const { scenario, lane } of requested) {
+      if (controller.signal.aborted) {
+        cancelled = true
+        break
       }
-      if (cancelled) break
+      const cell = await runOne(options, runRoot, runId, scenario, lane, kiloCommit, cloudCommit, controller.signal)
+      cells.push(cell)
+      printCell(cell, runRoot)
+      if (cell.outcome === "cancelled") cancelled = true
     }
   } catch (error) {
     if (controller.signal.aborted) cancelled = true
@@ -379,6 +391,17 @@ async function readStackStatus(cloud: string, signal: AbortSignal): Promise<Stac
 function preflight(options: Options): Problem[] {
   const problems: Problem[] = []
   const platform = `${process.platform}-${process.arch}`
+
+  const requested = options.scenarios.flatMap((scenario) =>
+    options.lanes.map((lane) => ({ scenario, lane, supported: supportsLane(scenario, lane) })),
+  )
+  if (!requested.some((cell) => cell.supported)) {
+    const pairs = requested.map((cell) => `${cell.scenario}/${cell.lane}`).join(", ")
+    problems.push({
+      message: `no requested scenario runs on a requested lane: ${pairs}`,
+      fix: "Run each scenario on a lane it supports, for example --scenario followup.new-session --lane local.",
+    })
+  }
 
   if (process.platform !== "darwin" && process.platform !== "linux") {
     problems.push({

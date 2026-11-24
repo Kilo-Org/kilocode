@@ -1125,6 +1125,7 @@
         "kilo-code.new.autoApprove.enabled": {
           "type": "boolean",
           "default": false,
+          "scope": "application",
           "description": "Start Kilo Code with the main auto-approve toggle enabled. When enabled, permission prompts are approved automatically. Sandbox escalation prompts are always excluded."
         },
         "kilo-code.new.maxCost": {
@@ -1362,7 +1363,7 @@
     "@types/ws": "8.18.1",
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2",
-    "@vscode/vsce": "^4.0.0",
+    "@vscode/vsce": "4.1.1",
     "babel-preset-solid": "^1.9.9",
     "esbuild": "^0.28.1",
     "esbuild-plugin-solid": "^0.6.0",
@@ -1370,6 +1371,7 @@
     "eslint-config-prettier": "^10.1.8",
     "happy-dom": "21.0.4",
     "knip": "5.85.0",
+    "ovsx": "1.4.0",
     "prettier": "3.6.2",
     "qrcode": "^1.5.4",
     "storybook": "10.6.2",

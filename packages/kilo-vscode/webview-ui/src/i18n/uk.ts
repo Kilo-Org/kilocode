@@ -316,6 +316,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "Видалити з дозволених",
   "ui.permission.rule.addToDenied": "Додати до заблокованих",
   "ui.permission.rule.removeFromDenied": "Видалити із заблокованих",
+  "ui.permission.rule.fromConfig": "Керується файлом конфігурації",
   "ui.permission.toolLabel.read": "Читати",
   "ui.permission.toolLabel.edit": "Редагувати",
   "ui.permission.toolLabel.write": "Записати",
@@ -805,6 +806,7 @@ export const dict = {
 
   "dialog.model.noProviders": "Немає провайдерів",
   "dialog.model.unavailable": "Моделі Kilo недоступні",
+  "dialog.model.loadFailed": "Не вдалося завантажити провайдерів для цього проєкту.",
 
   "prompt.placeholder.connecting": "Підключення до сервера...",
   "prompt.placeholder.default":
@@ -1393,6 +1395,9 @@ export const dict = {
   "settings.saveBar.cancel": "Скасувати",
   "settings.saveBar.saving": "Збереження…",
   "settings.saveBar.saveFailed": "Не вдалося зберегти налаштування",
+  "settings.saveBar.dismissError": "Закрити",
+  "settings.saveBar.unconfirmedWrite": "Хост розширення не підтвердив «{{name}}».",
+  "settings.saveBar.unconfirmedSave": "Хост розширення не підтвердив збереження. Спробуйте ще раз.",
   "notifications.action.next": "Далі",
   "notifications.action.close": "Закрити",
   "notifications.action.tryModel": "Спробувати {{model}}",
@@ -1403,6 +1408,8 @@ export const dict = {
   "settings.indexing.kiloSignIn.description": "Увійдіть у Kilo, щоб використовувати hosted embeddings.",
   // Missing translations - English fallbacks until translated
   "profile.switchingAccount": "Перемикання акаунту…",
+  "profile.unavailableAccount": "Недоступний акаунт",
+  "profile.switchFailed": "Не вдалося підтвердити перемикання акаунта.",
   "settings.agentBehaviour.createMode": "Створити новий режим",
   "settings.agentBehaviour.createMode.button": "Створити",
   "settings.agentBehaviour.createMode.cancel": "Скасувати",

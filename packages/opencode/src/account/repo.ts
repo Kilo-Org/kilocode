@@ -5,8 +5,10 @@ import { Effect, Layer, Option, Schema, Context } from "effect"
 
 import { Database } from "@opencode-ai/core/database/database"
 import { AccountStateTable, AccountTable } from "@opencode-ai/core/account/sql"
-import { AccessToken, AccountID, AccountRepoError, Info, OrgID, RefreshToken } from "./schema"
-import { normalizeServerUrl } from "./url"
+// kilocode_change start
+import { accountKey, normalizeServerUrl } from "@opencode-ai/core/account/key"
+// kilocode_change end
+import { AccessToken, AccountID, AccountRepoError, Info, OrgID, RefreshToken, RemoteID } from "./schema" // kilocode_change
 
 export type AccountRow = (typeof AccountTable)["$inferSelect"]
 
@@ -17,6 +19,10 @@ export interface Interface {
   readonly list: () => Effect.Effect<Info[], AccountRepoError>
   readonly remove: (accountID: AccountID) => Effect.Effect<void, AccountRepoError>
   readonly use: (accountID: AccountID, orgID: Option.Option<OrgID>) => Effect.Effect<void, AccountRepoError>
+  // kilocode_change start
+  /** The organization stored for the account that holds the account state, or none otherwise. */
+  readonly selected: (accountID: AccountID) => Effect.Effect<Option.Option<OrgID>, AccountRepoError>
+  // kilocode_change end
   readonly getRow: (accountID: AccountID) => Effect.Effect<Option.Option<AccountRow>, AccountRepoError>
   readonly persistToken: (input: {
     accountID: AccountID
@@ -25,7 +31,7 @@ export interface Interface {
     expiry: Option.Option<number>
   }) => Effect.Effect<void, AccountRepoError>
   readonly persistAccount: (input: {
-    id: AccountID
+    remoteID: RemoteID // kilocode_change
     email: string
     url: string
     accessToken: AccessToken
@@ -101,6 +107,19 @@ const layer = Layer.effect(
       query(state(accountID, orgID)).pipe(Effect.asVoid),
     )
 
+    // kilocode_change start
+    const selected = Effect.fn("AccountRepo.selected")((accountID: AccountID) =>
+      query(db.select().from(AccountStateTable).where(eq(AccountStateTable.id, ACCOUNT_STATE_ID)).get()).pipe(
+        Effect.map((row) => {
+          if (!row) return Option.none<OrgID>()
+          if (row.active_account_id !== accountID) return Option.none<OrgID>()
+          if (row.active_org_id === null || row.active_org_id === undefined) return Option.none<OrgID>()
+          return Option.some(row.active_org_id)
+        }),
+      ),
+    )
+    // kilocode_change end
+
     const getRow = Effect.fn("AccountRepo.getRow")((accountID: AccountID) =>
       query(db.select().from(AccountTable).where(eq(AccountTable.id, accountID)).get()).pipe(
         Effect.map(Option.fromNullishOr),
@@ -125,12 +144,14 @@ const layer = Layer.effect(
       query(
         db.transaction((tx) =>
           Effect.gen(function* () {
+            // kilocode_change start
             const url = normalizeServerUrl(input.url)
+            const id = accountKey(url, input.remoteID)
 
             yield* tx
               .insert(AccountTable)
               .values({
-                id: input.id,
+                id,
                 email: input.email,
                 url,
                 access_token: input.accessToken,
@@ -141,14 +162,14 @@ const layer = Layer.effect(
                 target: AccountTable.id,
                 set: {
                   email: input.email,
-                  url,
                   access_token: input.accessToken,
                   refresh_token: input.refreshToken,
                   token_expiry: input.expiry,
                 },
               })
               .run()
-            yield* state(input.id, input.orgID)
+            yield* state(id, input.orgID)
+            // kilocode_change end
           }),
         ),
       ).pipe(Effect.asVoid),
@@ -159,6 +180,7 @@ const layer = Layer.effect(
       list,
       remove,
       use,
+      selected, // kilocode_change
       getRow,
       persistToken,
       persistAccount,

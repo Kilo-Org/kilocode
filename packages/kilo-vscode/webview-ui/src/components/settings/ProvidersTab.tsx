@@ -52,6 +52,7 @@ const ProvidersTab: Component = () => {
 
   const kiloLoggedIn = createMemo(() => !!provider.authStates()[KILO_PROVIDER_ID])
   const kiloFailure = createMemo(() => providerFailure(KILO_PROVIDER_ID, provider.failures()))
+  const loadFailed = provider.loadFailed
 
   const connectedProviders = createMemo(() => {
     const ids = visibleConnectedIds(provider.connected(), provider.authStates())
@@ -199,15 +200,17 @@ const ProvidersTab: Component = () => {
               >
                 Kilo Gateway
               </span>
-              <Show
-                when={kiloLoggedIn() && !(kiloFailure() && providerFailureNeedsSignIn(kiloFailure()!))}
-                fallback={
-                  <Button size="small" variant="secondary" onClick={() => server.goToLogin()}>
-                    {language.t("common.signIn")}
-                  </Button>
-                }
-              >
-                <Tag>{language.t("settings.providers.tag.gateway")}</Tag>
+              <Show when={!loadFailed()}>
+                <Show
+                  when={kiloLoggedIn() && !(kiloFailure() && providerFailureNeedsSignIn(kiloFailure()!))}
+                  fallback={
+                    <Button size="small" variant="secondary" onClick={() => server.goToLogin()}>
+                      {language.t("common.signIn")}
+                    </Button>
+                  }
+                >
+                  <Tag>{language.t("settings.providers.tag.gateway")}</Tag>
+                </Show>
               </Show>
             </div>
             <Show when={kiloFailure()}>
@@ -235,6 +238,20 @@ const ProvidersTab: Component = () => {
             </Show>
           </div>
         </Card>
+      </Show>
+
+      {/* Reports the provider read itself, so it stays visible for every provider row. */}
+      <Show when={loadFailed()}>
+        <span
+          style={{
+            display: "block",
+            "margin-top": "8px",
+            "font-size": "var(--kilo-font-size-12)",
+            color: "var(--vscode-errorForeground)",
+          }}
+        >
+          {language.t("dialog.model.loadFailed")}
+        </span>
       </Show>
 
       {/* Connected providers (excluding Kilo) */}

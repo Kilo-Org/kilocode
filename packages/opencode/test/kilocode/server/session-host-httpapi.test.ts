@@ -23,7 +23,7 @@ import { createKiloClient } from "@kilocode/sdk/v2"
 import { NodeHttpServer } from "@effect/platform-node"
 import { afterAll, afterEach, describe, expect } from "bun:test"
 import { Effect, Layer, Schema } from "effect"
-import { HttpClient, HttpClientRequest, HttpRouter } from "effect/unstable/http"
+import { HttpClient, HttpClientRequest, HttpRouter, HttpServer } from "effect/unstable/http"
 import { HttpApi, HttpApiBuilder } from "effect/unstable/httpapi"
 import { testEffect, pollWithTimeout } from "../../lib/effect"
 import { parse } from "../../server/httpapi-exercise/assertions"
@@ -42,11 +42,33 @@ const NEW_ONE = "ses_0000000000000000000000000a"
 const MESSAGE = "msg_00000000000000000000000009"
 const TOKEN = "kilo-test-bearer-value"
 const ORG = "22222222-2222-4222-8222-222222222222"
+const INTEGRATION = "44444444-4444-4444-8444-444444444444"
+const PRIMARY = "Kilo-Org/kilocode"
+const DISCOVERY = "/api/trpc/organizations.cloudAgentNext.listGitHubRepositories"
+const REPOSITORIES = "/trpc/listHostedWorkspaceRepositories"
+const CREATE = "/trpc/createHostedWorkspace"
+const PRIVATE = "/private/provider/repository"
 const HEAD = "1111111111111111111111111111111111111111"
 const OTHER_HEAD = "2222222222222222222222222222222222222222"
 const BASE = "3333333333333333333333333333333333333333"
 
 const TestHttpApi = HttpApi.make("opencode-instance").addHttpApi(SessionHostApi)
+
+const repos = [
+  { id: 12, fullName: "Kilo-Org/private-tools", private: true },
+  { id: 34, fullName: "Kilo-Org/public-tools", private: false },
+]
+const create = {
+  repository: { type: "github", repo: PRIMARY, branch: "main" } as const,
+  agent: { mode: "build", model: "test/fake" },
+  operationKey: "11111111-1111-4111-8111-111111111111",
+}
+const selected = {
+  ...create,
+  organizationID: ORG,
+  integrationID: INTEGRATION,
+  additionalRepositoryIDs: [34, 12],
+}
 
 function sessionInfo(id: string) {
   return Schema.decodeUnknownSync(SessionV1.SessionInfo)({
@@ -153,6 +175,20 @@ function changeFile(path: string, scope?: string) {
   }
 }
 
+type Rejection = { status: number; code: string; reason: string }
+
+function rejected(error: Rejection) {
+  return Response.json(
+    {
+      error: {
+        message: error.reason,
+        data: { code: error.code, httpStatus: error.status, detail: PRIVATE },
+      },
+    },
+    { status: error.status },
+  )
+}
+
 type State = {
   token: "ok" | "invalid"
   catalog: "single" | "two"
@@ -164,6 +200,9 @@ type State = {
   pullFile: "available" | "omitted" | "stale"
   remove: "ok" | "invalid" | "unauthorized" | "conflict" | "unavailable"
   continuation: "ok" | "balance" | "mismatch"
+  discovery?: "superjson" | "ambiguous"
+  repositories?: "legacy" | Rejection
+  create?: "replay" | Rejection
   pr?: { summary?: unknown; refresh?: unknown; status?: number; raw?: string; workspaceID?: string }
 }
 
@@ -270,6 +309,32 @@ function harness(initial: Partial<State> = {}) {
       if (url.pathname === "/api/cloud-agent-next/token") {
         if (state.token === "invalid") return new Response("invalid", { status: 418 })
         return Response.json({ token: CONTROL, expiresAt: new Date(Date.now() + 600_000).toISOString() })
+      }
+      if (url.pathname === DISCOVERY) {
+        const data = {
+          integrationInstalled: true,
+          repositories: [
+            { fullName: "Kilo-Org/unrelated", platformIntegrationId: PROFILE },
+            { fullName: PRIMARY.toLowerCase(), platformIntegrationId: INTEGRATION, privateOrigin: PRIVATE },
+            ...(state.discovery === "ambiguous" ? [{ fullName: PRIMARY, platformIntegrationId: PROFILE }] : []),
+          ],
+        }
+        return Response.json({ result: { data: state.discovery === "superjson" ? { json: data } : data } })
+      }
+      if (url.pathname === REPOSITORIES) {
+        if (typeof state.repositories === "object") return rejected(state.repositories)
+        const input = Object(parse(url.searchParams.get("input") ?? "{}"))
+        const next = input.page === 2
+        return Response.json({
+          result: {
+            data: {
+              ...(state.repositories === "legacy" ? {} : { hostedAdditionalRepositoriesVersion: 1 }),
+              repositories: [{ ...repos.at(next ? 1 : 0), checkoutPath: PRIVATE, controlToken: CONTROL }],
+              ...(next ? {} : { nextPage: 2 }),
+              sourceToken: TOKEN,
+            },
+          },
+        })
       }
       if (url.pathname === "/kilo/session" && request.method === "GET") {
         return Response.json([sessionInfo(SESSION)])
@@ -622,7 +687,8 @@ function harness(initial: Partial<State> = {}) {
           result: { data: { success: true, deletedSessionIds: [SESSION, OTHER, SESSION2] } },
         })
       }
-      if (url.pathname === "/trpc/createHostedWorkspace") {
+      if (url.pathname === CREATE) {
+        if (typeof state.create === "object") return rejected(state.create)
         const input = Object(parse(body))
         return Response.json({
           result: {
@@ -631,7 +697,7 @@ function harness(initial: Partial<State> = {}) {
               cloudAgentSessionId: CLOUD,
               kiloSessionId: SESSION,
               messageId: input.message?.id,
-              replayed: false,
+              replayed: state.create === "replay",
             },
           },
         })
@@ -691,6 +757,20 @@ function layer(
 
 const app = harness()
 const it = testEffect(layer(app.url))
+const web = harness()
+const itRepositories = testEffect(
+  layer(
+    app.url,
+    SessionHost.layer({
+      env: {
+        CLOUD_AGENT_NEXT_BASE_URL: app.url,
+        KILO_WEB_APP_URL: web.url,
+        KILO_API_URL: web.url,
+        KILO_ORG_ID: PROFILE,
+      },
+    }).pipe(Layer.provide(Layer.succeed(Auth.Service, auth()))),
+  ),
+)
 const issuer = harness({ token: "invalid" })
 const itIssuer = testEffect(layer(issuer.url))
 const itSignedOut = testEffect(
@@ -735,6 +815,16 @@ const itOffline = testEffect(layer(offline.url))
 const legacy = fixture("legacy")
 const registry = createRegistry([legacy.value])
 const itLegacy = testEffect(layer(app.url, Layer.succeed(SessionHost.Service, { registry, default: registry.default })))
+const unsupported = createRegistry([
+  {
+    ...legacy.value,
+    default: true,
+    createWorkspace: () => Effect.die(new Error("selected create dispatched without repository support")),
+  },
+])
+const itUnsupported = testEffect(
+  layer(app.url, Layer.succeed(SessionHost.Service, { registry: unsupported, default: unsupported.default })),
+)
 const projectionBase = Schema.decodeUnknownSync(WorkspacePullRequestResult)({
   id: { providerID: "projector", workspaceID: WORKSPACE },
   state: "available",
@@ -765,6 +855,9 @@ afterEach(() => {
   app.state.pullFile = "available"
   app.state.remove = "ok"
   app.state.continuation = "ok"
+  app.state.repositories = undefined
+  app.state.create = undefined
+  web.state.discovery = undefined
   app.state.pr = undefined
   projection.failure = undefined
   projection.value = projectionBase
@@ -773,6 +866,7 @@ afterEach(() => {
 afterAll(() => {
   void app.stop()
   void issuer.stop()
+  void web.stop()
 })
 
 const workspacePath = (workspaceID = WORKSPACE) =>
@@ -799,6 +893,25 @@ const pullFilePath = (workspaceID = WORKSPACE) =>
     .replace(":workspaceID", workspaceID)
 const attachPath = (sessionID = SESSION) =>
   SessionHostPaths.attach.replace(":providerID", "kilo-cloud").replace(":sessionID", sessionID)
+
+const scope = { organizationID: ORG, primaryRepo: PRIMARY }
+const repositoriesPath = (query: Record<string, string | undefined> = {}) => {
+  const params = new URLSearchParams()
+  for (const [name, value] of Object.entries({ ...scope, ...query })) {
+    if (value !== undefined) params.set(name, value)
+  }
+  return `${SessionHostPaths.workspaceRepositories}?${params}`
+}
+
+const createWorkspace = (body: unknown) =>
+  HttpClientRequest.post(SessionHostPaths.workspace).pipe(
+    HttpClientRequest.bodyJson(body),
+    Effect.flatMap(HttpClient.execute),
+  )
+
+const sdk = HttpServer.HttpServer.use((server) =>
+  Effect.succeed(createKiloClient({ baseUrl: HttpServer.formatAddress(server.address) })),
+)
 
 const attach = (sessionID = SESSION) =>
   Effect.gen(function* () {
@@ -1664,8 +1777,266 @@ describe("session host HttpApi", () => {
     }),
   )
 
+  itRepositories.live("lists private and public candidates through the SDK, keeping the next page pinned", () =>
+    Effect.gen(function* () {
+      const client = yield* sdk
+      for (const envelope of [undefined, "superjson"] as const) {
+        web.state.discovery = envelope
+        const before = app.calls.length
+        const prior = web.calls.length
+        const first = yield* Effect.promise(() => client.sessionHost.listWorkspaceRepositories(scope))
+        expect(first.response?.status).toBe(200)
+        expect(first.data).toEqual({
+          hostedAdditionalRepositoriesVersion: 1,
+          integrationID: INTEGRATION,
+          repositories: repos.slice(0, 1),
+          nextPage: 2,
+        })
+
+        // Inventory drift after page one must not rebind the pinned page.
+        web.state.discovery = "ambiguous"
+        const next = yield* Effect.promise(() =>
+          client.sessionHost.listWorkspaceRepositories({
+            ...scope,
+            integrationID: first.data?.integrationID,
+            page: String(first.data?.nextPage),
+          }),
+        )
+        expect(next.response?.status).toBe(200)
+        expect(next.data).toEqual({
+          hostedAdditionalRepositoriesVersion: 1,
+          integrationID: INTEGRATION,
+          repositories: repos.slice(1),
+        })
+
+        const calls = web.calls.slice(prior)
+        const inventory = calls.filter((call) => call.path === DISCOVERY)
+        expect(inventory).toHaveLength(1)
+        expect(inventory.at(0)).toMatchObject({ method: "GET", auth: `Bearer ${TOKEN}`, body: "" })
+        expect(parse(new URLSearchParams(inventory.at(0)?.search).get("input") ?? "{}")).toEqual({
+          organizationId: ORG,
+        })
+        expect(calls.every((call) => [DISCOVERY, "/api/cloud-agent-next/token"].includes(call.path))).toBe(true)
+
+        const worker = app.calls.slice(before)
+        expect(worker).toHaveLength(2)
+        for (const call of worker) {
+          expect(call).toMatchObject({
+            method: "GET",
+            path: REPOSITORIES,
+            auth: `Bearer ${CONTROL}`,
+            org: ORG,
+            body: "",
+          })
+        }
+        const input = { organizationId: ORG, integrationId: INTEGRATION, primaryRepo: PRIMARY }
+        expect(worker.map((call) => parse(new URLSearchParams(call.search).get("input") ?? "{}"))).toEqual([
+          input,
+          { ...input, page: 2 },
+        ])
+      }
+    }),
+  )
+
+  itRepositories.live("rejects invalid repository queries and selections before calling Cloud", () =>
+    Effect.gen(function* () {
+      const before = app.calls.length
+      const prior = web.calls.length
+      for (const query of [
+        { organizationID: undefined },
+        { organizationID: "not-a-uuid" },
+        { primaryRepo: undefined },
+        { primaryRepo: `https://github.com/${PRIMARY}` },
+        { integrationID: "not-a-uuid" },
+        { page: "0" },
+        { page: "101" },
+        { page: "1.5" },
+      ]) {
+        const response = yield* HttpClient.get(repositoriesPath(query))
+        expect(response.status, JSON.stringify(query)).toBe(400)
+      }
+      for (const change of [
+        { organizationID: undefined },
+        { organizationID: "not-a-uuid" },
+        { integrationID: undefined },
+        { integrationID: "not-a-uuid" },
+        { repository: { type: "git", url: "https://example.test/owner/repo" } },
+        { repository: { type: "github", repo: `${PRIMARY}/extra` } },
+        { additionalRepositoryIDs: [12, 12] },
+        { additionalRepositoryIDs: [0] },
+        { additionalRepositoryIDs: [1.5] },
+        { additionalRepositoryIDs: [Number.MAX_SAFE_INTEGER + 1] },
+        { additionalRepositoryIDs: [1, 2, 3, 4, 5, 6] },
+      ]) {
+        const response = yield* createWorkspace({ ...selected, ...change })
+        expect(response.status, JSON.stringify(change)).toBe(400)
+      }
+      expect(app.calls).toHaveLength(before)
+      expect(web.calls).toHaveLength(prior)
+    }),
+  )
+
+  itUnsupported.live("returns 503 without dispatching selected creates to a provider without repository support", () =>
+    Effect.gen(function* () {
+      const listed = yield* HttpClient.get(repositoriesPath())
+      expect(listed.status).toBe(503)
+      const created = yield* createWorkspace(selected)
+      expect(created.status).toBe(503)
+    }),
+  )
+
+  itRepositories.live("preflights each selected create and preserves its scope and idempotency through the SDK", () =>
+    Effect.gen(function* () {
+      const client = yield* sdk
+      const before = app.calls.length
+      const prior = web.calls.length
+      const input = { ...selected, profile: { id: PROFILE }, prompt: "Set up the workspace", messageID: MESSAGE }
+      for (const replayed of [false, true]) {
+        app.state.create = replayed ? "replay" : undefined
+        const result = yield* Effect.promise(() =>
+          client.sessionHost.createWorkspace({ sessionHostCreateWorkspaceInput: input }),
+        )
+        expect(result.response?.status, JSON.stringify(result.error)).toBe(200)
+        expect(result.data).toEqual({
+          workspace: { providerID: "kilo-cloud", workspaceID: WORKSPACE },
+          session: { providerID: "kilo-cloud", sessionID: SESSION },
+          messageID: MESSAGE,
+          replayed,
+        })
+      }
+      const calls = app.calls.slice(before)
+      expect(calls.map((call) => [call.method, call.path])).toEqual([
+        ["GET", REPOSITORIES],
+        ["POST", CREATE],
+        ["GET", REPOSITORIES],
+        ["POST", CREATE],
+      ])
+      for (const call of calls) {
+        expect(call).toMatchObject({ auth: `Bearer ${CONTROL}`, org: ORG })
+        if (call.path === REPOSITORIES) {
+          expect(parse(new URLSearchParams(call.search).get("input") ?? "{}")).toEqual({
+            organizationId: ORG,
+            integrationId: INTEGRATION,
+            primaryRepo: PRIMARY,
+            page: 1,
+          })
+          continue
+        }
+        expect(parse(call.body)).toEqual({
+          operationKey: input.operationKey,
+          clientProvenance: "agent-manager",
+          repository: { ...input.repository, githubIntegrationId: INTEGRATION },
+          additionalRepositoryIds: input.additionalRepositoryIDs,
+          profile: input.profile,
+          message: { id: MESSAGE, prompt: input.prompt },
+          agent: input.agent,
+          options: { kilocodeOrganizationId: ORG },
+        })
+      }
+      const issued = web.calls.slice(prior)
+      expect(issued.length).toBeGreaterThan(0)
+      for (const call of issued) {
+        expect(call).toMatchObject({ path: "/api/cloud-agent-next/token", auth: `Bearer ${TOKEN}` })
+        expect(parse(call.body)).toEqual({ organizationId: ORG })
+      }
+    }),
+  )
+
+  itRepositories.live("fails closed before create when the scoped repository catalog is unavailable", () =>
+    Effect.gen(function* () {
+      for (const [failure, status] of [
+        ["legacy", 503],
+        [
+          { code: "NOT_FOUND", status: 404, reason: 'No procedure found on path "listHostedWorkspaceRepositories"' },
+          503,
+        ],
+        [{ code: "FORBIDDEN", status: 403, reason: "hosted_workspace_repository_access_denied" }, 403],
+        [{ code: "NOT_FOUND", status: 404, reason: "hosted_workspace_repository_unavailable" }, 404],
+      ] as const) {
+        app.state.repositories = failure
+        const before = app.calls.length
+        const listed = yield* HttpClient.get(repositoriesPath({ integrationID: INTEGRATION }))
+        const created = yield* createWorkspace(selected)
+        for (const response of [listed, created]) {
+          expect(response.status, JSON.stringify(failure)).toBe(status)
+          expect(yield* response.text).not.toContain(PRIVATE)
+        }
+        expect(app.calls.slice(before).map((call) => call.path)).toEqual([REPOSITORIES, REPOSITORIES])
+      }
+    }),
+  )
+
+  itRepositories.live("preserves known create rejection statuses without leaking provider details or retrying", () =>
+    Effect.gen(function* () {
+      for (const failure of [
+        { status: 400, code: "BAD_REQUEST", reason: "hosted_workspace_repository_duplicate" },
+        { status: 403, code: "FORBIDDEN", reason: "hosted_workspace_repository_access_denied" },
+        { status: 404, code: "NOT_FOUND", reason: "hosted_workspace_repository_unavailable" },
+      ]) {
+        app.state.create = failure
+        const before = app.calls.length
+        const response = yield* createWorkspace(selected)
+        expect(response.status, failure.reason).toBe(failure.status)
+        const text = yield* response.text
+        expect(text).toContain(failure.reason)
+        expect(text).not.toContain(PRIVATE)
+        expect(app.calls.slice(before).map((call) => call.path)).toEqual([REPOSITORIES, CREATE])
+      }
+    }),
+  )
+
+  itRepositories.live("exposes retryable and terminal selected-create conflicts through the SDK", () =>
+    Effect.gen(function* () {
+      const client = yield* sdk
+      for (const [reason, retryable] of [
+        ["creation_in_progress", true],
+        ["operation_key_reuse_mismatch", false],
+        ["session_create_intent_conflict", false],
+      ] as const) {
+        app.state.create = { status: 409, code: "CONFLICT", reason }
+        const before = app.calls.length
+        const result = yield* Effect.promise(() =>
+          client.sessionHost.createWorkspace({ sessionHostCreateWorkspaceInput: selected }),
+        )
+        expect(result.response?.status).toBe(409)
+        expect(result.error).toEqual({ code: reason, message: reason, retryable })
+        expect(app.calls.slice(before).map((call) => call.path)).toEqual([REPOSITORIES, CREATE])
+      }
+      const legacy = yield* createWorkspace(create)
+      expect(legacy.status).toBe(409)
+      expect(yield* legacy.json).toEqual({ _tag: "ConflictError", message: "Kilo Cloud rejected this operation" })
+    }),
+  )
+
+  it.live("keeps empty and omitted selections identical for promptless root creation on old Cloud", () =>
+    Effect.gen(function* () {
+      app.state.repositories = "legacy"
+      const before = app.calls.length
+      for (const body of [create, { ...create, additionalRepositoryIDs: [], integrationID: INTEGRATION }]) {
+        const response = yield* createWorkspace(body)
+        expect(response.status).toBe(200)
+        expect(yield* response.json).toEqual({
+          workspace: { providerID: "kilo-cloud", workspaceID: WORKSPACE },
+          session: { providerID: "kilo-cloud", sessionID: SESSION },
+          replayed: false,
+        })
+      }
+      const calls = app.calls.slice(before).filter((call) => call.path !== "/api/cloud-agent-next/token")
+      expect(calls.map((call) => call.path)).toEqual([CREATE, CREATE])
+      for (const call of calls) {
+        expect(parse(call.body)).toEqual({
+          operationKey: create.operationKey,
+          clientProvenance: "agent-manager",
+          repository: create.repository,
+          agent: create.agent,
+        })
+      }
+    }),
+  )
+
   it.live("creates a workspace and starts another session in it with caller-supplied idempotency", () =>
     Effect.gen(function* () {
+      const before = app.calls.length
       const created = yield* HttpClientRequest.post(SessionHostPaths.workspace).pipe(
         HttpClientRequest.bodyJson({
           repository: { type: "github", repo: "Kilo-Org/kilocode", branch: "main" },
@@ -1687,11 +2058,12 @@ describe("session host HttpApi", () => {
       })
       expect(JSON.stringify(result)).not.toContain(CLOUD)
 
-      const call = app.calls.find((item) => item.path === "/trpc/createHostedWorkspace")
+      const call = app.calls.slice(before).find((item) => item.path === CREATE)
       expect(call?.body).toContain('"clientProvenance":"agent-manager"')
       expect(call?.body).toContain(`"id":"${MESSAGE}"`)
+      expect(parse(call?.body ?? "{}")).toHaveProperty("profile.id", PROFILE)
       // The issuer sees the source credential; the Worker sees only the control token.
-      const issued = app.calls.find((item) => item.path === "/api/cloud-agent-next/token")
+      const issued = app.calls.slice(before).find((item) => item.path === "/api/cloud-agent-next/token")
       expect(issued?.auth).toBe(`Bearer ${TOKEN}`)
       expect(issued?.body).toBe("{}")
       expect(call?.auth).toBe(`Bearer ${CONTROL}`)
@@ -1714,8 +2086,11 @@ describe("session host HttpApi", () => {
         messageID: "msg_0000000000000000000000000a",
       })
 
-      const sessionCall = app.calls.find((item) => item.path === "/trpc/createHostedWorkspaceSession")
+      const calls = app.calls.slice(before)
+      const sessionCall = calls.find((item) => item.path === "/trpc/createHostedWorkspaceSession")
       expect(sessionCall?.body).toContain(`"workspaceId":"${WORKSPACE}"`)
+      expect(parse(sessionCall?.body ?? "{}")).not.toHaveProperty("additionalRepositoryIds")
+      expect(calls.some((call) => call.path === DISCOVERY || call.path === REPOSITORIES)).toBe(false)
     }),
   )
 

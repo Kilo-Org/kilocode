@@ -3,11 +3,14 @@ package ai.kilocode.client.settings.checkpoints
 import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
+import ai.kilocode.client.app.ManualRetentionResult
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.settings.base.BaseContentPanel
 import ai.kilocode.client.settings.base.BaseSettingsUi
 import ai.kilocode.client.settings.base.SettingsRow
 import ai.kilocode.client.settings.base.SettingsToggle
+import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
@@ -27,6 +30,7 @@ import com.intellij.openapi.ui.ValidationInfo
 import com.intellij.util.text.DateFormatUtil
 import com.intellij.platform.project.ProjectId
 import com.intellij.ui.DocumentAdapter
+import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.fields.IntegerField
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import kotlinx.coroutines.CoroutineScope
@@ -37,6 +41,15 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.swing.JButton
 import javax.swing.event.DocumentEvent
+
+/** State of the one-off cleanup action on the checkpoints page. */
+internal sealed interface Cleanup {
+    data object Idle : Cleanup
+    data object Running : Cleanup
+    data object Failed : Cleanup
+    data object Unrestored : Cleanup
+    data object Retrying : Cleanup
+}
 
 internal class CheckpointsSettingsUi(
     cs: CoroutineScope,
@@ -54,12 +67,11 @@ internal class CheckpointsSettingsUi(
 ) {
     private var effective: ConfigDto? = null
     private var retention: RetentionStatusDto? = null
-    private var pending = false
-    private var retentionError = false
+    private var cleanup: Cleanup = Cleanup.Idle
     private var retentionPoll: kotlinx.coroutines.Job? = null
 
     init {
-        startSettings(CheckpointsContent(this, { updateDraft(it) }, ::runCleanup, ::syncContent))
+        startSettings(CheckpointsContent(this, { updateDraft(it) }, ::runCleanup, ::retryRestore, ::syncContent))
         if (hint != null) loadProject(projectId, hint)
         startRetentionPoll()
     }
@@ -133,7 +145,7 @@ internal class CheckpointsSettingsUi(
     override fun syncContent() {
         val ready = appState.status == KiloAppStatusDto.READY
         val available = ready && !saving && (!hasProjectDirectory || workspaceLoaded)
-        form.sync(draft, available, retention, pending, retentionError)
+        form.sync(draft, available, retention, cleanup)
         top.hideBanner()
         if (saving) {
             showProgress(KiloBundle.message("settings.checkpoints.saving"))
@@ -157,15 +169,9 @@ internal class CheckpointsSettingsUi(
 
     @RequiresEdt
     private fun runCleanup() {
-        val accepted = confirm?.invoke() ?: Messages.showYesNoDialog(
-            this,
-            KiloBundle.message("settings.checkpoints.cleanup.confirm.message"),
-            KiloBundle.message("settings.checkpoints.cleanup.confirm.title"),
-            Messages.getWarningIcon(),
-        ) == Messages.YES
-        if (!accepted) return
-        pending = true
-        retentionError = false
+        val confirmed = confirm?.invoke() ?: dialogAccepted()
+        if (!confirmed) return
+        cleanup = Cleanup.Running
         syncContent()
         startRetentionPoll()
         LOG.info("manual session cleanup: confirmed")
@@ -173,19 +179,97 @@ internal class CheckpointsSettingsUi(
         jobs += app.runManualRetentionAsync(policy) { result ->
             ApplicationManager.getApplication().invokeLater({
                 if (isDisposed) return@invokeLater
-                pending = false
-                if (result != null) {
-                    retention = result
-                } else {
-                    retentionError = true
-                    KiloNotifications.error(
-                        null,
-                        KiloBundle.message("settings.checkpoints.cleanup.error.title"),
-                        KiloBundle.message("settings.checkpoints.cleanup.error.message"),
-                    )
+                when (result) {
+                    is ManualRetentionResult.Complete -> {
+                        retention = result.status
+                        cleanup = Cleanup.Idle
+                    }
+                    ManualRetentionResult.NotStarted, ManualRetentionResult.RunFailed -> {
+                        cleanup = Cleanup.Failed
+                        notifyFailed()
+                    }
+                    ManualRetentionResult.PolicyNotRestored -> {
+                        cleanup = Cleanup.Unrestored
+                        notifyUnrestored()
+                    }
+                    ManualRetentionResult.NotStartedWithPolicyOn -> {
+                        cleanup = Cleanup.Unrestored
+                        notifyUnrestoredWithoutRun()
+                    }
                 }
                 syncContent()
             }, ModalityState.any())
+        }
+    }
+
+    /** The real confirmation dialog, used only when no test double is injected. */
+    @RequiresEdt
+    private fun dialogAccepted(): Boolean = Messages.showYesNoDialog(
+        this,
+        KiloBundle.message("settings.checkpoints.cleanup.confirm.message"),
+        KiloBundle.message("settings.checkpoints.cleanup.confirm.title"),
+        Messages.getWarningIcon(),
+    ) == Messages.YES
+
+    /** Write the saved disabled policy back after [ManualRetentionResult.PolicyNotRestored]. */
+    @RequiresEdt
+    private fun retryRestore() {
+        if (!isDisposed) {
+            cleanup = Cleanup.Retrying
+            syncContent()
+        }
+        LOG.info("manual session cleanup: retrying retention restore")
+        val policy = RetentionPatchDto(enabled = false, maxAgeDays = baseline.days)
+        // The write-back runs on the app-lifetime scope, so closing settings mid-retry cannot cancel it.
+        // The job is deliberately not added to `jobs`: dispose() cancels that list, which would cancel
+        // an app-scope job and undo the guarantee this path exists to provide.
+        app.restoreRetentionAsync(policy) { restored ->
+            ApplicationManager.getApplication().invokeLater({
+                if (isDisposed) {
+                    // The notification outlives the page, so keep a retry offered when the write failed.
+                    if (!restored) notifyUnrestored()
+                    return@invokeLater
+                }
+                if (restored) {
+                    cleanup = Cleanup.Idle
+                    syncContent()
+                    return@invokeLater
+                }
+                cleanup = Cleanup.Unrestored
+                syncContent()
+                notifyUnrestored()
+            }, ModalityState.any())
+        }
+    }
+
+    private fun notifyFailed() {
+        KiloNotifications.error(
+            null,
+            KiloBundle.message("settings.checkpoints.cleanup.error.title"),
+            KiloBundle.message("settings.checkpoints.cleanup.error.message"),
+        )
+    }
+
+    private fun notifyUnrestored() {
+        KiloNotifications.error(
+            null,
+            KiloBundle.message("settings.checkpoints.cleanup.unrestored.title"),
+            KiloBundle.message("settings.checkpoints.cleanup.unrestored.message"),
+            KiloBundle.message("common.retry"),
+        ) {
+            ApplicationManager.getApplication().invokeLater({ retryRestore() }, ModalityState.any())
+        }
+    }
+
+    /** The cleanup never ran, so the message must not say it did. */
+    private fun notifyUnrestoredWithoutRun() {
+        KiloNotifications.error(
+            null,
+            KiloBundle.message("settings.checkpoints.cleanup.unrestored.title"),
+            KiloBundle.message("settings.checkpoints.cleanup.unrestored.notRun.message"),
+            KiloBundle.message("common.retry"),
+        ) {
+            ApplicationManager.getApplication().invokeLater({ retryRestore() }, ModalityState.any())
         }
     }
 
@@ -198,12 +282,11 @@ internal class CheckpointsSettingsUi(
                 val active = withContext(UI) {
                     if (status != null) {
                         retention = status
-                        retentionError = false
-                    } else {
-                        retentionError = true
+                    } else if (cleanup != Cleanup.Unrestored && cleanup != Cleanup.Running && cleanup != Cleanup.Retrying) {
+                        cleanup = Cleanup.Failed
                     }
                     syncContent()
-                    pending || status?.progress != null
+                    cleanup == Cleanup.Running || cleanup == Cleanup.Retrying || status?.progress != null
                 }
                 if (active) delay(RETENTION_POLL_MS)
             } while (active && isActive)
@@ -225,6 +308,7 @@ internal class CheckpointsContent(
     parent: Disposable,
     private val update: (CheckpointsDraft.() -> CheckpointsDraft) -> Unit,
     cleanupAction: () -> Unit,
+    retryAction: () -> Unit,
     refresh: () -> Unit,
 ) : BaseContentPanel() {
     private val snapshot = SettingsToggle { value -> update { copy(snapshot = value) } }.apply {
@@ -238,7 +322,16 @@ internal class CheckpointsContent(
         name = "checkpoint-cleanup-run"
         addActionListener { cleanupAction() }
     }
-    private val last = SettingsRow(KiloBundle.message("settings.checkpoints.cleanup.last"), value = runButton)
+    private val retryLink = ActionLink(KiloBundle.message("common.retry")) {
+        retryAction()
+    }.apply {
+        name = "checkpoint-cleanup-retry"
+        isVisible = false
+    }
+    private val controls = Stack.horizontal(UiStyle.Gap.md())
+        .next(retryLink)
+        .next(runButton)
+    private val last = SettingsRow(KiloBundle.message("settings.checkpoints.cleanup.last"), value = controls)
 
     init {
         section(
@@ -268,8 +361,7 @@ internal class CheckpointsContent(
         draft: CheckpointsDraft,
         available: Boolean,
         status: RetentionStatusDto?,
-        pending: Boolean,
-        error: Boolean,
+        cleanupState: Cleanup,
     ) {
         snapshot.isSelected = draft.snapshot
         snapshot.isEnabled = available
@@ -277,13 +369,15 @@ internal class CheckpointsContent(
         cleanup.isEnabled = available
         days.sync(draft.days)
         days.isEnabled = available && draft.cleanup
-        val running = pending || status?.progress != null
+        val running = cleanupState == Cleanup.Running || cleanupState == Cleanup.Retrying || status?.progress != null
         runButton.isEnabled = available && days.valid() && !running
         runButton.text = KiloBundle.message(if (running) "settings.checkpoints.cleanup.running" else "settings.checkpoints.cleanup.run")
+        retryLink.isVisible = cleanupState == Cleanup.Unrestored
+        controls.revalidate()
         last.update(
             KiloBundle.message("settings.checkpoints.cleanup.last"),
-            statusText(status, pending, error),
-            runButton,
+            statusText(status, cleanupState),
+            controls,
         )
     }
 
@@ -291,7 +385,10 @@ internal class CheckpointsContent(
         days.restore()
     }
 
-    private fun statusText(status: RetentionStatusDto?, pending: Boolean, error: Boolean): String {
+    private fun statusText(status: RetentionStatusDto?, cleanupState: Cleanup): String {
+        if (cleanupState == Cleanup.Unrestored || cleanupState == Cleanup.Retrying) {
+            return KiloBundle.message("settings.checkpoints.cleanup.status.unrestored")
+        }
         val progress = status?.progress
         if (progress != null) return if (progress.phase == "scanning") {
             KiloBundle.message("settings.checkpoints.cleanup.progress.scanning", progress.processed, progress.total)
@@ -304,9 +401,9 @@ internal class CheckpointsContent(
                 progress.failed,
             )
         }
-        if (pending) return KiloBundle.message("settings.checkpoints.cleanup.starting")
+        if (cleanupState == Cleanup.Running) return KiloBundle.message("settings.checkpoints.cleanup.starting")
         val result = status?.last
-        if (result == null && error) return KiloBundle.message("settings.checkpoints.cleanup.status.error")
+        if (result == null && cleanupState == Cleanup.Failed) return KiloBundle.message("settings.checkpoints.cleanup.status.error")
         if (result == null) return KiloBundle.message("settings.checkpoints.cleanup.never")
         return KiloBundle.message(
             "settings.checkpoints.cleanup.last.details",
