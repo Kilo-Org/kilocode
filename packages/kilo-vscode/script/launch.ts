@@ -1,19 +1,22 @@
-// Builds the extension and opens it in a separate VS Code instance: own user data, own extensions, and a server
-// profile under the state directory (or `--fresh` for a temporary one). The installed Kilo CLI login is reused.
-// Usage: bun run extension [--fresh] [workspace]
+// Builds the extension and opens it in a separate VS Code instance: per-worktree user data and extensions so parallel
+// dev hosts do not collide, and one gitignored server profile shared across worktrees of the same repo (`--isolated`
+// for a per-worktree profile, `--fresh` for a temporary one). The installed Kilo CLI login is reused.
+// Usage: bun run extension [--fresh] [--isolated] [workspace]
 import { createHash } from "node:crypto"
 import { existsSync } from "node:fs"
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { reuse } from "./cli-login"
+import { launchProfile } from "./launch-profile"
 
 const root = path.resolve(import.meta.dir, "..")
 const args = Bun.argv.slice(2)
 const fresh = args.includes("--fresh")
+const isolated = args.includes("--isolated")
 const workspace = path.resolve(args.find((arg) => !arg.startsWith("--")) ?? process.env.INIT_CWD ?? process.cwd())
 // The instance socket lives in the user data directory, and a unix socket path is limited to 103 characters. A deep
-// worktree path would exceed that, so the default state directory is per-repo under the OS temp directory.
+// worktree path would exceed that, so the VS Code state directory is per-worktree under the OS temp directory.
 const state = fresh
   ? await mkdtemp(path.join(tmpdir(), "kilo-vscode-v2-"))
   : path.join(tmpdir(), `kilo-vscode-v2-${createHash("sha256").update(root).digest("hex").slice(0, 12)}`)
@@ -31,7 +34,8 @@ await writeFile(
 const build = Bun.spawn([process.execPath, path.join(root, "script/build.ts")], { stdout: "inherit", stderr: "inherit" })
 if ((await build.exited) !== 0) process.exit(1)
 
-const profile = process.env.KILO_V2_PROFILE ?? path.join(state, "profile")
+const profile = launchProfile({ root, state, env: process.env, fresh, isolated })
+await mkdir(profile, { recursive: true })
 try {
   if (await reuse({ profile, workspace, script: path.resolve(root, "..", "..", "script", "dev-isolated.ts") }))
     console.log("auth: reusing the installed Kilo CLI login")
@@ -45,7 +49,7 @@ const code = [
   "/Applications/Visual Studio Code - Insiders.app/Contents/Resources/app/bin/code-insiders",
 ].find((file) => file && existsSync(file)) ?? "code"
 
-console.log(`workspace: ${workspace}\nstate: ${state}`)
+console.log(`workspace: ${workspace}\nstate: ${state}\nprofile: ${profile}`)
 // Strip Electron/VS Code variables so the new instance does not attach to the process that started it, for example a
 // VS Code task or the extension host terminal.
 const env = Object.fromEntries(
