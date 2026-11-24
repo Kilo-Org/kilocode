@@ -2,13 +2,15 @@
 // Both sides of the bridge are built from the spec in one place; every frame that
 // crosses a process or WebSocket boundary is parsed by a schema in this module.
 import z from "zod"
+import { DefaultPort } from "./defaults"
+
+export { DefaultPort }
 
 export const HostName = "ai.kilo.browser_host"
 export const Protocol = 1
 export const StoreExtensionId = "fpihhpdjnlhjpefblefklcegfmnmbmib"
 export const FirefoxExtensionId = "browser-agent@kilo.ai"
 export const StoreUrl = `https://chromewebstore.google.com/detail/${StoreExtensionId}`
-export const DefaultPort = 47917
 
 export const ExtensionId = z.string().regex(/^[a-p]{32}$/)
 

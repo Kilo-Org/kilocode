@@ -1,8 +1,15 @@
 export * as KiloPluginNpm from "./plugin-npm"
 
-import { PluginGitSource } from "@kilocode/kilo-plugin/plugin/git-source"
 import { Npm } from "@opencode/util/npm"
 import { Effect, Layer } from "effect"
+
+const GIT_PREFIX = "git:"
+
+// Matches `PluginGitSource.isGitPluginSpec` without pulling `@kilocode/kilo-plugin/plugin/git-source` (and
+// transitively `@opencode/core/plugin/module`) into CLI startup when no `git:` plugin spec is resolved.
+function isGitPluginSpec(spec: string) {
+  return spec.startsWith(GIT_PREFIX) && spec.length > GIT_PREFIX.length && !spec.startsWith("git://")
+}
 
 /**
  * The npm service with Kilo `git:` plugin specs resolved from the plugin git cache. The server resolves a `git:`
@@ -12,7 +19,6 @@ import { Effect, Layer } from "effect"
  * than a `git:` one, and every other method, reaches the native service unchanged.
  */
 export const wrap = (npm: Npm.Interface): Npm.Interface => {
-  const directory = (pkg: string) => PluginGitSource.cacheDirectory(pkg) ?? pkg
   // A clone is a plain directory to the loader, and `Host.resolve` switches to package self-reference resolution as
   // soon as a name is supplied. Leaving the name empty makes it read the clone's own manifest, exactly like the
   // server's `{ directory: target }` path, so a plugin whose manifest maps no `exports` resolves the same way here.
@@ -21,27 +27,34 @@ export const wrap = (npm: Npm.Interface): Npm.Interface => {
   // A rejection is mapped to the typed failure so no caller sees a defect where it expects a plugin error.
   const git = (pkg: string, options: { readonly refresh: boolean; readonly force?: boolean }) =>
     Effect.gen(function* () {
+      const { PluginGitSource } = yield* Effect.promise(() => import("@kilocode/kilo-plugin/plugin/git-source"))
+      const directory = PluginGitSource.cacheDirectory(pkg) ?? pkg
       const result = yield* Effect.tryPromise({
         try: () => PluginGitSource.resolveGitPluginTarget(pkg, options),
-        catch: (cause) => new Npm.InstallFailedError({ add: [pkg], dir: directory(pkg), cause }),
+        catch: (cause) => new Npm.InstallFailedError({ add: [pkg], dir: directory, cause }),
       })
       if (!result.ok)
-        return yield* new Npm.InstallFailedError({ add: [pkg], dir: directory(pkg), cause: result.error })
+        return yield* new Npm.InstallFailedError({ add: [pkg], dir: directory, cause: result.error })
       return packageOf(result.target)
     })
   // `resolve` is the non-installing read path the TUI and `plugin list` use: it reads the cache and reports the
   // expected directory when nothing is cached yet, like `Npm.resolve` does for a package that is not installed,
   // instead of cloning over the network or dying.
   const cached = (pkg: string) =>
-    git(pkg, { refresh: false }).pipe(Effect.orElseSucceed(() => packageOf(directory(pkg))))
-  const owned = (pkg: string) => PluginGitSource.isGitPluginSpec(pkg)
+    git(pkg, { refresh: false }).pipe(
+      Effect.catch(() =>
+        Effect.promise(() => import("@kilocode/kilo-plugin/plugin/git-source")).pipe(
+          Effect.map(({ PluginGitSource }) => packageOf(PluginGitSource.cacheDirectory(pkg) ?? pkg)),
+        ),
+      ),
+    )
   return {
     ...npm,
-    add: (pkg) => (owned(pkg) ? git(pkg, { refresh: true }) : npm.add(pkg)),
-    resolve: (pkg) => (owned(pkg) ? cached(pkg) : npm.resolve(pkg)),
-    check: (pkg) => (owned(pkg) ? Effect.succeed(false) : npm.check(pkg)),
+    add: (pkg) => (isGitPluginSpec(pkg) ? git(pkg, { refresh: true }) : npm.add(pkg)),
+    resolve: (pkg) => (isGitPluginSpec(pkg) ? cached(pkg) : npm.resolve(pkg)),
+    check: (pkg) => (isGitPluginSpec(pkg) ? Effect.succeed(false) : npm.check(pkg)),
     // An explicit update must fetch, even when the cached clone is still inside the refresh window.
-    update: (pkg) => (owned(pkg) ? git(pkg, { refresh: true, force: true }) : npm.update(pkg)),
+    update: (pkg) => (isGitPluginSpec(pkg) ? git(pkg, { refresh: true, force: true }) : npm.update(pkg)),
   }
 }
 
