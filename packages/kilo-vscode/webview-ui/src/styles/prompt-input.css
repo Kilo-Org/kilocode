@@ -1198,3 +1198,13 @@ body.vscode-reduce-motion .prompt-issues-menu {
     transform: scale(0.94);
   }
 }
+
+/* packages/ui/src/styles/base.css forces textareas to 16px on touch devices
+   (iOS anti-zoom). The prompt textarea is transparent and the highlight overlay
+   draws its text, so keep the textarea at the overlay's size (the Kilo font
+   size setting), or the caret and selection drift away from the visible text. */
+@media (hover: none) and (pointer: coarse) {
+  .prompt-input {
+    font-size: var(--font-size-base) !important;
+  }
+}
