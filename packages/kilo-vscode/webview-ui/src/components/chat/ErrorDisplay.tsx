@@ -14,6 +14,7 @@ import {
   parseProviderAuthError,
   isUnauthorizedPaidModelError,
   isUnauthorizedPromotionLimitError,
+  isSignedOutError,
 } from "../../utils/errorUtils"
 import ProviderConnectDialog from "../settings/ProviderConnectDialog"
 
@@ -46,6 +47,8 @@ export const ErrorDisplay: Component<ErrorDisplayProps> = (props) => {
       (provider.authMethods()[err.providerID] ?? []).some((method) => method.type === "oauth")
     )
   })
+
+  const kilo = () => provider.providers().kilo?.name ?? "Kilo Gateway"
 
   const errorText = createMemo(() => {
     const msg = props.error.data?.message
@@ -101,6 +104,18 @@ export const ErrorDisplay: Component<ErrorDisplayProps> = (props) => {
           <p data-slot="auth-prompt-description">{t("error.promotionLimit.description")}</p>
           <Button variant="primary" onClick={() => props.onLogin?.()}>
             {t("error.promotionLimit.action")}
+          </Button>
+        </div>
+      </Match>
+      <Match when={isSignedOutError(parsed())}>
+        <div data-component="auth-prompt">
+          <div data-slot="auth-prompt-header">
+            <span data-slot="auth-prompt-icon">↻</span>
+            <span data-slot="auth-prompt-title">{t("error.providerAuth.title", { provider: kilo() })}</span>
+          </div>
+          <p data-slot="auth-prompt-description">{t("error.providerAuth.description", { provider: kilo() })}</p>
+          <Button variant="primary" onClick={() => props.onLogin?.()}>
+            {t("common.signIn")}
           </Button>
         </div>
       </Match>
