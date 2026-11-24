@@ -20,7 +20,9 @@ interface HighlightRegistry {
 
 export function highlightApi(): { registry: HighlightRegistry; ctor: HighlightCtor } | undefined {
   const g = globalThis as unknown as { CSS?: { highlights?: HighlightRegistry }; Highlight?: HighlightCtor }
+  // oxlint-disable-next-line kilo-vscode/require-view-active-guard -- Pure helper; callers (messages.tsx, transcript-reply.tsx) gate access on useViewActive() + owner tokens
   if (!g.CSS?.highlights || typeof g.Highlight !== "function") return undefined
+  // oxlint-disable-next-line kilo-vscode/require-view-active-guard -- Pure helper; callers (messages.tsx, transcript-reply.tsx) gate access on useViewActive() + owner tokens
   return { registry: g.CSS.highlights, ctor: g.Highlight }
 }
 
