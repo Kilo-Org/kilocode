@@ -218,8 +218,14 @@ export const dict = {
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Automatisch goedkeuren wisselen",
-  "tui.autoApprove.description": "Keur verzoeken om toestemming automatisch goed voor dit proces",
+  "tui.autoApprove.description": "Keur verzoeken om toestemming automatisch goed voor elke client en onthoud deze instelling",
   "tui.autoApprove.enabled":
     "Automatisch goedkeuren ingeschakeld. Verzoeken om toestemming worden automatisch goedgekeurd.",
   "tui.autoApprove.disabled": "Automatisch goedkeuren uitgeschakeld.",
+  "tui.autoApprove.projectDisabled": "Automatisch goedkeuren is uitgeschakeld door de configuratie van dit project.",
+  "tui.autoApprove.saveFailed": "Kan de instelling voor automatisch goedkeuren niet opslaan.",
+
+  // Session transcript export
+  "session.export.success": "Het sessietranscript is geëxporteerd als Markdown.",
+  "session.export.error": "Exporteren van sessietranscript mislukt",
 }

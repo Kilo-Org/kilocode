@@ -196,7 +196,13 @@ export const dict = {
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "切換自動核准",
-  "tui.autoApprove.description": "為此程序自動核准權限請求",
+  "tui.autoApprove.description": "為所有用戶端自動核准權限請求並記住此設定",
   "tui.autoApprove.enabled": "已啟用自動核准。權限請求將自動獲得核准。",
   "tui.autoApprove.disabled": "已停用自動核准。",
+  "tui.autoApprove.projectDisabled": "此專案的設定已停用自動核准。",
+  "tui.autoApprove.saveFailed": "無法儲存自動核准設定。",
+
+  // Session transcript export
+  "session.export.success": "工作階段記錄已匯出為 Markdown。",
+  "session.export.error": "無法匯出工作階段記錄",
 }

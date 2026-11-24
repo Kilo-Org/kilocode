@@ -62,6 +62,9 @@ export class Info extends Config.Info.extend<Info>("KiloConfigPolicy.Info")({
   session_sync: Schema.Boolean.pipe(optional).annotate({
     description: "Synchronize signed-in Kilo sessions and required assets (default: true; global config only)",
   }),
+  auto_approve: Schema.Boolean.pipe(optional).annotate({
+    description: "Approve permission requests automatically for every client unless a rule denies them",
+  }),
   hide_prompt_training_models: Schema.Boolean.pipe(optional).annotate({
     description: "Hide Kilo models that can use prompts for training and deny provider data collection",
   }),
@@ -176,6 +179,7 @@ const settings = {
   memory_model: { schema: Schema.NullOr(Schema.String), expected: "a model string or null" },
   web_search: { schema: Schema.Boolean, expected: "a boolean" },
   retention: { schema: Retention, expected: "an object with optional enabled and maxAgeDays" },
+  auto_approve: { schema: Schema.Boolean, expected: "a boolean" },
 } as const
 
 /** Decode each Kilo-only setting on its own, so one invalid field does not drop the others. */

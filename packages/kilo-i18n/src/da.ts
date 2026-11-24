@@ -212,7 +212,13 @@ export const dict = {
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Skift auto-godkendelse",
-  "tui.autoApprove.description": "Godkend anmodninger om tilladelse automatisk for denne proces",
+  "tui.autoApprove.description": "Godkend anmodninger om tilladelse automatisk for hver klient, og husk denne indstilling",
   "tui.autoApprove.enabled": "Auto-godkendelse aktiveret. Anmodninger om tilladelse godkendes automatisk.",
   "tui.autoApprove.disabled": "Auto-godkendelse deaktiveret.",
+  "tui.autoApprove.projectDisabled": "Auto-godkendelse er deaktiveret i dette projekts konfiguration.",
+  "tui.autoApprove.saveFailed": "Kunne ikke gemme indstillingen for automatisk godkendelse.",
+
+  // Session transcript export
+  "session.export.success": "Sessionsudskriften blev eksporteret som Markdown.",
+  "session.export.error": "Eksport af sessionsudskrift mislykkedes",
 }

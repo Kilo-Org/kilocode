@@ -24,6 +24,7 @@
     "src/shared",
     "test/browser/edit-handoff.tsx",
     "test/browser/sidebar-search.tsx",
+    "test/browser/swarm-avatar-colors.tsx",
     "test/fixtures/agent-stack-render.tsx",
     "test/fixtures/browser-panel-render.tsx",
     "test/fixtures/browser-settings-render.tsx",

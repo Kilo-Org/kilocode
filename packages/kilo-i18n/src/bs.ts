@@ -219,7 +219,13 @@ export const dict = {
 
   // Auto-approve toggle for the TUI (`/auto-approve`, Ctrl+Alt+A).
   "tui.autoApprove.title": "Uključi/isključi automatsko odobravanje",
-  "tui.autoApprove.description": "Automatski odobri zahtjeve za dozvolu za ovaj proces",
+  "tui.autoApprove.description": "Automatski odobri zahtjeve za dozvolu za svaki klijent i zapamti ovo podešavanje",
   "tui.autoApprove.enabled": "Automatsko odobravanje uključeno. Zahtjevi za dozvolu se odobravaju automatski.",
   "tui.autoApprove.disabled": "Automatsko odobravanje isključeno.",
+  "tui.autoApprove.projectDisabled": "Automatsko odobravanje je isključeno u konfiguraciji ovog projekta.",
+  "tui.autoApprove.saveFailed": "Nije moguće sačuvati postavku automatskog odobravanja.",
+
+  // Session transcript export
+  "session.export.success": "Transkript sesije je izvezen kao Markdown.",
+  "session.export.error": "Izvoz transkripta sesije nije uspio",
 }

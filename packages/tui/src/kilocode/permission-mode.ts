@@ -1,5 +1,5 @@
-// Runtime auto-approve for the TUI. The configured mode (`--auto` or `session.permissions`) is the starting value, and
-// a toggle overrides it for this process, so switching never needs a config edit or a restart.
+// Runtime auto-approve for the TUI. The configured mode (`--auto` or the saved `session.permissions` setting) is the
+// starting value; a toggle saves the choice for the next run and overrides it for this process.
 import type { PermissionRequest } from "@opencode/client"
 import { KiloPermission } from "@opencode/schema/kilocode/permission"
 import { createSignal } from "solid-js"
@@ -17,13 +17,11 @@ export function setPermissionMode(mode: PermissionMode | undefined) {
 }
 
 /**
- * Flips the effective mode and returns the new one. An unrecognized mode degrades to prompting instead of granting the
- * bypass, so a future mode that reaches here cannot silently enable auto-approve.
+ * The mode a toggle selects. An unrecognized mode degrades to prompting instead of granting the bypass, so a future
+ * mode that reaches here cannot silently enable auto-approve.
  */
-export function togglePermissionMode(current: PermissionMode) {
-  const next: PermissionMode = current === "prompt" ? "autoaccept" : "prompt"
-  setOverride(next)
-  return next
+export function nextPermissionMode(current: PermissionMode): PermissionMode {
+  return current === "prompt" ? "autoaccept" : "prompt"
 }
 
 /**

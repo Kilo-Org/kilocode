@@ -8,18 +8,18 @@ import { AgentAvatar, AgentAvatarPalette } from "@kilocode/kilo-ui/agent-avatar"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import type { ToolActions } from "@kilocode/kilo-ui/message-part"
 import { createMemo, Show, type Accessor, type Component } from "solid-js"
+import { transcriptChildren } from "../src/components/chat/background-agents"
 import { useLanguage } from "../src/context/language"
 import { SessionView } from "../src/v2/session-view"
 import { V2Scope } from "../src/v2/client"
 import { description, label, type Activity } from "./v2/activity"
 import { SortableClosableTab } from "./ClosableTab"
 import { InspectorTabStrip } from "./InspectorTabStrip"
-import { availableSubagents, type SubagentTab } from "./subagent-tabs"
-import { childTools } from "../src/v2/child-session"
+import type { SubagentTab } from "./subagent-tabs"
 import type { Sessions } from "./v2/sessions"
 
 interface Props {
-  sessions: Sessions
+  sessions: Pick<Sessions, "activityFor" | "currentSessionID" | "messages" | "release" | "scope">
   tabs: Accessor<SubagentTab[]>
   active: Accessor<string | undefined>
   visible: Accessor<boolean>
@@ -143,11 +143,10 @@ const SubagentContent: Component<ContentProps> = (props) => {
 }
 
 export const SubagentPanel: Component<Props> = (props) => {
-  // Colors follow the parent's spawn order so tabs match the parent transcript.
+  // Use the same spawn order as the parent view, regardless of which tabs are open.
   const siblings = createMemo(() => {
     const id = props.sessions.currentSessionID()
-    if (!id) return []
-    return availableSubagents(childTools(props.sessions.messages(id))).map((tab) => tab.id)
+    return id ? transcriptChildren(props.sessions.messages(id)) : []
   })
   return (
     <AgentAvatarPalette ids={siblings()}>
