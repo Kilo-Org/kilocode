@@ -63,3 +63,157 @@ describe("gemini schema - typed nodes beside combiners", () => {
     expect(run(models.gateway, structuredClone(arg)).properties.arg).toEqual(arg)
   })
 })
+
+// Gemini's OpenAPI subset rejects empty strings in enum lists
+// ("enum[i]: cannot be empty"), which some MCP tool schemas (e.g. PostHog's
+// query tools) legitimately contain. Empty entries are dropped before the
+// request reaches the provider; an enum left with no values is removed.
+describe("ProviderTransform.schema - gemini empty enum values", () => {
+  const geminiModel = {
+    providerID: "google",
+    api: {
+      id: "gemini-3-pro",
+    },
+  } as any
+
+  test("drops empty strings from a plain enum", () => {
+    const schema = {
+      type: "object",
+      properties: {
+        operator: { type: "string", enum: ["", "eq", "ne"] },
+      },
+    } as any
+
+    const result = ProviderTransform.schema(geminiModel, schema) as any
+
+    expect(result.properties.operator.enum).toEqual(["eq", "ne"])
+  })
+
+  test("drops empty strings from an enum nested in anyOf", () => {
+    const schema = {
+      type: "object",
+      properties: {
+        filterGroup: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              operator: {
+                anyOf: [{ type: "string" }, { type: "string", enum: ["", "eq", "ne"] }],
+              },
+            },
+          },
+        },
+      },
+    } as any
+
+    const result = ProviderTransform.schema(geminiModel, schema) as any
+
+    const branch = result.properties.filterGroup.items.properties.operator.anyOf[1]
+    expect(branch.enum).toEqual(["eq", "ne"])
+  })
+
+  test("removes an enum that only held empty strings", () => {
+    const schema = {
+      type: "object",
+      properties: {
+        blank: { type: "string", enum: [""] },
+      },
+    } as any
+
+    const result = ProviderTransform.schema(geminiModel, schema) as any
+
+    expect(result.properties.blank.type).toBe("string")
+    expect("enum" in result.properties.blank).toBe(false)
+  })
+
+  test.each([{ values: [""] }, { values: [] }])("omits an invalid enum inside anyOf: $values", ({ values }) => {
+    const schema = {
+      type: "object",
+      properties: {
+        value: {
+          anyOf: [{ type: "string", enum: values }, { type: "number" }],
+        },
+      },
+    } as any
+
+    const result = ProviderTransform.schema(geminiModel, schema) as any
+
+    expect(result.properties.value.anyOf[0]).toEqual({ type: "string" })
+    expect("enum" in result.properties.value.anyOf[0]).toBe(false)
+  })
+
+  test("does not keep a string type alive for an enum emptied to null only", () => {
+    const schema = {
+      type: "object",
+      properties: {
+        maybe: { type: ["string", "null"], enum: ["", null] },
+      },
+    } as any
+
+    const result = ProviderTransform.schema(geminiModel, schema) as any
+
+    expect(result.properties.maybe.type).toBe("null")
+  })
+
+  test("drops null from a typed enum without adding nullable", () => {
+    const schema = {
+      type: "object",
+      properties: {
+        maybe: { type: "string", enum: [null, "a", "b"] },
+      },
+    } as any
+
+    const result = ProviderTransform.schema(geminiModel, schema) as any
+
+    // null never satisfied type "string" anyway, so removing it narrows nothing.
+    expect(result.properties.maybe).toEqual({ type: "string", enum: ["a", "b"] })
+  })
+
+  test("still lifts null into nullable on a type array", () => {
+    const schema = {
+      type: "object",
+      properties: {
+        maybe: { type: ["string", "null"], enum: [null, "a", "b"] },
+      },
+    } as any
+
+    const result = ProviderTransform.schema(geminiModel, schema) as any
+
+    expect(result.properties.maybe).toEqual({ type: "string", enum: ["a", "b"], nullable: true })
+  })
+
+  test("leaves enums without empty strings untouched", () => {
+    const schema = {
+      type: "object",
+      properties: {
+        operator: { type: "string", enum: ["eq", "ne"] },
+      },
+    } as any
+
+    const result = ProviderTransform.schema(geminiModel, schema) as any
+
+    expect(result.properties.operator.enum).toEqual(["eq", "ne"])
+  })
+
+  test("applies when gemini is served through an openai-compatible transport", () => {
+    const gatewayModel = {
+      providerID: "custom",
+      api: {
+        id: "gemini-flash-latest",
+        npm: "@ai-sdk/openai-compatible",
+      },
+    } as any
+
+    const schema = {
+      type: "object",
+      properties: {
+        operator: { type: "string", enum: ["", "eq", "ne"] },
+      },
+    } as any
+
+    const result = ProviderTransform.schema(gatewayModel, schema) as any
+
+    expect(result.properties.operator.enum).toEqual(["eq", "ne"])
+  })
+})
