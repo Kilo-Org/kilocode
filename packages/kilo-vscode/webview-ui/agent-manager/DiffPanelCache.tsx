@@ -3,7 +3,9 @@ import {
   createEffect,
   createMemo,
   createSignal,
+  on,
   onCleanup,
+  onMount,
   untrack,
   type Accessor,
   type Component,
@@ -18,9 +20,9 @@ import { DiffPanel } from "./DiffPanel"
 import { diffDataKey } from "./worktree-diffs"
 import { ViewActiveProvider, blurOnHide, freezeValue, skipInactiveFocus } from "../src/v2/view-active"
 
-const CACHE_SIZE = 16
+const CACHE_SIZE = 24
 /** Number of MRU diff panels kept warm in place (no content-visibility: hidden) for instant switching. */
-const HOT_DIFF_SLOTS = 8
+const HOT_DIFF_SLOTS = 15
 
 interface Entry {
   key: string
@@ -28,6 +30,7 @@ interface Entry {
   project: string
   ctx: string
   used: number
+  size?: { width: number; height: number }
 }
 
 interface Props {
@@ -79,6 +82,40 @@ export const DiffPanelCache: Component<Props> = (props) => {
   const [coldKeys, setColdKeys] = createSignal<ReadonlySet<string>>(new Set())
   let used = 0
   let idleHandle: number | ReturnType<typeof setTimeout> | undefined
+  let hostSize = { width: 0, height: 0 }
+  let observedHost: HTMLElement | undefined
+  let hostObserver: ResizeObserver | undefined
+
+  const activeKey = createMemo(() =>
+    props.active() && props.current() ? `${props.project() ?? "single"}\0${props.current()}` : undefined,
+  )
+  const activeEntry = createMemo(() => {
+    const key = activeKey()
+    return key ? entries().find((item) => item.cacheKey === key) : undefined
+  })
+
+  // Track the shared diff wrapper size asynchronously via one ResizeObserver so
+  // hidden diff panels pin their last width/height (zero DOM reads on switch,
+  // and split-handle drags only reflow the single active diff panel).
+  const observeHost = (host: HTMLElement | null) => {
+    if (!host || host === observedHost) return
+    if (host.clientWidth > 0 && host.clientHeight > 0) {
+      hostSize = { width: Math.round(host.clientWidth), height: Math.round(host.clientHeight) }
+      const current = untrack(activeEntry)
+      if (current && !current.size) current.size = { ...hostSize }
+    }
+    if (typeof ResizeObserver === "undefined") return
+    hostObserver?.disconnect()
+    observedHost = host
+    hostObserver = new ResizeObserver((list) => {
+      const box = list[0]?.contentRect
+      if (!box || box.width <= 0 || box.height <= 0) return
+      hostSize = { width: Math.round(box.width), height: Math.round(box.height) }
+      const current = untrack(activeEntry)
+      if (current) current.size = { ...hostSize }
+    })
+    hostObserver.observe(host)
+  }
 
   const cancelIdle = () => {
     if (idleHandle === undefined) return
@@ -114,7 +151,12 @@ export const DiffPanelCache: Component<Props> = (props) => {
     else idleHandle = setTimeout(run, 150)
   }
 
-  onCleanup(cancelIdle)
+  onCleanup(() => {
+    cancelIdle()
+    hostObserver?.disconnect()
+    hostObserver = undefined
+    observedHost = undefined
+  })
 
   createEffect(() => {
     const contexts = props.contexts()
@@ -146,7 +188,17 @@ export const DiffPanelCache: Component<Props> = (props) => {
         for (const item of prev) if (!scoped.includes(item)) props.onEvict?.(item.cacheKey)
         return scoped
       }
-      const next = [...scoped, { key, cacheKey, project, ctx, used: ++used }]
+      const next = [
+        ...scoped,
+        {
+          key,
+          cacheKey,
+          project,
+          ctx,
+          used: ++used,
+          size: hostSize.width > 0 && hostSize.height > 0 ? { ...hostSize } : undefined,
+        },
+      ]
       if (next.length <= CACHE_SIZE) {
         for (const item of prev) if (!next.includes(item)) props.onEvict?.(item.cacheKey)
         return next
@@ -168,13 +220,35 @@ export const DiffPanelCache: Component<Props> = (props) => {
   return (
     <For each={entries()}>
       {(entry) => {
-        const active = createMemo(
-          () => props.active() && `${props.project() ?? "single"}\0${props.current()}` === entry.cacheKey,
-        )
+        const active = createMemo(() => activeKey() === entry.cacheKey)
         const cold = createMemo(() => !active() && coldKeys().has(entry.cacheKey))
         const entryProject = entry.project === "single" ? undefined : entry.project
         let slotEl: HTMLDivElement | undefined
+
+        onMount(() => {
+          observeHost(slotEl?.parentElement ?? null)
+        })
+
         blurOnHide(active, () => slotEl)
+        createEffect(
+          on(
+            active,
+            (isActive) => {
+              if (!slotEl) return
+              if (!isActive) {
+                const pinned = entry.size ?? (hostSize.width > 0 && hostSize.height > 0 ? hostSize : undefined)
+                if (pinned) {
+                  slotEl.style.width = `${pinned.width}px`
+                  slotEl.style.height = `${pinned.height}px`
+                }
+                return
+              }
+              slotEl.style.width = ""
+              slotEl.style.height = ""
+            },
+            { defer: true },
+          ),
+        )
 
         // Freeze reactive inputs while hidden so switching worktrees or background
         // diff polls never trigger Solid reactive churn inside inactive diff panels.

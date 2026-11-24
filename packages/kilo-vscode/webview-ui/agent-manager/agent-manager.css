@@ -6100,15 +6100,15 @@ body.vscode-high-contrast-light {
 
 /* Hidden-but-alive side panel host: taken out of flex flow so the chat reclaims
    the full width, while staying in place behind the opaque .am-main-pane (z-index:2).
-   Keeping it inside the viewport without transform/inert/aria-hidden avoids Pierre
-   IntersectionObserver unmount/remount storms and AX tree reserialization when
-   switching between diff-open and diff-closed worktrees. */
+   Avoid inherited properties (pointer-events, visibility) and parent opacity toggles
+   here: every child panel is already opacity:0 or off-screen, and keeping this parent
+   free of inherited/opacity changes avoids Blink walking all cached diff Shadow DOM
+   nodes on no-diff <-> diff switches. */
 .am-side-host-hidden {
   position: absolute;
   top: 0;
   right: 0;
   bottom: 0;
-  opacity: 0;
   z-index: 0;
 }
 

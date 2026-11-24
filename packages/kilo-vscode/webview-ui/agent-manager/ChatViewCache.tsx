@@ -7,6 +7,7 @@ import {
   createSignal,
   on,
   onCleanup,
+  onMount,
   untrack,
   type Accessor,
   type Component,
@@ -22,7 +23,7 @@ import { V2Scope } from "../src/v2/client"
 import type { V2 } from "../src/v2/scope"
 import { SessionView } from "../src/v2/session-view"
 import type { ManagerContext } from "../src/v2/shortcut-hint"
-import { ViewActiveProvider, freezeValue, skipInactiveFocus } from "../src/v2/view-active"
+import { ViewActiveProvider, blurOnHide, freezeValue, skipInactiveFocus } from "../src/v2/view-active"
 import { SpeechToTextStatusProvider } from "../src/components/speech-to-text/status"
 import {
   chatSlotKey,
@@ -120,7 +121,15 @@ export const ChatViewCache: Component<ChatViewCacheProps> = (props) => {
   // Track host size asynchronously via one shared ResizeObserver and attach the
   // observed dimensions to the active slot so every slot pins its own exact width
   // when hidden, even across rapid full-width <-> split-width switches.
-  const bindHost = (el: HTMLDivElement) => {
+  let hostEl: HTMLDivElement | undefined
+  onMount(() => {
+    const el = hostEl
+    if (!el) return
+    if (el.clientWidth > 0 && el.clientHeight > 0) {
+      hostSize = { width: Math.round(el.clientWidth), height: Math.round(el.clientHeight) }
+      const current = untrack(activeEntry)
+      if (current && !current.size) current.size = { ...hostSize }
+    }
     if (typeof ResizeObserver === "undefined") return
     const observer = new ResizeObserver((entries) => {
       const box = entries[0]?.contentRect
@@ -131,7 +140,7 @@ export const ChatViewCache: Component<ChatViewCacheProps> = (props) => {
     })
     observer.observe(el)
     onCleanup(() => observer.disconnect())
-  }
+  })
 
   // Synchronously ensure the active slot exists during computed phase (before render effects).
   createComputed(() => {
@@ -228,7 +237,7 @@ export const ChatViewCache: Component<ChatViewCacheProps> = (props) => {
   const showFallback = () => !props.hidden() && !props.store()
 
   return (
-    <div class="am-chat-host" classList={{ "am-chat-host-hidden": props.hidden() }} ref={bindHost}>
+    <div class="am-chat-host" classList={{ "am-chat-host-hidden": props.hidden() }} ref={hostEl}>
       <Show when={showFallback()}>
         <div class="am-chat-wrapper am-chat-fallback">
           <div class="am-intro-fallback">{props.fallback()}</div>
@@ -239,28 +248,24 @@ export const ChatViewCache: Component<ChatViewCacheProps> = (props) => {
           const active = createMemo(() => !props.hidden() && currentKey() === entry.keySignal())
           let slotEl: HTMLDivElement | undefined
 
-          // Freeze hidden slot box dimensions using the slot's last observed host size
-          // (zero synchronous DOM reads) and blur immediately on hide so no keystrokes leak
-          // into hidden textareas or block focus transfer to older slots.
+          // Blur before render effects mutate DOM classes, and pin hidden slot box
+          // dimensions using the slot's last observed host size (zero DOM reads on switch).
+          blurOnHide(active, () => slotEl)
           createEffect(
             on(
               active,
-              (isActive, wasActive) => {
+              (isActive) => {
                 if (!slotEl) return
-                if (!isActive && wasActive) {
+                if (!isActive) {
                   const pinned = entry.size ?? (hostSize.width > 0 && hostSize.height > 0 ? hostSize : undefined)
                   if (pinned) {
                     slotEl.style.width = `${pinned.width}px`
                     slotEl.style.height = `${pinned.height}px`
                   }
-                  const focused = document.activeElement
-                  if (focused instanceof HTMLElement && slotEl.contains(focused)) focused.blur()
                   return
                 }
-                if (isActive) {
-                  slotEl.style.width = ""
-                  slotEl.style.height = ""
-                }
+                slotEl.style.width = ""
+                slotEl.style.height = ""
               },
               { defer: true },
             ),

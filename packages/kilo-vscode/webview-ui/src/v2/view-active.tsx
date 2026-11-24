@@ -2,7 +2,7 @@
 // Defaults to true for single-view surfaces (sidebar, subagent inspector, tests);
 // Agent Manager caches provide a reactive accessor so inactive cached slots ignore
 // global keyboard/window listeners and pause layout observers.
-import { createContext, createEffect, createMemo, on, useContext, type Accessor, type JSX } from "solid-js"
+import { createComputed, createContext, createMemo, on, useContext, type Accessor, type JSX } from "solid-js"
 
 const ALWAYS_ACTIVE: Accessor<boolean> = () => true
 
@@ -23,14 +23,32 @@ function sameValue<T>(a: T, b: T): boolean {
   return false
 }
 
-/** Freeze a reactive read while `active()` is false so hidden cached views do zero reactive work. */
-export function freezeValue<T>(active: Accessor<boolean>, read: Accessor<T>): Accessor<T> {
+/** Shallow element-wise reference equality for frozen array memos. */
+export function sameArray<T>(left: readonly T[], right: readonly T[]): boolean {
+  if (left.length !== right.length) return false
+  for (let index = 0; index < left.length; index++) {
+    if (left[index] !== right[index]) return false
+  }
+  return true
+}
+
+/** Freeze a reactive computation while `active()` is false, with custom equality for catch-up on reveal. */
+export function freezeMemo<T>(
+  active: Accessor<boolean>,
+  read: (previous: T | undefined) => T,
+  equals: (previous: T, next: T) => boolean = sameValue,
+): Accessor<T> {
   const held = createMemo<{ value: T } | undefined>(
-    (previous) => (active() || !previous ? { value: read() } : previous),
+    (previous) => (active() || !previous ? { value: read(previous?.value) } : previous),
     undefined,
-    { equals: (previous, next) => previous !== undefined && next !== undefined && sameValue(previous.value, next.value) },
+    { equals: (previous, next) => previous !== undefined && next !== undefined && equals(previous.value, next.value) },
   )
   return () => held()!.value
+}
+
+/** Freeze a reactive read while `active()` is false so hidden cached views do zero reactive work. */
+export function freezeValue<T>(active: Accessor<boolean>, read: Accessor<T>): Accessor<T> {
+  return freezeMemo(active, () => read(), sameValue)
 }
 
 const INACTIVE_CONTAINER =
@@ -78,13 +96,17 @@ export function skipInactiveFocus(event: FocusEvent, container: HTMLElement): vo
   else target.blur()
 }
 
-/** Blur any focused descendant inside `el` when `visible()` transitions from true to false. */
+/**
+ * Blur any focused descendant inside `el` when `visible()` transitions to false.
+ * Runs in `createComputed` before render effects mutate DOM classes/styles so
+ * Chromium does not force a synchronous style recalc inside `blur()`.
+ */
 export function blurOnHide(visible: Accessor<boolean>, el: () => HTMLElement | undefined): void {
-  createEffect(
+  createComputed(
     on(
       visible,
-      (shown, wasShown) => {
-        if (shown || !wasShown) return
+      (shown) => {
+        if (shown) return
         const node = el()
         const focused = document.activeElement
         if (node && focused instanceof HTMLElement && node.contains(focused)) focused.blur()

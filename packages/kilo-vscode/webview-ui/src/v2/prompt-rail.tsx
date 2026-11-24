@@ -219,7 +219,7 @@ export function PromptRail(props: PromptRailProps) {
 
   // Resizing the panel moves the rail out from under an open card.
   createEffect(() => {
-    if (!open()) return
+    if (!viewActive() || !open()) return
     const onResize = () => place()
     window.addEventListener("resize", onResize)
     onCleanup(() => window.removeEventListener("resize", onResize))

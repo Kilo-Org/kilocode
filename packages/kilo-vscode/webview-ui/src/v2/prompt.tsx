@@ -470,7 +470,12 @@ export function PromptInput(props: {
     if (!viewActive()) return
     setHeld({ altKey: event.altKey, ctrlKey: event.ctrlKey, metaKey: event.metaKey })
   }
-  const release = () => setHeld(NO_KEYS)
+  const release = () => {
+    if (viewActive()) setHeld(NO_KEYS)
+  }
+  createEffect(() => {
+    if (!viewActive()) setHeld(NO_KEYS)
+  })
   onMount(() => {
     window.addEventListener("keydown", hold)
     window.addEventListener("keyup", hold)
@@ -1169,7 +1174,9 @@ export function PromptInput(props: {
     // Measure once before the first paint. The observer only reports after it, which would expand the actions the
     // cached fold held back and animate them into the overflow menu on every switch.
     measure()
-    const observer = new ResizeObserver(measure)
+    const observer = new ResizeObserver(() => {
+      if (viewActive()) measure()
+    })
     if (hintRef) observer.observe(hintRef)
     if (pinnedRef) observer.observe(pinnedRef)
     onCleanup(() => observer.disconnect())

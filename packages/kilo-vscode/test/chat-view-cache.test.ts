@@ -120,7 +120,7 @@ describe("chat-view-cache", () => {
     expect(pruned.recent).toEqual([2])
   })
 
-  it("exposes default cache capacity >= 8 for multi-worktree switching", () => {
-    expect(CHAT_CACHE_SIZE).toBeGreaterThanOrEqual(8)
+  it("exposes default cache capacity >= 15 for multi-worktree switching", () => {
+    expect(CHAT_CACHE_SIZE).toBeGreaterThanOrEqual(15)
   })
 })

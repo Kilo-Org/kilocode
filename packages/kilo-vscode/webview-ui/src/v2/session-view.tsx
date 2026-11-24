@@ -53,7 +53,7 @@ import { reviewScopes, slashActions, worktreeAction, type SlashHandlers } from "
 import { createSlashCatalog } from "./slash-catalog"
 import { dispatchSlash } from "./slash-dispatch"
 import { TranscriptSearchProvider } from "./transcript-search"
-import { useViewActive } from "./view-active"
+import { freezeMemo, sameArray, useViewActive } from "./view-active"
 
 export function SessionView(props: {
   session: string | undefined
@@ -186,11 +186,14 @@ export function SessionView(props: {
   })
   // Sibling-aware identicons for the subagents this session spawned. The shared transcript helper reads the child
   // IDs from the session's subagent tool parts, matching the palette the open session's transcript had.
-  const siblings = createMemo(() => {
-    const id = session()
-    if (!id) return []
-    return transcriptChildren(v2.data.session.message.list(id))
-  })
+  const siblings = freezeMemo(
+    viewActive,
+    () => {
+      const id = session()
+      return id ? transcriptChildren(v2.data.session.message.list(id)) : []
+    },
+    sameArray,
+  )
   const permissions = createMemo(() => family().flatMap((id) => v2.data.session.permission.list(id) ?? []))
   const forms = createMemo(() => family().flatMap((id) => v2.data.session.form.list(id) ?? []))
 

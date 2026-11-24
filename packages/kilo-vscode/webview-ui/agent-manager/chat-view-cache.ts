@@ -8,7 +8,7 @@
  * reserialization spikes on switches while bounding DOM and memory usage.
  */
 
-export const CHAT_CACHE_SIZE = 10
+export const CHAT_CACHE_SIZE = 15
 
 export interface ChatCacheSlot {
   readonly id: number

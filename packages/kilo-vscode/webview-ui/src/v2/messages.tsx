@@ -16,7 +16,7 @@ import { useVSCode } from "../context/vscode"
 import { onTimelineHighlight, type TimelineHighlight } from "../utils/timeline/highlight"
 import { partKey } from "../utils/timeline/timeline-parts"
 import { useV2 } from "./client"
-import { collectInstructionFiles } from "./instruction-files"
+import { collectInstructionFiles, sameInstructionFiles } from "./instruction-files"
 import { QuestionDock } from "./question"
 import { revertedCount, visibleMessages } from "./revert"
 import type { Selection } from "./selectors"
@@ -56,7 +56,7 @@ import type { ReplyHandler } from "./append-ready"
 import { partFeedback } from "../../../src/shared/browser-feedback"
 import { isChatReference } from "../../../src/shared/review-comments"
 import { capacity, historyAction, promptItems, railEntries, type PromptRailItem } from "./prompt-rail-data"
-import { useViewActive } from "./view-active"
+import { freezeMemo, freezeValue, sameArray, useViewActive } from "./view-active"
 
 /**
  * Container for Virtua rows. Virtua sizes it from cached row heights and places
@@ -78,14 +78,6 @@ const VirtualBox: Component<{
 )
 
 let searchHighlightOwner: symbol | undefined
-
-function sameKeys(left: readonly string[], right: readonly string[]) {
-  if (left.length !== right.length) return false
-  for (let index = 0; index < left.length; index++) {
-    if (left[index] !== right[index]) return false
-  }
-  return true
-}
 
 export function MessageList(props: {
   session?: string
@@ -138,36 +130,47 @@ export function MessageList(props: {
 
   // createData already puts pending user input into the message list. Only queued
   // input waits for the end of the turn, so it moves below the transcript.
-  const queued = () => {
-    const id = props.session
-    if (!id) return []
-    return v2.data.session.pending
-      .list(id)
-      .flatMap((item): SessionInboxUser[] => (item.type === "user" && item.delivery === "queue" ? [item] : []))
-  }
-  const revert = () => (props.session ? v2.data.session.get(props.session)?.revert : undefined)
+  // Freeze live store reads while hidden in Agent Manager's keep-alive chat cache so
+  // background streaming worktrees do zero DOM/Virtua work until switched to.
+  const queued = freezeMemo(
+    viewActive,
+    () => {
+      const id = props.session
+      if (!id) return [] as SessionInboxUser[]
+      return v2.data.session.pending
+        .list(id)
+        .flatMap((item): SessionInboxUser[] => (item.type === "user" && item.delivery === "queue" ? [item] : []))
+    },
+    sameArray,
+  )
+  const revert = freezeValue(viewActive, () => (props.session ? v2.data.session.get(props.session)?.revert : undefined))
   const allMessages = () => {
     const all = props.session ? v2.data.session.message.list(props.session) : []
     const ids = new Set(queued().map((item) => item.id))
     return ids.size === 0 ? all : all.filter((message) => !ids.has(message.id))
   }
-  const messages = createMemo(() => visibleMessages(allMessages(), revert()))
-  const revertCount = createMemo(() => revertedCount(allMessages(), revert()))
-  const instructions = createMemo(() => collectInstructionFiles(messages(), v2.directory))
-  const sentReferences = createMemo(() =>
-    messages().flatMap((message) =>
-      message.type === "user"
-        ? (partFeedback(message.metadata, message.text)?.review?.comments.filter(isChatReference) ?? [])
-        : [],
-    ),
+  const messages = freezeMemo(viewActive, () => visibleMessages(allMessages(), revert()).slice(), sameArray)
+  const revertCount = freezeValue(viewActive, () => revertedCount(allMessages(), revert()))
+  const instructions = freezeMemo(viewActive, () => collectInstructionFiles(messages(), v2.directory), sameInstructionFiles)
+  const sentReferences = freezeMemo(
+    viewActive,
+    () =>
+      messages().flatMap((message) =>
+        message.type === "user"
+          ? (partFeedback(message.metadata, message.text)?.review?.comments.filter(isChatReference) ?? [])
+          : [],
+      ),
+    sameArray,
   )
-  const working = () => !!props.session && v2.data.session.status(props.session) === "running"
-  const loadingOlder = () => !!props.session && v2.data.session.message.loading(props.session)
-  // The server always returns a next cursor, so a page shorter than the limit is what proves the start is loaded.
-  const more = () =>
-    !!props.session &&
-    v2.data.session.message.more(props.session) &&
-    !v2.data.session.message.startLoaded(props.session)
+  const working = freezeValue(viewActive, () => !!props.session && v2.data.session.status(props.session) === "running")
+  const loadingOlder = freezeValue(viewActive, () => !!props.session && v2.data.session.message.loading(props.session))
+  const more = freezeValue(
+    viewActive,
+    () =>
+      !!props.session &&
+      v2.data.session.message.more(props.session) &&
+      !v2.data.session.message.startLoaded(props.session),
+  )
   const empty = () => !props.session || (messages().length === 0 && queued().length === 0 && !revert())
   // The open session shows its loader instead of the welcome screen until the first transcript page lands.
   const starting = () =>
@@ -182,11 +185,12 @@ export function MessageList(props: {
   props.onScrollToBottomReady?.(() => autoScroll.resume())
   onCleanup(() => props.onScrollToBottomReady?.(undefined))
 
-  // An instruction load a read card reports is shown there, so its transcript
-  // notice row would repeat the same line. The row is dropped after the rows are
-  // built, so the turn grouping still sees the instruction message.
-  const rows = createMemo<TranscriptRow[]>((previous) =>
-    withoutReportedNotices(transcriptRows(messages(), previous), instructions().reported),
+  // An instruction load a read card reports is shown there, so its transcript notice row would repeat the same line.
+  // Gating on viewActive() catches up in-place store mutations on reactivation while reusing unchanged row objects.
+  const rows = freezeMemo<TranscriptRow[]>(
+    viewActive,
+    (previous) => withoutReportedNotices(transcriptRows(messages(), previous), instructions().reported),
+    sameArray,
   )
   // A run that waits on a permission reports idle while its last step can still
   // change, so an unfinished last step also keeps its turn live.
@@ -209,8 +213,8 @@ export function MessageList(props: {
   const partition = createMemo<TranscriptPartition>((previous) =>
     partitionTranscript(rows(), queued(), direct(), previous),
   )
-  const virtualKeys = createMemo(() => partition().virtualKeys, undefined, { equals: sameKeys })
-  const directKeys = createMemo(() => partition().directKeys, undefined, { equals: sameKeys })
+  const virtualKeys = createMemo(() => partition().virtualKeys, undefined, { equals: sameArray })
+  const directKeys = createMemo(() => partition().directKeys, undefined, { equals: sameArray })
   const lookup = createMemo(() => new Map(rows().map((row) => [row.key, row])))
   // A fork keeps the messages before the chosen one, so a fork at the first user message is an empty session.
   // Only a transcript without older pages proves which user message is the first. A session created in this view
@@ -284,6 +288,7 @@ export function MessageList(props: {
   )
 
   createEffect(() => {
+    if (!viewActive()) return
     const id = pendingRestore()
     if (!id) return
     if (loadingOlder()) return
@@ -629,6 +634,7 @@ export function MessageList(props: {
   const [startMargin, setStartMargin] = createSignal(0)
   let turnsEl: HTMLDivElement | undefined
   const syncStart = () => {
+    if (!viewActive()) return
     const el = scrollEl()
     if (!el || !turnsEl) return
     const next = Math.round(el.scrollTop + turnsEl.getBoundingClientRect().top - el.getBoundingClientRect().top)
@@ -743,10 +749,10 @@ export function MessageList(props: {
   }
   let activeFrame: number | undefined
   const scheduleActive = () => {
-    if (activeFrame !== undefined) return
+    if (!viewActive() || activeFrame !== undefined) return
     activeFrame = requestAnimationFrame(() => {
       activeFrame = undefined
-      trackActive()
+      if (viewActive()) trackActive()
     })
   }
   onCleanup(() => {

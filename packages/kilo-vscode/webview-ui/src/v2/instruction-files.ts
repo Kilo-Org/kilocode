@@ -9,6 +9,16 @@ export type InstructionFiles = {
   reported: Set<string>
 }
 
+export function sameInstructionFiles(left: InstructionFiles, right: InstructionFiles): boolean {
+  if (left.reported.size !== right.reported.size || left.byRead.size !== right.byRead.size) return false
+  for (const id of right.reported) if (!left.reported.has(id)) return false
+  for (const [key, files] of right.byRead) {
+    const prev = left.byRead.get(key)
+    if (!prev || prev.length !== files.length || !prev.every((item, index) => item === files[index])) return false
+  }
+  return true
+}
+
 /**
  * The instruction files each read loaded. The read tool publishes instruction
  * paths on a synthetic message, not on the tool part, so the two are matched by
