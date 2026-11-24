@@ -229,6 +229,7 @@ export const dict = {
   "session.export.success": "Het sessietranscript is geëxporteerd als Markdown.",
   "session.export.error": "Exporteren van sessietranscript mislukt",
   // Herdr pane agent state reports.
-  "tui.herdr.permissionNeedsInput": "Voor de toestemming is invoer nodig",
-  "tui.herdr.inputNeedsResponse": "Op de invoer moet worden gereageerd",
+  "tui.herdr.waitingForPermission": "Wachten op toestemming",
+  "tui.herdr.waitingForAnswer": "Wachten op je antwoord",
+  "tui.herdr.socketPathTooLong": "Statusrapportage aan Herdr is uitgeschakeld omdat HERDR_SOCKET_PATH te lang is.",
 }

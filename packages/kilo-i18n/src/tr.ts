@@ -226,6 +226,7 @@ export const dict = {
   "session.export.success": "Oturum dökümü Markdown olarak dışa aktarıldı.",
   "session.export.error": "Oturum dökümü dışa aktarılamadı",
   // Herdr pane agent state reports.
-  "tui.herdr.permissionNeedsInput": "İzin için giriş gerekiyor",
-  "tui.herdr.inputNeedsResponse": "Girdinin yanıtlanması gerekiyor",
+  "tui.herdr.waitingForPermission": "İzin bekleniyor",
+  "tui.herdr.waitingForAnswer": "Yanıtınız bekleniyor",
+  "tui.herdr.socketPathTooLong": "HERDR_SOCKET_PATH çok uzun olduğu için Herdr durum bildirimi kapalı.",
 }

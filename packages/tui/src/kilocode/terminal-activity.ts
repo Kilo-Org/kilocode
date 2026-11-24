@@ -1,4 +1,5 @@
 import { Plugin } from "@opencode/plugin/tui"
+import { sessionActivity } from "./session-activity"
 
 // kilo_port(cli:fd8272d869ad) activity packets for terminals that ask for them
 
@@ -27,18 +28,14 @@ export function format(state: State, timestamp = Date.now()) {
  * does not.
  */
 export function activity(data: Plugin.Context["data"], sessionID: string): State {
-  const root = data.session.root(sessionID)
-  const members = Array.from(new Set([root, ...data.session.family(root)]))
-  const blocked = members.some(
-    (id) => (data.session.permission.list(id)?.length ?? 0) > 0 || (data.session.form.list(id)?.length ?? 0) > 0,
+  const family = sessionActivity(data, sessionID)
+  if (family.attention) return "waiting"
+  if (
+    family.running.some((id) => data.session.message.list(id).some((item) => item.type === "assistant" && item.retry))
   )
-  if (blocked) return "waiting"
-  const running = members.filter((id) => data.session.status(id) === "running")
-  if (running.some((id) => data.session.message.list(id).some((item) => item.type === "assistant" && item.retry)))
     return "retry"
-  if (running.length > 0) return "busy"
-  if (members.some((id) => data.session.pending.list(id).some((item) => item.type !== "synthetic"))) return "busy"
-  const info = data.session.get(root)
+  if (family.busy) return "busy"
+  const info = data.session.get(family.root)
   if (info?.outcome === "failed") return "error"
   if (info?.outcome === "succeeded") return "done"
   return "idle"

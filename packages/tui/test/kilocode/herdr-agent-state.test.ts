@@ -11,14 +11,18 @@ import {
   buildResumeArgv,
   createReporter,
   createSender,
-  loadHerdrTranslator,
+  replyRejection,
   sendSocketRequest,
+  socketPathTooLong,
   status,
   type HerdrMethod,
   type HerdrReport,
 } from "../../src/kilocode/herdr-agent-state"
 
 type Data = Plugin.Context["data"]
+
+// These tests listen on a unix socket path; Windows serves the same protocol on a named pipe.
+const unix = test.skipIf(process.platform === "win32")
 
 interface Scene {
   roots?: Record<string, string>
@@ -56,35 +60,6 @@ describe("herdr agent state", () => {
     expect(buildResumeArgv("x".repeat(8_200), "kilo")).toBeUndefined()
   })
 
-  test("reports localized blocked state messages", async () => {
-    const translate = await loadHerdrTranslator("de-DE")
-    expect(status(data({ permissions: { ses_1: 1 } }), "ses_1", translate)).toEqual({
-      state: "blocked",
-      sessionID: "ses_1",
-      message: "Die Berechtigung benötigt eine Eingabe",
-    })
-    expect(status(data({ forms: { ses_1: 1 } }), "ses_1", translate)).toEqual({
-      state: "blocked",
-      sessionID: "ses_1",
-      message: "Die Eingabe benötigt eine Antwort",
-    })
-  })
-
-  test("maps traditional Chinese and Brazilian Portuguese locales", async () => {
-    for (const locale of ["zh-Hant", "zh-Hant-TW", "zh-TW"]) {
-      const translate = await loadHerdrTranslator(locale)
-      expect(status(data({ permissions: { ses_1: 1 } }), "ses_1", translate).message).toBe("權限需要輸入")
-      expect(status(data({ forms: { ses_1: 1 } }), "ses_1", translate).message).toBe("輸入需要回應")
-    }
-    const translate = await loadHerdrTranslator("pt-BR")
-    expect(status(data({ permissions: { ses_1: 1 } }), "ses_1", translate).message).toBe(
-      "A permissão precisa de uma entrada",
-    )
-    expect(status(data({ forms: { ses_1: 1 } }), "ses_1", translate).message).toBe(
-      "A entrada precisa de uma resposta",
-    )
-  })
-
   test("reports idle without a session", () => {
     expect(status(data(), undefined)).toEqual({ state: "idle" })
   })
@@ -119,12 +94,29 @@ describe("herdr agent state", () => {
     expect(status(data({ permissions: { ses_1: 1 } }), "ses_1")).toEqual({
       state: "blocked",
       sessionID: "ses_1",
-      message: dict["tui.herdr.permissionNeedsInput"],
+      message: dict["tui.herdr.waitingForPermission"],
     })
     expect(status(data({ family: { ses_1: ["ses_1", "ses_2"] }, forms: { ses_2: 1 } }), "ses_1")).toEqual({
       state: "blocked",
       sessionID: "ses_1",
-      message: dict["tui.herdr.inputNeedsResponse"],
+      message: dict["tui.herdr.waitingForAnswer"],
+    })
+  })
+
+  test("blocked takes precedence over a running member of the same family", () => {
+    const family = { ses_1: ["ses_1", "ses_2"] }
+    expect(status(data({ family, permissions: { ses_2: 1 }, status: { ses_1: "running" } }), "ses_1")).toEqual({
+      state: "blocked",
+      sessionID: "ses_1",
+      message: dict["tui.herdr.waitingForPermission"],
+    })
+    expect(
+      status(data({ family, forms: { ses_1: 1 }, status: { ses_2: "running" }, permissions: { ses_2: 1 } }), "ses_1"),
+    ).toEqual({ state: "blocked", sessionID: "ses_1", message: dict["tui.herdr.waitingForPermission"] })
+    expect(status(data({ family, forms: { ses_1: 1 }, status: { ses_2: "running" } }), "ses_1")).toEqual({
+      state: "blocked",
+      sessionID: "ses_1",
+      message: dict["tui.herdr.waitingForAnswer"],
     })
   })
 
@@ -134,7 +126,7 @@ describe("herdr agent state", () => {
         method: "pane.report_agent",
         paneID: "wE:p5",
         seq: 42,
-        report: { state: "blocked", sessionID: "ses_1", message: dict["tui.herdr.permissionNeedsInput"] },
+        report: { state: "blocked", sessionID: "ses_1", message: dict["tui.herdr.waitingForPermission"] },
         command: "kilo2",
       }),
     ).toEqual({
@@ -148,7 +140,7 @@ describe("herdr agent state", () => {
         state: "blocked",
         agent_session_id: "ses_1",
         resume_argv: ["kilo2", "--session", "ses_1"],
-        message: dict["tui.herdr.permissionNeedsInput"],
+        message: dict["tui.herdr.waitingForPermission"],
       },
     })
 
@@ -246,6 +238,86 @@ describe("herdr agent state", () => {
     expect(sent).toEqual([1_000_001, 1_000_002, 1_000_003])
   })
 
+  test("retries a failed send on its own, without another state change", async () => {
+    const sent: number[] = []
+    const delivered = Promise.withResolvers<void>()
+    const reporter = createReporter({
+      data: data({ status: { ses_1: "running" } }),
+      session: () => "ses_1",
+      send: (_method, seq) => {
+        sent.push(seq)
+        if (sent.length === 3) delivered.resolve()
+        return Promise.resolve(sent.length === 3)
+      },
+      now: () => 1_000,
+      retryMs: 1,
+    })
+
+    reporter.tick()
+    await delivered.promise
+    await Bun.sleep(10)
+    expect(sent).toEqual([1_000_001, 1_000_002, 1_000_003])
+  })
+
+  test("stops retrying once released", async () => {
+    const sent: string[] = []
+    const reporter = createReporter({
+      data: data({ status: { ses_1: "running" } }),
+      session: () => "ses_1",
+      send: (method) => {
+        sent.push(method)
+        return Promise.resolve(false)
+      },
+      now: () => 1_000,
+      retryMs: 1,
+    })
+
+    reporter.tick()
+    await reporter.stop()
+    await Bun.sleep(10)
+    reporter.tick()
+    expect(sent).toEqual(["pane.report_agent", "pane.release_agent"])
+  })
+
+  test("reads a rejection out of a Herdr reply line", () => {
+    expect(replyRejection('{"id":"kilo:1","result":{"type":"ok"}}')).toBeUndefined()
+    expect(
+      replyRejection('{"id":"kilo:1","error":{"code":"pane_not_found","message":"pane w9:p9 not found"}}'),
+    ).toBe("pane_not_found: pane w9:p9 not found")
+    expect(replyRejection('{"id":"kilo:1","error":{}}')).toBe("rejected")
+    expect(replyRejection("not json")).toBe("malformed reply")
+  })
+
+  test("flags socket paths that do not fit sun_path", () => {
+    expect(socketPathTooLong("/tmp/herdr.sock", "darwin")).toBe(false)
+    expect(socketPathTooLong("x".repeat(103), "darwin")).toBe(false)
+    expect(socketPathTooLong("x".repeat(104), "darwin")).toBe(true)
+    expect(socketPathTooLong("x".repeat(107), "linux")).toBe(false)
+    expect(socketPathTooLong("x".repeat(108), "linux")).toBe(true)
+    expect(socketPathTooLong("é".repeat(52), "darwin")).toBe(true)
+    expect(socketPathTooLong("x".repeat(300), "win32")).toBe(false)
+  })
+
+  unix("reports a rejected request once it is answered", async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "herdr-reject-"))
+    const socketPath = path.join(dir, "herdr.sock")
+    const server = net.createServer((socket) => {
+      socket.on("data", () => {
+        socket.write('{"id":"kilo:1","error":{"code":"invalid_res')
+        socket.write('ume_argv","message":"bad argv"}}\n')
+      })
+    })
+    await new Promise<void>((resolve) => server.listen(socketPath, resolve))
+    try {
+      const rejected: string[] = []
+      expect(await sendSocketRequest(socketPath, "{}", 500, (reason) => rejected.push(reason))).toBe(true)
+      expect(rejected).toEqual(["invalid_resume_argv: bad argv"])
+    } finally {
+      server.close()
+      await fs.rm(dir, { recursive: true, force: true })
+    }
+  })
+
   test("does not resend a state while its send is still in flight", async () => {
     const sent: number[] = []
     const pending = Promise.withResolvers<boolean>()
@@ -279,7 +351,7 @@ describe("herdr agent state", () => {
     }
   })
 
-  test("sends newline-delimited JSON over a unix socket", async () => {
+  unix("sends newline-delimited JSON over a unix socket", async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "herdr-test-"))
     const socketPath = path.join(dir, "herdr.sock")
     const received: string[] = []
@@ -300,7 +372,7 @@ describe("herdr agent state", () => {
     }
   })
 
-  test("sendSocketRequest times out when the server never replies", async () => {
+  unix("sendSocketRequest times out when the server never replies", async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "herdr-timeout-"))
     const socketPath = path.join(dir, "herdr.sock")
     const sockets = new Set<net.Socket>()
@@ -340,7 +412,7 @@ describe("herdr agent state", () => {
     const firstResult = send("pane.report_agent", 1, { state: "working", sessionID: "ses_1" })
     await started.promise
     const replaced = [
-      send("pane.report_agent", 2, { state: "blocked", sessionID: "ses_1", message: dict["tui.herdr.permissionNeedsInput"] }),
+      send("pane.report_agent", 2, { state: "blocked", sessionID: "ses_1", message: dict["tui.herdr.waitingForPermission"] }),
       send("pane.report_agent", 3, { state: "idle", sessionID: "ses_1" }),
     ]
     const release = send("pane.release_agent", 4)
@@ -369,14 +441,14 @@ describe("herdr agent state", () => {
 
     const hungResult = send("pane.report_agent", 1, { state: "working", sessionID: "ses_1" })
     send("pane.report_agent", 2, { state: "idle", sessionID: "ses_1" })
-    const latest = send("pane.report_agent", 3, { state: "blocked", sessionID: "ses_1", message: dict["tui.herdr.inputNeedsResponse"] })
+    const latest = send("pane.report_agent", 3, { state: "blocked", sessionID: "ses_1", message: dict["tui.herdr.waitingForAnswer"] })
 
     expect(await hungResult).toBe(false)
     expect(await latest).toBe(true)
     expect(sent).toEqual([1, 3])
   })
 
-  test("waits for report and release timeouts before subprocess exit", async () => {
+  unix("waits for report and release timeouts before subprocess exit", async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "herdr-shutdown-"))
     const socketPath = path.join(dir, "herdr.sock")
     const sockets = new Set<net.Socket>()
@@ -404,7 +476,7 @@ describe("herdr agent state", () => {
     const modulePath = fileURLToPath(new URL("../../src/kilocode/herdr-agent-state.ts", import.meta.url))
     const script = [
       `import { createReporter, createSender, sendSocketRequest } from ${JSON.stringify(modulePath)}`,
-      `const send = createSender({ paneID: "w1:p1", transport: (payload) => sendSocketRequest(${JSON.stringify(socketPath)}, payload) })`,
+      `const send = createSender({ paneID: "w1:p1", timeoutMs: 100, transport: (payload) => sendSocketRequest(${JSON.stringify(socketPath)}, payload, 100) })`,
       `const reporter = createReporter({`,
       `  data: { session: {`,
       `    root: (id) => id, family: () => [], status: () => "running",`,
@@ -440,7 +512,8 @@ describe("herdr agent state", () => {
       ])
       const elapsed = performance.now() - started
       expect({ stderr, exit }).toEqual({ stderr: "", exit: 0 })
-      expect(Number(stdout)).toBeGreaterThanOrEqual(750)
+      // Two injected 100 ms send timeouts: the unanswered report, then the unanswered release.
+      expect(Number(stdout)).toBeGreaterThanOrEqual(150)
       expect(Number(stdout)).toBeLessThan(2_000)
       expect(elapsed).toBeLessThan(2_500)
       expect(requests.map((request) => JSON.parse(request).method)).toEqual([

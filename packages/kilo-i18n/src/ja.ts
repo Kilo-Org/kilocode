@@ -222,6 +222,7 @@ export const dict = {
   "session.export.success": "セッション記録を Markdown としてエクスポートしました。",
   "session.export.error": "セッション記録をエクスポートできませんでした",
   // Herdr pane agent state reports.
-  "tui.herdr.permissionNeedsInput": "権限の入力が必要です",
-  "tui.herdr.inputNeedsResponse": "入力への応答が必要です",
+  "tui.herdr.waitingForPermission": "許可を待機中",
+  "tui.herdr.waitingForAnswer": "回答を待機中",
+  "tui.herdr.socketPathTooLong": "HERDR_SOCKET_PATH が長すぎるため、Herdr へのステータス報告は無効です。",
 }

@@ -226,6 +226,7 @@ export const dict = {
   "session.export.success": "Запис сеансу експортовано у форматі Markdown.",
   "session.export.error": "Не вдалося експортувати запис сеансу",
   // Herdr pane agent state reports.
-  "tui.herdr.permissionNeedsInput": "Для дозволу потрібне введення",
-  "tui.herdr.inputNeedsResponse": "Потрібна відповідь на введення",
+  "tui.herdr.waitingForPermission": "Очікування дозволу",
+  "tui.herdr.waitingForAnswer": "Очікування вашої відповіді",
+  "tui.herdr.socketPathTooLong": "Надсилання стану до Herdr вимкнено: значення HERDR_SOCKET_PATH задовге.",
 }

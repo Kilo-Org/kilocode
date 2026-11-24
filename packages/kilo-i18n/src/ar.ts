@@ -217,6 +217,7 @@ export const dict = {
   "session.export.success": "تم تصدير سجل الجلسة بتنسيق Markdown.",
   "session.export.error": "فشل تصدير سجل الجلسة",
   // Herdr pane agent state reports.
-  "tui.herdr.permissionNeedsInput": "يتطلب الإذن إدخالاً",
-  "tui.herdr.inputNeedsResponse": "يتطلب الإدخال استجابةً",
+  "tui.herdr.waitingForPermission": "في انتظار الإذن",
+  "tui.herdr.waitingForAnswer": "في انتظار إجابتك",
+  "tui.herdr.socketPathTooLong": "إبلاغ Herdr بالحالة معطّل لأن HERDR_SOCKET_PATH طويل جداً.",
 }

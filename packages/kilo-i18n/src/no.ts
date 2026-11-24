@@ -224,6 +224,7 @@ export const dict = {
   "session.export.success": "Sesjonsutskriften ble eksportert som Markdown.",
   "session.export.error": "Eksport av sesjonsutskrift mislyktes",
   // Herdr pane agent state reports.
-  "tui.herdr.permissionNeedsInput": "Tillatelsen krever inndata",
-  "tui.herdr.inputNeedsResponse": "Inndata krever et svar",
+  "tui.herdr.waitingForPermission": "Venter på tillatelse",
+  "tui.herdr.waitingForAnswer": "Venter på svaret ditt",
+  "tui.herdr.socketPathTooLong": "Statusrapportering til Herdr er slått av fordi HERDR_SOCKET_PATH er for lang.",
 }
