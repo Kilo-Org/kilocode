@@ -899,6 +899,17 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
     }
 
     fun testCurrentSessionIsReobservedAfterSignInRestoresTheGate() {
+        // The signed-out wait below treats `active == 0` as proof that the gate reset cancelled the
+        // session's feed. That reading only holds if a feed existed: on a loaded runner setUp's
+        // session panel can mount before its load-then-observe chain finishes, and then the
+        // signed-out refresh would race the still-running sign-in path instead of following it.
+        // Wait for the feed the sign-in path leaves behind before reading the reset.
+        val mounted = coroutines.pumpUntil { rpc.collectors == 1 && rpc.active == 1 }
+
+        assertTrue(
+            "setUp must leave exactly one live system-events feed; collectors=${rpc.collectors} active=${rpc.active}",
+            mounted,
+        )
         val initial = rpc.collectors
         rpc.list = HostedWorkspaceListDto(signedOut = true)
         hosted.refresh("/signed-out")
@@ -1103,8 +1114,8 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
     }
 
     private class FakeHosted(private val ref: HostedWorkspaceRefDto) : KiloHostedRpcApi {
-        var workspaceChangesCalls = 0
-        var refreshWorkspaceChangesCalls = 0
+        @Volatile var workspaceChangesCalls = 0
+        @Volatile var refreshWorkspaceChangesCalls = 0
         var changes = HostedWorkspaceChangesDto(ref, "captured", 1, "2026-11-18T00:00:00Z", false, listOf(
             HostedWorkspaceChangeComparisonDto(null, HostedWorkspaceComparisonDto("origin/main", "a".repeat(40), "b".repeat(40)), false,
                 listOf(change("base-a.kt", "against-base-branch", 4, 1),
@@ -1125,11 +1136,14 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
         override suspend fun refreshWorkspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
 
         val events = MutableSharedFlow<HostedSystemEventDto>(replay = 16)
-        var collectors = 0
-        var active = 0
-        var workspaceCalls = 0
-        var statusCalls = 0
-        var starts = 0
+        // Written by the collecting coroutine and read by the test thread's waits and assertions, so
+        // they must be volatile: a plain field may legally be cached by the waiting loop's JIT-compiled
+        // predicate.
+        @Volatile var collectors = 0
+        @Volatile var active = 0
+        @Volatile var workspaceCalls = 0
+        @Volatile var statusCalls = 0
+        @Volatile var starts = 0
         var gate: CompletableDeferred<Unit>? = null
         var name: String? = null
         var deletionState = "active"

@@ -947,6 +947,24 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals(main.path, file.path.params["path"])
     }
 
+    fun `test a duplicate primary checkout row renders once and deletion still syncs`() {
+        val primary = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        val stale = primary.copy(main = false)
+        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        rpc.listed += listOf(primary, stale, item)
+        val controller = WorktreeController(service, "/repo", coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+
+        assertEquals(listOf(primary.id, item.id), roots(tree(panel)))
+
+        edt { controller.remove(item) }
+        flush()
+
+        assertEquals(listOf(primary.id), roots(tree(panel)))
+    }
+
     fun `test refresh preserves selected worktree across model replace`() {
         val first = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
         val second = WorktreeDto("/repo/.kilo/worktrees/feature-y", "feature-y", "feature/y", "/repo/.kilo/worktrees/feature-y")
@@ -1689,6 +1707,12 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         edt { controller.reload() }
         timers.advanceBy(300)
         flush()
+        // The debounce fires the dirty poll, but its answer reaches the row through the status
+        // service's own coroutine and an EDT hop, so a fixed drain can finish before the counts do.
+        waitUntil {
+            val metrics = row(panel, 0).metrics
+            metrics?.localFiles == 3 && metrics.localAdditions == 2 && metrics.localDeletions == 1
+        }
 
         edt {
             val view = tree(panel)

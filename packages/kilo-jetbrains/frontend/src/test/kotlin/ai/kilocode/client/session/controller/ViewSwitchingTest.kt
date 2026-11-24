@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.controller
 
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.rpc.dto.ChatEventDto
@@ -7,10 +8,12 @@ import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
+import ai.kilocode.rpc.dto.LoadErrorDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ProfileBalanceDto
 import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.ProfileOrganizationDto
+import ai.kilocode.rpc.dto.ProfileSyncDto
 import ai.kilocode.rpc.dto.SessionChangeKindDto
 import kotlinx.coroutines.CompletableDeferred
 
@@ -596,6 +599,44 @@ class ViewSwitchingTest : SessionControllerTestBase() {
         assertTrue(show.account.switching)
         assertNull(show.account.targetOrgId)
         assertEquals(null, appRpc.orgSelections.last())
+    }
+
+    fun `test failed organization switch clears the switching overlay and offers the account settings`() {
+        projectRpc.state.value = workspaceReady()
+        rpc.recent.add(session("ses_1"))
+        appRpc.state.value = KiloAppStateDto(
+            KiloAppStatusDto.READY,
+            profile = ProfileDto(
+                email = "user@example.com",
+                organizations = listOf(ProfileOrganizationDto("org_1", "Kilo", "OWNER")),
+            ),
+        )
+        val m = controller()
+        val events = collect(m)
+        flush()
+        events.clear()
+
+        appRpc.organizationResult = ProfileSyncDto(error = LoadErrorDto(resource = "profile", status = 500))
+        edt { m.selectOrganization("org_1") }
+        flush()
+
+        val shows = events.filterIsInstance<SessionControllerEvent.AccountOverlayChanged.Show>()
+        assertTrue(shows.isNotEmpty())
+        assertEquals(false, shows.last().account.switching)
+        assertNull(shows.last().account.targetOrgId)
+        assertEquals(listOf<String?>("org_1"), appRpc.orgSelections)
+
+        // The picker reverted, so the overlay says why and points at the page that can retry.
+        val note = actionNotifications.single().first
+        assertEquals(KiloBundle.message("profile.notice.switchUnavailable"), note.first)
+        assertNull(note.second)
+        assertEquals(KiloBundle.message("profile.action.accountSettings"), note.third)
+        assertTrue("the switch must not raise an error balloon", notifications.isEmpty())
+        edt { actionNotifications.single().second() }
+        assertTrue(
+            "the action must open the profile settings",
+            appRpc.telemetry.any { it.event == "Profile Settings Opened" && it.properties["surface"] == "session_overlay" },
+        )
     }
 
     fun `test replay includes current overlay event`() {

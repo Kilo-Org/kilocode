@@ -490,7 +490,27 @@ function normalizeAbsolutePath(input: string): string {
 
 /** Whether `abs` is the workspace root or lives under it (both already normalized). */
 function isInsideWorkspace(abs: string, dir: string): boolean {
-  return abs === dir || abs.startsWith(`${dir}/`)
+  // A bare root already ends in its separator ("/", "//", "C:/"), so appending
+  // another would ask for a "//" prefix that no path under "/" has.
+  return abs === dir || abs.startsWith(dir.endsWith("/") ? dir : `${dir}/`)
+}
+
+/**
+ * Resolve the workspace root once: forward slashes, collapsed "." and ".."
+ * segments, and no trailing slash except on a bare root ("/", "//", "C:/"),
+ * which must stay non-empty so it still names the filesystem root.
+ *
+ * Returns "" for a root that names nothing (an empty or relative value), which
+ * `buildFileAttachments` treats as unknown.
+ */
+function resolveWorkspaceRoot(input: string): string {
+  const path = normalizeAbsolutePath(input.replaceAll("\\", "/"))
+  const drive = path.match(/^[A-Za-z]:/)?.[0] ?? ""
+  const rest = path.slice(drive.length)
+  if (!rest.startsWith("/")) return ""
+  const root = `${drive}${rest.startsWith("//") ? "//" : "/"}`
+  if (path === root) return path
+  return path.replace(/\/+$/, "")
 }
 
 /**
@@ -506,6 +526,10 @@ function isInsideWorkspace(abs: string, dir: string): boolean {
  * resolved path (relative or absolute) is normalized before the containment
  * check so a "../" sequence can't slip past a literal string-prefix match.
  *
+ * An unknown workspace root fails closed: with no root to compare against,
+ * nothing can be shown to live inside the workspace, so no mention becomes an
+ * attachment. The mentions still render.
+ *
  * Includes source.text position data so the message renderer can highlight
  * the full mention span (including paths with spaces or non-ASCII characters)
  * without falling back to the regex-based detection that stops at spaces.
@@ -515,13 +539,14 @@ export function buildFileAttachments(
   mentionedPaths: Set<string>,
   workspaceDir: string,
 ): FileAttachment[] {
+  const dir = resolveWorkspaceRoot(workspaceDir)
+  if (!dir) return []
   const result: FileAttachment[] = []
-  const dir = normalizeAbsolutePath(workspaceDir.replaceAll("\\", "/")).replace(/\/+$/, "")
   for (const path of mentionedPaths) {
     const token = `@${path}`
     const idx = text.indexOf(token)
     if (idx !== -1) {
-      const raw = isAbsolutePath(path) ? path.replaceAll("\\", "/") : `${dir}/${path}`
+      const raw = isAbsolutePath(path) ? path.replaceAll("\\", "/") : `${dir.endsWith("/") ? dir : `${dir}/`}${path}`
       const abs = normalizeAbsolutePath(raw)
       if (!isInsideWorkspace(abs, dir)) continue
       const url = new URL("file://")

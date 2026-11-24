@@ -314,6 +314,7 @@ describe("GoogleVertexPlugin", () => {
     ),
   )
 
+  // kilocode_change start - the ADC token goes only to a Vertex endpoint host
   it.effect("keeps Google auth fetch for OpenAI-compatible Vertex endpoints", () =>
     Effect.gen(function* () {
       googleAuthOptions.length = 0
@@ -326,7 +327,7 @@ describe("GoogleVertexPlugin", () => {
           if (evt.model.providerID !== "google-vertex") return
           if (evt.package !== "@ai-sdk/openai-compatible") return
           expect(typeof evt.options.fetch).toBe("function")
-          await evt.options.fetch("https://vertex.example", {
+          await evt.options.fetch("https://us-central1-aiplatform.googleapis.com/v1/projects/p/locations/us-central1", {
             headers: { "x-test": "1" },
           })
         }),
@@ -361,11 +362,394 @@ describe("GoogleVertexPlugin", () => {
       )
       expect(fetchCalls).toHaveLength(1)
       expect(googleAuthOptions).toEqual([{ scopes: ["https://www.googleapis.com/auth/cloud-platform"] }])
-      expect(fetchCalls[0].input).toBe("https://vertex.example")
+      expect(fetchCalls[0].input).toBe(
+        "https://us-central1-aiplatform.googleapis.com/v1/projects/p/locations/us-central1",
+      )
       expect(new Headers(fetchCalls[0].init?.headers).get("authorization")).toBe("Bearer vertex-token")
       expect(new Headers(fetchCalls[0].init?.headers).get("x-test")).toBe("1")
     }),
   )
+
+  it.effect("sends the Google access token only to a Vertex API host", () =>
+    Effect.gen(function* () {
+      googleAuthOptions.length = 0
+      const fetchCalls: { input: Parameters<typeof fetch>[0]; init?: RequestInit }[] = []
+      const plugin = yield* PluginV2.Service
+      const aisdk = yield* AISDK.Service
+      yield* addPlugin()
+      yield* aisdk.hook.sdk((evt) =>
+        Effect.promise(async () => {
+          if (evt.model.providerID !== "google-vertex") return
+          if (evt.package !== "@ai-sdk/openai-compatible") return
+          await evt.options.fetch("https://proxy.example/v1/projects/p/locations/us-central1", {
+            headers: { "x-test": "1" },
+          })
+        }),
+      )
+      const originalFetch = fetch
+      ;(globalThis as typeof globalThis & { fetch: typeof fetch }).fetch = (async (
+        input: Parameters<typeof fetch>[0],
+        init?: RequestInit,
+      ) => {
+        fetchCalls.push({ input, init })
+        return new Response("ok")
+      }) as typeof fetch
+      yield* Effect.acquireUseRelease(
+        Effect.void,
+        () =>
+          aisdk.runSDK({
+            model: ModelV2.Info.make({
+              ...ModelV2.Info.empty(ProviderV2.ID.make("google-vertex"), ModelV2.ID.make("gemini")),
+              api: {
+                id: ModelV2.ID.make("gemini"),
+                type: "aisdk",
+                package: "@ai-sdk/openai-compatible",
+              },
+            }),
+            package: "@ai-sdk/openai-compatible",
+            options: { name: "google-vertex" },
+          }),
+        () =>
+          Effect.sync(() => {
+            ;(globalThis as typeof globalThis & { fetch: typeof fetch }).fetch = originalFetch
+          }),
+      )
+      expect(fetchCalls).toHaveLength(1)
+      expect(googleAuthOptions).toEqual([])
+      expect(new Headers(fetchCalls[0].init?.headers).get("authorization")).toBeNull()
+      expect(new Headers(fetchCalls[0].init?.headers).get("x-test")).toBe("1")
+    }),
+  )
+
+  it.effect("sends the Google access token to a Vertex mTLS host", () =>
+    Effect.gen(function* () {
+      googleAuthOptions.length = 0
+      const fetchCalls: { input: Parameters<typeof fetch>[0]; init?: RequestInit }[] = []
+      const plugin = yield* PluginV2.Service
+      const aisdk = yield* AISDK.Service
+      yield* addPlugin()
+      yield* aisdk.hook.sdk((evt) =>
+        Effect.promise(async () => {
+          if (evt.model.providerID !== "google-vertex") return
+          if (evt.package !== "@ai-sdk/openai-compatible") return
+          await evt.options.fetch(
+            "https://us-central1-aiplatform.mtls.googleapis.com/v1/projects/p/locations/us-central1",
+            {
+              headers: { "x-test": "1" },
+            },
+          )
+        }),
+      )
+      const originalFetch = fetch
+      ;(globalThis as typeof globalThis & { fetch: typeof fetch }).fetch = (async (
+        input: Parameters<typeof fetch>[0],
+        init?: RequestInit,
+      ) => {
+        fetchCalls.push({ input, init })
+        return new Response("ok")
+      }) as typeof fetch
+      yield* Effect.acquireUseRelease(
+        Effect.void,
+        () =>
+          aisdk.runSDK({
+            model: ModelV2.Info.make({
+              ...ModelV2.Info.empty(ProviderV2.ID.make("google-vertex"), ModelV2.ID.make("gemini")),
+              api: {
+                id: ModelV2.ID.make("gemini"),
+                type: "aisdk",
+                package: "@ai-sdk/openai-compatible",
+              },
+            }),
+            package: "@ai-sdk/openai-compatible",
+            options: { name: "google-vertex" },
+          }),
+        () =>
+          Effect.sync(() => {
+            ;(globalThis as typeof globalThis & { fetch: typeof fetch }).fetch = originalFetch
+          }),
+      )
+      expect(fetchCalls).toHaveLength(1)
+      expect(googleAuthOptions).toEqual([{ scopes: ["https://www.googleapis.com/auth/cloud-platform"] }])
+      expect(new Headers(fetchCalls[0].init?.headers).get("authorization")).toBe("Bearer vertex-token")
+      expect(new Headers(fetchCalls[0].init?.headers).get("x-test")).toBe("1")
+    }),
+  )
+
+  it.effect("requires a Google Cloud region for the OpenAI-compatible Vertex location", () =>
+    Effect.gen(function* () {
+      const plugin = yield* PluginV2.Service
+      const aisdk = yield* AISDK.Service
+      yield* addPlugin()
+      const exit = yield* aisdk
+        .runSDK({
+          model: ModelV2.Info.make({
+            ...ModelV2.Info.empty(ProviderV2.ID.make("google-vertex"), ModelV2.ID.make("gemini")),
+            api: {
+              id: ModelV2.ID.make("gemini"),
+              type: "aisdk",
+              package: "@ai-sdk/openai-compatible",
+            },
+            request: { headers: {}, body: { location: "proxy.example/x" } },
+          }),
+          package: "@ai-sdk/openai-compatible",
+          options: { name: "google-vertex", location: "proxy.example/x" },
+        })
+        .pipe(Effect.exit)
+      expect(exit._tag).toBe("Failure")
+      expect(String(exit)).toContain("Invalid Google Vertex location")
+    }),
+  )
+
+  it.effect("requires a Google Cloud region for the native Vertex location", () =>
+    withEnv({ GOOGLE_VERTEX_PROJECT: undefined, GOOGLE_CLOUD_PROJECT: "p" }, () =>
+      Effect.gen(function* () {
+        vertexOptions.length = 0
+        const plugin = yield* PluginV2.Service
+        const aisdk = yield* AISDK.Service
+        yield* addPlugin()
+        const exit = yield* aisdk
+          .runSDK({
+            model: ModelV2.Info.make({
+              ...ModelV2.Info.empty(ProviderV2.ID.make("google-vertex"), ModelV2.ID.make("gemini")),
+              api: {
+                id: ModelV2.ID.make("gemini"),
+                type: "aisdk",
+                package: "@ai-sdk/google-vertex",
+              },
+            }),
+            package: "@ai-sdk/google-vertex",
+            options: { project: "p", location: "https://proxy.example" },
+          })
+          .pipe(Effect.exit)
+        expect(exit._tag).toBe("Failure")
+        expect(vertexOptions).toHaveLength(0)
+      }),
+    ),
+  )
+
+  it.effect("requires a Google Cloud region when the OpenAI-compatible endpoint comes from the catalog", () =>
+    Effect.gen(function* () {
+      const plugin = yield* PluginV2.Service
+      const aisdk = yield* AISDK.Service
+      yield* addPlugin()
+      const exit = yield* aisdk
+        .language(
+          ModelV2.Info.make({
+            ...ModelV2.Info.empty(ProviderV2.ID.make("google-vertex"), ModelV2.ID.make("gemini")),
+            api: {
+              id: ModelV2.ID.make("gemini"),
+              type: "aisdk",
+              package: "@ai-sdk/openai-compatible",
+              url: "https://${GOOGLE_VERTEX_ENDPOINT}/v1/projects/${GOOGLE_VERTEX_PROJECT}/locations/${GOOGLE_VERTEX_LOCATION}",
+            },
+            request: { headers: {}, body: { project: "p", location: "proxy.example/x" } },
+          }),
+        )
+        .pipe(Effect.exit)
+      expect(exit._tag).toBe("Failure")
+      expect(String(exit)).toContain("Invalid Google Vertex location")
+    }),
+  )
+
+  it.effect("requires a Google Cloud region when the native Vertex endpoint comes from the catalog", () =>
+    Effect.gen(function* () {
+      vertexOptions.length = 0
+      const plugin = yield* PluginV2.Service
+      const aisdk = yield* AISDK.Service
+      yield* addPlugin()
+      const exit = yield* aisdk
+        .language(
+          ModelV2.Info.make({
+            ...ModelV2.Info.empty(ProviderV2.ID.make("google-vertex"), ModelV2.ID.make("gemini")),
+            api: {
+              id: ModelV2.ID.make("gemini"),
+              type: "aisdk",
+              package: "@ai-sdk/google-vertex",
+              url: "https://${GOOGLE_VERTEX_ENDPOINT}/v1/projects/${GOOGLE_VERTEX_PROJECT}/locations/${GOOGLE_VERTEX_LOCATION}",
+            },
+            request: { headers: {}, body: { project: "p", location: "proxy.example/x" } },
+          }),
+        )
+        .pipe(Effect.exit)
+      expect(exit._tag).toBe("Failure")
+      expect(String(exit)).toContain("Invalid Google Vertex location")
+      expect(vertexOptions).toHaveLength(0)
+    }),
+  )
+
+  it.effect("uses an explicit non-Vertex endpoint without validating the OpenAI-compatible location", () =>
+    Effect.gen(function* () {
+      const plugin = yield* PluginV2.Service
+      const aisdk = yield* AISDK.Service
+      yield* addPlugin()
+      const result = yield* aisdk.runSDK({
+        model: ModelV2.Info.make({
+          ...ModelV2.Info.empty(ProviderV2.ID.make("google-vertex"), ModelV2.ID.make("gemini")),
+          api: {
+            id: ModelV2.ID.make("gemini"),
+            type: "aisdk",
+            package: "@ai-sdk/openai-compatible",
+          },
+        }),
+        package: "@ai-sdk/openai-compatible",
+        options: { name: "google-vertex", baseURL: "https://proxy.example/v1", location: "proxy.example/x" },
+      })
+      expect(result.options.location).toBe("proxy.example/x")
+    }),
+  )
+
+  it.effect("uses an explicit non-Vertex endpoint without validating the native Vertex location", () =>
+    Effect.gen(function* () {
+      vertexOptions.length = 0
+      const plugin = yield* PluginV2.Service
+      const aisdk = yield* AISDK.Service
+      yield* addPlugin()
+      yield* aisdk.runSDK({
+        model: ModelV2.Info.make({
+          ...ModelV2.Info.empty(ProviderV2.ID.make("google-vertex"), ModelV2.ID.make("gemini")),
+          api: {
+            id: ModelV2.ID.make("gemini"),
+            type: "aisdk",
+            package: "@ai-sdk/google-vertex",
+          },
+        }),
+        package: "@ai-sdk/google-vertex",
+        options: { name: "google-vertex", baseURL: "https://proxy.example/v1", location: "proxy.example/x" },
+      })
+      expect(vertexOptions).toHaveLength(1)
+      expect(vertexOptions[0].location).toBe("proxy.example/x")
+    }),
+  )
+
+  it.effect("uses a concrete Vertex endpoint without validating the OpenAI-compatible location", () =>
+    Effect.gen(function* () {
+      const plugin = yield* PluginV2.Service
+      const aisdk = yield* AISDK.Service
+      yield* addPlugin()
+      const baseURL = "https://us-central1-aiplatform.googleapis.com/v1/projects/p/locations/us-central1"
+      const result = yield* aisdk.runSDK({
+        model: ModelV2.Info.make({
+          ...ModelV2.Info.empty(ProviderV2.ID.make("google-vertex"), ModelV2.ID.make("gemini")),
+          api: {
+            id: ModelV2.ID.make("gemini"),
+            type: "aisdk",
+            package: "@ai-sdk/openai-compatible",
+          },
+        }),
+        package: "@ai-sdk/openai-compatible",
+        options: { name: "google-vertex", baseURL, location: "proxy.example/x" },
+      })
+      expect(result.options.baseURL).toBe(baseURL)
+      expect(result.options.location).toBe("proxy.example/x")
+    }),
+  )
+
+  it.effect("uses a concrete Vertex endpoint without validating the native Vertex location", () =>
+    Effect.gen(function* () {
+      vertexOptions.length = 0
+      const plugin = yield* PluginV2.Service
+      const aisdk = yield* AISDK.Service
+      yield* addPlugin()
+      yield* aisdk.runSDK({
+        model: ModelV2.Info.make({
+          ...ModelV2.Info.empty(ProviderV2.ID.make("google-vertex"), ModelV2.ID.make("gemini")),
+          api: {
+            id: ModelV2.ID.make("gemini"),
+            type: "aisdk",
+            package: "@ai-sdk/google-vertex",
+          },
+        }),
+        package: "@ai-sdk/google-vertex",
+        options: {
+          name: "google-vertex",
+          baseURL: "https://us-central1-aiplatform.googleapis.com/v1/projects/p/locations/us-central1",
+          location: "proxy.example/x",
+        },
+      })
+      expect(vertexOptions).toHaveLength(1)
+      expect(vertexOptions[0].location).toBe("proxy.example/x")
+    }),
+  )
+
+  it.effect("treats a blank OpenAI-compatible endpoint as unset and resolves the region", () =>
+    withEnv(
+      { GOOGLE_VERTEX_LOCATION: "europe-west4", GOOGLE_CLOUD_LOCATION: undefined, VERTEX_LOCATION: undefined },
+      () =>
+        Effect.gen(function* () {
+          const plugin = yield* PluginV2.Service
+          const aisdk = yield* AISDK.Service
+          yield* addPlugin()
+          const result = yield* aisdk.runSDK({
+            model: ModelV2.Info.make({
+              ...ModelV2.Info.empty(ProviderV2.ID.make("google-vertex"), ModelV2.ID.make("gemini")),
+              api: {
+                id: ModelV2.ID.make("gemini"),
+                type: "aisdk",
+                package: "@ai-sdk/openai-compatible",
+              },
+            }),
+            package: "@ai-sdk/openai-compatible",
+            options: { name: "google-vertex", baseURL: "   " },
+          })
+          expect("baseURL" in result.options).toBe(false)
+          expect(result.options.location).toBe("europe-west4")
+        }),
+    ),
+  )
+
+  it.effect("treats a blank native Vertex endpoint as unset and resolves the region", () =>
+    withEnv(
+      { GOOGLE_VERTEX_LOCATION: "europe-west4", GOOGLE_CLOUD_LOCATION: undefined, VERTEX_LOCATION: undefined },
+      () =>
+        Effect.gen(function* () {
+          vertexOptions.length = 0
+          const plugin = yield* PluginV2.Service
+          const aisdk = yield* AISDK.Service
+          yield* addPlugin()
+          yield* aisdk.runSDK({
+            model: ModelV2.Info.make({
+              ...ModelV2.Info.empty(ProviderV2.ID.make("google-vertex"), ModelV2.ID.make("gemini")),
+              api: {
+                id: ModelV2.ID.make("gemini"),
+                type: "aisdk",
+                package: "@ai-sdk/google-vertex",
+              },
+            }),
+            package: "@ai-sdk/google-vertex",
+            options: { name: "google-vertex", baseURL: "   " },
+          })
+          expect(vertexOptions).toHaveLength(1)
+          expect("baseURL" in vertexOptions[0]).toBe(false)
+          expect(vertexOptions[0].location).toBe("europe-west4")
+        }),
+    ),
+  )
+
+  it.effect("persists a padded Vertex location in lowercase and expands the endpoint", () =>
+    Effect.gen(function* () {
+      const catalog = yield* Catalog.Service
+      yield* catalog.transform((catalog) =>
+        catalog.provider.update(ProviderV2.ID.make("google-vertex"), (provider) => {
+          provider.api = {
+            type: "aisdk",
+            package: "@ai-sdk/openai-compatible",
+            url: "https://${GOOGLE_VERTEX_ENDPOINT}/v1/projects/${GOOGLE_VERTEX_PROJECT}/locations/${GOOGLE_VERTEX_LOCATION}",
+          }
+          provider.request.body.project = "config-project"
+          provider.request.body.location = " US-CENTRAL1 "
+        }),
+      )
+      yield* addPlugin()
+      const provider = required(yield* catalog.provider.get(ProviderV2.ID.make("google-vertex")))
+      expect(provider.request.body.location).toBe("us-central1")
+      expect(provider.api).toEqual({
+        type: "aisdk",
+        package: "@ai-sdk/openai-compatible",
+        url: "https://us-central1-aiplatform.googleapis.com/v1/projects/config-project/locations/us-central1",
+      })
+    }),
+  )
+  // kilocode_change end
 
   it.effect("trims model IDs before selecting language models", () =>
     Effect.gen(function* () {
