@@ -69,7 +69,7 @@ export function releaseFocusRegion(event: PointerEvent, doc: Document = document
 export const isPromptPaste = (event: ClipboardEvent): boolean =>
   !event.defaultPrevented &&
   !hasPopup() &&
-  !event.composedPath().some((node) => node instanceof Element && (isTextControl(node) || node.closest(".xterm")))
+  !event.composedPath().some((node) => node instanceof Element && (isTextControl(node) || node.closest(".am-terminal-host")))
 
 /** Check writability without visibility, since review can cover the intended prompt. */
 export const isWritablePrompt = (prompt: HTMLTextAreaElement | undefined): prompt is HTMLTextAreaElement =>

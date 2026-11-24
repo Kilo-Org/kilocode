@@ -67,7 +67,10 @@ export function createPanel(input: {
       trackCostSession: input.trackCostSession,
       saveImageDirectory: input.saveImageDirectory,
       onMessage: ready,
-      globals: { KILO_AGENT_MANAGER_INTRO_DISMISSED: input.context.globalState.get<boolean>(INTRO) === true },
+      globals: {
+        KILO_AGENT_MANAGER_INTRO_DISMISSED: input.context.globalState.get<boolean>(INTRO) === true,
+        KILO_GHOSTTY_WASM_URI: panel.webview.asWebviewUri(Uri.joinPath(root, "dist", "ghostty-vt.wasm")).toString(),
+      },
       handle: (message: ToHost) => {
         const item = message as unknown as PanelMessage
         if (item.type === "webviewReady") return true

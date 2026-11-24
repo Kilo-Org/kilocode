@@ -21,7 +21,7 @@ export function blocksBrowserDefault(event: Chord, mac: boolean): boolean {
   return /^[1-9]$/.test(key)
 }
 
-/** A chord the focused xterm hands to the Agent Manager instead of sending it to the shell. */
+/** A chord the focused terminal hands to the Agent Manager instead of sending it to the shell. */
 export function leavesTerminal(event: Chord, mac: boolean): boolean {
   if (!primary(event, mac)) return false
   const key = event.key.toLowerCase()
