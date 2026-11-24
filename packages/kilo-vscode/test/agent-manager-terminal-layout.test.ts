@@ -17,14 +17,13 @@ const terminal = normalize(
 )
 const pkg = normalize(readFileSync(resolve(import.meta.dir, "../package.json"), "utf8"))
 
-test("xterm owns the padding used by FitAddon", () => {
+test("terminal host owns the padding used by libghostty FitAddon", () => {
   const host = css.match(/\.am-terminal-host\s*\{([^}]*)\}/)?.[1]
-  const term = css.match(/\.am-terminal-host \[class~="xterm"\]\s*\{([^}]*)\}/)?.[1]
 
   expect(host).toBeDefined()
-  expect(term).toBeDefined()
-  expect(host).not.toMatch(/\bpadding\s*:/)
-  expect(term).toMatch(/\bpadding\s*:\s*8px\s*;/)
+  expect(host).toMatch(/\bpadding\s*:\s*8px\s*;/)
+  expect(host).toMatch(/\bbox-sizing\s*:\s*border-box\s*;/)
+  expect(css).not.toContain('[class~="xterm"]')
 })
 
 test("limits inspector layout updates during resize", () => {
@@ -47,15 +46,22 @@ test("limits inspector layout updates during resize", () => {
 })
 
 test("does not refit hidden terminal buffers during resize", () => {
-  const callback = terminal.match(/const ro = new ResizeObserver\(\(\) => \{([\s\S]*?)\n    \}\)/)?.[1]
+  const callback = terminal.match(/const ro = new ResizeObserver\(\(\) => \{([\s\S]*?)\n  \}\)/)?.[1]
   expect(callback).toBeDefined()
   expect(callback).toContain("if (!props.active) return")
-  expect(callback!.indexOf("if (!props.active) return")).toBeLessThan(callback!.indexOf("fit.fit()"))
+  expect(callback!.indexOf("if (!props.active) return")).toBeLessThan(callback!.indexOf("fitTerminalDirect(term, fit)"))
 })
 
-test("uses the scalable DOM renderer for concurrent terminals", () => {
-  expect(terminal).not.toContain("WebglAddon")
-  expect(pkg).not.toContain("@xterm/addon-webgl")
+test("uses libghostty exclusively with no xterm dependencies remaining", () => {
+  expect(pkg).toContain('"ghostty-web"')
+  expect(pkg).not.toContain("@xterm/")
+  expect(terminal).toContain('from "ghostty-web"')
+  expect(terminal).not.toContain("@xterm/")
+})
+
+test("pauses hidden terminals and resumes on activation", () => {
+  expect(terminal).toContain("pauseTerminalRender(term)")
+  expect(terminal).toContain("resumeTerminalRender(term")
 })
 
 test("orders local terminal status lines through the output batcher", () => {
@@ -68,16 +74,21 @@ test("uses a browser-valid close code when replay overflows", () => {
   expect(terminal).toContain('close(4009, "terminal replay exceeded limit")')
 })
 
-test("keeps raw PTY line endings and initializes Unicode widths before attaching", () => {
+test("keeps raw PTY line endings and shares one Ghostty WASM instance", () => {
   expect(terminal).toContain("convertEol: false")
-  expect(terminal).toContain('term.unicode.activeVersion = "15-graphemes"')
-  expect(terminal.indexOf("term.loadAddon(new UnicodeGraphemesAddon())")).toBeLessThan(terminal.indexOf("open()"))
+  expect(terminal).toContain("loadGhostty()")
+  expect(terminal).toContain("ghostty,")
 })
 
 test("fits and forces the initial PTY dimensions before socket attach", () => {
   expect(terminal).toContain("const syncSize = (force = false)")
   expect(terminal).toContain("if (props.active) syncSize(true)")
-  expect(terminal.indexOf("fitNow()\n      if (!ws && !props.pending) open()")).toBeGreaterThan(-1)
+  expect(terminal.indexOf("repaint.fitNow()\n    if (!socket.connected() && canAttachNow) socket.open()")).toBeGreaterThan(-1)
+})
+
+test("guards against 0-byte WASM writes on empty replay boundaries", () => {
+  expect(terminal).toContain("if (len > 0)")
+  expect(terminal).toContain("batcher.flush()")
 })
 
 test("keeps terminal sockets mounted while history is open", () => {
@@ -86,17 +97,28 @@ test("keeps terminal sockets mounted while history is open", () => {
   expect(css).toMatch(/\.am-detail-stack-hidden[^}]*transform: translate\(-100vw, 0\)/s)
 })
 
-test("moves a closed side panel outside xterm's intersection area", () => {
+test("moves a closed side panel off-screen without unmounting terminals", () => {
   expect(css).toMatch(/\.am-side-host-hidden[^}]*transform: translate\(-100vw, 0\)/s)
 })
 
 test("re-sends dimensions when an optimistic terminal receives its PTY", () => {
   const created = terminal.match(
-    /if \(message\.terminalId === props\.terminalId && !ws\) \{([\s\S]*?)\n        \}/,
+    /if \(message\.terminalId === props\.terminalId && !socket\.connected\(\)\) \{([\s\S]*?)\n      \}/,
   )?.[1]
   expect(created).toBeDefined()
-  expect(created).toContain("fitNow()")
-  expect(created!.indexOf("fitNow()")).toBeLessThan(created!.indexOf("open()"))
+  expect(created).toContain("repaint.fitNow()")
+  expect(created!.indexOf("repaint.fitNow()")).toBeLessThan(created!.indexOf("socket.open()"))
+})
+
+const tabsCss = normalize(
+  readFileSync(resolve(import.meta.dir, "../webview-ui/src/styles/session-tabs.css"), "utf8"),
+)
+
+test("tab strip uses definite width so terminal OSC title updates never flicker header width", () => {
+  const rule = tabsCss.match(/\.am-inspector-tablist\s*\{([^}]*)\}/)?.[1]
+  expect(rule).toBeDefined()
+  expect(rule).toContain("width: calc(var(--tab-count, 1) * var(--am-tab-max-width));")
+  expect(rule).toContain("max-width: 100%;")
 })
 
 test("clamps the restored inspector width to the shared layout bounds", () => {

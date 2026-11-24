@@ -16,6 +16,7 @@ import { createSignal } from "solid-js"
 import type { Accessor } from "solid-js"
 import { LOCAL } from "../navigate"
 import { strongest, type Activity } from "../v2/activity"
+import { measureInitialDimensions } from "./ghostty"
 import type {
   ExtensionMessage,
   ScriptTerminalKind,
@@ -30,7 +31,7 @@ import { isTerminalTabId, SCRIPT_TERMINAL_PREFIX, TERMINAL_PREFIX } from "../../
 
 export { isTerminalTabId, SCRIPT_TERMINAL_PREFIX, TERMINAL_PREFIX }
 
-/** Status is separate from mounted xterm records so snapshot updates never remount them. */
+/** Status is separate from mounted terminal records so snapshot updates never remount them. */
 export type ScriptTerminalStatus = Pick<ScriptTerminalView, "state" | "exitCode" | "kind">
 
 /** One row in `terminalsByContext`. */
@@ -46,7 +47,7 @@ export interface TerminalTabState {
 }
 
 /** Terminal row enriched with the sidebar context it belongs to. Used by
- *  the render layer so every xterm instance stays mounted across
+ *  the render layer so every terminal instance stays mounted across
  *  worktree switches and we only toggle visibility, not lifecycle. */
 export interface TerminalTabStateWithContext extends TerminalTabState {
   contextKey: string
@@ -72,7 +73,7 @@ export interface TerminalStateControls {
   activityFor(context: string): Activity
   /** Add a terminal record to one context. */
   add(worktreeId: string | null, term: TerminalTabState): void
-  /** Fill an optimistic terminal record without replacing its xterm-owning object. */
+  /** Fill an optimistic terminal record without replacing its terminal-owning object. */
   attach(terminalId: string, input: Pick<TerminalTabState, "title" | "font">): boolean
   /** Drop a terminal from its context (location resolved automatically).
    *  Returns the removed record so callers can react to placement. */
@@ -81,7 +82,7 @@ export interface TerminalStateControls {
   contextFor(terminalId: string): string | undefined
   /** Whether a terminal belongs to a provider-owned script (Run/Setup). */
   isScript(terminalId: string): boolean
-  /** Reactive script state, kept apart from stable xterm terminal records. */
+  /** Reactive script state, kept apart from stable terminal records. */
   scriptStatus(terminalId: string): ScriptTerminalStatus | undefined
   /** Reconcile a complete provider-owned script terminal snapshot. Returns newly hydrated records. */
   syncScripts(views: ScriptTerminalView[]): TerminalTabStateWithContext[]
@@ -125,7 +126,7 @@ export interface TerminalStateControls {
   title(terminalId: string): string | undefined
   /** Record an OSC title change for a terminal. Kept outside the
    *  terminal records so `<For>` reference stability (and therefore the
-   *  mounted xterm instances) is preserved. */
+   *  mounted terminal instances) is preserved. */
   setTitle(terminalId: string, title: string): void
   /**
    * Persist a new order for a context's terminals (webview-memory only —
@@ -166,7 +167,7 @@ export interface TerminalStateControls {
  *  whether a child is "the same" across renders. If `all()` created
  *  `{...t, contextKey}` each time (the original bug), adding a new
  *  terminal to context A would rewrite every object in every context —
- *  `<For>` would then unmount + remount every live xterm across the
+ *  `<For>` would then unmount + remount every live terminal across the
  *  whole app, destroying instances and losing canvas state.
  *
  *  ## Plain accessors, not memos
@@ -177,7 +178,7 @@ export interface TerminalStateControls {
  *  (not from the array), so behavior is identical — while the module
  *  stays unit-testable: bun resolves `solid-js` to its server build,
  *  where a memo never recomputes after a signal write. Re-filtering a
- *  handful of terminals per read is far cheaper than an xterm frame.
+ *  handful of terminals per read is far cheaper than a terminal frame.
  */
 export function createTerminalState(selection: Accessor<string | null>): TerminalStateControls {
   const [terminalsByContext, setTerminalsByContext] = createSignal<Record<string, TerminalTabStateWithContext[]>>({})
@@ -185,7 +186,7 @@ export function createTerminalState(selection: Accessor<string | null>): Termina
   const [focusedId, setFocusedId] = createSignal<string | undefined>()
   const [focusRequest, setFocusRequest] = createSignal<TerminalFocusRequest | undefined>()
   // OSC-provided titles, keyed by terminal id. Separate from the terminal
-  // records on purpose: replacing a record would remount its xterm via
+  // records on purpose: replacing a record would remount its terminal via
   // <For> reference inequality (see the module comment above).
   const [titles, setTitles] = createSignal<Record<string, string>>({})
   const [scripts, setScripts] = createSignal<Record<string, ScriptTerminalStatus>>({})
@@ -244,7 +245,7 @@ export function createTerminalState(selection: Accessor<string | null>): Termina
   const sides = (): TerminalTabStateWithContext[] => {
     const map = terminalsByContext()
     // Same reference-stability rule as `all` — the side render layer is
-    // a <For> over live xterm instances too.
+    // a <For> over live terminal instances too.
     const out: TerminalTabStateWithContext[] = []
     for (const list of Object.values(map)) {
       for (const t of list) if (t.placement === "side") out.push(t)
@@ -322,7 +323,7 @@ export function createTerminalState(selection: Accessor<string | null>): Termina
     const term = terminalsByContext()[key ?? ""]?.find((item) => item.id === terminalId)
     if (!term) return false
     // Keep the record reference stable so Solid's <For> never remounts the
-    // xterm that already owns focus and buffered input.
+    // terminal that already owns focus and buffered input.
     term.title = input.title
     term.font = input.font
     term.pending = undefined
@@ -647,33 +648,6 @@ function newId(): string {
   return `${TERMINAL_PREFIX}${crypto.randomUUID()}`
 }
 
-/**
- * Estimate initial terminal geometry from the current DOM container.
- * Provides best-effort columns and rows so PTY spawn avoids the default
- * 80-column line width before the first xterm fit pass commits.
- */
-function measureInitialDimensions(
-  placement: TerminalPlacement,
-  font: TerminalFont,
-): { cols: number; rows: number } | undefined {
-  if (typeof document === "undefined") return undefined
-  const selector =
-    placement === "side"
-      ? ".am-side-terminal-layer, .am-side-terminal, .am-diff-panel-wrapper"
-      : ".am-terminal-layer, .am-detail-stack"
-  const host = document.querySelector(selector) as HTMLElement | null
-  const rect = host?.getBoundingClientRect()
-  if (!rect || rect.width <= 0 || rect.height <= 0) return undefined
-  const cellWidth = font.fontSize > 0 ? font.fontSize * 0.6 : 7.2
-  const cellHeight = font.fontSize > 0 ? font.fontSize * 1.2 : 14.4
-  const availableWidth = Math.max(0, rect.width - 30)
-  const availableHeight = Math.max(0, rect.height - 16)
-  return {
-    cols: Math.max(10, Math.floor(availableWidth / cellWidth)),
-    rows: Math.max(3, Math.floor(availableHeight / cellHeight)),
-  }
-}
-
 export function createTerminalHandlers(deps: TerminalHandlerDeps) {
   const activate = (id: string) => {
     deps.state.setActiveId(id)
@@ -765,7 +739,7 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
 
   const closeTerminal = (terminalId: string) => {
     // Script terminals transition through a provider-owned stopping snapshot.
-    // Keep their xterm mounted until closure is confirmed by a snapshot or
+    // Keep their terminal mounted until closure is confirmed by a snapshot or
     // terminal.closed message so live output is never discarded early.
     if (deps.state.isScript(terminalId)) {
       deps.postMessage({ type: "agentManager.terminal.close", terminalId })
@@ -809,7 +783,7 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
    */
   const closeSide = (terminalId: string): boolean => {
     // Validate before mutating: dropping a non-side record here would
-    // unmount its xterm while the backend PTY leaks (no close sent).
+    // unmount its terminal while the backend PTY leaks (no close sent).
     const term = deps.state.sides().find((t) => t.id === terminalId)
     if (!term) return false
     const key = term.contextKey
@@ -989,6 +963,7 @@ function handleCreated(deps: TerminalMessageHandlerDeps, msg: CreatedMessage) {
   deps.saveTabMemory()
   deps.setSelection(target)
   deps.activate(msg.terminalId)
+  deps.state.requestFocus(msg.terminalId)
 }
 
 function handleScriptTerminals(deps: TerminalMessageHandlerDeps, msg: ScriptTerminalsMessage) {

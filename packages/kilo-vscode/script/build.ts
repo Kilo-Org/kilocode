@@ -96,7 +96,7 @@ export async function buildExtension(options: BuildOptions = {}) {
     runTarget("webviews", (previous) => buildWebviews(production, previous)),
     runTarget("shikiWorker", () => buildShikiWorker(production)),
     runTarget("markdownWorker", () => buildMarkdownWorker(production)),
-    runTarget("lottie", () => copyLottie()),
+    runTarget("wasms", () => copyWasms()),
   ])
 
   if (meta) {
@@ -261,19 +261,22 @@ async function buildWorker(naming: string, entry: string, format: "iife" | "esm"
   }
 }
 
-async function copyLottie() {
-  // The animated Kilo logo loads its WASM renderer from next to the bundle; the CSP blocks the CDN default.
-  const source = path.join(
-    path.dirname(Bun.resolveSync("@lottiefiles/dotlottie-web/package.json", root)),
-    "dist",
-    "dotlottie-player.wasm",
-  )
-  await copyFile(source, path.join(dist, "dotlottie-player.wasm"))
+async function copyWasms() {
+  // The animated Kilo logo and libghostty terminal load their WASM binaries next to the bundle; the CSP blocks
+  // external URLs.
+  const sources = [
+    ["dotlottie-player.wasm", path.join(path.dirname(Bun.resolveSync("@lottiefiles/dotlottie-web/package.json", root)), "dist", "dotlottie-player.wasm")],
+    ["ghostty-vt.wasm", path.join(path.dirname(Bun.resolveSync("ghostty-web/package.json", root)), "ghostty-vt.wasm")],
+  ] as const
+  await Promise.all(sources.map(([name, source]) => copyFile(source, path.join(dist, name))))
   return {
     state: {
       version: 1 as const,
-      inputs: stampFiles([source, ...buildScripts]),
-      outputs: stampOutputs(dist, ["dotlottie-player.wasm"]),
+      inputs: stampFiles([...sources.map(([, source]) => source), ...buildScripts]),
+      outputs: stampOutputs(
+        dist,
+        sources.map(([name]) => name),
+      ),
     },
   }
 }
@@ -358,7 +361,23 @@ function webviewPlugins(solid: Plugin): Plugin[] {
     },
   }
 
-  return [dedupe, pierre, markdown, sprite, css, solid]
+  // ghostty-web's Vite dist embeds a 1.3 MB base64 copy of ghostty-vt.wasm for zero-config bundlers.
+  // VS Code webviews block `fetch("data:...")` via CSP anyway and load dist/ghostty-vt.wasm via KILO_GHOSTTY_WASM_URI,
+  // so strip the unused inline payload from the agent-manager bundle.
+  const ghostty: Plugin = {
+    name: "ghostty-strip-inline-wasm",
+    setup(build) {
+      build.onLoad({ filter: /ghostty-web[/\\]dist[/\\]ghostty-web\.js$/ }, async (args) => {
+        const source = await Bun.file(args.path).text()
+        return {
+          contents: source.replace(/"data:application\/wasm;base64,[A-Za-z0-9+/=]+"/, '""'),
+          loader: "js",
+        }
+      })
+    },
+  }
+
+  return [dedupe, pierre, markdown, sprite, css, ghostty, solid]
 }
 
 if (import.meta.main) {

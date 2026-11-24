@@ -1,5 +1,5 @@
 /**
- * JSX render helpers for xterm terminal tabs.
+ * JSX render helpers for libghostty terminal tabs.
  *
  * Kept separate from the general tab-rendering module so the terminal
  * feature is self-contained under `terminal/` and the whole folder can
@@ -77,24 +77,19 @@ export function renderTerminalTab(deps: TerminalTabRenderDeps): JSX.Element {
 }
 
 /**
- * Render the persistent xterm layer that stacks every terminal tab.
+ * Render the persistent libghostty layer that stacks every terminal tab.
  *
  * ## Invariant
  *
- * **Once an xterm instance is mounted, its DOM subtree is only ever
+ * **Once a terminal instance is mounted, its DOM subtree is only ever
  * hidden, never unmounted.** Inactive slots keep their layout box but
- * are translated one viewport off-screen; xterm 6's render service
- * observes the screen element and pauses the render loop (rAF and model
- * updates) for non-intersecting terminals, then replays a
- * full refresh when the slot slides back in. Keeping the box (unlike
- * `display: none`) also lets FitAddon measure the real panel size while
- * hidden, so background-created terminals such as setup scripts wrap
- * output at the panel's width from the start. Hiding via opacity instead
- * — the historical workaround for the "press Enter to see content" bug,
- * where reattachment left a stale canvas — kept the render loop running
- * at full rate for output no one sees. `TerminalTab`'s activation
- * repaint (fit + refresh) remains as insurance on top of xterm's own
- * resume.
+ * are translated one viewport off-screen while `TerminalTab` pauses
+ * their render loop (`pauseTerminalRender`), eliminating rAF and Canvas
+ * work for off-screen slots while WASM parsing keeps their screen state
+ * up to date. Keeping the box (unlike `display: none`) lets FitAddon
+ * measure the real panel size while hidden, so background-created
+ * terminals such as setup scripts wrap output at the panel's width from
+ * the start. Activation resumes the render loop and paints a full frame.
  *
  * ## Design
  *
@@ -104,7 +99,7 @@ export function renderTerminalTab(deps: TerminalTabRenderDeps): JSX.Element {
  * at all; slots control which terminal of a context is shown.
  *
  * The layer is mounted under `<Show>` only when at least one terminal
- * exists; that boundary never flips under a live xterm, since removing
+ * exists; that boundary never flips under a live terminal, since removing
  * the last terminal disposes its instance first.
  */
 export function renderTerminalLayer(props: {
@@ -147,12 +142,12 @@ export function renderTerminalLayer(props: {
  * Render the side-panel terminal layer inside the right-hand inspector.
  *
  * Same invariant as `renderTerminalLayer`: every side terminal stays
- * mounted, inactive slots are translated off-screen so xterm's render
- * observer pauses them while FitAddon keeps measuring, and only the
- * visible tab's slot is shown. The layer is scoped to `contextKey` —
- * side terminals from other
- * contexts stay paused in the background and never refit — and within a
- * context only the active strip tab's terminal is shown.
+ * mounted, inactive slots are translated off-screen with their render
+ * loop paused while FitAddon keeps measuring, and only the visible
+ * tab's slot is shown. The layer is scoped to `contextKey` — side
+ * terminals from other contexts stay paused in the background and never
+ * refit — and within a context only the active strip tab's terminal is
+ * shown.
  */
 export function renderSideTerminalLayer(props: {
   state: TerminalStateControls

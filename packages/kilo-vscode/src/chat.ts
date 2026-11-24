@@ -675,9 +675,14 @@ export function html(input: {
     KILO_EXTENSION_VERSION: input.version,
     ...input.globals,
   }
-  const script = Object.entries(globals)
-    .map(([key, value]) => `window.${key} = ${JSON.stringify(value).replace(/</g, "\\u003c")};`)
-    .join(" ")
+  const preload =
+    typeof input.globals?.KILO_GHOSTTY_WASM_URI === "string"
+      ? ` if (typeof WebAssembly !== "undefined" && typeof WebAssembly.instantiateStreaming === "function") { window.__KILO_GHOSTTY_WASM_PROMISE = WebAssembly.instantiateStreaming(fetch(window.KILO_GHOSTTY_WASM_URI), { env: { log: function() {} } }).catch(function() { return null; }); }`
+      : ""
+  const script =
+    Object.entries(globals)
+      .map(([key, value]) => `window.${key} = ${JSON.stringify(value).replace(/</g, "\\u003c")};`)
+      .join(" ") + preload
   return `<!DOCTYPE html>
 <html lang="${escape(input.language)}" data-theme="kilo-vscode" data-sidebar="${input.sidebar ?? ""}">
 <head>
