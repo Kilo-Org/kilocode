@@ -14,7 +14,7 @@ This guide uses Kilo's custom provider configuration. Direct requests use your A
 
 ## Before you begin
 
-1. Sign in to the [Ace Data Cloud console](https://platform.acedata.cloud/console/applications) and create an API token that can call the OpenAI service.
+1. Sign in to the [Ace Data Cloud console](https://platform.acedata.cloud/console/applications) and create an application API token with access to the models you want to use. If you restrict allowed APIs, include the Models API for discovery and the Chat Completions API listed for each selected model.
 2. Check your balance. Use the [model catalog](https://platform.acedata.cloud/models) to identify models that list **Chat Completions** and check their current pricing.
 3. Keep the token private. Use the provider dialog or an environment variable; do not commit it to your project.
 
@@ -29,7 +29,7 @@ This guide uses Kilo's custom provider configuration. Direct requests use your A
 - **Provider ID:** `acedatacloud`
 - **Display name:** `Ace Data Cloud`
 - **Provider API:** **OpenAI Compatible**
-- **Base URL:** `https://api.acedata.cloud/openai`
+- **Base URL:** `https://api.acedata.cloud/v1`
 - **API key:** Your Ace Data Cloud API token
 
 3. Use **Fetch models** next to the model list to refresh the models available with your credentials. Select each compatible model you want to use, then click **Submit**. If discovery is unavailable, enter the exact model ID from the catalog.
@@ -58,7 +58,7 @@ Define the models you want to use under `models`, using the exact ID of each Cha
       "name": "Ace Data Cloud",
       "npm": "@ai-sdk/openai-compatible",
       "options": {
-        "baseURL": "https://api.acedata.cloud/openai",
+        "baseURL": "https://api.acedata.cloud/v1",
         "apiKey": "{env:ACEDATACLOUD_API_KEY}"
       },
       "models": {
@@ -90,13 +90,13 @@ kilo run -m acedatacloud/gpt-4.1-mini "Reply with KILO_ACE_OK"
 
 ## API compatibility
 
-Use **OpenAI Compatible** (`@ai-sdk/openai-compatible`) for this configuration. It sends requests to `https://api.acedata.cloud/openai/chat/completions`. The example enables text, streaming, and tool calls. It does not declare vision or reasoning support.
+Use **OpenAI Compatible** (`@ai-sdk/openai-compatible`) for this configuration. It sends requests to `https://api.acedata.cloud/v1/chat/completions`. The example enables text, streaming, and tool calls. It does not declare vision or reasoning support.
 
 Models served only through Responses or Messages need configuration for that protocol and its authentication. Check the [model catalog](https://platform.acedata.cloud/models) and the [Chat Completions API guide](https://platform.acedata.cloud/documents/openai-chat-completions) for the model you select.
 
 ## Troubleshooting
 
-- **Authentication fails:** Check that the API token is valid and has access to the OpenAI service. A platform management token is not an inference API token.
+- **Authentication fails:** Check that the API token is valid and has access to the selected model’s Chat Completions API. A platform management token is not an inference API token.
 - **Model not found:** Use the exact model ID, and keep the explicit `models` entry for CLI configuration. Check the current Ace Data Cloud catalog and your account access.
 - **Model discovery fails:** Check the token and base URL, then use **Fetch models** again or add an exact compatible model ID manually.
 - **Balance or access error:** Check your account balance and service access in the Ace Data Cloud console.
