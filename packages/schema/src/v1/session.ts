@@ -514,6 +514,7 @@ export const Assistant = Schema.Struct({
     root: Schema.String,
   }),
   summary: Schema.optional(Schema.Boolean),
+  forked: Schema.optional(Schema.Boolean), // kilocode_change - copied turns are prior context, not a new run
   cost: Schema.Finite,
   tokens: Schema.Struct({
     total: Schema.optional(Schema.Finite),

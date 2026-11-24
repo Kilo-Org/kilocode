@@ -3,6 +3,7 @@ import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { describe, expect } from "bun:test"
 import { Effect } from "effect"
 import { AgentUsage } from "@/kilocode/agent-usage"
+import { aggregateSessionStats } from "@/cli/cmd/stats"
 import { MessageV2 } from "@/session/message-v2"
 import { Session } from "@/session/session"
 import { MessageID, PartID, SessionID } from "@/session/schema"
@@ -539,6 +540,107 @@ describe("agent usage", () => {
         AgentUsage.cursor.decode(Buffer.from(JSON.stringify({ startedAt: -1, id: run.id })).toString("base64url")),
       ).toThrow()
     }),
+  )
+
+  it.instance(
+    "forking a session does not recount copied runs, tokens, or active time",
+    () =>
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const source = yield* sessions.create({ title: "Usage fixture" })
+        const usage = tokens(1_000, 100, 20, 200, 10)
+        const assistant = yield* turn({
+          sessionID: source.id,
+          agent: "build",
+          created: 1_100,
+          completed: 2_100,
+          cost: 0,
+          tokens: usage,
+        })
+        // Free models bill nothing. The copied prompt size stays on the message
+        // for context, and must not become a second run.
+        yield* sessions.updateMessage({ ...assistant, tokens: usage })
+
+        const before = yield* AgentUsage.summary()
+        const statsBefore = yield* aggregateSessionStats()
+        expect(before).toEqual([
+          {
+            agent: "build",
+            runs: 1,
+            sessions: 1,
+            cost: 0,
+            activeMs: 1_000,
+            tokens: usage,
+            errors: 0,
+            lastRunAt: 1_100,
+          },
+        ])
+
+        const first = yield* sessions.fork({ sessionID: source.id })
+        yield* sessions.fork({ sessionID: first.id })
+
+        expect(yield* AgentUsage.summary()).toEqual(before)
+        const runs = yield* AgentUsage.runs()
+        expect(runs).toHaveLength(1)
+        expect(runs[0]).toMatchObject({
+          sessionID: source.id,
+          activeMs: 1_000,
+          cost: 0,
+          tokens: usage,
+          outcome: "completed",
+        })
+        expect((yield* sessions.get(source.id)).tokens).toEqual(usage)
+        expect((yield* sessions.get(first.id)).tokens).toEqual(tokens(0, 0, 0, 0, 0))
+
+        const statsAfter = yield* aggregateSessionStats()
+        expect(statsAfter.totalTokens).toEqual(statsBefore.totalTokens)
+        expect(statsAfter.totalCost).toBe(statsBefore.totalCost)
+        expect(statsAfter.modelUsage).toEqual(statsBefore.modelUsage)
+        expect(statsAfter.totalSessions).toBe(statsBefore.totalSessions + 2)
+
+        const copy = yield* sessions.messages({ sessionID: first.id })
+        const copied = copy.find((msg) => msg.info.role === "assistant")
+        if (!copied || copied.info.role !== "assistant") throw new Error("expected copied assistant")
+        expect(copied.info.forked).toBe(true)
+        expect(copied.info.cost).toBe(0)
+        expect(copied.info.tokens).toEqual(usage)
+        expect(copied.info.time).toEqual({ created: 1_100, completed: 2_100 })
+        const finish = copied.parts.find((part) => part.type === "step-finish")
+        if (!finish || finish.type !== "step-finish") throw new Error("expected copied step")
+        expect(finish.cost).toBe(0)
+        expect(finish.tokens).toEqual(tokens(0, 0, 0, 0, 0))
+
+        const original = (yield* sessions.messages({ sessionID: source.id })).find(
+          (msg) => msg.info.role === "assistant",
+        )
+        if (!original || original.info.role !== "assistant") throw new Error("expected source assistant")
+        expect(original.info.forked).toBeUndefined()
+        expect(original.parts.find((part) => part.type === "step-finish")).toMatchObject({ cost: 0, tokens: usage })
+
+        yield* turn({
+          sessionID: first.id,
+          agent: "build",
+          created: 3_000,
+          completed: 3_400,
+          cost: 0.1,
+          tokens: tokens(5, 6, 0, 0, 0),
+        })
+        expect(yield* AgentUsage.summary()).toEqual([
+          {
+            agent: "build",
+            runs: 2,
+            sessions: 2,
+            cost: 0.1,
+            activeMs: 1_400,
+            tokens: tokens(1_005, 106, 20, 200, 10),
+            errors: 0,
+            lastRunAt: 3_000,
+          },
+        ])
+        const after = yield* AgentUsage.runs()
+        expect(after.map((run) => run.sessionID).sort()).toEqual([source.id, first.id].sort())
+      }),
+    30_000,
   )
 
   it.instance("drives the runs query off the session, message, and step-finish indexes", () =>
