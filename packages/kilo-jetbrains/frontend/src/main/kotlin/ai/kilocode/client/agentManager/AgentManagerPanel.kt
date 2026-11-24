@@ -1171,7 +1171,7 @@ class AgentManagerPanel(
                 .filterNot { it.ref.key in removedHosted }
             val keys = visible.mapTo(mutableSetOf()) { it.ref.key }
             val pending = if (hostedState.signedOut) emptyList() else pendingHosted.values.map {
-                HostedWorkspaceRowData(it, null, null, KiloBundle.message("hosted.workspace.progress.creating.short"))
+                HostedWorkspaceRowData(it, progress = KiloBundle.message("hosted.workspace.progress.creating.short"))
             }
             val created = if (hostedState.signedOut) emptyList() else createdHosted.values
                 .filterNot { it.ref.key in keys || management?.excluded(it.ref) == true }
