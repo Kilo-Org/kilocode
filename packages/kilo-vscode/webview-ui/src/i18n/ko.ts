@@ -811,6 +811,8 @@ export const dict = {
 
   "dialog.model.noProviders": "공급자 없음",
   "dialog.model.unavailable": "Kilo 모델을 사용할 수 없음",
+  "dialog.model.selectedUnavailable":
+    "{{model}} ({{provider}}) 모델을 사용할 수 없습니다. 공급자에 다시 연결하거나 다른 모델을 선택하세요.",
   "dialog.model.loadFailed": "이 프로젝트의 공급자를 불러올 수 없습니다.",
 
   "prompt.placeholder.connecting": "서버에 연결 중...",

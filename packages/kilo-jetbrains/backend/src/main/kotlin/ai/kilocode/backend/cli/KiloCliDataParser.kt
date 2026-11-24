@@ -517,7 +517,7 @@ object KiloCliDataParser {
         return arr.mapNotNull { elem ->
             val obj = elem.jsonObject
             val info = obj["info"]?.jsonObject ?: return@mapNotNull null
-            val msg = parseMessage(info)
+            val msg = parseMessage(info, history = true)
             val parts = obj["parts"]?.jsonArray ?: JsonArray(emptyList())
             MessageWithPartsDto(
                 info = msg,
@@ -1341,24 +1341,32 @@ object KiloCliDataParser {
     // Internal — message/part/session parsing
     // ================================================================
 
-    internal fun parseMessage(obj: JsonObject): MessageDto {
+    internal fun parseMessage(obj: JsonObject, history: Boolean = false): MessageDto {
         val time = obj["time"]?.jsonObject
         val tokens = obj["tokens"]?.jsonObject
         val error = obj["error"]?.jsonObject
         val raw = obj["summary"].obj()?.get("diffs")
         val summary = if (raw == null) null else MessageSummaryDto(parseDiffs(raw))
+        val role = obj.str("role") ?: "unknown"
+        fun JsonObject.hasId(key: String): Boolean =
+            (this[key] as? JsonPrimitive)?.let { it.isString && it.content.isNotBlank() } == true
+
+        // An old user message can be updated by SSE after the user has picked a new model.
+        val model = (obj["model"] as? JsonObject)
+            ?.takeIf { history && role == "user" && it.hasId("providerID") && it.hasId("modelID") }
+            ?: obj
 
         return MessageDto(
             id = obj.str("id") ?: "",
             sessionID = obj.str("sessionID") ?: "",
-            role = obj.str("role") ?: "unknown",
+            role = role,
             time = MessageTimeDto(
                 created = time?.num("created") ?: 0.0,
                 completed = time?.num("completed"),
             ),
             agent = obj.str("agent"),
-            providerID = obj.str("providerID"),
-            modelID = obj.str("modelID"),
+            providerID = model.str("providerID"),
+            modelID = model.str("modelID"),
             parentID = obj.str("parentID"),
             cost = obj.num("cost"),
             tokens = tokens?.let(::parseTokens),

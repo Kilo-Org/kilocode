@@ -5,6 +5,7 @@ import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.ReasoningPicker
 import ai.kilocode.client.session.ui.model.ModelPicker
+import ai.kilocode.client.session.ui.model.findModel
 import ai.kilocode.client.session.ui.model.modelItems
 import ai.kilocode.client.settings.base.BaseContentPanel
 import ai.kilocode.client.settings.base.BaseSettingsUi
@@ -172,7 +173,7 @@ internal class ModelsSettingsUi(
 
     @RequiresEdt
     private fun syncVariant(ready: Boolean): Boolean {
-        val item = allItems.firstOrNull { it.key == draft.subagent || it.id == draft.subagent }
+        val item = allItems.findModel(draft.subagent)
         val valid = item?.variants.orEmpty()
         if (draft.variant != null && draft.variant !in valid) draft = draft.copy(variant = valid.firstOrNull())
         if (draft.subagent != null && valid.isEmpty() && draft.variant != null) draft = draft.copy(variant = null)

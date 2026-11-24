@@ -793,6 +793,8 @@ export const dict = {
 
   "dialog.model.noProviders": "No providers",
   "dialog.model.unavailable": "Kilo models unavailable",
+  "dialog.model.selectedUnavailable":
+    "{{model}} ({{provider}}) is unavailable. Reconnect the provider or choose another model.",
   "dialog.model.loadFailed": "Could not load providers for this project.",
 
   "prompt.placeholder.connecting": "Connecting to server...",

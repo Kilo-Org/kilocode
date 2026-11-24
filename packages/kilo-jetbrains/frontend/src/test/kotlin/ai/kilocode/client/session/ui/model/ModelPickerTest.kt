@@ -344,6 +344,24 @@ class ModelPickerTest : BasePlatformTestCase() {
         assertEquals("azure/gpt", picker.selectedForTest()?.key)
     }
 
+    fun `test OpenAI selection survives refresh when its key matches a Kilo model id`() {
+        val picker = ModelPicker()
+        val rows = listOf(
+            item("openai/gpt-6.2-sol", "GPT 6.2 Sol", "kilo", "Kilo"),
+            item("gpt-6.2-sol", "GPT 6.2 Sol", "openai", "OpenAI"),
+        )
+        picker.favorites = { listOf(ModelSelectionDto("openai", "gpt-6.2-sol")) }
+        picker.onSelect = { picker.setItems(rows, it.key) }
+        picker.setItems(rows, "kilo/openai/gpt-6.2-sol")
+
+        picker.cycle()
+        assertEquals("openai/gpt-6.2-sol", picker.selectionKeyForTest())
+        picker.setItems(rows)
+        assertEquals("OpenAI / GPT 6.2 Sol ▾", picker.text)
+        picker.select("openai/gpt-6.2-sol")
+        assertEquals("openai/gpt-6.2-sol", picker.selectionKeyForTest())
+    }
+
     fun `test item keeps reasoning variants`() {
         val item = ModelPicker.Item("gpt", "GPT", "openai", "OpenAI", variants = listOf("low", "high"))
 

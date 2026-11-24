@@ -813,6 +813,8 @@ export const dict = {
 
   "dialog.model.noProviders": "プロバイダーなし",
   "dialog.model.unavailable": "Kilo モデルを利用できません",
+  "dialog.model.selectedUnavailable":
+    "{{model}} ({{provider}}) を利用できません。プロバイダーに再接続するか、別のモデルを選択してください。",
   "dialog.model.loadFailed": "このプロジェクトのプロバイダーを読み込めませんでした。",
 
   "prompt.placeholder.connecting": "サーバーに接続中...",

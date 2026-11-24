@@ -1,3 +1,6 @@
+import type { UiI18nParams } from "@kilocode/kilo-ui/context"
+import type { ToastOptions } from "@kilocode/kilo-ui/toast"
+import { KILO_PROVIDER_ID } from "../../../src/shared/provider-model"
 import type { ModelSelection, Provider } from "../types/messages"
 import { isModelValid } from "./provider-utils"
 
@@ -33,4 +36,28 @@ export function resolveModelSelection(input: {
     if (model) return model
   }
   return validate(input.fallback)
+}
+
+export function unavailableModelToast(
+  selection: ModelSelection | null,
+  providers: Record<string, Provider>,
+  unavailable: boolean,
+  t: (key: string, params?: UiI18nParams) => string,
+): ToastOptions {
+  if (selection && selection.providerID !== KILO_PROVIDER_ID) {
+    const provider = providers[selection.providerID]
+    return {
+      variant: "error",
+      description: t("dialog.model.selectedUnavailable", {
+        model: provider?.models[selection.modelID]?.name ?? selection.modelID,
+        provider: provider?.name ?? selection.providerID,
+      }),
+    }
+  }
+  // Say why the picker is empty when an organization's Kilo catalog failed to load.
+  return {
+    variant: "error",
+    title: unavailable ? t("dialog.model.unavailable") : t("dialog.model.select.title"),
+    description: unavailable ? t("session.activity.retry") : undefined,
+  }
 }

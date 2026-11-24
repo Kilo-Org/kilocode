@@ -830,6 +830,8 @@ export const dict = {
 
   "dialog.model.noProviders": "Keine Anbieter",
   "dialog.model.unavailable": "Kilo-Modelle nicht verfügbar",
+  "dialog.model.selectedUnavailable":
+    "{{model}} ({{provider}}) ist nicht verfügbar. Verbinden Sie den Anbieter erneut oder wählen Sie ein anderes Modell.",
   "dialog.model.loadFailed": "Anbieter für dieses Projekt konnten nicht geladen werden.",
 
   "prompt.placeholder.connecting": "Verbindung zum Server wird hergestellt...",

@@ -2508,6 +2508,66 @@ try {
     assert.equal(Object.keys(value.allMessages()).length, size + 1, "Only the promoted session cache should remain")
     await emit({ type: "sessionCommandCompleted", messageID: request.messageID })
   }
+
+  {
+    const kilo = { providerID: "kilo", modelID: "openai/gpt-5" }
+    const openai = { providerID: "openai", modelID: "gpt-5" }
+    const name = "GPT-5"
+    const refresh = (status: "connected" | "disconnected" | "missing" = "connected") =>
+      emit({
+        type: "providersLoaded",
+        organizationId: "org-a",
+        providers: {
+          kilo: { id: "kilo", name: "Kilo", models: { [kilo.modelID]: { id: kilo.modelID, name } } },
+          openai: {
+            id: "openai",
+            name: "OpenAI",
+            models: status === "missing" ? {} : { [openai.modelID]: { id: openai.modelID, name } },
+          },
+        },
+        connected: status === "disconnected" ? ["kilo"] : ["kilo", "openai"],
+        defaults: { kilo: kilo.modelID },
+        defaultSelection: kilo,
+        authMethods: {},
+        authStates: {},
+      })
+    const dispatch = (pick: ModelSelection) => {
+      choice(value.selected(), pick)
+      const before = requests().length
+      assert.equal(value.sendMessage("send with selected provider"), true)
+      assert.equal(value.sendCommand("review", ""), true)
+      const [prompt, command] = requests().slice(before)
+      assert(prompt?.type === "sendMessage" && command?.type === "sendCommand")
+      for (const request of [prompt, command]) {
+        assert.equal(request.providerID, pick.providerID)
+        assert.equal(request.modelID, pick.modelID)
+      }
+    }
+
+    await refresh()
+    value.setCurrentSessionID("ses_same-display-model")
+    for (const pick of [kilo, openai]) {
+      value.selectModel(pick.providerID, pick.modelID)
+      dispatch(pick)
+      await emit({ type: "providersLoading" })
+      await refresh()
+      dispatch(pick)
+    }
+
+    for (const status of ["disconnected", "missing"] as const) {
+      await refresh(status)
+      const before = requests().length
+      const prompt = value.sendMessage("do not fall back to Kilo")
+      const command = value.sendCommand("review", "do not fall back to Kilo")
+      assert.equal(requests().length, before, `Unavailable OpenAI model (${status}) must not dispatch`)
+      assert.equal(prompt, false)
+      assert.equal(command, false)
+      choice(value.selected(), openai)
+    }
+
+    await refresh()
+    dispatch(openai)
+  }
   assert.deepEqual(failures, [])
 } finally {
   const before = state("background")

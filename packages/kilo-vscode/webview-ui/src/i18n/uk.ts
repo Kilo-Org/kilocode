@@ -806,6 +806,8 @@ export const dict = {
 
   "dialog.model.noProviders": "Немає провайдерів",
   "dialog.model.unavailable": "Моделі Kilo недоступні",
+  "dialog.model.selectedUnavailable":
+    "{{model}} ({{provider}}) недоступна. Підключіться до провайдера знову або виберіть іншу модель.",
   "dialog.model.loadFailed": "Не вдалося завантажити провайдерів для цього проєкту.",
 
   "prompt.placeholder.connecting": "Підключення до сервера...",
