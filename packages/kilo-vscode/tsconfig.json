@@ -22,6 +22,7 @@
   ],
   "exclude": [
     "src/shared",
+    "test/browser/auto-model-preview.tsx",
     "test/browser/edit-handoff.tsx",
     "test/browser/sidebar-search.tsx",
     "test/browser/swarm-avatar-colors.tsx",

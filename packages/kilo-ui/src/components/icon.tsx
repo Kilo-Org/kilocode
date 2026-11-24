@@ -139,6 +139,10 @@ const icons: Record<string, { path: string; viewBox: string }> = {
     viewBox: "0 0 20 20",
     path: `<path fill-rule="evenodd" clip-rule="evenodd" d="M10 2.5L18.125 16.25H1.875L10 2.5ZM9.375 7.5H10.625V12H9.375V7.5ZM9.375 13.125H10.625V14.375H9.375V13.125Z" fill="currentColor"/>`,
   },
+  sparkle: {
+    viewBox: "0 0 20 20",
+    path: `<path d="M10 2.25L11.9 8.1L17.75 10L11.9 11.9L10 17.75L8.1 11.9L2.25 10L8.1 8.1L10 2.25Z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/>`,
+  },
 }
 
 type Name = keyof typeof icons

@@ -21,6 +21,7 @@
 @import "./todo-dock.css";
 @import "./prompt-dropdowns.css";
 @import "./model-selector.css";
+@import "./auto-model-preview.css";
 @import "./permission-dock.css";
 @import "./dialogs.css";
 @import "./history.css";

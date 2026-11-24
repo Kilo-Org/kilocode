@@ -622,7 +622,8 @@
    they need the same readable lane as the composer rather than the full width
    of a wide surface such as Agent Manager. */
 .chat-view .chat-input > .startup-error-banner,
-.chat-view .chat-input > [data-component="permission-shortcuts"] {
+.chat-view .chat-input > [data-component="permission-shortcuts"],
+.chat-view .chat-input > [data-component="auto-model-preview"] {
   box-sizing: border-box;
   width: min(calc(100% - var(--prompt-gutter) - var(--prompt-gutter)), var(--chat-readable-width));
   margin-inline: auto;
@@ -632,30 +633,34 @@
   margin-inline: 0;
 }
 
-/* A permission card with a diff can be taller than the room left under the
+/* A permission card or Auto Model preview can be taller than the room left under the
    transcript, and `.chat-view` clips whatever doesn't fit. With a rigid
-   `.chat-input` that silently cut off the Allow/Deny row with nothing to
-   scroll. Only while a permission is pending, lay the composer column out so
+   `.chat-input` that silently cut off controls with nothing to
+   scroll. While either dock is visible, lay the composer column out so
    the card is a shrinkable flex item: its height is then bounded by the space
    actually available and its own body scrolls instead. */
-.chat-input:has(> [data-component="permission-shortcuts"]) {
+.chat-input:has(> [data-component="permission-shortcuts"]),
+.chat-input:has(> [data-component="auto-model-preview"]) {
   display: flex;
   flex-direction: column;
   flex-shrink: 1;
   min-height: 0;
 }
 
-.chat-input:has(> [data-component="permission-shortcuts"]) > * {
+.chat-input:has(> [data-component="permission-shortcuts"]) > *,
+.chat-input:has(> [data-component="auto-model-preview"]) > * {
   flex-shrink: 0;
 }
 
 /* Margins don't collapse in a flex column, so drop the halves that used to
    overlap and keep the spacing around the card identical. */
-.chat-input:has(> [data-component="permission-shortcuts"]) > .startup-error-banner {
+.chat-input:has(> [data-component="permission-shortcuts"]) > .startup-error-banner,
+.chat-input:has(> [data-component="auto-model-preview"]) > .startup-error-banner {
   margin-bottom: 0;
 }
 
-.chat-input:has(> [data-component="permission-shortcuts"]) > .prompt-input-container {
+.chat-input:has(> [data-component="permission-shortcuts"]) > .prompt-input-container,
+.chat-input:has(> [data-component="auto-model-preview"]) > .prompt-input-container {
   margin-top: var(--prompt-gutter);
 }
 
@@ -666,6 +671,11 @@
   /* Shrinks down to the card's own floor plus its 12px vertical margins, so the
      card is never laid out over the prompt input below it. */
   min-height: calc(var(--permission-card-min-height, 11em) + 24px);
+}
+
+.chat-input > [data-component="auto-model-preview"] {
+  flex-shrink: 1;
+  min-height: 11em;
 }
 
 .vscode-session-turn-diffs-trigger {

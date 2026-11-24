@@ -42,6 +42,12 @@ import { createSelection, Selectors } from "./selectors"
 import type { ManagerContext } from "./shortcut-hint"
 import { settledLoader, startingLoader } from "./session-loading"
 import { createAutoApprove } from "./auto-approve"
+import { AutoModelPreviewButton, AutoModelPreviewDock } from "./auto-model-preview"
+import {
+  createAutoModelPreview,
+  type AutoModelPreviewController,
+  type ComposerDraftState,
+} from "./auto-model-preview-state"
 import { createSandbox } from "./sandbox"
 import { createBackgroundJobs } from "./background-jobs"
 import { createWorking } from "./working"
@@ -53,6 +59,13 @@ import { reviewScopes, slashActions, worktreeAction, type SlashHandlers } from "
 import { createSlashCatalog } from "./slash-catalog"
 import { dispatchSlash } from "./slash-dispatch"
 import { TranscriptSearchProvider } from "./transcript-search"
+
+function dismissAutoPreviewOnEscape(event: KeyboardEvent, controller: AutoModelPreviewController): boolean {
+  if (!controller.open()) return false
+  event.preventDefault()
+  controller.close()
+  return true
+}
 
 export function SessionView(props: {
   session: string | undefined
@@ -244,6 +257,16 @@ export function SessionView(props: {
   // Only a pending permission changes the Send label. A pending question leaves Send in place instead of Stop.
   const questioning = () => !blocked() && forms().length > 0
   const selection = createSelection(session, draftKey)
+  const [composerDraft, setComposerDraft] = createSignal<ComposerDraftState>({ text: "", goal: false })
+  const autoPreview = createAutoModelPreview({
+    api: v2.api,
+    directory: v2.directory,
+    draft: composerDraft,
+    model: selection.model,
+    models: () => v2.data.location.model.list(),
+    agent: () => selection.agent()?.id,
+    disabled: () => v2.connection.status() !== "connected" || Boolean(v2.handshake()),
+  })
   const preferences = useModelPreferences()
   const autoApprove = createAutoApprove()
   const visiblePermission = createPermissionPresentation({
@@ -568,6 +591,7 @@ export function SessionView(props: {
     if (props.readOnly) return
     const handler = (event: KeyboardEvent) => {
       if (event.key !== "Escape" || event.defaultPrevented || event.isComposing) return
+      if (dismissAutoPreviewOnEscape(event, autoPreview)) return
       if (!running() && !working.submitting() && !goal.active()) return
       event.preventDefault()
       stop()
@@ -650,11 +674,13 @@ export function SessionView(props: {
                 goal={goal}
                 connected={v2.connection.status() === "connected"}
               />
+              <AutoModelPreviewDock controller={autoPreview} />
               <Show when={draftKey()} keyed>
                 {(key) => (
                   <PromptInput
                     draftKey={key}
                     session={session()}
+                    model={selection.model()}
                     // An active goal keeps working between its runs, so the composer offers Stop as main did.
                     running={running() || goal.active()}
                     disabled={v2.connection.status() !== "connected" || !!v2.handshake()}
@@ -679,7 +705,9 @@ export function SessionView(props: {
                     manager={props.manager}
                     focusOnDraftChange={props.focusOnDraftChange}
                     onFocusChange={props.onFocusChange}
+                    onDraftChange={setComposerDraft}
                     selectors={<Selectors selection={selection} blocked={blocked()} />}
+                    pinnedActions={<AutoModelPreviewButton controller={autoPreview} />}
                     autoApprove={{ enabled: autoApprove.enabled(), onToggle: autoApprove.toggle }}
                     sandbox={sandboxControl}
                     worktrees={props.worktrees}
