@@ -49,6 +49,8 @@ export function translate(env: Record<string, string | undefined>) {
   }
   env.OPENCODE_TUI_USE_PINNED_MODE ??= "1"
   env.OPENCODE_TUI_OVERLAP_STARTUP ??= "1"
+  // Terminal status records (OSC 7501) and Herdr identify the app as Kilo, not OpenCode.
+  env.OPENCODE_PROGRAM_STATUS_APP ??= "kilo"
 }
 
 /**

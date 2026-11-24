@@ -132,24 +132,31 @@ export function buildRequest(input: {
 export function createReporter(input: {
   data: Plugin.Context["data"]
   session: () => string | undefined
-  send: (method: HerdrMethod, seq: number, report?: HerdrReport) => Promise<void>
+  send: (method: HerdrMethod, seq: number, report?: HerdrReport) => Promise<boolean>
   now?: () => number
   translate?: HerdrTranslator
 }) {
   let seq = (input.now?.() ?? Date.now()) * 1000
-  let lastKey: string | undefined
+  let delivered: string | undefined
+  let inflight: string | undefined
 
+  // A state counts as reported only after Herdr answers; a failed send is retried on the next tick.
   const tick = () => {
     const report = status(input.data, input.session(), input.translate)
     const key = JSON.stringify(report)
-    if (key === lastKey) return
-    lastKey = key
+    if (key === delivered || key === inflight) return
+    inflight = key
     seq += 1
-    input.send("pane.report_agent", seq, report)
+    void input.send("pane.report_agent", seq, report).then((ok) => {
+      if (inflight !== key) return
+      inflight = undefined
+      if (ok) delivered = key
+    })
   }
 
   const stop = () => {
-    lastKey = undefined
+    delivered = undefined
+    inflight = undefined
     seq += 1
     return input.send("pane.release_agent", seq)
   }
@@ -157,59 +164,70 @@ export function createReporter(input: {
   return { tick, stop }
 }
 
-export function sendSocketRequest(socketPath: string, payload: string, timeoutMs = SOCKET_TIMEOUT): Promise<void> {
+// Resolves true once Herdr replies; connection errors, early close, and timeouts resolve false.
+export function sendSocketRequest(socketPath: string, payload: string, timeoutMs = SOCKET_TIMEOUT): Promise<boolean> {
   const endpoint = process.platform === "win32" ? `\\\\.\\pipe\\${socketPath}` : socketPath
   return new Promise((resolve) => {
     let settled = false
     const client = net.createConnection(endpoint, () => {
       client.write(`${payload}\n`)
     })
-    const finish = () => {
+    const finish = (ok: boolean) => {
       if (settled) return
       settled = true
       clearTimeout(timer)
       client.destroy()
-      resolve()
+      resolve(ok)
     }
-    const timer = setTimeout(finish, timeoutMs)
+    const timer = setTimeout(() => finish(false), timeoutMs)
     timer.unref?.()
     client.unref()
-    client.setTimeout(timeoutMs, finish)
-    client.on("data", finish)
-    client.on("error", finish)
-    client.on("end", finish)
-    client.on("close", finish)
+    client.setTimeout(timeoutMs, () => finish(false))
+    client.on("data", () => finish(true))
+    client.on("error", () => finish(false))
+    client.on("end", () => finish(false))
+    client.on("close", () => finish(false))
   })
 }
 
 export function createSender(input: {
   paneID: string
-  transport: (payload: string) => Promise<void>
+  transport: (payload: string) => Promise<boolean>
   timeoutMs?: number
 }) {
   const timeoutMs = input.timeoutMs ?? SOCKET_TIMEOUT
-  let pending: string | undefined
-  let draining: Promise<void> | undefined
+  let next: { payload: string; done: PromiseWithResolvers<boolean> } | undefined
+  let draining = false
 
   const drain = async () => {
-    while (pending !== undefined) {
-      const payload = pending
-      pending = undefined
-      const timeout = Promise.withResolvers<void>()
-      const timer = setTimeout(timeout.resolve, timeoutMs)
-      await Promise.race([Promise.resolve().then(() => input.transport(payload)).catch(() => {}), timeout.promise])
+    draining = true
+    while (next) {
+      const item = next
+      next = undefined
+      const timeout = Promise.withResolvers<boolean>()
+      const timer = setTimeout(() => timeout.resolve(false), timeoutMs)
+      const ok = await Promise.race([
+        Promise.resolve()
+          .then(() => input.transport(item.payload))
+          .catch(() => false),
+        timeout.promise,
+      ])
       clearTimeout(timer)
+      item.done.resolve(ok)
     }
+    draining = false
   }
 
+  // Each call resolves with its own delivery outcome; a request replaced before it was sent resolves false.
   return (method: HerdrMethod, seq: number, report?: HerdrReport) => {
-    pending = JSON.stringify(buildRequest({ method, paneID: input.paneID, seq, report }))
-    if (draining) return draining
-    const current = drain().finally(() => {
-      draining = undefined
-    })
-    draining = current
-    return current
+    next?.done.resolve(false)
+    next = {
+      payload: JSON.stringify(buildRequest({ method, paneID: input.paneID, seq, report })),
+      done: Promise.withResolvers<boolean>(),
+    }
+    const result = next.done.promise
+    if (!draining) void drain()
+    return result
   }
 }
 
@@ -240,9 +258,9 @@ export default Plugin.define({
     timer.unref()
     reporter.tick()
 
-    return () => {
+    return async () => {
       clearInterval(timer)
-      return reporter.stop()
+      await reporter.stop()
     }
   },
 })

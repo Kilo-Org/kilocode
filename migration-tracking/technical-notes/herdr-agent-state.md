@@ -30,7 +30,9 @@ The plugin samples the displayed session and its descendants once per second. It
 
 Messages use the runtime locale reported by `Intl.DateTimeFormat`, with English as the fallback for unsupported locales. Non-English dictionaries are loaded only when the integration is active. Restart the TUI after changing the runtime locale.
 
-Blocked state takes precedence over working state. Synthetic pending items alone do not indicate work. Identical reports are deduplicated; this is change reporting, not a heartbeat.
+Blocked state takes precedence over working state. Synthetic pending items alone do not indicate work. Identical reports are deduplicated; this is change reporting, not a heartbeat. A report counts as delivered only once Herdr replies on the socket. A connection error, early close or timeout leaves it undelivered, and the next tick sends the same state again. A state whose send is still in flight is not sent twice.
+
+The OSC 7501 terminal status records (`packages/tui/src/context/program-status.ts`) are a separate channel. They identify the app through `OPENCODE_PROGRAM_STATUS_APP`, which the Kilo host sets to `kilo` (`packages/kilo-cli/src/env.ts`), with the upstream `opencode` default otherwise.
 
 Requests are newline-delimited JSON using `pane.report_agent`, source and agent `kilo`, and increasing sequence numbers. When a session is active, reports also include `resume_argv` (`[<cli>, "--session", <rootSessionID>]`, using `OPENCODE_CLI_NAME`, which is `kilo2` during v2 development and flips to `kilo` on release) so Herdr 1 (0.9.2+) can restore the session after a server restart; values that violate Herdr's plain-command or character constraints are omitted so state reporting is never rejected. A newer pending report replaces stale pending reports while a send is in flight. Socket errors and timeouts do not interrupt the TUI. Normal plugin cleanup awaits `pane.release_agent`, including any in-flight send ahead of it. Each send is bounded to 500 ms, so cleanup waits at most two send intervals (one second); abrupt process termination cannot guarantee delivery.
 

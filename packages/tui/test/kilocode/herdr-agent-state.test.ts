@@ -199,18 +199,20 @@ describe("herdr agent state", () => {
       session: () => currentSession,
       send: (method, seq, report) => {
         sent.push({ method, seq, report })
-        return Promise.resolve()
+        return Promise.resolve(true)
       },
       now: () => 1_000,
     })
 
     reporter.tick()
+    await Promise.resolve()
     reporter.tick()
     expect(sent).toEqual([{ method: "pane.report_agent", seq: 1_000_001, report: { state: "idle" } }])
 
     currentSession = "ses_1"
     scene.status = { ses_1: "running" }
     reporter.tick()
+    await Promise.resolve()
     reporter.tick()
     expect(sent.at(-1)).toEqual({
       method: "pane.report_agent",
@@ -221,6 +223,60 @@ describe("herdr agent state", () => {
 
     await reporter.stop()
     expect(sent.at(-1)).toEqual({ method: "pane.release_agent", seq: 1_000_003, report: undefined })
+  })
+
+  test("retries an unchanged state after a failed send and stops once it is delivered", async () => {
+    const sent: number[] = []
+    const outcomes = [false, false, true]
+    const reporter = createReporter({
+      data: data({ status: { ses_1: "running" } }),
+      session: () => "ses_1",
+      send: (_method, seq) => {
+        sent.push(seq)
+        return Promise.resolve(outcomes.shift() ?? true)
+      },
+      now: () => 1_000,
+    })
+
+    for (let i = 0; i < 5; i++) {
+      reporter.tick()
+      await Promise.resolve()
+      await Promise.resolve()
+    }
+    expect(sent).toEqual([1_000_001, 1_000_002, 1_000_003])
+  })
+
+  test("does not resend a state while its send is still in flight", async () => {
+    const sent: number[] = []
+    const pending = Promise.withResolvers<boolean>()
+    const reporter = createReporter({
+      data: data({ status: { ses_1: "running" } }),
+      session: () => "ses_1",
+      send: (_method, seq) => {
+        sent.push(seq)
+        return pending.promise
+      },
+      now: () => 1_000,
+    })
+
+    reporter.tick()
+    reporter.tick()
+    reporter.tick()
+    expect(sent).toEqual([1_000_001])
+    pending.resolve(true)
+    await pending.promise
+    await Promise.resolve()
+    reporter.tick()
+    expect(sent).toEqual([1_000_001])
+  })
+
+  test("sendSocketRequest reports failure when the socket is unreachable", async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "herdr-missing-"))
+    try {
+      expect(await sendSocketRequest(path.join(dir, "missing.sock"), "{}", 200)).toBe(false)
+    } finally {
+      await fs.rm(dir, { recursive: true, force: true })
+    }
   })
 
   test("sends newline-delimited JSON over a unix socket", async () => {
@@ -236,7 +292,7 @@ describe("herdr agent state", () => {
     await new Promise<void>((resolve) => server.listen(socketPath, resolve))
     try {
       const payload = JSON.stringify(buildRequest({ method: "pane.report_agent", paneID: "w1:p1", seq: 1, report: { state: "idle" } }))
-      await sendSocketRequest(socketPath, payload)
+      expect(await sendSocketRequest(socketPath, payload)).toBe(true)
       expect(received.join("")).toBe(`${payload}\n`)
     } finally {
       server.close()
@@ -256,7 +312,7 @@ describe("herdr agent state", () => {
     try {
       const payload = JSON.stringify(buildRequest({ method: "pane.report_agent", paneID: "w1:p1", seq: 1, report: { state: "idle" } }))
       const start = Date.now()
-      await sendSocketRequest(socketPath, payload, 50)
+      expect(await sendSocketRequest(socketPath, payload, 50)).toBe(false)
       expect(Date.now() - start).toBeLessThan(1_000)
     } finally {
       for (const socket of sockets) socket.destroy()
@@ -276,20 +332,24 @@ describe("herdr agent state", () => {
         const parsed = JSON.parse(payload) as { params: { seq: number } }
         sent.push(parsed.params.seq)
         started.resolve()
-        if (parsed.params.seq === 1) return first.promise
-        return Promise.resolve()
+        if (parsed.params.seq === 1) return first.promise.then(() => true)
+        return Promise.resolve(true)
       },
     })
 
-    const done = send("pane.report_agent", 1, { state: "working", sessionID: "ses_1" })
+    const firstResult = send("pane.report_agent", 1, { state: "working", sessionID: "ses_1" })
     await started.promise
-    send("pane.report_agent", 2, { state: "blocked", sessionID: "ses_1", message: dict["tui.herdr.permissionNeedsInput"] })
-    send("pane.report_agent", 3, { state: "idle", sessionID: "ses_1" })
-    send("pane.release_agent", 4)
+    const replaced = [
+      send("pane.report_agent", 2, { state: "blocked", sessionID: "ses_1", message: dict["tui.herdr.permissionNeedsInput"] }),
+      send("pane.report_agent", 3, { state: "idle", sessionID: "ses_1" }),
+    ]
+    const release = send("pane.release_agent", 4)
 
     expect(sent).toEqual([1])
+    expect(await Promise.all(replaced)).toEqual([false, false])
     first.resolve()
-    await done
+    expect(await firstResult).toBe(true)
+    expect(await release).toBe(true)
     expect(sent).toEqual([1, 4])
   })
 
@@ -302,16 +362,17 @@ describe("herdr agent state", () => {
       transport: (payload) => {
         const parsed = JSON.parse(payload) as { params: { seq: number } }
         sent.push(parsed.params.seq)
-        if (parsed.params.seq === 1) return hung.promise
-        return Promise.resolve()
+        if (parsed.params.seq === 1) return hung.promise.then(() => true)
+        return Promise.resolve(true)
       },
     })
 
-    const done = send("pane.report_agent", 1, { state: "working", sessionID: "ses_1" })
+    const hungResult = send("pane.report_agent", 1, { state: "working", sessionID: "ses_1" })
     send("pane.report_agent", 2, { state: "idle", sessionID: "ses_1" })
-    send("pane.report_agent", 3, { state: "blocked", sessionID: "ses_1", message: dict["tui.herdr.inputNeedsResponse"] })
+    const latest = send("pane.report_agent", 3, { state: "blocked", sessionID: "ses_1", message: dict["tui.herdr.inputNeedsResponse"] })
 
-    await done
+    expect(await hungResult).toBe(false)
+    expect(await latest).toBe(true)
     expect(sent).toEqual([1, 3])
   })
 
