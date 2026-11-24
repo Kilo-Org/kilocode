@@ -36,6 +36,7 @@ const ProviderSelectDialog = () => {
   const provider = useProvider()
   const server = useServer()
   const language = useLanguage()
+  provider.trackDialog()
 
   const items = createMemo<ProviderItem[]>(() => {
     language.locale()

@@ -31,7 +31,10 @@ afterAll(async () => {
     await fs.rm(path.join(dir, file), { force: true }).catch(() => {})
   }
   await Effect.runPromise(
-    Config.Service.use((svc) => svc.invalidate()).pipe(Effect.scoped, Effect.provide(AppNodeBuilder.build(Config.node))),
+    Config.Service.use((svc) => svc.invalidate()).pipe(
+      Effect.scoped,
+      Effect.provide(AppNodeBuilder.build(Config.node)),
+    ),
   )
   await InstanceRuntime.disposeAllInstances()
 })
@@ -807,6 +810,308 @@ describe("saveAlwaysRules", () => {
         yield* reply({ requestID: PermissionV1.ID.make("permission_a5"), reply: "once" })
         yield* Fiber.join(fiberA)
         expectFailure(yield* Fiber.await(fiberB), Permission.RejectedError)
+      }),
+    ),
+  )
+
+  it.live("a cleared rule asks again in the same process", () =>
+    withDir({ git: true }, () =>
+      Effect.gen(function* () {
+        const saved = yield* ask({
+          id: PermissionV1.ID.make("permission_remove_seed"),
+          sessionID: SessionID.make("session_test"),
+          permission: "bash",
+          patterns: ["npm install"],
+          metadata: { rules: ["npm *", "npm install"] },
+          always: ["npm install *"],
+          ruleset: [],
+        }).pipe(Effect.forkScoped)
+        yield* waitForPending(1)
+        yield* saveAlwaysRules({
+          requestID: PermissionV1.ID.make("permission_remove_seed"),
+          approvedAlways: ["npm install"],
+        })
+        yield* reply({ requestID: PermissionV1.ID.make("permission_remove_seed"), reply: "once" })
+        yield* Fiber.join(saved)
+
+        const auto = yield* ask({
+          sessionID: SessionID.make("session_test"),
+          permission: "bash",
+          patterns: ["npm install"],
+          metadata: {},
+          always: [],
+          ruleset: [],
+        })
+        expect(auto.manual).toBe(false)
+
+        // A later prompt for another command of the same tool shows the saved rule.
+        // Clearing it there applies to the running process at once.
+        const cleared = yield* ask({
+          id: PermissionV1.ID.make("permission_remove_offer"),
+          sessionID: SessionID.make("session_test"),
+          permission: "bash",
+          patterns: ["npm test"],
+          metadata: { rules: ["npm *", "npm install", "npm test"] },
+          always: ["npm install *"],
+          ruleset: [],
+        }).pipe(Effect.forkScoped)
+        yield* waitForPending(1)
+        yield* saveAlwaysRules({
+          requestID: PermissionV1.ID.make("permission_remove_offer"),
+          removedAlways: ["npm install"],
+        })
+        yield* reply({ requestID: PermissionV1.ID.make("permission_remove_offer"), reply: "once" })
+        yield* Fiber.join(cleared)
+
+        const next = yield* ask({
+          id: PermissionV1.ID.make("permission_remove_after"),
+          sessionID: SessionID.make("session_test"),
+          permission: "bash",
+          patterns: ["npm install"],
+          metadata: {},
+          always: [],
+          ruleset: [],
+        }).pipe(Effect.forkScoped)
+        const items = yield* waitForPending(1)
+        expect(items.some((p) => String(p.id) === "permission_remove_after")).toBe(true)
+        yield* reply({ requestID: PermissionV1.ID.make("permission_remove_after"), reply: "once" })
+        yield* Fiber.join(next)
+      }),
+    ),
+  )
+
+  it.live("clearing one pattern edits only that entry in the config", () =>
+    withDir({ git: true }, () =>
+      Effect.gen(function* () {
+        const asking = yield* ask({
+          id: PermissionV1.ID.make("permission_remove_partial"),
+          sessionID: SessionID.make("session_test"),
+          permission: "bash",
+          patterns: ["npm install"],
+          metadata: { rules: ["npm *", "npm install"] },
+          always: ["npm install *"],
+          ruleset: [],
+        }).pipe(Effect.forkScoped)
+        yield* waitForPending(1)
+        yield* saveAlwaysRules({
+          requestID: PermissionV1.ID.make("permission_remove_partial"),
+          approvedAlways: ["npm *", "npm install"],
+        })
+        yield* saveAlwaysRules({
+          requestID: PermissionV1.ID.make("permission_remove_partial"),
+          removedAlways: ["npm install"],
+        })
+        yield* reply({ requestID: PermissionV1.ID.make("permission_remove_partial"), reply: "once" })
+        yield* Fiber.join(asking)
+
+        const config = yield* Config.Service
+        const cfg = yield* config.get()
+        expect(cfg.permission?.bash).toMatchObject({ "npm *": "allow" })
+        expect(cfg.permission?.bash).not.toMatchObject({ "npm install": "allow" })
+      }),
+    ),
+  )
+
+  it.live("a clearance only reaches patterns the request carries", () =>
+    withDir({ git: true }, () =>
+      Effect.gen(function* () {
+        const owner = yield* ask({
+          id: PermissionV1.ID.make("permission_remove_owner"),
+          sessionID: SessionID.make("session_test"),
+          permission: "bash",
+          patterns: ["npm install"],
+          metadata: { rules: ["npm *"] },
+          always: ["npm *"],
+          ruleset: [],
+        }).pipe(Effect.forkScoped)
+        yield* waitForPending(1)
+        yield* saveAlwaysRules({
+          requestID: PermissionV1.ID.make("permission_remove_owner"),
+          approvedAlways: ["npm *"],
+        })
+        yield* reply({ requestID: PermissionV1.ID.make("permission_remove_owner"), reply: "once" })
+        yield* Fiber.join(owner)
+
+        // A different prompt for the same tool, whose own rule list does not carry
+        // "npm *", asks to clear it. The saved rule for the other pattern stays.
+        const other = yield* ask({
+          id: PermissionV1.ID.make("permission_remove_foreign"),
+          sessionID: SessionID.make("session_test"),
+          permission: "bash",
+          patterns: ["git status"],
+          metadata: { rules: ["git *"] },
+          always: ["git *"],
+          ruleset: [],
+        }).pipe(Effect.forkScoped)
+        yield* waitForPending(1)
+        yield* saveAlwaysRules({
+          requestID: PermissionV1.ID.make("permission_remove_foreign"),
+          removedAlways: ["npm *"],
+        })
+        yield* reply({ requestID: PermissionV1.ID.make("permission_remove_foreign"), reply: "once" })
+        yield* Fiber.join(other)
+
+        const cfg = yield* Config.Service
+        expect((yield* cfg.get()).permission?.bash).toMatchObject({ "npm *": "allow" })
+      }),
+    ),
+  )
+
+  it.live("clearing a tool-wide rule removes its scalar config entry", () =>
+    withDir({ git: true }, () =>
+      Effect.gen(function* () {
+        const seed = yield* ask({
+          id: PermissionV1.ID.make("permission_remove_wild_seed"),
+          sessionID: SessionID.make("session_test"),
+          permission: "webfetch",
+          patterns: ["https://example.com/a"],
+          metadata: {},
+          always: ["*"],
+          ruleset: [],
+        }).pipe(Effect.forkScoped)
+        yield* waitForPending(1)
+        yield* saveAlwaysRules({
+          requestID: PermissionV1.ID.make("permission_remove_wild_seed"),
+          approvedAlways: ["*"],
+        })
+        yield* reply({ requestID: PermissionV1.ID.make("permission_remove_wild_seed"), reply: "once" })
+        yield* Fiber.join(seed)
+
+        const cfg = yield* Config.Service
+        expect((yield* cfg.get()).permission?.webfetch).toBe("allow")
+
+        // A sensitive request prompts even while the tool is allowed, which is the
+        // only way the dock can show a saved tool-wide rule for this permission.
+        const offer = yield* ask({
+          id: PermissionV1.ID.make("permission_remove_wild_offer"),
+          sessionID: SessionID.make("session_test"),
+          permission: "webfetch",
+          patterns: ["https://example.com/b"],
+          metadata: { sandboxEscalation: true },
+          always: ["*"],
+          ruleset: [],
+        }).pipe(Effect.forkScoped)
+        yield* waitForPending(1)
+        yield* saveAlwaysRules({
+          requestID: PermissionV1.ID.make("permission_remove_wild_offer"),
+          removedAlways: ["*"],
+        })
+        yield* reply({
+          requestID: PermissionV1.ID.make("permission_remove_wild_offer"),
+          reply: "once",
+          interactive: true,
+        })
+        yield* Fiber.join(offer)
+
+        expect((yield* cfg.get()).permission?.webfetch).toBeUndefined()
+
+        // The cleared entry also stops deciding requests in this process.
+        const after = yield* ask({
+          id: PermissionV1.ID.make("permission_remove_wild_after"),
+          sessionID: SessionID.make("session_test"),
+          permission: "webfetch",
+          patterns: ["https://example.com/c"],
+          metadata: {},
+          always: [],
+          ruleset: [],
+        }).pipe(Effect.forkScoped)
+        const items = yield* waitForPending(1)
+        expect(items.some((p) => String(p.id) === "permission_remove_wild_after")).toBe(true)
+        yield* reply({ requestID: PermissionV1.ID.make("permission_remove_wild_after"), reply: "reject" })
+        yield* Fiber.await(after)
+      }),
+    ),
+  )
+
+  it.live("removing a named pattern from a scalar entry keeps the entry and writes no sentinel", () =>
+    withDir({ git: true }, () =>
+      Effect.gen(function* () {
+        // A settings save can persist a permission as a bare scalar, which is the
+        // tool-wide default. The prompt then offers a named pattern the scalar does not
+        // list, and clearing that pattern must leave the saved default in place without
+        // a leftover key.
+        const dir = Global.Path.config
+        yield* Effect.promise(() =>
+          fs.writeFile(path.join(dir, "kilo.jsonc"), JSON.stringify({ permission: { read: "allow" } }, null, 2)),
+        )
+        const cfg = yield* Config.Service
+        yield* cfg.invalidate()
+        expect((yield* cfg.get()).permission?.read).toBe("allow")
+
+        const asking = yield* ask({
+          id: PermissionV1.ID.make("permission_scalar_remove"),
+          sessionID: SessionID.make("session_test"),
+          permission: "read",
+          patterns: ["/tmp/b.txt"],
+          metadata: { rules: ["/tmp/b.txt"] },
+          always: [],
+          ruleset: [],
+        }).pipe(Effect.forkScoped)
+        yield* waitForPending(1)
+        yield* saveAlwaysRules({
+          requestID: PermissionV1.ID.make("permission_scalar_remove"),
+          removedAlways: ["/tmp/b.txt"],
+        })
+        yield* reply({ requestID: PermissionV1.ID.make("permission_scalar_remove"), reply: "once" })
+        yield* Fiber.join(asking)
+
+        // The saved default stays, and the file holds no literal sentinel.
+        const text = yield* Effect.promise(() => fs.readFile(path.join(dir, "kilo.jsonc"), "utf8"))
+        expect(text).not.toContain("null")
+        expect(text).not.toContain("/tmp/b.txt")
+        yield* cfg.invalidate()
+        expect((yield* cfg.get()).permission?.read).toEqual({ "*": "allow" })
+      }),
+    ),
+  )
+
+  it.live("a rule the config cannot express leaves the saved entry alone", () =>
+    withDir({ git: true }, () =>
+      Effect.gen(function* () {
+        // Seed the tool-wide action, then approve a concrete pattern this format
+        // cannot store. The concrete approval must not disturb the saved entry.
+        const seed = yield* ask({
+          id: PermissionV1.ID.make("permission_unexpressible_seed"),
+          sessionID: SessionID.make("session_test"),
+          permission: "webfetch",
+          patterns: ["https://example.com/a"],
+          metadata: { sandboxEscalation: true },
+          always: ["*"],
+          ruleset: [],
+        }).pipe(Effect.forkScoped)
+        yield* waitForPending(1)
+        yield* saveAlwaysRules({
+          requestID: PermissionV1.ID.make("permission_unexpressible_seed"),
+          approvedAlways: ["*"],
+        })
+        yield* reply({
+          requestID: PermissionV1.ID.make("permission_unexpressible_seed"),
+          reply: "once",
+          interactive: true,
+        })
+        yield* Fiber.join(seed)
+
+        const cfg = yield* Config.Service
+        expect((yield* cfg.get()).permission?.webfetch).toBe("allow")
+
+        const asking = yield* ask({
+          id: PermissionV1.ID.make("permission_unexpressible"),
+          sessionID: SessionID.make("session_test"),
+          permission: "webfetch",
+          patterns: ["https://example.com/b"],
+          metadata: { sandboxEscalation: true },
+          always: ["https://example.com/b"],
+          ruleset: [],
+        }).pipe(Effect.forkScoped)
+        yield* waitForPending(1)
+        yield* saveAlwaysRules({
+          requestID: PermissionV1.ID.make("permission_unexpressible"),
+          approvedAlways: ["https://example.com/b"],
+        })
+        yield* reply({ requestID: PermissionV1.ID.make("permission_unexpressible"), reply: "once", interactive: true })
+        yield* Fiber.join(asking)
+
+        expect((yield* cfg.get()).permission?.webfetch).toBe("allow")
       }),
     ),
   )

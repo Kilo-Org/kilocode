@@ -402,14 +402,11 @@ export async function activate(context: vscode.ExtensionContext) {
   const autoApprove = registerToggleAutoApprove(
     context,
     connectionService,
-    (sessionId) => {
-      if (sessionId) {
-        const dir =
-          provider.getSessionDirectories().get(sessionId) ?? agentManagerProvider.getSessionDirectories().get(sessionId)
-        if (dir) return dir
-      }
-      return defaultDir()
-    },
+    (sessionId) =>
+      sessionId
+        ? (provider.getSessionDirectories().get(sessionId) ??
+          agentManagerProvider.getSessionDirectories().get(sessionId))
+        : undefined,
     () => {
       const dirs = new Set([defaultDir()])
       for (const dir of provider.getSessionDirectories().values()) dirs.add(dir)

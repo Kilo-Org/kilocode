@@ -1,6 +1,7 @@
 import { Effect } from "effect"
 import { define } from "../internal"
 import { ProviderV2 } from "../../provider"
+import { dropBlankEndpoint, parseAzureResourceName } from "../../kilocode/provider-endpoint" // kilocode_change
 
 function selectLanguage(sdk: any, modelID: string, useChat: boolean) {
   if (useChat && sdk.chat) return sdk.chat(modelID)
@@ -32,6 +33,16 @@ export const AzurePlugin = define({
       Effect.fn(function* (evt) {
         if (evt.package !== "@ai-sdk/azure") return
         if (evt.model.providerID === ProviderV2.ID.azure) {
+          // kilocode_change start - a blank endpoint option counts as unset
+          dropBlankEndpoint(evt.options)
+          // kilocode_change end
+          // kilocode_change start - a blank or whitespace-only resourceName counts as unset
+          if (typeof evt.options.resourceName === "string") {
+            const trimmed = evt.options.resourceName.trim()
+            if (trimmed) evt.options.resourceName = trimmed
+            else delete evt.options.resourceName
+          }
+          // kilocode_change end
           if (
             !evt.options.resourceName &&
             !evt.options.baseURL &&
@@ -41,6 +52,11 @@ export const AzurePlugin = define({
               "AZURE_RESOURCE_NAME is missing, set it using env var or reconnecting the azure provider and setting it",
             )
           }
+          // kilocode_change start - require a plain Azure resource name
+          if (typeof evt.options.resourceName === "string" && !evt.options.baseURL) {
+            evt.options.resourceName = parseAzureResourceName(evt.options.resourceName)
+          }
+          // kilocode_change end
         }
         const mod = yield* Effect.promise(() => import("@ai-sdk/azure"))
         evt.sdk = mod.createAzure(evt.options)

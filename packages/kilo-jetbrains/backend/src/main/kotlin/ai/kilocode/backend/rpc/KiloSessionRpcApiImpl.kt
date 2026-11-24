@@ -415,7 +415,7 @@ class KiloSessionRpcApiImpl internal constructor(
 
     override suspend fun savePermissionRules(requestId: String, directory: String, rules: PermissionAlwaysRulesDto) {
         app.requireReady()
-        if (HostedIDs.isWorkspace(directory)) return
+        requireLocalDir(directory, "savePermissionRules")
         log.info("savePermissionRules: requestId=$requestId")
         chat.savePermissionRules(requestId, directory, rules)
     }

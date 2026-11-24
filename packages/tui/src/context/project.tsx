@@ -44,6 +44,9 @@ export const { use: useProject, provider: ProjectProvider } = createSimpleContex
       const directories = project.data?.id
         ? await sdk.client.project.directories({ projectID: project.data.id, workspace })
         : undefined
+      // kilocode_change start - the project identity applies only for the selection that started this load
+      if (workspace !== store.workspace.current) return
+      // kilocode_change end
       batch(() => {
         setStore("instance", "path", reconcile(instancePath.data || defaultPath))
         setStore("project", "id", project.data?.id)
