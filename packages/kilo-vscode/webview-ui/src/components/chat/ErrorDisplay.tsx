@@ -8,6 +8,7 @@ import { Button } from "@kilocode/kilo-ui/button"
 import type { AssistantMessage } from "@kilocode/sdk/v2"
 import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
+import { useVSCode } from "../../context/vscode"
 import {
   unwrapError,
   parseAssistantError,
@@ -27,6 +28,7 @@ export const ErrorDisplay: Component<ErrorDisplayProps> = (props) => {
   const { t } = useLanguage()
   const dialog = useDialog()
   const provider = useProvider()
+  const vscode = useVSCode()
   const parsed = createMemo(() => parseAssistantError(props.error))
   const auth = createMemo(() => parseProviderAuthError(props.error))
   const authProvider = createMemo(() => {
@@ -114,7 +116,7 @@ export const ErrorDisplay: Component<ErrorDisplayProps> = (props) => {
             <span data-slot="auth-prompt-title">{t("error.providerAuth.title", { provider: kilo() })}</span>
           </div>
           <p data-slot="auth-prompt-description">{t("error.providerAuth.description", { provider: kilo() })}</p>
-          <Button variant="primary" onClick={() => props.onLogin?.()}>
+          <Button variant="primary" onClick={() => vscode.postMessage({ type: "openProfilePanel", login: true })}>
             {t("common.signIn")}
           </Button>
         </div>
