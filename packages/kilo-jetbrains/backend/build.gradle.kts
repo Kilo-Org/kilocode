@@ -205,6 +205,7 @@ dependencies {
         bundledModule("intellij.platform.kernel.backend")
         bundledModule("intellij.platform.rpc.backend")
         bundledModule("intellij.platform.backend")
+        testBundledPlugin("com.jetbrains.sh")
         testFramework(TestFrameworkType.Platform)
     }
 

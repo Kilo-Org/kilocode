@@ -8,14 +8,17 @@ import ai.kilocode.rpc.dto.RunSkipDto
 import ai.kilocode.rpc.dto.RunProcessState
 import ai.kilocode.rpc.dto.RunResultDto
 import ai.kilocode.rpc.dto.RunStateDto
+import com.intellij.execution.DefaultExecutionTarget
 import com.intellij.execution.ExecutionListener
 import com.intellij.execution.ExecutionManager
+import com.intellij.execution.ExecutionTarget
 import com.intellij.execution.KillableProcess
 import com.intellij.execution.RunManager
 import com.intellij.execution.RunnerAndConfigurationSettings
 import com.intellij.execution.configurations.RunConfiguration
 import com.intellij.execution.executors.DefaultRunExecutor
 import com.intellij.execution.impl.ExecutionManagerImpl
+import com.intellij.execution.impl.RunnerAndConfigurationSettingsImpl
 import com.intellij.execution.process.ProcessEvent
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessListener
@@ -31,6 +34,7 @@ import com.intellij.openapi.externalSystem.service.execution.ExternalSystemRunCo
 import com.intellij.openapi.externalSystem.util.ExternalSystemApiUtil
 import com.intellij.openapi.externalSystem.util.ExternalSystemUtil
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.util.JDOMUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -77,17 +81,20 @@ import java.util.concurrent.atomic.AtomicBoolean
 class WorktreeRunManager internal constructor(
     private val project: Project,
     private val cs: CoroutineScope,
-    private val exec: suspend (RunnerAndConfigurationSettings) -> Unit,
+    private val exec: suspend (RunnerAndConfigurationSettings, ExecutionTarget?) -> Unit,
 ) {
     /** Platform constructor — executes through the real Run pipeline on the EDT. */
-    constructor(project: Project, cs: CoroutineScope) : this(project, cs, { settings ->
+    constructor(project: Project, cs: CoroutineScope) : this(project, cs, { settings, target ->
         withContext(Dispatchers.EDT) {
-            ExecutionUtil.runConfiguration(settings, DefaultRunExecutor.getRunExecutorInstance())
+            val executor = DefaultRunExecutor.getRunExecutorInstance()
+            if (target == null) ExecutionUtil.runConfiguration(settings, executor)
+            else ExecutionUtil.runConfiguration(settings, executor, target)
         }
     })
 
     companion object {
         private val LOG = KiloLog.create(WorktreeRunManager::class.java)
+        private const val COMPOUND = "CompoundRunConfigurationType"
 
         /** Poll interval while waiting for a handler to disappear or a reaped pid to exit. */
         private const val REAP_POLL_INTERVAL_MS = 500L
@@ -103,6 +110,11 @@ class WorktreeRunManager internal constructor(
 
     /** What [produce] built: the clone to execute, plus source settings that will not apply to it. */
     private data class Produced(val settings: RunnerAndConfigurationSettings, val dropped: List<String> = emptyList())
+
+    private sealed interface Plan {
+        data class Ready(val children: List<RunnerAndConfigurationSettings>) : Plan
+        data class Skip(val reason: String) : Plan
+    }
 
     /**
      * [start] is when this clone was created — the lower bound [WorktreeRunReaper.match] uses.
@@ -169,6 +181,15 @@ class WorktreeRunManager internal constructor(
         val items = readAction {
             manager.allSettings.mapNotNull { s ->
                 val type = s.type.displayName
+                if (s.type.id == COMPOUND) {
+                    return@mapNotNull when (val plan = compound(manager, s)) {
+                        is Plan.Ready -> RunConfigDto(s.uniqueID, s.name, type)
+                        is Plan.Skip -> {
+                            skipped += RunSkipDto(s.name, type, plan.reason)
+                            null
+                        }
+                    }
+                }
                 if (WorktreeRunAdapter.supports(s.configuration)) {
                     return@mapNotNull RunConfigDto(s.uniqueID, s.name, type)
                 }
@@ -192,6 +213,50 @@ class WorktreeRunManager internal constructor(
         return RunConfigListDto(items, buildable = roots.isNotEmpty(), skipped = skipped)
     }
 
+    /** Read the saved references: the platform's resolved map can silently omit missing children. */
+    private fun compound(manager: RunManager, settings: RunnerAndConfigurationSettings): Plan {
+        val leaves = linkedMapOf<String, RunnerAndConfigurationSettings>()
+        val visiting = mutableSetOf<String>()
+        val visited = mutableSetOf<String>()
+
+        fun unsupported(child: RunnerAndConfigurationSettings): String? {
+            if (WorktreeRunAdapter.supports(child.configuration)) return null
+            return (WorktreeRunDelegate.support(child.configuration) as? WorktreeRunDelegate.Support.Skip)?.reason
+        }
+
+        fun visit(group: RunnerAndConfigurationSettings): String? {
+            val id = group.uniqueID
+            if (id in visited) return null
+            if (!visiting.add(id)) return "cyclic compound configuration '${group.name}'"
+            val refs = (group as? RunnerAndConfigurationSettingsImpl)?.writeScheme()?.getChildren("toRun").orEmpty()
+            if (refs.isEmpty()) return "no child configurations in '${group.name}'"
+            for (ref in refs) {
+                val name = ref.getAttributeValue("name")
+                val type = ref.getAttributeValue("type")
+                if (name.isNullOrBlank() || type.isNullOrBlank()) return "invalid child reference in '${group.name}'"
+                val target = ref.getAttributeValue("targetId")
+                if (target != null && target != DefaultExecutionTarget.INSTANCE.id) {
+                    return "child '$name' uses a non-default execution target ($target)"
+                }
+                val child = manager.findConfigurationByTypeAndName(type, name)
+                    ?: return "child configuration '$name' was not found"
+                if (type == COMPOUND) {
+                    visit(child)?.let { return it }
+                    continue
+                }
+                if (child.uniqueID in leaves) continue
+                unsupported(child)?.let { return "child '$name': $it" }
+                leaves[child.uniqueID] = child
+            }
+            visiting.remove(id)
+            visited.add(id)
+            return null
+        }
+
+        val reason = visit(settings)
+        return if (reason == null) Plan.Ready(leaves.values.toList()) else Plan.Skip(reason)
+    }
+
     /**
      * Linked external project roots that can be built: the system must have a known task mapping and
      * a registered run configuration type, because without one
@@ -211,21 +276,44 @@ class WorktreeRunManager internal constructor(
     suspend fun run(id: String, worktree: String): RunResultDto {
         listen()
         val manager = RunManager.getInstance(project)
-        // Reading a configuration's serialized state (fingerprint) and cloning it can touch the
-        // project model, so the whole lookup + clone runs inside a read action.
-        val settings = readAction { manager.allSettings.firstOrNull { it.uniqueID == id } }
-            ?: return RunResultDto(error = "run configuration not found: $id")
+        val (settings, plan) = readAction {
+            val settings = manager.allSettings.firstOrNull { it.uniqueID == id } ?: return@readAction null
+            settings to if (settings.type.id == COMPOUND) compound(manager, settings) else Plan.Ready(listOf(settings))
+        } ?: return RunResultDto(error = "run configuration not found: $id")
+        if (plan is Plan.Skip) {
+            return RunResultDto(error = "cannot run '${settings.name}' in a worktree: ${plan.reason}")
+        }
+        val children = (plan as Plan.Ready).children
         val repo = project.basePath ?: return RunResultDto(error = "project has no base path")
         val label = label(repo, worktree)
-        val entry = lock.withLock {
+        val prepared = lock.withLock {
+            // Don't start or stop any process until all children can be prepared for the worktree.
+            val entries = children.associate { child ->
+                val key = Key(child.uniqueID, worktree)
+                val entry = prepare(manager, child, key, repo, label)
+                    ?: return RunResultDto(error = produceErrorMessage(child))
+                key to entry
+            }
+            for (entry in entries.values) {
+                val path = readAction { WorktreeRunAdapter.script(entry.settings.configuration) } ?: continue
+                // IntelliJ's Shell runner uses a non-refreshing VFS lookup, even for new worktrees.
+                val file = withContext(Dispatchers.IO) { LocalFileSystem.getInstance().refreshAndFindFileByPath(path) }
+                if (file == null || file.isDirectory) return RunResultDto(error = "shell script not found: $path")
+            }
             released.remove(pathKey(worktree))
-            clone(manager, settings, Key(id, worktree), repo, label)
-        } ?: return RunResultDto(error = produceErrorMessage(settings))
-        LOG.info("worktree run: start config=${settings.name} worktree=$worktree")
-        exec(entry.settings)
+            for ((key, entry) in entries) install(key, entry)
+            entries.values
+        }
+        val target = DefaultExecutionTarget.INSTANCE.takeIf {
+            settings.type.id == COMPOUND || settings.type.id == WorktreeRunAdapter.SHELL
+        }
+        for (entry in prepared) {
+            LOG.info("worktree run: start config=${entry.settings.name} worktree=$worktree")
+            exec(entry.settings, target)
+        }
         // Reported every start, not only the first: the caveat applies to the run the user just began,
         // and a cached clone reuses the same reduced configuration.
-        val warning = entry.dropped.takeIf { it.isNotEmpty() }?.joinToString()
+        val warning = prepared.flatMap { it.dropped }.distinct().takeIf { it.isNotEmpty() }?.joinToString()
         return RunResultDto(ok = true, warning = warning)
     }
 
@@ -252,13 +340,13 @@ class WorktreeRunManager internal constructor(
         }
         for (clone in prepared) {
             LOG.info("worktree build: start config=${clone.name}")
-            exec(clone)
+            exec(clone, null)
         }
         return RunResultDto(ok = true)
     }
 
     /**
-     * Same reuse contract as [clone], except Build and Rebuild intentionally share one settings
+     * Same reuse contract as [prepare], except Build and Rebuild intentionally share one settings
      * instance per root/worktree. Switching between them mutates that same settings object before
      * execution, so `isAllowRunningInParallel = false` makes the platform stop the sibling process
      * instead of allowing Build and Rebuild to race over the same output directories.
@@ -313,12 +401,9 @@ class WorktreeRunManager internal constructor(
     /**
      * Reuses the cached per-worktree clone while the source configuration is unchanged (same
      * serialized state), so re-running restarts the same settings instance via the platform's
-     * `restartRunProfile`. When the user edits the source configuration, a fresh clone picks up the
-     * changes; because the platform's restart matches by settings identity, that fresh instance
-     * would leave the previous process orphaned and unmanageable from the popup, so any process
-     * still running under the replaced clone is stopped here first.
+     * `restartRunProfile`. Does not replace any entry until [install].
      */
-    private suspend fun clone(
+    private suspend fun prepare(
         manager: RunManager,
         settings: RunnerAndConfigurationSettings,
         key: Key,
@@ -329,13 +414,20 @@ class WorktreeRunManager internal constructor(
         val entry = clones[key]
         if (entry != null && entry.print == print) return entry
         val next = readAction { produce(manager, settings, key.worktree, repo, label) } ?: return null
-        if (entry != null) handlers[key]?.let { handler ->
+        return Entry(next.settings, print, next.dropped, reapable = true)
+    }
+
+    /** Restart matches by settings identity, so stop a live process explicitly when replacing its clone. */
+    private suspend fun install(key: Key, entry: Entry) {
+        val previous = clones[key]
+        if (previous === entry) return
+        if (previous != null) handlers[key]?.let { handler ->
             LOG.info("worktree run: stopping replaced clone before restart config=${key.id} worktree=${key.worktree}")
-            val doomed = doomed(key, entry)
+            val doomed = doomed(key, previous)
             ExecutionManagerImpl.stopProcess(handler)
             arm(key, doomed)
         }
-        return Entry(next.settings, print, next.dropped, reapable = true).also { clones[key] = it }
+        clones[key] = entry
     }
 
     /**
@@ -402,6 +494,9 @@ class WorktreeRunManager internal constructor(
      * gets the actionable hint; the generic message is for configurations nothing can run.
      */
     private suspend fun produceErrorMessage(settings: RunnerAndConfigurationSettings): String {
+        if (WorktreeRunAdapter.supports(settings.configuration)) {
+            return "cannot prepare '${settings.name}' for a worktree run; check its paths and settings"
+        }
         val support = readAction { WorktreeRunDelegate.support(settings.configuration) }
         return when (support) {
             is WorktreeRunDelegate.Support.Delegate ->
