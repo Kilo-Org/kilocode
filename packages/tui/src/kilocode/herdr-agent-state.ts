@@ -1,8 +1,8 @@
 import { dict } from "@kilocode/kilo-i18n/en"
 import { Plugin } from "@opencode/plugin/tui"
-import type { ConfigEntry } from "@opencode/client"
-import { ConfigFlag } from "@opencode/schema/config/flag"
 import net from "node:net"
+
+declare const OPENCODE_CLI_NAME: string | undefined
 
 export type HerdrState = "idle" | "working" | "blocked"
 
@@ -14,13 +14,13 @@ export interface HerdrReport {
 
 export type HerdrMethod = "pane.report_agent" | "pane.release_agent"
 
-const SOURCE = "kilo2"
-const AGENT = "kilo2"
-const HERDR_FLAG = "herdr_agent_state" satisfies ConfigFlag.Key
+const SOURCE = "kilo"
+const AGENT = "kilo"
 const TICK = 1_000
 const SOCKET_TIMEOUT = 500
-
-export type HerdrConfigEntries = ReadonlyArray<ConfigEntry>
+const PLAIN_COMMAND = /^[A-Za-z0-9_.][A-Za-z0-9_.-]*$/
+const FORBIDDEN_ARG_CHARS = /['\u0000-\u001F\u007F-\u009F]/
+const MAX_RESUME_ARGV_BYTES = 8_192
 
 export type HerdrTranslationKey = keyof typeof dict
 export type HerdrDictionary = Record<string, string>
@@ -67,37 +67,18 @@ export async function loadHerdrTranslator(locale = Intl.DateTimeFormat().resolve
   return (key) => t(dictionary, key)
 }
 
-export function herdrFlagEnabled(input: {
-  entries: HerdrConfigEntries
-  channel: string
-  overrides?: string
-}) {
-  const env = new Map(
-    (input.overrides ?? process.env.OPENCODE_FLAGS ?? "")
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean)
-      .map((item): [string, boolean] => (item.startsWith("-") ? [item.slice(1), false] : [item, true])),
-  )
-  const all = env.get(ConfigFlag.wildcard) === true
-  const experimental = input.entries.findLast(
-    (entry) => entry.type === "document" && entry.info.experimental !== undefined,
-  )
-  const allFlags = input.entries.findLast(
-    (entry) => entry.type === "document" && entry.info.experimental?.all_flags !== undefined,
-  )
-  const configured = experimental?.type === "document" ? experimental.info.experimental?.[HERDR_FLAG] : undefined
-  const configuredAll = allFlags?.type === "document" && allFlags.info.experimental?.all_flags === true
-  return env.get(HERDR_FLAG) ?? (all ? true : undefined) ?? configured ?? (configuredAll ? true : undefined) ?? (input.channel === "local" || input.channel === "dev")
+export function defaultCliName() {
+  return typeof OPENCODE_CLI_NAME === "string" ? OPENCODE_CLI_NAME : AGENT
 }
 
-export function herdrActivationEnabled(input: {
-  entries: HerdrConfigEntries
-  channel: string
-  herdrEnv?: string
-  overrides?: string
-}) {
-  return input.herdrEnv === "1" && herdrFlagEnabled(input)
+// Herdr validates resume_argv strictly and rejects the entire pane.report_agent on invalid values.
+export function buildResumeArgv(sessionID: string | undefined, command = defaultCliName()) {
+  if (!sessionID) return undefined
+  if (!PLAIN_COMMAND.test(command)) return undefined
+  if (FORBIDDEN_ARG_CHARS.test(sessionID)) return undefined
+  const argv = [command, "--session", sessionID]
+  if (Buffer.byteLength(argv.join(""), "utf8") > MAX_RESUME_ARGV_BYTES) return undefined
+  return argv
 }
 
 export function status(
@@ -123,7 +104,15 @@ export function status(
   return { state: "idle", sessionID: root }
 }
 
-export function buildRequest(input: { method: HerdrMethod; paneID: string; seq: number; report?: HerdrReport }) {
+export function buildRequest(input: {
+  method: HerdrMethod
+  paneID: string
+  seq: number
+  report?: HerdrReport
+  command?: string
+}) {
+  const resumeArgv =
+    input.method === "pane.report_agent" ? buildResumeArgv(input.report?.sessionID, input.command) : undefined
   return {
     id: `${SOURCE}:${input.seq}`,
     method: input.method,
@@ -134,6 +123,7 @@ export function buildRequest(input: { method: HerdrMethod; paneID: string; seq: 
       seq: input.seq,
       ...(input.report ? { state: input.report.state } : {}),
       ...(input.report?.sessionID ? { agent_session_id: input.report.sessionID } : {}),
+      ...(resumeArgv ? { resume_argv: resumeArgv } : {}),
       ...(input.report?.message ? { message: input.report.message } : {}),
     },
   }
@@ -230,10 +220,6 @@ export default Plugin.define({
     const paneID = process.env.HERDR_PANE_ID
     const socketPath = process.env.HERDR_SOCKET_PATH
     if (!paneID || !socketPath) return
-    const entries = await context.client.config
-      .get(context.location ? { location: { directory: context.location.directory } } : undefined)
-      .catch(() => undefined)
-    if (!entries || !herdrActivationEnabled({ entries, channel: context.app.channel, herdrEnv: process.env.HERDR_ENV })) return
 
     const send = createSender({
       paneID,

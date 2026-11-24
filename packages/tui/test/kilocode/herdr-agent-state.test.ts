@@ -8,13 +8,12 @@ import { fileURLToPath } from "node:url"
 import type { Plugin } from "@opencode/plugin/tui"
 import {
   buildRequest,
+  buildResumeArgv,
   createReporter,
   createSender,
-  herdrActivationEnabled,
   loadHerdrTranslator,
   sendSocketRequest,
   status,
-  type HerdrConfigEntries,
   type HerdrMethod,
   type HerdrReport,
 } from "../../src/kilocode/herdr-agent-state"
@@ -43,34 +42,18 @@ function data(scene: Scene = {}): Data {
   } as unknown as Data
 }
 
-function entries(...experimental: Array<Record<string, boolean>>): HerdrConfigEntries {
-  return experimental.map((value) => ({ type: "document", info: { experimental: value } })) as HerdrConfigEntries
-}
-
 describe("herdr agent state", () => {
-  test("activates Herdr only with its environment and release-safe flag", () => {
-    expect(herdrActivationEnabled({ entries: [], channel: "release", herdrEnv: "1", overrides: "" })).toBe(false)
-    expect(herdrActivationEnabled({ entries: [], channel: "dev", herdrEnv: "1", overrides: "" })).toBe(true)
-    expect(herdrActivationEnabled({ entries: [], channel: "dev", overrides: "" })).toBe(false)
-    expect(
-      herdrActivationEnabled({ entries: [], channel: "release", herdrEnv: "1", overrides: "herdr_agent_state" }),
-    ).toBe(true)
-    expect(
-      herdrActivationEnabled({
-        entries: entries({ herdr_agent_state: true }),
-        channel: "release",
-        herdrEnv: "1",
-        overrides: "",
-      }),
-    ).toBe(true)
-    expect(
-      herdrActivationEnabled({
-        entries: entries({ herdr_agent_state: true }),
-        channel: "release",
-        herdrEnv: "1",
-        overrides: "-herdr_agent_state",
-      }),
-    ).toBe(false)
+  test("builds validated resume_argv commands and rejects invalid inputs", () => {
+    expect(buildResumeArgv("ses_1", "kilo2")).toEqual(["kilo2", "--session", "ses_1"])
+    expect(buildResumeArgv("ses_1", "kilo")).toEqual(["kilo", "--session", "ses_1"])
+    expect(buildResumeArgv(undefined, "kilo")).toBeUndefined()
+    expect(buildResumeArgv("", "kilo")).toBeUndefined()
+    expect(buildResumeArgv("ses_1", "/usr/local/bin/kilo2")).toBeUndefined()
+    expect(buildResumeArgv("ses_1", "-kilo")).toBeUndefined()
+    expect(buildResumeArgv("ses_1", "kilo 2")).toBeUndefined()
+    expect(buildResumeArgv("ses'1", "kilo")).toBeUndefined()
+    expect(buildResumeArgv("ses\n1", "kilo")).toBeUndefined()
+    expect(buildResumeArgv("x".repeat(8_200), "kilo")).toBeUndefined()
   })
 
   test("reports localized blocked state messages", async () => {
@@ -152,18 +135,40 @@ describe("herdr agent state", () => {
         paneID: "wE:p5",
         seq: 42,
         report: { state: "blocked", sessionID: "ses_1", message: dict["tui.herdr.permissionNeedsInput"] },
+        command: "kilo2",
       }),
     ).toEqual({
-      id: "kilo2:42",
+      id: "kilo:42",
       method: "pane.report_agent",
       params: {
         pane_id: "wE:p5",
-        source: "kilo2",
-        agent: "kilo2",
+        source: "kilo",
+        agent: "kilo",
         seq: 42,
         state: "blocked",
         agent_session_id: "ses_1",
+        resume_argv: ["kilo2", "--session", "ses_1"],
         message: dict["tui.herdr.permissionNeedsInput"],
+      },
+    })
+
+    expect(
+      buildRequest({
+        method: "pane.report_agent",
+        paneID: "wE:p5",
+        seq: 43,
+        report: { state: "idle" },
+        command: "kilo2",
+      }),
+    ).toEqual({
+      id: "kilo:43",
+      method: "pane.report_agent",
+      params: {
+        pane_id: "wE:p5",
+        source: "kilo",
+        agent: "kilo",
+        seq: 43,
+        state: "idle",
       },
     })
 
@@ -171,16 +176,16 @@ describe("herdr agent state", () => {
       buildRequest({
         method: "pane.release_agent",
         paneID: "wE:p5",
-        seq: 43,
+        seq: 44,
       }),
     ).toEqual({
-      id: "kilo2:43",
+      id: "kilo:44",
       method: "pane.release_agent",
       params: {
         pane_id: "wE:p5",
-        source: "kilo2",
-        agent: "kilo2",
-        seq: 43,
+        source: "kilo",
+        agent: "kilo",
+        seq: 44,
       },
     })
   })

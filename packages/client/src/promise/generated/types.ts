@@ -2641,7 +2641,6 @@ export type ConfigEntry =
           automations?: boolean
           artifacts?: boolean
           video_generate?: boolean
-          herdr_agent_state?: boolean
           console_watches?: boolean
           mcp_events?: boolean
           full_codemode?: boolean
