@@ -1,29 +1,14 @@
 import { expect, it } from "bun:test"
-import { registerActivity } from "../webview-ui/agent-manager/terminal/activity"
+import { createActivityTracker } from "../webview-ui/agent-manager/terminal/activity"
 import { createTerminalState } from "../webview-ui/agent-manager/terminal/state"
 import type { Activity } from "../webview-ui/agent-manager/v2/activity"
 
 it("accepts all states, ignores invalid signals, and clears on expiry and disposal", async () => {
   const states: Activity[] = []
-  let handle!: (data: string) => boolean | Promise<boolean>
-  let disposed = false
-  const input = registerActivity(
-    {
-      registerOscHandler: (id, callback) => {
-        expect(id).toBe(777)
-        handle = callback
-        return {
-          dispose: () => {
-            disposed = true
-          },
-        }
-      },
-    },
-    (state) => states.push(state),
-  )
+  const tracker = createActivityTracker((state) => states.push(state))
   const packet = (state: string, time = Date.now()) => `kilo;activity;1;${state};${time}`
   try {
-    expect(handle("notify;hello")).toBe(false)
+    expect(tracker.handle("notify;hello")).toBe(false)
     for (const value of [
       packet("unknown"),
       packet("busy", Date.now() - 16_000),
@@ -32,25 +17,24 @@ it("accepts all states, ignores invalid signals, and clears on expiry and dispos
       "kilo;activity;1;busy;NaN",
       `${packet("busy")};extra`,
     ]) {
-      expect(handle(value)).toBe(true)
+      expect(tracker.handle(value)).toBe(true)
     }
     expect(states).toEqual([])
     for (const state of ["idle", "busy", "retry", "waiting", "error", "done"] as const) {
-      expect(handle(packet(state))).toBe(true)
+      expect(tracker.handle(packet(state))).toBe(true)
       expect(states.at(-1)).toBe(state)
     }
-    input.clear()
+    tracker.clear()
     expect(states.at(-1)).toBe("idle")
-    handle(packet("busy", Date.now() - 14_950))
+    tracker.handle(packet("busy", Date.now() - 14_950))
     expect(states.at(-1)).toBe("busy")
     await Bun.sleep(80)
     expect(states.at(-1)).toBe("idle")
-    handle(packet("busy"))
+    tracker.handle(packet("busy"))
   } finally {
-    input.dispose()
+    tracker.dispose()
   }
   expect(states.at(-1)).toBe("idle")
-  expect(disposed).toBe(true)
 })
 
 it("aggregates main and side terminals without remounting or crossing projects", () => {

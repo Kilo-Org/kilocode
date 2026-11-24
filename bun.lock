@@ -498,15 +498,11 @@
         "@opencode/util": "workspace:*",
         "@pierre/diffs": "1.2.10",
         "@thisbeyond/solid-dnd": "0.7.5",
-        "@xterm/addon-clipboard": "0.2.0",
-        "@xterm/addon-fit": "0.11.0",
-        "@xterm/addon-unicode-graphemes": "0.4.0",
-        "@xterm/addon-web-links": "0.12.0",
-        "@xterm/xterm": "6.0.0",
         "diff": "catalog:",
         "fastest-levenshtein": "1.0.16",
         "friendly-words": "1.3.1",
         "fuzzysort": "catalog:",
+        "ghostty-web": "https://codeload.github.com/anomalyco/ghostty-web/tar.gz/6eae54491912ca1404578f5b9371a51cf9101977",
         "ignore": "7.0.5",
         "ipaddr.js": "1.9.1",
         "js-tiktoken": "1.0.21",
@@ -2365,16 +2361,6 @@
 
     "@xmldom/xmldom": ["@xmldom/xmldom@0.9.12", "", {}, "sha512-5AXjrcMClTryPe9LgZrygpB1lj7s0S9E0+W+AHaVKAVyHanafK86iPSvG5xHVSp/jC+VH1UXu0TAEmY279xH7A=="],
 
-    "@xterm/addon-clipboard": ["@xterm/addon-clipboard@0.2.0", "", { "dependencies": { "js-base64": "^3.7.5" } }, "sha512-Dl31BCtBhLaUEECUbEiVcCLvLBbaeGYdT7NofB8OJkGTD3MWgBsaLjXvfGAD4tQNHhm6mbKyYkR7XD8kiZsdNg=="],
-
-    "@xterm/addon-fit": ["@xterm/addon-fit@0.11.0", "", {}, "sha512-jYcgT6xtVYhnhgxh3QgYDnnNMYTcf8ElbxxFzX0IZo+vabQqSPAjC3c1wJrKB5E19VwQei89QCiZZP86DCPF7g=="],
-
-    "@xterm/addon-unicode-graphemes": ["@xterm/addon-unicode-graphemes@0.4.0", "", {}, "sha512-9+/CqwbKcnlkJU4d3wIgO+wjsL8f6vyz+UwUWLu6nADQz8Gr8ONqGCJfdDjIdI+yYZLABQqQy47FzEM6AWELjw=="],
-
-    "@xterm/addon-web-links": ["@xterm/addon-web-links@0.12.0", "", {}, "sha512-4Smom3RPyVp7ZMYOYDoC/9eGJJJqYhnPLGGqJ6wOBfB8VxPViJNSKdgRYb8NpaM6YSelEKbA2SStD7lGyqaobw=="],
-
-    "@xterm/xterm": ["@xterm/xterm@6.0.0", "", {}, "sha512-TQwDdQGtwwDt+2cgKDLn0IRaSxYu1tSUjgKarSDkUM0ZNiSRXFpjxEsvc/Zgc5kq5omJ+V0a8/kIM2WD3sMOYg=="],
-
     "@yuuang/ffi-rs-android-arm64": ["@yuuang/ffi-rs-android-arm64@1.3.7", "", { "os": "android", "cpu": "arm64" }, "sha512-t6Wx3Xll6c07Nuk0k3xnZsxKFxlshm92i0U/BiTHc6kQbvu+fMJF+gKsj4yEj886jH51CM3EqZT9Xdhq9CdUVw=="],
 
     "@yuuang/ffi-rs-darwin-arm64": ["@yuuang/ffi-rs-darwin-arm64@1.3.2", "", { "os": "darwin", "cpu": "arm64" }, "sha512-kRdgPaOM6TfuC5wHUwstlatk4HNie2lwSLJWQL2LiAUIJ7+96CoiWUNVhwBcFrhdfxhnWenYS6F668CV0vit8Q=="],
@@ -2903,6 +2889,8 @@
 
     "get-tsconfig": ["get-tsconfig@4.14.3", "", { "dependencies": { "resolve-pkg-maps": "^1.0.0" } }, "sha512-++QEw4DIY7WGoukz+/+A/8dGYPT9l9yIadnmSgZ8Rjr3YVSVDipQSO9CdnJo9ePqFqUUqh+wk9uIaoiAwsiPkA=="],
 
+    "ghostty-web": ["ghostty-web@https://codeload.github.com/anomalyco/ghostty-web/tar.gz/6eae54491912ca1404578f5b9371a51cf9101977", {}, "sha512-N6stroUJBY9x7ZWlSPLYz2MPTvIlLJr38ns5PzRWMt/CIHLffUyYY4u8hkRKj3D11spjd75zB0xnXP6JpHkdIw=="],
+
     "gitlab-ai-provider": ["gitlab-ai-provider@6.24.0", "", { "dependencies": { "@anthropic-ai/sdk": "^0.71.0", "@anycable/core": "^0.9.2", "graphql-request": "^6.1.0", "isomorphic-ws": "^5.0.0", "openai": "^6.16.0", "proper-lockfile": "^4.1.2", "socket.io-client": "^4.8.1", "vscode-jsonrpc": "^8.2.1", "zod": "^3.25.76" }, "peerDependencies": { "@ai-sdk/provider": ">=3.0.0", "@ai-sdk/provider-utils": ">=4.0.0" } }, "sha512-O3clsZqSOcgFM8IztQVz7OSnKJoSG5yI0Uo3oWpgPusGy0VT7e40lZQDE0blN/FzzJnsV9JlDz+CIQ/El0z//Q=="],
 
     "glob": ["glob@13.0.5", "", { "dependencies": { "minimatch": "^10.2.1", "minipass": "^7.1.2", "path-scurry": "^2.0.0" } }, "sha512-BzXxZg24Ibra1pbQ/zE7Kys4Ua1ks7Bn6pKLkVPZ9FZe4JQS6/Q7ef3LG1H+k7lUf5l4T3PLSyYyYJVYUvfgTw=="],
@@ -3048,8 +3036,6 @@
     "jiti": ["jiti@2.7.0", "", { "bin": { "jiti": "lib/jiti-cli.mjs" } }, "sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ=="],
 
     "jose": ["jose@6.0.11", "", {}, "sha512-QxG7EaliDARm1O1S8BGakqncGT9s25bKL1WSf6/oa17Tkqwi8D2ZNglqCF+DsYF88/rV66Q/Q2mFAy697E1DUg=="],
-
-    "js-base64": ["js-base64@3.7.7", "", {}, "sha512-7rCnleh0z2CkXhH67J8K1Ytz0b2Y+yxTPL+/KOJoa20hfnVQ/3/T6W/KflYI4bRHRagNeXeU2bkNGI3v1oS/lw=="],
 
     "js-string-escape": ["js-string-escape@1.0.1", "", {}, "sha512-Smw4xcfIQ5LVjAOuJCvN/zIodzA/BBSsluuoSykP+lUvScIi4U6RJLfwHet5cxFnCswUjISV8oAXaqaJDY3chg=="],
 
