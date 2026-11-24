@@ -16,8 +16,8 @@ export function clientSessionStatus(status: ClientSessionStatus): SessionStatus 
 /** A session asleep on a pending wakeup is not a running turn. */
 export function isRunningStatus(
   status: SessionStatus["type"] | "scheduled" | undefined,
-): status is "busy" | "retry" | "offline" {
-  return status === "busy" || status === "retry" || status === "offline"
+): status is "busy" | "retry" | "offline" | "waiting" {
+  return status === "busy" || status === "retry" || status === "offline" || status === "waiting"
 }
 
 /**

@@ -223,6 +223,10 @@ export const layer = Layer.effect(
         events,
         cancel: state.cancel,
         stop: (id, work) => control.stop(id, goals.pause(id, preserve && id === sessionID).pipe(Effect.andThen(work))),
+        // kilocode_change start - reject pending permission requests during cancel
+        // so detached tool fibers blocked on Deferred.await unblock (#33)
+        rejectPermissions: permission.rejectForSession,
+        // kilocode_change end
       })
     })
     const goals = yield* Goal.make({

@@ -7,8 +7,8 @@ import type { PRStatus } from "./types"
 import type { ManagedSession, Worktree, WorktreeStateManager } from "./WorktreeStateManager"
 import { SNAPSHOT_INITIALIZATION } from "./constants"
 
-export type Activity = "idle" | "busy" | "retry" | "offline"
-export type FilterState = Activity | "waiting"
+export type Activity = "idle" | "busy" | "retry" | "offline" | "waiting" // a session blocked on a permission prompt is still active
+export type FilterState = Activity
 export type FailureCode =
   | "cross_workspace"
   | "host_error"

@@ -74,6 +74,9 @@ export function resolveDerivedSessionStatus(input: {
   if (input.hasQuestion) return "question"
   if (input.statusType === "offline") return "retry"
   if (input.statusType === "busy" || input.statusType === "retry") return input.statusType
+  // kilocode_change start - a session waiting for permission is an active turn, not idle (#33)
+  if (input.statusType === "waiting") return "busy"
+  // kilocode_change end
   if (input.scheduledAt !== undefined) return "scheduled"
   if (input.statusType === "idle") return input.statusType
   return "idle"
