@@ -40,13 +40,6 @@ function dir(input: ParseSource) {
   return input.type === "path" ? path.dirname(input.path) : input.dir
 }
 
-// kilocode_change start - a token is inert when its line is commented out with //
-function commented(text: string, index: number) {
-  const lineStart = text.lastIndexOf("\n", index - 1) + 1
-  return text.slice(lineStart, index).trimStart().startsWith("//")
-}
-// kilocode_change end
-
 /** Apply {env:VAR} and {file:path} substitutions to config text. */
 export async function substitute(input: SubstituteInput) {
   const missing = input.missing ?? "error"
@@ -59,7 +52,7 @@ export async function substitute(input: SubstituteInput) {
   const dollar = Boolean(input.markdown) && !trusted
   if (!trusted) {
     const active = Array.from(input.text.matchAll(dollar ? /(?<!\$)\{env:[^}]+\}/g : /\{env:[^}]+\}/g)).find(
-      (m) => !commented(input.text, m.index),
+      (m) => !ConfigVariableGuard.commented(input.text, m.index, input.markdown),
     )
     if (active) {
       throw new InvalidError({
@@ -72,7 +65,7 @@ export async function substitute(input: SubstituteInput) {
     // still allowed when a scope is supplied (the normal project path); this only guards a caller that omitted it.
     if (!input.fileScope) {
       const file = Array.from(input.text.matchAll(dollar ? /(?<!\$)\{file:[^}]+\}/g : /\{file:[^}]+\}/g)).find(
-        (m) => !commented(input.text, m.index),
+        (m) => !ConfigVariableGuard.commented(input.text, m.index, input.markdown),
       )
       if (file) {
         throw new InvalidError({
@@ -86,7 +79,7 @@ export async function substitute(input: SubstituteInput) {
   // kilocode_change start - leave commented tokens literal; reject server credentials
   const envPattern = dollar ? /(?<!\$)\{env:([^}]+)\}/g : /\{env:([^}]+)\}/g
   let text = input.text.replace(envPattern, (match, varName, offset: number) => {
-    if (commented(input.text, offset)) return match
+    if (ConfigVariableGuard.commented(input.text, offset, input.markdown)) return match
     if (!ConfigVariableGuard.env(varName)) {
       throw new InvalidError({ path: source(input), message: `blocked environment reference: "{env:${varName}}"` })
     }
@@ -108,7 +101,7 @@ export async function substitute(input: SubstituteInput) {
     out += text.slice(cursor, index)
 
     // kilocode_change start - skip tokens on commented-out lines
-    if (commented(text, index)) {
+    if (ConfigVariableGuard.commented(text, index, input.markdown)) {
       out += token
       cursor = index + token.length
       continue

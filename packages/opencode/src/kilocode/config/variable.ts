@@ -1,6 +1,7 @@
 import fs from "node:fs/promises"
 import { realpathSync, statSync } from "node:fs"
 import path from "node:path"
+import { createScanner } from "jsonc-parser"
 
 export namespace ConfigVariableGuard {
   export type FileScope = {
@@ -24,6 +25,29 @@ export namespace ConfigVariableGuard {
     "KILO_BROWSER_BROKER_URL",
     "KILO_BROWSER_BROKER_TOKEN",
   ])
+
+  // jsonc-parser's SyntaxKind is a const enum, which verbatimModuleSyntax forbids importing.
+  const OPEN_BRACE = 1
+  const LINE_COMMENT = 12
+  const BLOCK_COMMENT = 13
+  const EOF = 17
+
+  // A token is inert when its line is commented out with //, or, for JSONC documents (root object), when a
+  // string-aware scan finds it inside a /* */ block or a trailing // comment. Strings such as "**/*.ts" or
+  // "https://x" are not comments, and plain text (URLs, headers, prompts, markdown) is never scanned.
+  export function commented(text: string, index: number, markdown?: boolean) {
+    const lineStart = text.lastIndexOf("\n", index - 1) + 1
+    if (text.slice(lineStart, index).trimStart().startsWith("//")) return true
+    if (markdown || createScanner(text, true).scan() !== OPEN_BRACE) return false
+    const scanner = createScanner(text, false)
+    for (let kind = scanner.scan(); kind !== EOF; kind = scanner.scan()) {
+      const start = scanner.getTokenOffset()
+      if (start > index) return false
+      if (kind !== LINE_COMMENT && kind !== BLOCK_COMMENT) continue
+      if (index < start + scanner.getTokenLength()) return true
+    }
+    return false
+  }
 
   export function env(name: string) {
     return !secret.has(name.toUpperCase())

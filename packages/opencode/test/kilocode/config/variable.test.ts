@@ -82,6 +82,58 @@ test("ignores commented-out references in untrusted config", async () => {
   expect(await ConfigVariable.substitute({ ...source, text })).toBe(text)
 })
 
+test("leaves references inside block comments literal", async () => {
+  const text = ["{", "  /* {file:./_prompts/agents/*.md} {env:SAFE_VALUE} */", '  "a": 1', "}"].join("\n")
+  expect(await ConfigVariable.substitute({ ...source, text })).toBe(text)
+  expect(await ConfigVariable.substitute({ ...source, text, fileScope: { root: process.cwd(), source: "test" } })).toBe(
+    text,
+  )
+  expect(await ConfigVariable.substitute({ ...trusted, text, env: { SAFE_VALUE: "x" } })).toBe(text)
+})
+
+test("leaves references inside multi-line block comments literal", async () => {
+  const text = ["/*", " * {file:./missing.md}", " * {env:SAFE_VALUE}", " */", '{ "a": 1 }'].join("\n")
+  expect(await ConfigVariable.substitute({ ...trusted, text, env: { SAFE_VALUE: "x" } })).toBe(text)
+})
+
+test("substitutes a reference after a block comment closes on the same line", async () => {
+  const text = '{ /* note {env:SAFE_VALUE} */ "a": "{env:SAFE_VALUE}" }'
+  expect(await ConfigVariable.substitute({ ...trusted, text, env: { SAFE_VALUE: "x" } })).toBe(
+    '{ /* note {env:SAFE_VALUE} */ "a": "x" }',
+  )
+})
+
+test("leaves references in trailing line comments literal", async () => {
+  const text = '{ "a": "b" // {env:SAFE_VALUE} {file:./missing.md}\n}'
+  expect(await ConfigVariable.substitute({ ...trusted, text, env: { SAFE_VALUE: "x" } })).toBe(text)
+  expect(await ConfigVariable.substitute({ ...source, text, fileScope: { root: process.cwd(), source: "test" } })).toBe(
+    text,
+  )
+})
+
+test("still substitutes references next to strings containing comment markers", async () => {
+  const text =
+    '{ "g": "**/*.ts", "u": "https://x.test/{env:SAFE_VALUE}", "v": "{env:SAFE_VALUE}" // {env:SAFE_VALUE}\n}'
+  expect(await ConfigVariable.substitute({ ...trusted, text, env: { SAFE_VALUE: "x" } })).toBe(
+    '{ "g": "**/*.ts", "u": "https://x.test/x", "v": "x" // {env:SAFE_VALUE}\n}',
+  )
+})
+
+test("still rejects live env references in untrusted config near comments", async () => {
+  const text = '{ /* {env:SAFE_VALUE} */ "a": "{env:SAFE_VALUE}" }'
+  await expect(ConfigVariable.substitute({ ...source, text })).rejects.toBeInstanceOf(InvalidError)
+  await expect(
+    ConfigVariable.substitute({ ...source, text: '{ "g": "**/*.ts", "a": "{env:SAFE_VALUE}" }' }),
+  ).rejects.toBeInstanceOf(InvalidError)
+})
+
+test("does not treat block comment markers as comments in markdown", async () => {
+  const text = "/* {env:SAFE_VALUE} */"
+  expect(await ConfigVariable.substitute({ ...trusted, text, markdown: true, env: { SAFE_VALUE: "x" } })).toBe(
+    "/* x */",
+  )
+})
+
 test("rejects server credential environment substitutions", async () => {
   await expect(
     ConfigVariable.substitute({
@@ -201,4 +253,11 @@ test("guard read rejects an out-of-scope file with a BlockedError", async () => 
     await fs.rm(root, { recursive: true, force: true })
     await fs.rm(outside, { recursive: true, force: true })
   }
+})
+
+test("does not scan plain text such as URLs for comments", async () => {
+  const text = "https://config.example.com/{env:SAFE_VALUE}/kilo.json"
+  expect(await ConfigVariable.substitute({ ...trusted, text, env: { SAFE_VALUE: "x" } })).toBe(
+    "https://config.example.com/x/kilo.json",
+  )
 })
