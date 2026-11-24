@@ -74,7 +74,7 @@ Then choose a TeamoRouter model in the model picker, or change `model` in the co
 Any chat model ID from the [model list](https://teamorouter.com/models) can go under `models`. Use the ID exactly as listed. Model options and fields are described in [Custom Models](/docs/code-with-ai/agents/custom-models).
 
 - Set `limit` with both `context` and `output` so the context gauge and compaction are right. The pricing endpoint lists each model's `context_window`.
-- Kilo caps `output` at 32,000 tokens per request by default, so the larger `output` values in the example are not sent as-is unless you raise `KILO_EXPERIMENTAL_OUTPUT_TOKEN_MAX`. See [Custom Models](/docs/code-with-ai/agents/custom-models).
+- For models on the OpenAI-compatible endpoint, Kilo caps `output` at 32,000 tokens per request by default, so the larger `output` values in the example are not sent as-is. Claude models on `@ai-sdk/anthropic` are exempt on normal requests and can use their full `limit.output`. See [Custom Models](/docs/code-with-ai/agents/custom-models).
 - Kilo defaults `cost` to zero for models it does not already know, so spend reporting shows zero. If you want it, add `cost` in USD per million tokens from the pricing endpoint.
 
 ## Troubleshooting
