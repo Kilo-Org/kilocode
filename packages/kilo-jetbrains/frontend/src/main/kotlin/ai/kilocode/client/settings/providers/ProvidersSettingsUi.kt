@@ -126,11 +126,14 @@ internal class ProvidersSettingsUi(
         val LOG = KiloLog.create(ProvidersSettingsUi::class.java)
     }
 
+    // The add flow is self-contained: its dialog saves through its own RPC and never reads the
+    // loaded provider state, so it must stay available while a load or another operation is
+    // still in flight (or stuck, e.g. without connectivity). Only disposal disables it.
     private val add = SettingsToolbarAction(
         KiloBundle.message("settings.providers.addCustom"),
         KiloBundle.message("settings.providers.addCustom.description"),
         AllIcons.General.Add,
-        { !busy },
+        { !disposed },
     ) { custom() }
     private val refresh = SettingsToolbarAction(
         KiloBundle.message("settings.providers.refresh"),

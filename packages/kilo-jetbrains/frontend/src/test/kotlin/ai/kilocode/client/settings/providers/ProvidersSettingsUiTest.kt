@@ -28,6 +28,10 @@ import ai.kilocode.rpc.dto.ProviderOAuthReadyDto
 import ai.kilocode.rpc.dto.ProviderSettingsDto
 import ai.kilocode.rpc.dto.ProviderSettingsProviderDto
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.actionSystem.ActionPlaces
+import com.intellij.openapi.actionSystem.ActionToolbar
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.impl.SimpleDataContext
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.ui.ValidationInfo
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -1110,6 +1114,31 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         edt {
             assertEquals(listOf("openai"), rows(panel).map { it.key })
             assertFalse(text(panel).contains("Loading providers"))
+        }
+    }
+
+    fun `test add provider stays enabled while the provider state is still loading`() {
+        // A wedged or unavailable state() load must not gate the custom-provider flow (#15918):
+        // adding a provider is local configuration that does not read the loaded state.
+        val rpc = installProvider(ProviderSettingsDto())
+        rpc.states.add(CompletableDeferred())
+        val panel = edt { createUi() }
+
+        flushUntil { rpc.stateCalls.size == 1 }
+
+        edt {
+            val actions = components(panel)
+                .filterIsInstance<ActionToolbar>()
+                .flatMap { it.actionGroup.getChildren(null).toList() }
+            val add = actions.single { it.templatePresentation.text == KiloBundle.message("settings.providers.addCustom") }
+            val refresh = actions.single { it.templatePresentation.text == KiloBundle.message("settings.providers.refresh") }
+            val context = SimpleDataContext.builder().build()
+            val addEvent = AnActionEvent.createFromAnAction(add, null, ActionPlaces.TOOLBAR, context)
+            add.update(addEvent)
+            assertTrue(addEvent.presentation.isEnabled)
+            val refreshEvent = AnActionEvent.createFromAnAction(refresh, null, ActionPlaces.TOOLBAR, context)
+            refresh.update(refreshEvent)
+            assertFalse(refreshEvent.presentation.isEnabled)
         }
     }
 
