@@ -6,6 +6,8 @@ import * as Log from "@opencode-ai/core/util/log"
 import { Filesystem } from "../util/filesystem"
 import { KilocodePaths } from "./paths"
 import { pattern } from "./mcp/tool-id"
+import { ConfigVariable } from "../config/variable"
+import { sanitizeProjectMcpHeaders } from "./config/mcp-headers"
 
 export namespace McpMigrator {
   const log = Log.create({ service: "kilocode.mcp-migrator" })
@@ -128,6 +130,57 @@ export namespace McpMigrator {
     return config
   }
 
+  const token = /\{(?:env|file):[^}]+\}/
+
+  /**
+   * Resolve `{env:}` / `{file:}` in the headers of a converted remote server the way the modern
+   * `mcp` key does. A trusted store (the VS Code global store, like global config) expands them
+   * through `ConfigVariable.substitute`: an unset variable is empty and a blocked one is refused,
+   * and a header that cannot resolve is dropped with a warning instead of being sent literally.
+   * An untrusted project store gets `sanitizeProjectMcpHeaders`, which drops the whole server.
+   */
+  async function resolveHeaders(
+    name: string,
+    config: ConfigMCP.Info,
+    file: string,
+    trusted: boolean,
+    warnings: string[],
+  ): Promise<ConfigMCP.Info | undefined> {
+    if (config.type !== "remote" || !config.headers) return config
+    if (!trusted) {
+      const result = sanitizeProjectMcpHeaders({ mcp: { [name]: config } }, file)
+      warnings.push(...result.warnings.map((warning) => warning.message))
+      return result.config.mcp[name]
+    }
+    const headers: Record<string, string> = {}
+    for (const [key, value] of Object.entries(config.headers)) {
+      if (!token.test(value)) {
+        headers[key] = value
+        continue
+      }
+      for (const match of value.matchAll(/\{env:([^}]+)\}/g)) {
+        if (process.env[match[1]]) continue
+        warnings.push(`MCP server '${name}' header '${key}' references unset environment variable '${match[1]}'`)
+      }
+      const resolved = await ConfigVariable.substitute({
+        text: value,
+        type: "virtual",
+        source: file,
+        dir: path.dirname(file),
+        trusted: true,
+        escapeJson: false,
+      }).catch((err: unknown) => {
+        warnings.push(
+          `MCP server '${name}' header '${key}' skipped: ${(err as { data?: { message?: string } }).data?.message ?? String(err)}`,
+        )
+        return undefined
+      })
+      if (resolved !== undefined) headers[key] = resolved
+    }
+    const { headers: _, ...rest } = config
+    return Object.keys(headers).length > 0 ? { ...rest, headers } : rest
+  }
+
   export async function migrate(options?: {
     projectDir?: string
     skipGlobalPaths?: boolean
@@ -144,7 +197,7 @@ export namespace McpMigrator {
     // Servers a skipped store declared that no store this load read covers: what the load lost.
     const held = new Set<string>()
 
-    const allServers: Array<{ name: string; server: KilocodeMcpServer }> = []
+    const allServers: Array<{ name: string; server: KilocodeMcpServer; file: string; trusted: boolean }> = []
 
     // 1. VSCode extension global storage (primary location for global MCP settings)
     // A caller that skipped global paths and asked for the report gets the store read only to
@@ -158,7 +211,7 @@ export namespace McpMigrator {
       const vscodeSettings = await readMcpSettings(vscodeSettingsPath)
       for (const [name, server] of Object.entries(vscodeSettings?.mcpServers ?? {})) {
         if (!skipGlobal) {
-          allServers.push({ name, server })
+          allServers.push({ name, server, file: vscodeSettingsPath, trusted: true })
           continue
         }
         // A disabled server grants nothing when it is read, and neither does an entry the
@@ -179,20 +232,20 @@ export namespace McpMigrator {
         const projectSettings = await readMcpSettings(projectSettingsPath)
         if (projectSettings?.mcpServers) {
           for (const [name, server] of Object.entries(projectSettings.mcpServers)) {
-            allServers.push({ name, server }) // Later entries win in deduplication
+            allServers.push({ name, server, file: projectSettingsPath, trusted: false }) // Later entries win in deduplication
           }
         }
       }
     }
 
     // Deduplicate by name (later entries win - project overrides global)
-    const serversByName = new Map<string, KilocodeMcpServer>()
-    for (const { name, server } of allServers) {
-      serversByName.set(name, server)
+    const serversByName = new Map<string, (typeof allServers)[number]>()
+    for (const item of allServers) {
+      serversByName.set(item.name, item)
     }
 
     // Convert each server
-    for (const [name, server] of serversByName) {
+    for (const [name, { server, file, trusted }] of serversByName) {
       // A store is parsed straight from JSON, so an entry can be a value the conversion cannot
       // read at all (`mcpServers: { foo: null }`). Refusing it here keeps one such entry in one
       // project file from throwing away every server of the load.
@@ -211,7 +264,9 @@ export namespace McpMigrator {
 
       const converted = convertServer(name, server)
       if (converted) {
-        mcp[name] = converted
+        const resolved = await resolveHeaders(name, converted, file, trusted, warnings)
+        if (resolved) mcp[name] = resolved
+        else skipped.push({ name, reason: "variable references are not allowed in project MCP headers" })
       }
     }
 
