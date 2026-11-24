@@ -39,11 +39,83 @@ async function assertAccessible(page: Page, selector: string) {
 
 const PROMPT = "Refactor the authentication helper to handle expired tokens and add tests."
 const SCREENSHOT_DIR = process.env.AUTO_MODEL_PREVIEW_SCREENSHOT_DIR
+const BASELINE_DIR =
+  process.env.AUTO_MODEL_PREVIEW_BASELINE_DIR ?? path.join(import.meta.dir, "__screenshots__/auto-model-preview")
+const UPDATE_BASELINES = process.env.AUTO_MODEL_PREVIEW_UPDATE_BASELINES === "1"
+const MAX_DIFF_RATIO = 0.005
 
-async function saveShot(page: Page, name: string) {
-  if (!SCREENSHOT_DIR) return
-  await fs.mkdir(SCREENSHOT_DIR, { recursive: true })
-  await page.screenshot({ path: path.join(SCREENSHOT_DIR, name) })
+async function comparePng(page: Page, actual: Buffer, expected: Buffer) {
+  const actualUrl = `data:image/png;base64,${actual.toString("base64")}`
+  const expectedUrl = `data:image/png;base64,${expected.toString("base64")}`
+  return page.evaluate(
+    async ({ aUrl, bUrl }) => {
+      const load = (src: string) =>
+        new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new Image()
+          img.onload = () => resolve(img)
+          img.onerror = () => reject(new Error("Failed to decode PNG for visual comparison"))
+          img.src = src
+        })
+      const [a, b] = await Promise.all([load(aUrl), load(bUrl)])
+      if (a.width !== b.width || a.height !== b.height) {
+        return { sameSize: false, diffRatio: 1, widthA: a.width, heightA: a.height, widthB: b.width, heightB: b.height }
+      }
+      const read = (img: HTMLImageElement) => {
+        const canvas = document.createElement("canvas")
+        canvas.width = img.width
+        canvas.height = img.height
+        const ctx = canvas.getContext("2d")!
+        ctx.drawImage(img, 0, 0)
+        return ctx.getImageData(0, 0, img.width, img.height).data
+      }
+      const dataA = read(a)
+      const dataB = read(b)
+      let diff = 0
+      const pixels = a.width * a.height
+      for (let i = 0; i < dataA.length; i += 4) {
+        const delta =
+          Math.abs(dataA[i]! - dataB[i]!) +
+          Math.abs(dataA[i + 1]! - dataB[i + 1]!) +
+          Math.abs(dataA[i + 2]! - dataB[i + 2]!) +
+          Math.abs(dataA[i + 3]! - dataB[i + 3]!)
+        if (delta > 16) diff++
+      }
+      return { sameSize: true, diffRatio: diff / pixels, widthA: a.width, heightA: a.height, widthB: b.width, heightB: b.height }
+    },
+    { aUrl: actualUrl, bUrl: expectedUrl },
+  )
+}
+
+async function captureAndVerify(page: Page, name: string) {
+  const baselinePath = path.join(BASELINE_DIR, name)
+  const hasBaseline = await fs
+    .access(baselinePath)
+    .then(() => true)
+    .catch(() => false)
+  if (!SCREENSHOT_DIR && !UPDATE_BASELINES && !hasBaseline) return
+
+  const actual = await page.screenshot()
+  if (SCREENSHOT_DIR) {
+    await fs.mkdir(SCREENSHOT_DIR, { recursive: true })
+    await fs.writeFile(path.join(SCREENSHOT_DIR, name), actual)
+  }
+  if (UPDATE_BASELINES) {
+    await fs.mkdir(BASELINE_DIR, { recursive: true })
+    await fs.writeFile(baselinePath, actual)
+    return
+  }
+  if (!hasBaseline) return
+
+  const expected = await fs.readFile(baselinePath)
+  const diff = await comparePng(page, actual, expected)
+  expect(
+    diff.sameSize,
+    `${name} dimensions changed (${diff.widthA}x${diff.heightA} vs baseline ${diff.widthB}x${diff.heightB})`,
+  ).toBe(true)
+  expect(
+    diff.diffRatio,
+    `${name} visual diff ${(diff.diffRatio * 100).toFixed(2)}% exceeded ${(MAX_DIFF_RATIO * 100).toFixed(2)}% threshold`,
+  ).toBeLessThanOrEqual(MAX_DIFF_RATIO)
 }
 
 test.skipIf(!executable)(
@@ -160,7 +232,7 @@ test.skipIf(!executable)(
         const trigger = dark.page.locator('[data-action="auto-model-preview"]')
         const textarea = dark.page.locator("textarea.prompt-input")
         await expect(trigger.count()).resolves.toBe(0)
-        await saveShot(dark.page, "01-before-empty-prompt.png")
+        await captureAndVerify(dark.page, "01-before-empty-prompt.png")
 
         // 2. Typing a prompt reveals the Preview model button in the bottom-right toolbar.
         await expect(dark.page.locator(".startup-error-banner").count()).resolves.toBe(0)
@@ -174,7 +246,7 @@ test.skipIf(!executable)(
           return actions.every((node) => node.getBoundingClientRect().right <= triggerRect.left + 1)
         })
         await expect(trigger.textContent()).resolves.toContain("Preview model")
-        await saveShot(dark.page, "02-after-button-ready.png")
+        await captureAndVerify(dark.page, "02-after-button-ready.png")
 
         // 3. Clicking Preview model opens the dock above the composer with all 4 outcomes.
         await trigger.click()
@@ -218,7 +290,7 @@ test.skipIf(!executable)(
         expect(geometry.triggerRight).toBeLessThanOrEqual(geometry.sendLeft + 1)
 
         await assertAccessible(dark.page, '[data-component="auto-model-preview"]')
-        await saveShot(dark.page, "03-after-preview-open-dark.png")
+        await captureAndVerify(dark.page, "03-after-preview-open-dark.png")
 
         // 4. Collapsing Additional attributes hides the attribute list and flips aria-expanded.
         const attrsToggle = dark.page.locator('[data-action="auto-model-preview-attributes"]')
@@ -226,7 +298,7 @@ test.skipIf(!executable)(
         await attrsToggle.click()
         expect(await attrsToggle.getAttribute("aria-expanded")).toBe("false")
         await expect(dark.page.locator(".auto-model-preview-attrs-list").count()).resolves.toBe(0)
-        await saveShot(dark.page, "04-after-preview-collapsed-dark.png")
+        await captureAndVerify(dark.page, "04-after-preview-collapsed-dark.png")
         await attrsToggle.click()
         expect(await attrsToggle.getAttribute("aria-expanded")).toBe("true")
 
@@ -259,7 +331,7 @@ test.skipIf(!executable)(
       try {
         await auto.page.locator("textarea.prompt-input").fill(PROMPT)
         await expect(auto.page.locator('[data-action="auto-model-preview"]').count()).resolves.toBe(0)
-        await saveShot(auto.page, "05-auto-model-hidden.png")
+        await captureAndVerify(auto.page, "05-auto-model-hidden.png")
       } finally {
         await auto.context.close()
       }
@@ -276,7 +348,7 @@ test.skipIf(!executable)(
         await light.page.locator(".auto-model-preview-task-title").waitFor({ state: "visible" })
         expect((await panel.textContent()) ?? "").toContain("Not available.")
         await assertAccessible(light.page, '[data-component="auto-model-preview"]')
-        await saveShot(light.page, "06-after-preview-open-light.png")
+        await captureAndVerify(light.page, "06-after-preview-open-light.png")
       } finally {
         await light.context.close()
       }
