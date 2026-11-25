@@ -1,9 +1,10 @@
 package ai.kilocode.client.agentManager
 
+import ai.kilocode.client.ui.active.ActiveBadge
 import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.active.ActiveMove
-import ai.kilocode.client.ui.tree.ActiveTreeNode
 import ai.kilocode.client.ui.tree.ActiveTreeColors
+import ai.kilocode.client.ui.tree.ActiveTreeNode
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.util.concurrency.annotations.RequiresEdt
@@ -16,9 +17,17 @@ import java.util.UUID
 @Suppress("TooManyFunctions")
 internal class AgentManagerLayout(private val properties: PropertiesComponent? = null) {
     @Serializable
-    data class Section(override val key: String, override val title: String, val color: String? = null) : ActiveItem {
-        // The backdrop stays the same on hover and selection; selection is painted as an underline.
-        override val alwaysSelected = true
+    data class Section(override val key: String, override val title: String, val color: String? = null) : ActiveItem
+
+    /**
+     * A section header as rendered in the tree. The persisted [Section] stays free of display state;
+     * the count is computed on each refresh so it never participates in [Section] equality.
+     */
+    data class Header(val section: Section, val count: Int) : ActiveItem {
+        override val key get() = section.key
+        override val title get() = section.title
+        override val badges get() = listOf(ActiveBadge(count.toString()))
+        override val inlineBadges get() = true
     }
 
     @Serializable
@@ -163,9 +172,9 @@ internal class AgentManagerLayout(private val properties: PropertiesComponent? =
         }
         val roots = (grouped[ROOT].orEmpty() + sections.values).distinctBy { it.key }
         val nodes = sorted(ROOT, roots).map { item ->
-            ActiveTreeNode(item, sections[item.key]?.let { section ->
-                sorted(section.key, grouped[section.key].orEmpty()).map { ActiveTreeNode(it) }
-            }, color = ActiveTreeColors.color(sections[item.key]?.color))
+            val section = sections[item.key] ?: return@map ActiveTreeNode(item)
+            val children = sorted(section.key, grouped[section.key].orEmpty()).map { ActiveTreeNode(it) }
+            ActiveTreeNode(Header(section, children.size), children, ActiveTreeColors.color(section.color))
         }
         // Retain temporarily undiscovered Cloud rows so a refresh cannot lose their placement.
         val visible = mapOf(ROOT to nodes.map { it.item.key }) + nodes.mapNotNull { node ->
