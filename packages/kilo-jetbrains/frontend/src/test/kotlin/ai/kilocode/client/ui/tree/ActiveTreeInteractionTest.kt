@@ -235,6 +235,35 @@ class ActiveTreeInteractionTest : BasePlatformTestCase() {
         assertFalse(view.isExpanded(path))
     }
 
+    fun `test movable section body leaves press and release available to native drag recognition`() {
+        val actions = ActiveTreeActions()
+        val tree = ActiveTree("", actions = actions,
+            reorder = ActiveReorder(onMove = {}, reparent = { _, parent -> parent == null }))
+        val view = tree.preferredFocus() as ActiveTreeView
+        view.setUI(DefaultTreeUI())
+        tree.update(nodes())
+        view.setSize(400, 300)
+        val entry = view.hierarchy.entries.getValue("group")
+        val path = TreePath(entry.path)
+        val cell = view.regions.cell(entry)
+        val point = Point(cell.centerX.toInt(), cell.centerY.toInt())
+        val control = requireNotNull(view.regions.control(entry))
+        val pointer = ActiveTreePointer(view, actions)
+        fun event(id: Int) = MouseEvent(view, id, 0, 0, point.x, point.y, 1, false, MouseEvent.BUTTON1)
+
+        view.collapsePath(path)
+        assertEquals("group", view.pickable(point))
+        assertNull(view.pickable(Point(control.centerX.toInt(), control.centerY.toInt())))
+        assertFalse(pointer.process(event(MouseEvent.MOUSE_PRESSED)))
+        assertEquals(listOf("group"), tree.selectedKeys())
+        assertFalse(view.isExpanded(path))
+
+        assertFalse(pointer.process(event(MouseEvent.MOUSE_RELEASED)))
+        assertTrue(view.isExpanded(path))
+        assertTrue(pointer.process(event(MouseEvent.MOUSE_CLICKED)))
+        assertTrue(view.isExpanded(path))
+    }
+
     fun `test shift F10 checks branch menu eligibility`() {
         val calls = mutableListOf<String>()
         val menu = ActiveMenu(DataKey.create<String>("test.menu.branch.keyboard"), DefaultActionGroup(), { it.key },

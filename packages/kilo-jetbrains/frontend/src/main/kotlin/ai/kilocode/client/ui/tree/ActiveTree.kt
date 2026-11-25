@@ -788,6 +788,7 @@ internal class ActiveTreeView(
     internal fun bounds(entry: ActiveEntry): Rectangle? = regions.bounds(entry)
 
 
+    @RequiresEdt
     internal fun state(
         entry: ActiveEntry, selected: Boolean, focused: Boolean, width: Int = regions.width(entry),
     ): ActiveRenderState {
@@ -795,12 +796,17 @@ internal class ActiveTreeView(
         val enabled = isEnabled && !entry.item.disabled
         val hovered = hoveredKey == entry.key
         val cell = if (hovered) button.cell?.takeIf { button.row == getRowForPath(TreePath(entry.path)) } else null
-        val fg = UIUtil.getTreeForeground(active && !entry.allowsChildren, active || focused)
+        val fg = if (entry.allowsChildren) UIUtil.getListForeground()
+            else UIUtil.getTreeForeground(active, active || focused)
         val background = background
-        val selection = UIUtil.getTreeBackground(true, !entry.allowsChildren && active)
-        val fixed = entry.item.alwaysSelected
-        val hover = if (hovered && !fixed) JBUI.CurrentTheme.Tree.Hover.background(active || focused) else null
-        val backdrop = if (fixed || selected) selection else hover ?: background
+        // Branches keep the tree surface; the geometry painter underlines the selected header.
+        val highlight = when {
+            entry.allowsChildren -> null
+            selected -> UIUtil.getTreeBackground(true, active)
+            hovered -> JBUI.CurrentTheme.Tree.Hover.background(focused)
+            else -> null
+        }
+        val backdrop = highlight ?: background
         val actions = actionsVisible(enabled, selected, hovered, active)
         return ActiveRenderState(
             item = entry.item,
@@ -810,7 +816,7 @@ internal class ActiveTreeView(
             hovered = hovered,
             enabled = enabled,
             background = background,
-            selectionColor = if (fixed || selected) selection else hover,
+            selectionColor = highlight,
             paintSelection = false,
             backdrop = backdrop,
             foreground = fg,
@@ -1045,6 +1051,7 @@ internal class ActiveTreeView(
             .install()
     }
 
+    @RequiresEdt
     internal fun pickable(point: Point): String? {
         return ordering.pick(point)
     }
