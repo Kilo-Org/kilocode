@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test"
+import { ShellLiteral } from "@opencode/core/kilocode/shell/literal"
 import { names, storage, translate } from "../src/env"
 
 test.each([undefined, "0", "1"])("startup defaults preserve an explicit host setting (%s)", (setting) => {
@@ -6,6 +7,10 @@ test.each([undefined, "0", "1"])("startup defaults preserve an explicit host set
   translate(env)
   expect(env.OPENCODE_TUI_USE_PINNED_MODE).toBe(setting ?? "1")
   expect(env.OPENCODE_TUI_OVERLAP_STARTUP).toBe(setting ?? "1")
+})
+
+test("the host enables masked shell resources for its process", () => {
+  expect(ShellLiteral.enabled()).toBe(true)
 })
 
 test("KILO_ variables reach their OPENCODE_ name, and the Kilo name wins", () => {

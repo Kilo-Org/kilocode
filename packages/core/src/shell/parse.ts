@@ -176,7 +176,9 @@ export function scan(command: string, shell: string, cwd: string): Effect.Effect
       if (item.redirectPrefixEnd !== undefined) {
         const head = item.resource.slice(0, item.redirectPrefixEnd)
         const next = item.resource[item.redirectPrefixEnd]
-        const separator = next === "\t" || next === "\n" ? next : " "
+        // kilocode_change start - shell-literal: a masked resource turns the newline before a heredoc body into `_`
+        const separator = next === "\t" || next === "\n" || next === "_" ? next : " "
+        // kilocode_change end
         output.commands.push({ resource: item.resource, save: `${head}${separator}*` })
         continue
       }
@@ -222,7 +224,10 @@ export function scan(command: string, shell: string, cwd: string): Effect.Effect
         output.directories.push(...resolved.directories)
         if (directoryCommand === parts && resolved.complete) continue
       }
-      const selected = prefix(words.slice(0, PREFIX_LENGTH))
+      // kilocode_change start - shell-literal: a masked resource is saved with masked words
+      const saved = item.patternWords?.slice(0, words.length) ?? words
+      const selected = prefix(saved.slice(0, PREFIX_LENGTH))
+      // kilocode_change end
       const conventional = `${selected.join(" ")} *`
       const end = item.wordEnds?.[selected.length - 1]
       // Keep existing grants stable unless normalized spacing loses the original source boundary.

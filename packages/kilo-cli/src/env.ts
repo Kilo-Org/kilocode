@@ -1,7 +1,9 @@
 // KILO_* environment translation (host composition, rung 2). Kilo users set KILO_<NAME>; the upstream runtime
 // reads OPENCODE_<NAME>. The entry imports this module first, so the translation runs before an upstream module
 // reads the environment. Child processes (the background service, a standalone server) inherit the result. It also
-// names Kilo's app directory (`directory` below).
+// names Kilo's app directory (`directory` below), and turns on shell resource masking below.
+
+import { ShellLiteral } from "@opencode/core/kilocode/shell/literal"
 
 /**
  * The v1 Kilo variables (`packages/core/src/flag/flag.ts` and `packages/opencode/src/effect/runtime-flags.ts` on
@@ -63,3 +65,7 @@ export const directory = "kilo2"
 
 translate(process.env)
 process.env.OPENCODE_APP_DIR_NAME = directory // kilo_port(global:0e189a57d108)
+// Shell permission resources mask operator characters that the shell reads as literal text (quoted words, escapes,
+// heredoc bodies), so rules such as `*>*` match only real operators. In-process, so a child process such as a test
+// run sees the scanner's default (packages/core/src/kilocode/shell/literal.ts).
+ShellLiteral.enable()

@@ -345,6 +345,7 @@ export const Plugin = {
           action: name,
           resources: parsed.commands.map((command) => command.resource),
           save: parsed.commands.map((command) => command.save),
+          metadata: { command: invocation.command }, // kilocode_change(shell-literal) - the prompt names the command, not its masked resource
           ...Permission.invocation(context),
         })
       // Approval can outlive the directory, so validate immediately before spawning.

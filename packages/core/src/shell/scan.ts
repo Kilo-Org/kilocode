@@ -1,5 +1,7 @@
 export * as ShellScan from "./scan.js"
 
+import { ShellLiteral } from "../kilocode/shell/literal.js" // kilocode_change(shell-literal)
+
 export type OpaqueReason =
   | "command-substitution"
   | "compound-command"
@@ -16,6 +18,12 @@ type Command = {
   resource: string
   words: string[]
   rawWords: string[]
+  // kilocode_change start - shell-literal: raw words with literal operators masked, for prefixes saved against a
+  // masked resource. Set only by a `pattern` scan; raw words keep the source for command analysis.
+  patternWords?: string[]
+  // This command's text is a program for another shell, so `pattern` rendering keeps it as written.
+  program?: true
+  // kilocode_change end
   // Exclusive raw-token ends relative to resource, for source-shaped permission prefixes.
   wordEnds?: number[]
   statementHead?: true
@@ -156,6 +164,7 @@ type BashContext = {
   sinkBracket?: boolean
   variableSink?: boolean
   evalSink?: boolean
+  render: Render // kilocode_change(shell-literal)
 }
 
 type BashHeredoc = {
@@ -176,6 +185,12 @@ type BashState = {
   nestedCommands: Command[]
   words: string[]
   rawWords: string[]
+  // kilocode_change start - shell-literal: literal positions of `input`, shared with the lists nested in it
+  inert: Set<number>
+  patternWords: string[]
+  // A here-string feeds the command's standard input, which a shell head runs as a program.
+  stdinProgram: boolean
+  // kilocode_change end
   // Pending heredocs, shared with nested groups: a body starts after the next newline token at any nesting.
   heredocs: BashHeredoc[]
   structures: Array<{
@@ -216,7 +231,7 @@ type BashState = {
 
 // A word's cooked text, the literal text it decodes to apart from its expansions, and the literal text of its
 // command substitutions' words, which stands in for their output.
-type BashText = { word: string; literal: string; output: string }
+type BashText = { word: string; literal: string; output: string; inert?: Set<number> } // kilocode_change(shell-literal)
 
 // Arithmetic text, a builtin operand that names or binds a variable now, or a value bound for later.
 type BashEvaluation = "arithmetic" | "binding" | "deferred"
@@ -225,9 +240,19 @@ type BashEvaluation = "arithmetic" | "binding" | "deferred"
 // Dash alike, so it is the default.
 export type Dialect = "bash" | "zsh" | "posix"
 
-export function scan(input: string, dialect: Dialect = "posix"): Result {
+// kilocode_change start - shell-literal seam: `source` reports resources as written; `pattern` masks the operator
+// characters the scanner proves literal (packages/core/src/kilocode/shell/literal.ts). The Kilo host enables
+// `pattern` for its process; every other caller keeps upstream's `source`.
+export type Render = "source" | "pattern"
+
+export function scan(
+  input: string,
+  dialect: Dialect = "posix",
+  render: Render = ShellLiteral.enabled() ? "pattern" : "source",
+): Result {
+  // kilocode_change end
   if (input.length > MAX_INPUT_LENGTH) return { kind: "opaque", reason: "invalid-structure" }
-  const context: BashContext = { remaining: MAX_INPUT_LENGTH * MAX_SUBSTITUTION_DEPTH, dialect }
+  const context: BashContext = { remaining: MAX_INPUT_LENGTH * MAX_SUBSTITUTION_DEPTH, dialect, render } // kilocode_change(shell-literal)
   const result = scanBash(input, 0, 0, context)
   if (result.kind === "opaque") return result
   if (
@@ -296,6 +321,11 @@ function finishBashWord(state: BashState) {
     state.words.push(state.word)
     // Unquoted trailing continuations are ignored syntax, not part of the raw token.
     state.rawWords.push(state.input.slice(state.wordStart, state.wordEnd))
+    // kilocode_change start - shell-literal
+    const word = state.rawWords[state.rawWords.length - 1]
+    if (state.context.render === "pattern")
+      state.patternWords.push(ShellLiteral.render(state.input, state.inert, state.wordStart, word))
+    // kilocode_change end
   }
   if (state.redirectTarget) {
     if (!state.dupRedirect || !/^(?:\d+-?|-)$/.test(state.input.slice(state.wordStart, state.wordEnd)))
@@ -359,20 +389,26 @@ function bashWordEvaluation(state: BashState): BashEvaluation | undefined {
 }
 
 // Index of the word naming the builtin that runs, skipping precommand wrappers and their options.
+// kilocode_change start - shell-literal: one owner for the command word after its precommands, shared by the builtin
+// check and the program check below
 function bashBuiltinIndex(state: BashState) {
-  let name = state.commandWordIndex
-  while (
-    BASH_PRECOMMANDS.has(state.words[name] ?? "") ||
-    (state.context.dialect !== "bash" && ZSH_PRECOMMANDS.has(state.words[name] ?? ""))
-  ) {
-    const precommand = state.words[name++]
-    while (precommand !== "-" && state.words[name]?.startsWith("-")) {
-      if (precommand === "exec" && /^-[cl]*a$/.test(state.words[name])) name++
+  if (state.commandWordIndex < 0) return state.commandWordIndex
+  return state.commandWordIndex + bashHead(state.words.slice(state.commandWordIndex), state.context.dialect)
+}
+
+// The index of the command word after its precommands and their options, such as `command -p` or `time`.
+function bashHead(words: readonly string[], dialect: Dialect) {
+  let name = 0
+  while (BASH_PRECOMMANDS.has(words[name] ?? "") || (dialect !== "bash" && ZSH_PRECOMMANDS.has(words[name] ?? ""))) {
+    const precommand = words[name++]
+    while (precommand !== "-" && words[name]?.startsWith("-")) {
+      if (precommand === "exec" && /^-[cl]*a$/.test(words[name])) name++
       name++
     }
   }
   return name
 }
+// kilocode_change end
 
 function finishBashCommand(state: BashState, boundary = false, newline = false) {
   finishBashWord(state)
@@ -399,6 +435,17 @@ function finishBashCommand(state: BashState, boundary = false, newline = false) 
         ? { redirectWordCount: state.redirectWordCount - name }
         : {}),
     }
+    // kilocode_change start - shell-literal: a program another shell will run stays visible to the rules
+    if (state.context.render === "pattern") {
+      const head = bashHead(state.words.slice(name), state.context.dialect)
+      const stdin = state.stdinProgram || state.heredocs.some((heredoc) => !heredoc.owned)
+      if (ShellLiteral.runsProgram(state.words.slice(name + head), stdin)) command.program = true
+      else {
+        command.resource = ShellLiteral.render(state.input, state.inert, state.commandStart, resource)
+        command.patternWords = state.patternWords.slice(name)
+      }
+    }
+    // kilocode_change end
     state.commands.push(command)
     const builtin = bashBuiltinIndex(state)
     const builtinName = state.words[builtin]
@@ -459,6 +506,10 @@ function finishBashCommand(state: BashState, boundary = false, newline = false) 
         rawWords: [prefixToken],
         redirectPrefixEnd: prefixEnd,
       }
+      // kilocode_change start - shell-literal
+      if (state.context.render === "pattern")
+        command.resource = ShellLiteral.render(state.input, state.inert, state.commandStart, resource)
+      // kilocode_change end
       state.commands.push(command)
       owner = command
     }
@@ -477,6 +528,8 @@ function finishBashCommand(state: BashState, boundary = false, newline = false) 
   if (!inHeader && (state.words.length > 0 || state.hasRedirect)) bashStatement(state)
   state.words.length = 0
   state.rawWords.length = 0
+  state.patternWords.length = 0 // kilocode_change(shell-literal)
+  state.stdinProgram = false // kilocode_change(shell-literal)
   state.commandWordIndex = -1
   state.commandStart = undefined
   state.dupRedirect = false
@@ -498,6 +551,7 @@ function scanBash(
   // A group shares its parent's heredocs; a substitution starts its own.
   heredocs?: BashHeredoc[],
   outer?: BashText,
+  inert?: Set<number>, // kilocode_change(shell-literal) - the enclosing list's literal positions in `input`
 ): BashResult {
   if (depth > MAX_SUBSTITUTION_DEPTH || context.remaining < 0) return { kind: "opaque", reason: "invalid-structure" }
   const state: BashState = {
@@ -507,6 +561,9 @@ function scanBash(
     nestedCommands: [],
     words: [],
     rawWords: [],
+    inert: inert ?? new Set(), // kilocode_change(shell-literal)
+    patternWords: [], // kilocode_change(shell-literal)
+    stdinProgram: false, // kilocode_change(shell-literal)
     heredocs: heredocs ?? [],
     structures: [],
     word: "",
@@ -749,6 +806,7 @@ function scanBashOperatorOrSeparator(
     state.redirectTarget = true
     state.dupRedirect = redirect === "<&" || redirect === ">&"
     state.hereString = redirect === "<<<"
+    if (state.hereString) state.stdinProgram = true // kilocode_change(shell-literal): a shell head runs the here-string
     return index + redirect.length - 1
   }
   if (state.structures.at(-1)?.phase === "pattern" && char === "|") {
@@ -810,11 +868,23 @@ function readBashHeredocs(state: BashState, index: number, depth: number, contex
     const body = bashHeredoc(state.input, end + 1, heredoc)
     if (!body) return { kind: "opaque", reason: "heredoc" } satisfies Opaque
     if (heredoc.command) heredoc.command.resource = state.input.slice(heredoc.start, body.end).trim()
-    const text = heredoc.quoted ? { word: body.source, literal: body.source, output: "" } : bashText()
+    // kilocode_change start - shell-literal: an unquoted body records its literal positions relative to the body
+    const text: BashText = heredoc.quoted
+      ? { word: body.source, literal: body.source, output: "" }
+      : { ...bashText(), inert: new Set() }
+    // kilocode_change end
     if (!heredoc.quoted) {
       const expansion = scanBashSpan(body.source, 0, depth, context, state.commands, BASH_SPANS.heredoc, true, text)
       if (typeof expansion === "object") return expansion
     }
+    // kilocode_change start - shell-literal: a program read from a heredoc by a shell stays visible to the rules
+    ShellLiteral.heredoc(state.inert, end, body.source.length, text.inert)
+    if (heredoc.command && context.render === "pattern") {
+      if (heredoc.command.program) heredoc.command.patternWords = undefined
+      else
+        heredoc.command.resource = ShellLiteral.render(state.input, state.inert, heredoc.start, heredoc.command.resource)
+    }
+    // kilocode_change end
     if (heredoc.binding) bashEvaluatesExpansion(text, "deferred", context)
     end = body.end
   }
@@ -914,7 +984,10 @@ function scanBashCommandStart(
     (char === "(" ||
       (char === "{" && testAt(SPACE_CONTINUATION_AHEAD_RE, input, index + 1)))
   ) {
-    const group = scanBash(input, index + 1, depth + 1, context, char === "{" ? "}" : ")", state.heredocs)
+    // kilocode_change start - shell-literal: a group scans the same input
+    const close = char === "{" ? "}" : ")"
+    const group = scanBash(input, index + 1, depth + 1, context, close, state.heredocs, undefined, state.inert)
+    // kilocode_change end
     if (group.kind === "opaque") return group
     if (!input.slice(index + 1, group.end).trim()) return { kind: "opaque", reason: "invalid-structure" }
     state.commands.push(...group.commands)
@@ -1114,6 +1187,7 @@ function scanBashUnit(
   if (char === "\\") {
     if (mode === "quoted" && !'$`"\\\n'.includes(next)) return undefined
     if (text && next !== "\n") bashAppend(text, input.slice(index + 1, index + 2))
+    ShellLiteral.mark(text?.inert, index + 1, index + 2) // kilocode_change(shell-literal)
     return index + 1
   }
   if (char === "$" && context.dialect !== "bash" && zshEvaluates(input, index))
@@ -1164,6 +1238,7 @@ function scanBashUnit(
     )
       return { kind: "opaque", reason: "unterminated-quote" }
     if (text) bashAppend(text, quote.value)
+    ShellLiteral.mark(text?.inert, index, quote.end) // kilocode_change(shell-literal)
     return quote.end
   }
   if (mode === "arithmetic" && opener === "$'") {
@@ -1177,6 +1252,7 @@ function scanBashUnit(
     const end = input.indexOf("'", index + 1)
     if (end < 0) return { kind: "opaque", reason: "unterminated-quote" }
     if (text) bashAppend(text, input.slice(index + 1, end))
+    ShellLiteral.mark(text?.inert, index + 1, end) // kilocode_change(shell-literal)
     return end
   }
   if (mode === "arithmetic" && char === "'")
@@ -1302,7 +1378,12 @@ function scanBashSpan(
     else if (char === "\\" && (input[index + 1] === span.open || input[index + 1] === span.close)) {
       if (text) bashAppend(text, input.slice(index, index + 2))
       index++
-    } else if (text) bashAppend(text, char)
+      // kilocode_change start - shell-literal: plain text of a double-quoted word or an unquoted heredoc body
+    } else if (text) {
+      bashAppend(text, char)
+      if (span === BASH_SPANS.double || span === BASH_SPANS.heredoc) ShellLiteral.mark(text.inert, index, index + 1)
+    }
+    // kilocode_change end
   }
   return span.close ? { kind: "opaque", reason: "unterminated-quote" } : input.length
 }
@@ -1317,7 +1398,7 @@ function scanBashNested(
   close: ")" | "nofork",
   text?: BashText,
 ): number | Opaque {
-  const nested = scanBash(input, start, depth + 1, context, close, undefined, text)
+  const nested = scanBash(input, start, depth + 1, context, close, undefined, text, text?.inert) // kilocode_change(shell-literal)
   if (nested.kind === "opaque") return nested
   commands.push(...nested.commands)
   return nested.end
