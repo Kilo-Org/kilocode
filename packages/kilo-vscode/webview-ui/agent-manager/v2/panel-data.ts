@@ -32,6 +32,12 @@ export function key(directory: string) {
   return directoryKey(directory)
 }
 
+function trimDirectory(directory: string) {
+  if (!directory) return ""
+  if (/^[A-Za-z]:[\\/]+$/.test(directory)) return directory.slice(0, 3)
+  return directory.length > 1 ? directory.replace(/[\\/]+$/, "") : directory
+}
+
 /** The keys of the stores that receive `event`. Events without a location go to every store. */
 export function targets(event: OpenCodeEvent, keys: Iterable<string>) {
   const directory = event.location?.directory
@@ -82,7 +88,7 @@ export function createPanelData(input: {
   // worktree, or no worktree, is selected.
   const wakeups = createWakeups({
     api,
-    directories: input.directories ?? (() => [...stores.keys()]),
+    directories: input.directories ?? (() => [...stores.values()].map((entry) => entry.scope.directory)),
     connected: () => connection.status() === "connected",
     home: input.home,
   })
@@ -98,6 +104,7 @@ export function createPanelData(input: {
     const id = key(directory)
     const found = stores.get(id)
     if (found) return found.scope
+    const resolved = trimDirectory(directory)
     const entry = createRoot((dispose) => {
       const event = events()
       onCleanup(event.clear)
@@ -106,7 +113,7 @@ export function createPanelData(input: {
         api,
         connection,
         event,
-        directory: id,
+        directory: resolved,
         shared: metadata,
         visible,
         bindings,
@@ -177,7 +184,7 @@ export function createPanelData(input: {
     reload,
     release,
     retain,
-    directories: () => [...stores.keys()],
+    directories: () => [...stores.values()].map((entry) => entry.scope.directory),
     /** Runs a host command against the mounted views, as a `command` message from the host does. */
     command: (name: string) => commands.forEach((handler) => handler(name)),
     /** Relay replies and host commands; returns true when the message was one of them. */

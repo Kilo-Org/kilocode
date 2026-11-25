@@ -146,6 +146,8 @@ const server = Bun.serve({
     if (url.pathname === "/api/session") return json({ data: [], location: { directory: dir } })
     if (url.pathname === "/api/model") return json({ location: { directory: dir }, data: state.models })
     if (url.pathname === "/api/provider") return json({ location: { directory: dir }, data: state.providers })
+    if (url.pathname === "/api/command")
+      return json({ location: { directory: dir }, data: [{ name: "audit-win", description: "Audit", template: "" }] })
     if (url.pathname === "/api/config") return json([{ type: "document", info: { model: "kilo/v1" } }])
     return json({ _tag: "NotFound", message: "not found" }, 404)
   },
@@ -398,6 +400,32 @@ describe("Agent Manager two-wave logout -> re-login recovery", () => {
         expect(root.data.location.model.list()?.map((item) => item.id)).toEqual(["kilo/v1"])
       } finally {
         locationGate?.resolve()
+        dispose()
+      }
+    })
+  })
+
+  test("preserves original Windows store directory on requests while deduplicating normalized aliases and aligning command.list()", async () => {
+    const api = OpenCode.make({ baseUrl: `http://127.0.0.1:${server.port}` })
+    await createRoot(async (dispose) => {
+      try {
+        const panel = createPanelData({ post: () => {}, api })
+        const winStore = panel.store(WIN_ROOT_SERVER)
+        expect(winStore.directory).toBe(WIN_ROOT_SERVER)
+        expect(panel.store(WIN_ROOT_STORE)).toBe(winStore)
+        expect(panel.find(WIN_ROOT_STORE)).toBe(winStore)
+        await until(() => panel.connection.status() === "connected")
+
+        await winStore.data.location.command.sync()
+        expect(requests.some((item) => item.path === "/api/command" && item.location === WIN_ROOT_SERVER)).toBe(true)
+        expect(winStore.data.location.command.list()?.map((item) => item.name)).toEqual(["audit-win"])
+
+        // A hidden store created from a forward-slash Windows path also aligns defaultLocation on command.sync().
+        const hidden = panel.store(WIN_HIDDEN_STORE)
+        await hidden.data.location.command.sync()
+        await until(() => hidden.data.location.default().directory === WIN_HIDDEN_SERVER)
+        expect(hidden.data.location.command.list()?.map((item) => item.name)).toEqual(["audit-win"])
+      } finally {
         dispose()
       }
     })

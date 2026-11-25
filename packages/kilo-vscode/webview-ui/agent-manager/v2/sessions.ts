@@ -23,14 +23,16 @@ export function createSessions(input: {
   // joins the lookup. Every store that loaded the session applies the move, so a project store knows the destination.
   const [watched, setWatched] = createSignal<ReadonlySet<string>>(new Set())
   const followed = createMemo<readonly string[]>((previous) => {
-    const known = new Set(project().map((item) => item.directory))
-    const next = new Set<string>()
+    const known = new Set(project().map((item) => key(item.directory)))
+    const next = new Map<string, string>()
     for (const id of watched())
       for (const item of project()) {
         const directory = item.data.session.get(id)?.location.directory
-        if (directory && !known.has(key(directory))) next.add(key(directory))
+        if (!directory) continue
+        const normalized = key(directory)
+        if (!known.has(normalized) && !next.has(normalized)) next.set(normalized, directory)
       }
-    const result = [...next].toSorted()
+    const result = [...next.values()].toSorted()
     return result.length === previous.length && result.every((item, index) => item === previous[index])
       ? previous
       : result
@@ -39,7 +41,7 @@ export function createSessions(input: {
 
   // A store can also load a session of another directory, when an event about it reaches that store. The session
   // belongs to the store of its own directory.
-  const owns = (item: V2, info: SessionInfo) => key(info.location.directory) === item.directory
+  const owns = (item: V2, info: SessionInfo) => key(info.location.directory) === key(item.directory)
 
   // The owning store of each loaded session. The map changes only when a session appears, disappears, or moves, so a
   // session record update does not invalidate every scope lookup.
@@ -47,7 +49,7 @@ export function createSessions(input: {
   // events, so the session belongs to that store even before it loaded the session itself.
   const owners = createMemo<Map<string, V2>>((previous) => {
     const next = new Map<string, V2>()
-    const homes = new Map(stores().map((item) => [item.directory, item]))
+    const homes = new Map(stores().map((item) => [key(item.directory), item]))
     for (const item of stores())
       for (const info of item.data.session.list()) {
         const home = homes.get(key(info.location.directory))
@@ -82,10 +84,11 @@ export function createSessions(input: {
   createEffect(() => {
     const extra = followed()
     if (extra.length === 0) return
+    const extraKeys = new Set(extra.map(key))
     untrack(() => input.panel.show(extra))
     for (const id of watched()) {
       const item = owners().get(id)
-      if (!item || !extra.includes(item.directory) || item.data.session.get(id)) continue
+      if (!item || !extraKeys.has(key(item.directory)) || item.data.session.get(id)) continue
       const mark = `${item.directory}\n${id}`
       if (loaded.has(mark)) continue
       loaded.add(mark)

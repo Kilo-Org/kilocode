@@ -216,12 +216,13 @@ function wrapLocationSync(
   if (!api.location) return api
   let cached: { requested: string; info: LocationInfo } | undefined
   let inflight: { requested: string; promise: Promise<LocationInfo> } | undefined
+  let verified: string | undefined
 
   const align = (requested: string | undefined, canonical: string, info?: LocationInfo) => {
-    if (!requested) return
+    if (!requested || requested === verified) return
     // Defer past the caller's microtask so an explicit `syncInfo()` updates `defaultLocation()` first.
     queueMicrotask(() => {
-      if (disposed()) return
+      if (disposed() || requested === verified) return
       const data = getData()
       const current = data.location.default().directory
       if (requested !== current || canonical === current) return
@@ -247,7 +248,18 @@ function wrapLocationSync(
     })
   }
 
-  return {
+  const observe =
+    <Q extends { location?: { directory?: string } } | undefined, O, R extends { location: { directory: string } }>(
+      fn: (query?: Q, options?: O) => Promise<R>,
+    ) =>
+    (query?: Q, options?: O) => {
+      const requested = query?.location?.directory
+      const promise = fn(query, options)
+      void promise.then((response) => align(requested, response.location.directory), () => undefined)
+      return promise
+    }
+
+  const wrapped: OpenCodeClient = {
     ...api,
     location: {
       ...api.location,
@@ -268,35 +280,28 @@ function wrapLocationSync(
           }
           void promise.then(clear, clear)
         }
-        void promise.then((info) => align(requested, info.directory, info), () => undefined)
+        void promise.then(
+          (info) => {
+            if (requested && info.directory === requested) {
+              verified = requested
+              return
+            }
+            align(requested, info.directory, info)
+          },
+          () => undefined,
+        )
         return promise
       },
     },
-    ...(api.model
-      ? {
-          model: {
-            ...api.model,
-            list: (query, options) => {
-              const requested = query?.location?.directory
-              const promise = api.model.list(query, options)
-              void promise.then((response) => align(requested, response.location.directory), () => undefined)
-              return promise
-            },
-          },
-        }
-      : {}),
-    ...(api.provider
-      ? {
-          provider: {
-            ...api.provider,
-            list: (query, options) => {
-              const requested = query?.location?.directory
-              const promise = api.provider.list(query, options)
-              void promise.then((response) => align(requested, response.location.directory), () => undefined)
-              return promise
-            },
-          },
-        }
-      : {}),
   }
+  if (api.model) wrapped.model = { ...api.model, list: observe(api.model.list) }
+  if (api.provider) wrapped.provider = { ...api.provider, list: observe(api.provider.list) }
+  if (api.command) wrapped.command = { ...api.command, list: observe(api.command.list) }
+  if (api.agent) wrapped.agent = { ...api.agent, list: observe(api.agent.list) }
+  if (api.integration) wrapped.integration = { ...api.integration, list: observe(api.integration.list) }
+  if (api.skill) wrapped.skill = { ...api.skill, list: observe(api.skill.list) }
+  if (api.reference) wrapped.reference = { ...api.reference, list: observe(api.reference.list) }
+  if (api.vcs) wrapped.vcs = { ...api.vcs, get: observe(api.vcs.get) }
+  if (api.shell) wrapped.shell = { ...api.shell, list: observe(api.shell.list) }
+  return wrapped
 }
