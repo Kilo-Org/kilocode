@@ -97,7 +97,13 @@ export function provider(model: Provider.Model) {
 export interface Interface {
   readonly environment: (model: Provider.Model, editorContext?: EditorContext) => Effect.Effect<string[]> // kilocode_change
   readonly skills: (agent: Agent.Info) => Effect.Effect<string | undefined>
-  readonly mcp: (agent: Agent.Info, permission?: PermissionV1.Ruleset) => Effect.Effect<string | undefined>
+  // kilocode_change start
+  readonly mcp: (
+    agent: Agent.Info,
+    permission?: PermissionV1.Ruleset,
+    opts?: { readonly networkRestricted?: boolean },
+  ) => Effect.Effect<string | undefined>
+  // kilocode_change end
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/SystemPrompt") {}
@@ -164,7 +170,14 @@ const layer = Layer.effect(
         ].join("\n")
       }),
 
-      mcp: Effect.fn("SystemPrompt.mcp")(function* (agent: Agent.Info, permission?: PermissionV1.Ruleset) {
+      // kilocode_change start
+      mcp: Effect.fn("SystemPrompt.mcp")(function* (
+        agent: Agent.Info,
+        permission?: PermissionV1.Ruleset,
+        opts?: { readonly networkRestricted?: boolean },
+      ) {
+        if (opts?.networkRestricted) return
+        // kilocode_change end
         const ruleset = Permission.merge(agent.permission, permission ?? [])
         const instructions = (yield* mcp.instructions()).filter(
           (item) => item.tools.length === 0 || Permission.disabled(item.tools, ruleset).size < item.tools.length,
