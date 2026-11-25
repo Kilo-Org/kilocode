@@ -158,7 +158,7 @@ jobs:
           - target: linux-arm64
             host: ubuntu-24.04-arm
           - target: darwin-arm64
-            host: macos-15
+            host: blacksmith-6vcpu-macos-15
           - target: darwin-x64
             host: macos-15-intel
     runs-on: ${{ matrix.host }}
