@@ -39,6 +39,7 @@ type Manager = {
   statsPoller: { stop: () => void }
   prBridge: { reset: () => void }
   busySessions: Set<string>
+  busyDirs: Map<string, string>
   projectPollers: { sync: () => void }
   sendRepoInfo: () => Promise<void>
   pushState: () => void
@@ -68,6 +69,7 @@ function createManager(options?: { panel?: boolean; active?: Context }) {
   manager.statsPoller = { stop: () => undefined }
   manager.prBridge = { reset: () => undefined }
   manager.busySessions = new Set()
+  manager.busyDirs = new Map()
   manager.projectPollers = { sync: () => undefined }
   manager.sendRepoInfo = mock(async () => undefined)
   manager.pushState = mock(() => undefined)
