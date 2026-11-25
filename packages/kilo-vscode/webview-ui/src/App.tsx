@@ -299,11 +299,22 @@ const AppContent: Component = () => {
     ["showOpenTabs", "showOpenTabs"],
   ])
 
+  const views = new Map<string, ViewType>([
+    ["historyButtonClicked", "history"],
+    ["profileButtonClicked", "profile"],
+    ["settingsButtonClicked", "settings"],
+  ])
+
   const handleViewAction = (action: string) => {
     const event = events.get(action)
     if (event) {
       setCurrentView("newTask")
       window.dispatchEvent(new CustomEvent(event))
+      return
+    }
+    const view = views.get(action)
+    if (view) {
+      setCurrentView(view)
       return
     }
     switch (action) {
@@ -321,14 +332,11 @@ const AppContent: Component = () => {
         tabs?.closeAll()
         setCurrentView("newTask")
         break
-      case "historyButtonClicked":
-        setCurrentView("history")
-        break
-      case "profileButtonClicked":
+      case "startLogin":
+        setMigration(false)
         setCurrentView("profile")
-        break
-      case "settingsButtonClicked":
-        setCurrentView("settings")
+        vscode.postMessage({ type: "refreshProfile" })
+        server.startLogin()
         break
       case "cycleAgentMode":
         if (document.hasFocus()) cycleAgent(1)

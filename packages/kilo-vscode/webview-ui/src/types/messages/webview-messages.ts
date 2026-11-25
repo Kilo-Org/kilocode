@@ -294,6 +294,7 @@ export interface ConfigureAgentManagerSetupScriptMessage {
 
 export interface OpenProfilePanelRequest {
   type: "openProfilePanel"
+  login?: boolean
 }
 
 export interface OpenConfigFileRequest {

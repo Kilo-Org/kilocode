@@ -8,6 +8,7 @@ interface Msg {
   branchName?: string
   sessionId?: string
   turnId?: string
+  login?: boolean
 }
 
 interface Ctx {
@@ -15,7 +16,7 @@ interface Ctx {
   openAgentManager: () => Thenable<unknown>
   openAdvancedWorktree: () => Thenable<unknown>
   openChanges: (sessionId?: string, turnId?: string) => Thenable<unknown>
-  openProfile: () => Thenable<unknown>
+  openProfile: (login?: boolean) => Thenable<unknown>
   currentSessionId?: string
   createWorktree?: (baseBranch?: string, branchName?: string) => Promise<void>
   continueInWorktree?: (
@@ -61,7 +62,7 @@ export async function handleSidebarWorktreeMessage(message: Msg, ctx: Ctx) {
   }
 
   if (message.type === "openProfilePanel") {
-    await ctx.openProfile()
+    await ctx.openProfile(message.login === true)
     return true
   }
 

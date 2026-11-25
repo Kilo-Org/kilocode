@@ -686,7 +686,11 @@ export async function activate(context: vscode.ExtensionContext) {
       else provider.postMessage({ type: "action", action: "cyclePreviousAgentMode" })
       agentManagerProvider.postMessage({ type: "action", action: "cyclePreviousAgentMode" })
     }),
-    vscode.commands.registerCommand("kilo-code.new.profileButtonClicked", () => {
+    vscode.commands.registerCommand("kilo-code.new.profileButtonClicked", (login?: unknown) => {
+      if (login === true) {
+        settingsEditorProvider.openProfileLogin()
+        return
+      }
       settingsEditorProvider.openPanel("profile")
     }),
     vscode.commands.registerCommand("kilo-code.new.settingsButtonClicked", (tab?: string, projectId?: string) => {
