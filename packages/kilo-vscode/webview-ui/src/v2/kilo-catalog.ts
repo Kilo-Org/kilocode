@@ -43,9 +43,9 @@ export function failureNeedsSignIn(failure: Failure) {
 }
 
 /**
- * Reads the reason on each connection and again on each `catalog` event. Only the latest read writes, so a slow
- * answer for an earlier state cannot replace a newer one. A server without the method reports no reason. The
- * directory is an accessor because one connection serves every directory of the Agent Manager.
+ * Reads the reason on each connection and again on each `catalog` event for this directory's Location. Only the latest
+ * read writes, so a slow answer for an earlier state cannot replace a newer one. A server without the method reports
+ * no reason.
  */
 export function createKiloCatalog(input: {
   api: OpenCodeClient
@@ -58,13 +58,16 @@ export function createKiloCatalog(input: {
   const state = { read: 0 }
   const refresh = () => {
     const directory = input.directory()
-    if (!directory) return
+    if (!directory || input.status() !== "connected") return
     const read = ++state.read
     void rpc["catalog.status"]({}, { location: { directory } }).then(
       (result) => read === state.read && setFailure(result.failure ?? undefined),
       () => read === state.read && setFailure(undefined),
     )
   }
+  onCleanup(() => {
+    state.read++
+  })
   createEffect(
     on(
       () => [input.status(), input.directory()] as const,

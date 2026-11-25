@@ -49,7 +49,7 @@ function make(input: { list: (call: number) => Promise<unknown[]>; kilo: boolean
   const [status, setStatus] = createSignal("connected")
   const connection = { status } as unknown as Parameters<typeof createConnectionMetadata>[0]["connection"]
   return createRoot((dispose) => {
-    const metadata = createConnectionMetadata({ api, connection, subscribe: () => () => {}, chat: false })
+    const metadata = createConnectionMetadata({ api, connection })
     metadata.attach("/workspace")
     return { calls, metadata, dispose, setStatus }
   })
@@ -135,6 +135,42 @@ describe("createConnectionMetadata handshake", () => {
     expect(scope.calls).not.toContain("handshake")
   })
 
+  test("falls back to another attached directory when the first directory detaches before verification", async () => {
+    const queried: string[] = []
+    const api = {
+      plugin: {
+        list: async (query?: { location?: { directory: string } }) => {
+          const dir = query?.location?.directory ?? ""
+          queried.push(`plugin.list:${dir}`)
+          return { data: dir === "/second" ? [{ id: "kilocode.handshake" }] : [] }
+        },
+      },
+      rpc: () => ({
+        get: async (_input: unknown, opts?: { location?: { directory: string } }) => {
+          queried.push(`handshake:${opts?.location?.directory ?? ""}`)
+          return { version: "2.0.0" }
+        },
+      }),
+    } as unknown as OpenCodeClient
+    const [status] = createSignal("connected")
+    const connection = { status } as unknown as Parameters<typeof createConnectionMetadata>[0]["connection"]
+    const scope = createRoot((dispose) => {
+      const metadata = createConnectionMetadata({ api, connection })
+      const detachFirst = metadata.attach("/first")
+      metadata.attach("/second")
+      return { metadata, detachFirst, dispose }
+    })
+    try {
+      await until(() => queried.includes("plugin.list:/first"))
+      scope.detachFirst()
+      await until(() => scope.metadata.version() === "2.0.0")
+      expect(queried).toContain("handshake:/second")
+      expect(queried).not.toContain("handshake:/first")
+    } finally {
+      scope.dispose()
+    }
+  })
+
   // The real server and the real client: the webview connects as soon as the server prints its URL, before the
   // Location of the workspace has registered its plugins.
   test("reads the version of a real v2 server whose Location is still activating", async () => {
@@ -147,7 +183,7 @@ describe("createConnectionMetadata handshake", () => {
     const [status] = createSignal("connected")
     const connection = { status } as unknown as Parameters<typeof createConnectionMetadata>[0]["connection"]
     const scope = createRoot((dispose) => {
-      const metadata = createConnectionMetadata({ api, connection, subscribe: () => () => {}, chat: false })
+      const metadata = createConnectionMetadata({ api, connection })
       metadata.attach(workspace)
       return { metadata, dispose }
     })

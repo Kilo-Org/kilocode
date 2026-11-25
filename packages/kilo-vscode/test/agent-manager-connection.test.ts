@@ -157,3 +157,22 @@ describe("createAgentManagerConnection", () => {
   })
 })
 
+describe("located", () => {
+  test("matches Windows backslashes, drive/case variants, UNC paths, and trailing slashes", () => {
+    const filter = located(() => ["c:/users/alice/repo", "/repo/", "c:/", "//server/share/repo"])
+    const check = (directory?: string) => filter(event("model.updated", directory) as never)
+
+    expect(check("C:\\Users\\Alice\\Repo")).toBe(true)
+    expect(check("C:\\Users\\Alice\\Repo\\")).toBe(true)
+    expect(check("c:/users/alice/repo/")).toBe(true)
+    expect(check("C:\\")).toBe(true)
+    expect(check("\\\\SERVER\\Share\\Repo\\")).toBe(true)
+    expect(check("/repo")).toBe(true)
+    expect(check("/repo/")).toBe(true)
+    expect(check(undefined)).toBe(true)
+
+    expect(check("C:\\Users\\Alice\\Other")).toBe(false)
+    expect(check("/Repo")).toBe(false)
+  })
+})
+

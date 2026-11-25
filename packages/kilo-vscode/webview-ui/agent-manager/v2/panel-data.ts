@@ -5,11 +5,11 @@ import { OpenCode, type OpenCodeClient, type OpenCodeEvent } from "@opencode/cli
 import { createClientConnection } from "@opencode/client/solid"
 import { createRoot, createSignal, onCleanup } from "solid-js"
 import { createV2Scope, type V2 } from "../../src/v2/scope"
-import { createConnectionMetadata, type ConnectionMetadata } from "../../src/v2/connection-metadata"
+import { createConnectionMetadata } from "../../src/v2/connection-metadata"
 import { createWakeups } from "../../src/v2/wakeups"
-import { catalogEvent } from "../../src/v2/kilo-catalog"
 import { events } from "../../src/v2/events"
 import { transport } from "../../src/v2/transport"
+import { directoryKey } from "../../../src/shared/directory-key"
 import type { ToHost, ToWebview } from "../../../src/protocol"
 
 type Entry = {
@@ -29,7 +29,7 @@ type Entry = {
 const BROADCAST: ReadonlySet<string> = new Set(["session.moved"])
 
 export function key(directory: string) {
-  return directory.length > 1 ? directory.replace(/[\\/]+$/, "") : directory
+  return directoryKey(directory)
 }
 
 /** The keys of the stores that receive `event`. Events without a location go to every store. */
@@ -37,7 +37,7 @@ export function targets(event: OpenCodeEvent, keys: Iterable<string>) {
   const directory = event.location?.directory
   if (!directory || BROADCAST.has(event.type)) return [...keys]
   const target = key(directory)
-  return [...keys].filter((item) => item === target)
+  return [...keys].filter((item) => key(item) === target)
 }
 
 export function createPanelData(input: {
@@ -54,11 +54,8 @@ export function createPanelData(input: {
   const [bindings, setBindings] = createSignal<Record<string, string>>({})
   const [selection, setSelection] = createSignal(false)
   const commands = new Set<(name: string) => void>()
-  const catalogHandlers = new Set<() => void>()
-  let metadata: ConnectionMetadata | undefined
   let connected: OpenCodeEvent | undefined
   const route = (event: OpenCodeEvent) => {
-    if (event.type === catalogEvent) catalogHandlers.forEach((handler) => handler())
     if (event.type === "server.connected") {
       // A store loads its directory's location, VCS and project when the server connects, and each of those loads
       // the whole Location on the server. A hidden store loads them once it is shown, so a reconnect with many
@@ -70,7 +67,15 @@ export function createPanelData(input: {
       })
       return
     }
-    targets(event, stores.keys()).forEach((item) => stores.get(item)?.emit(event))
+    const directory = event.location?.directory
+    if (!directory || BROADCAST.has(event.type)) {
+      stores.forEach((entry) => entry.emit(event))
+      return
+    }
+    const target = key(directory)
+    stores.forEach((entry, id) => {
+      if (id === target || key(entry.scope.data.location.default().directory) === target) entry.emit(event)
+    })
   }
   const connection = createClientConnection(api, { onEvent: route, pageLifecycle: true })
   // One pending-wakeup store for every directory the panel draws: a worktree row is scheduled even while another
@@ -81,16 +86,7 @@ export function createPanelData(input: {
     connected: () => connection.status() === "connected",
     home: input.home,
   })
-  metadata = createConnectionMetadata({
-    api,
-    connection,
-    subscribe: (_type, handler) => {
-      catalogHandlers.add(handler)
-      return () => {
-        catalogHandlers.delete(handler)
-      }
-    },
-  })
+  const metadata = createConnectionMetadata({ api, connection })
   const open = (url: string, external?: boolean) => input.post({ type: "open", url, external })
   const onCommand = (handler: (name: string) => void) => {
     commands.add(handler)
