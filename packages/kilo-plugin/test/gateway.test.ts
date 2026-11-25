@@ -2252,7 +2252,24 @@ describe("KiloGatewayPlugin", () => {
             const host = yield* addPlugin()
             const rpc = yield* Rpc.Service
             const providers = yield* Provider.Service
-            expect(yield* rpc.call("kilocode.gateway", "authStatus", {})).toMatchObject({ authenticated: true })
+            const integrations = yield* Integration.Service
+            expect(yield* rpc.call("kilocode.gateway", "authStatus", {})).toMatchObject({
+              authenticated: true,
+              method: "oauth",
+              organizationID: null,
+              server: backend.url,
+            })
+            expect(yield* credentials.list(integrationID)).toHaveLength(1)
+            expect((yield* integrations.get(integrationID))?.connections).toMatchObject([
+              {
+                type: "credential",
+                label: "rejected",
+                status: { status: "needs_auth", message: "Credentials rejected (HTTP 401) - sign in again" },
+              },
+            ])
+            expect(yield* rpc.call("kilocode.gateway", "catalog.status", {})).toEqual({
+              failure: { kind: "unauthorized", status: 401 },
+            })
             expect((yield* providers.get(kilo))?.settings?.apiKey).toBe("anonymous")
             expect(backend.requests.filter((request) => request.path.endsWith("/models")).map((request) => request.authorization))
               .toEqual(["Bearer token", null])

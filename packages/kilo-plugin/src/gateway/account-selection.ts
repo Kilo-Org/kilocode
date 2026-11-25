@@ -52,16 +52,30 @@ export function selectCredential(
   input: Overrides,
   connection: ConnectionInfo | undefined,
   credential: Credential.Value | undefined,
+  env: Env = process.env,
 ) {
   const saved = input.content !== undefined ? (input.content ?? undefined) : credential && credentialInput(credential)
   const token = input.direct?.token ?? saved?.token ?? input.settings?.kilocodeToken ?? input.settings?.apiKey
+  const resolvedConnection = !input.direct && input.content === undefined && saved ? connection : undefined
   return {
     token,
     saved,
-    connection: !input.direct && input.content === undefined && saved ? connection : undefined,
+    connection: resolvedConnection,
+    statusConnection: resolveStatusConnection(resolvedConnection, connection, input.direct?.token, env),
     envActive: Boolean(input.direct || input.content !== undefined || (!saved && token !== undefined)),
     useLegacySelection: Boolean(input.direct || input.content),
   }
+}
+
+function resolveStatusConnection(
+  resolvedConnection: ConnectionInfo | undefined,
+  activeConnection: ConnectionInfo | undefined,
+  directToken: string | undefined,
+  env: Env,
+): ConnectionInfo | undefined {
+  if (resolvedConnection) return resolvedConnection
+  if (activeConnection?.type !== "env" || directToken === undefined) return undefined
+  return env[activeConnection.name] === directToken ? activeConnection : undefined
 }
 
 type SelectedCredential = ReturnType<typeof selectCredential>

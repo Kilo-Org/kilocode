@@ -42,7 +42,9 @@ import { KiloGatewayAccounts } from "./accounts"
 import { randomUUID } from "node:crypto"
 import { Clock, Duration, Effect, Fiber, Latch, Option, Schedule, Schema, Scope, Semaphore, Stream } from "effect"
 import { GatewayAccountSelection } from "./account-selection.js"
+import { GatewayAuthRecovery } from "./auth-recovery.js"
 import { GatewayCatalog } from "./catalog.js"
+import { GatewayCoalesce } from "./coalesce.js"
 import { GatewayOptions } from "./options.js"
 import { GatewayPrompt } from "./prompt.js"
 import { GatewayRouters } from "./routers.js"
@@ -55,11 +57,11 @@ const id = Provider.ID.make("kilo")
 const integrationID = IntegrationID.make("kilo")
 const methodID = IntegrationMethodID.make("device")
 const REFRESH_INTERVAL = Duration.minutes(5)
-const MAX_SNAPSHOTS = 10
 const LEGACY_ORGANIZATION_KEY = "organization:env"
 // How long activation waits for the first Kilo catalog. The server answers 503 when a Location's plugins take longer
 // than 5 seconds to activate, and a team catalog takes several sequential Kilo API requests.
 export const FIRST_CATALOG_WAIT = Duration.seconds(2)
+export const AUTH_VERIFY_COOLDOWN = GatewayAuthRecovery.VERIFY_COOLDOWN
 const LOOPBACK = new Set(["127.0.0.1", "localhost", "[::1]", "::1"])
 const IS_TEST_RUNNER = /\.test\.[cm]?[jt]sx?$/.test(process.argv[1] ?? "")
 // Upstream OpenCode request identity from `packages/core/src/session/model-request.ts`. The Gateway attributes through
@@ -72,16 +74,6 @@ const UPSTREAM_REQUEST_HEADERS = [
   "x-opencode-client",
 ]
 
-// The last good catalog of one personal or anonymous scope: its models and its default model.
-const decodeSnapshot = Schema.decodeUnknownOption(
-  Schema.fromJsonString(
-    Schema.Struct({
-      models: Schema.Array(Schema.Unknown),
-      imageModels: Schema.Array(Schema.Unknown).pipe(Schema.optional),
-      defaultModelID: Schema.optional(Schema.String),
-    }),
-  ),
-)
 // Published on the global bus (`{ global: true }`), so plugin instances of other locations also reload.
 const OrganizationEvent = Bus.ephemeral({
   type: `rpc.${KiloGatewayRpc.Definition.id}.organization`,
@@ -95,6 +87,7 @@ interface CatalogState extends GatewayCatalog.View {
   readonly account?: KiloAccount.Info
   readonly organizationID?: string
   readonly connection?: ConnectionInfo
+  readonly statusConnection?: ConnectionInfo
   readonly envActive: boolean
   readonly skippedOfflineTest?: boolean
 }
@@ -129,7 +122,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     }
     const scopeCompatible = () => !catalog.organizationID && (!catalog.account || KiloAccount.compatible(catalog.account))
     const activeAccount = () => scopeCompatible() && catalog.account?.token ? catalog.account : undefined
-    const lastGood = new Map<string, GatewayCatalog.Snapshot>()
+    const snapshots = GatewayCatalog.createSnapshots(ctx.storage)
     const sessionMetadata = new Map<string, KiloGatewayRpc.SessionMetadata>()
     let retryFiber: Fiber.Fiber<void, never> | undefined
     let cachedProjectID: string | null | undefined
@@ -141,15 +134,29 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     let emitCatalog: ((status: KiloGatewayRpc.CatalogStatus) => Effect.Effect<void, unknown>) | undefined
     let publishedCatalog = ""
     const publishCatalog = Effect.suspend(() => {
-      const status = catalogStatus(catalog)
+      const status = GatewayCatalog.status(catalog)
       const key = JSON.stringify(status)
       if (!emitCatalog || key === publishedCatalog) return Effect.void
       publishedCatalog = key
       return emitCatalog(status).pipe(Effect.catch(() => Effect.void))
     })
 
+    const authRecovery = GatewayAuthRecovery.create({
+      integrationID,
+      instanceID,
+      integration: ctx.integration,
+      bus,
+      scope,
+      getCatalog: () => catalog,
+      getEpoch: () => epoch,
+      verify: (targetEpoch, rejectedToken) => verifyAuth(targetEpoch, rejectedToken),
+    })
+
     // The catalog has settled for the current account: the Gateway published it, so `KiloGatewayAccounts.get` is stable.
-    const settled = publishCatalog.pipe(Effect.andThen(Effect.sync(() => KiloGatewayAccounts.changed(ctx.location.directory))))
+    const settled = authRecovery.syncConnectionStatus.pipe(
+      Effect.andThen(publishCatalog),
+      Effect.andThen(Effect.sync(() => KiloGatewayAccounts.changed(ctx.location.directory))),
+    )
 
     const getProjectID = Effect.gen(function* () {
       if (cachedProjectID !== undefined) return cachedProjectID ?? undefined
@@ -191,7 +198,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       const credential = connection
         ? yield* ctx.integration.connection.resolve(connection).pipe(Effect.orElseSucceed(() => undefined))
         : undefined
-      const selected = GatewayAccountSelection.selectCredential(input, connection, credential)
+      const selected = GatewayAccountSelection.selectCredential(input, connection, credential, process.env)
       const route = GatewayAccountSelection.selectRoute(input, selected, process.env)
       const stored = route.selectionKey ? yield* readOrganizationSelection(route.selectionKey) : undefined
       const legacy =
@@ -213,6 +220,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         gateway: input.gateway,
         envActive: selected.envActive,
         connection: selected.connection,
+        statusConnection: selected.statusConnection,
         selectionKey: route.selectionKey,
         personalSelected: scope.personalSelected,
         account: scope.account,
@@ -237,42 +245,6 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         yield* ctx.agent.reload()
       })
 
-    const saveSnapshot = (writeKey: string, snapshot: GatewayCatalog.Snapshot) =>
-      Effect.gen(function* () {
-        if (!lastGood.has(writeKey) && lastGood.size >= MAX_SNAPSHOTS) {
-          const oldest = lastGood.keys().next().value
-          if (oldest) lastGood.delete(oldest)
-        }
-        lastGood.set(writeKey, snapshot)
-        if (writeKey.startsWith("catalog:personal:")) {
-          const scanned = yield* ctx.storage
-            .scan({ prefix: "catalog:personal:" })
-            .pipe(Effect.orElseSucceed(() => ({ entries: [] })))
-          for (const entry of scanned.entries) {
-            if (entry.key !== writeKey) {
-              yield* ctx.storage.remove(entry.key).pipe(Effect.catch(() => Effect.void))
-            }
-          }
-        }
-        yield* ctx.storage.set(writeKey, JSON.stringify(snapshot)).pipe(Effect.catch(() => Effect.void))
-      })
-
-    const readSnapshot = (key: string) =>
-      Effect.gen(function* () {
-        const memory = lastGood.get(key)
-        if (memory) return memory
-        const value = yield* ctx.storage.get(key).pipe(Effect.orElseSucceed(() => undefined))
-        const decoded = typeof value === "string" ? Option.getOrUndefined(decodeSnapshot(value)) : undefined
-        if (!decoded || decoded.models.length === 0) return undefined
-        const snapshot: GatewayCatalog.Snapshot = {
-          models: decoded.models as readonly KiloModels.Model[],
-          imageModels: (decoded.imageModels ?? []) as readonly KiloModels.Model[],
-          defaultModelID: decoded.defaultModelID,
-        }
-        lastGood.set(key, snapshot)
-        return snapshot
-      })
-
     const loadCatalog = Effect.fn("KiloGatewayPlugin.loadCatalog")(function* (
       targetEpoch: number,
       attempt = 0,
@@ -284,6 +256,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       gateway = resolved.gateway
       let current = resolved.account
       const connection = resolved.connection
+      const statusConnection = resolved.statusConnection
       const envActive = resolved.envActive
       const base = current?.baseURL ?? gateway
       const api = current?.server ?? server
@@ -294,6 +267,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         catalog = {
           organizationID: resolved.organizationID,
           connection,
+          statusConnection,
           envActive,
           models: [],
           imageModels: [],
@@ -309,6 +283,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         catalog = {
           account: current,
           connection,
+          statusConnection,
           envActive,
           models: [],
           imageModels: [],
@@ -332,6 +307,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         catalog = {
           account: current,
           connection,
+          statusConnection,
           envActive,
           models: [],
           imageModels: [],
@@ -342,13 +318,9 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         return
       }
 
-      const fetchedProfile: { profile: Option.Option<KiloProfile.Info>; failure?: KiloProfile.ProfileError["reason"] } =
-        token
-          ? yield* KiloProfile.get(api, token).pipe(
-              Effect.map((profile) => ({ profile: Option.some(profile) })),
-              Effect.catch((error) => Effect.succeed({ profile: Option.none<KiloProfile.Info>(), failure: error.reason })),
-            )
-          : { profile: Option.none<KiloProfile.Info>() }
+      const fetchedProfile = token
+        ? yield* GatewayCoalesce.profile(api, token)
+        : { profile: Option.none<KiloProfile.Info>() }
       const profile = fetchedProfile.profile
       if (targetEpoch !== epoch) return
       // An outage leaves the team-only status unknown, so fail closed. A rejected token keeps v1's catalog 401
@@ -357,6 +329,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         catalog = {
           account: current,
           connection,
+          statusConnection,
           envActive,
           models: [],
           imageModels: [],
@@ -373,6 +346,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           catalog = {
             account: current,
             connection,
+            statusConnection,
             envActive,
             models: [],
             imageModels: [],
@@ -395,7 +369,17 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         KiloModes.clearCache()
         organizationModes = []
         yield* ctx.agent.reload()
-        catalog = { account: current, connection, envActive, models: [], imageModels: [], failed: true, failure: { kind: "organization_missing" }, anonymous: false }
+        catalog = {
+          account: current,
+          connection,
+          statusConnection,
+          envActive,
+          models: [],
+          imageModels: [],
+          failed: true,
+          failure: { kind: "organization_missing" },
+          anonymous: false,
+        }
         return
       }
 
@@ -412,36 +396,29 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
 
       // Organization agents share the same resolved account as the catalog. Errors and empty responses
       // remove them, as v1 loadOrganizationModes did, instead of retaining another scope's instructions.
-      const modes = token && organizationID ? yield* KiloModes.get(api, token, organizationID, ctx.app.version) : []
+      const modes =
+        token && organizationID ? yield* GatewayCoalesce.modes(api, token, organizationID, ctx.app.version) : []
       if (targetEpoch !== epoch) return
       organizationModes = modes
       yield* ctx.agent.reload()
 
-      const [fetched, defaultModelID] = yield* Effect.all(
-        [
-          KiloModels.get({
-            server: base,
-            token,
-            organizationID,
-            version: ctx.app.version,
-          }).pipe(Effect.result),
-          KiloDefaults.get({
-            server: api,
-            token,
-            organizationID,
-            endpoint: base,
-          }),
-        ],
-        { concurrency: 2 },
-      )
-      if (targetEpoch !== epoch) return
-
-      const outcome = yield* GatewayCatalog.settle({ base, token, organizationID }, fetched, defaultModelID, {
-        read: readSnapshot,
-        save: saveSnapshot,
+      const [fetched, defaultModelID] = yield* GatewayCoalesce.catalog({
+        api,
+        base,
+        token,
+        organizationID,
+        version: ctx.app.version,
       })
       if (targetEpoch !== epoch) return
-      catalog = { account: current, connection, envActive, ...outcome.view }
+
+      const outcome = yield* GatewayCatalog.settle(
+        { base, token, organizationID, profileFailure: fetchedProfile.failure },
+        fetched,
+        defaultModelID,
+        snapshots,
+      )
+      if (targetEpoch !== epoch) return
+      catalog = { account: current, connection, statusConnection, envActive, ...outcome.view }
       if (outcome.retry) yield* scheduleRetry(outcome.retry, targetEpoch, attempt)
     })
 
@@ -469,6 +446,23 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           }),
         ),
         Effect.asVoid,
+      )
+    }
+
+    function verifyAuth(targetEpoch: number, rejectedToken: string) {
+      return lock.withPermit(
+        Effect.gen(function* () {
+          if (targetEpoch !== epoch) return
+          if (GatewayCatalog.isUnauthorized(catalog)) return
+          const resolved = yield* resolveCurrentAccount
+          if (targetEpoch !== epoch || resolved.account?.token !== rejectedToken) return
+          yield* cancelRetry
+          yield* loadCatalog(targetEpoch, 0)
+          if (targetEpoch !== epoch) return
+          yield* ctx.provider.reload()
+          yield* settled
+          if (GatewayCatalog.isUnauthorized(catalog)) yield* authRecovery.notifyInvalidated(rejectedToken)
+        }),
       )
     }
 
@@ -521,18 +515,18 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     // The load signals a latch instead of being joined, so a slow one is not interrupted with the activation that
     // stops waiting for it.
     const awaitFirstCatalog = Effect.fnUntraced(function* (targetEpoch: number) {
-      const settled = yield* Latch.make(false)
-      yield* lock.withPermit(loadCatalog(targetEpoch, 0)).pipe(Effect.ensuring(settled.open), Effect.forkIn(scope))
-      const loaded = yield* settled.await.pipe(Effect.timeoutOption(FIRST_CATALOG_WAIT))
+      const done = yield* Latch.make(false)
+      yield* lock.withPermit(loadCatalog(targetEpoch, 0)).pipe(Effect.ensuring(done.open), Effect.forkIn(scope))
+      const loaded = yield* done.await.pipe(Effect.timeoutOption(FIRST_CATALOG_WAIT))
       // The provider transform below reads a catalog that settled in time. One that lands later would be invisible,
       // whether it carries chat or image models, so reload the provider, as a retry does. A failed load has no models
-      // to publish; its retry reloads on success.
+      // to publish; its retry reloads on success, while status and connection state still settle.
       if (Option.isSome(loaded)) return
-      yield* settled.await.pipe(
+      yield* done.await.pipe(
         Effect.andThen(
           Effect.suspend(() =>
-            !catalog.failed && targetEpoch === epoch
-              ? ctx.provider.reload().pipe(Effect.andThen(publishCatalog))
+            targetEpoch === epoch
+              ? (catalog.failed ? Effect.void : ctx.provider.reload()).pipe(Effect.andThen(settled))
               : Effect.void,
           ),
         ),
@@ -549,11 +543,12 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     gateway = start.gateway
     const stored = start.organizationID
       ? undefined
-      : yield* readSnapshot(GatewayCatalog.snapshotKey(start.account?.baseURL ?? gateway, start.account?.token))
+      : yield* snapshots.read(GatewayCatalog.snapshotKey(start.account?.baseURL ?? gateway, start.account?.token))
     if (stored) {
       catalog = {
         account: start.account,
         connection: start.connection,
+        statusConnection: start.statusConnection,
         envActive: start.envActive,
         models: stored.models,
         imageModels: stored.imageModels ?? [],
@@ -567,6 +562,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       catalog = {
         account: start.account,
         connection: start.connection,
+        statusConnection: start.statusConnection,
         envActive: start.envActive,
         models: [],
         imageModels: [],
@@ -827,9 +823,10 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     yield* ctx.session.hook(
       "http.response",
       (event) =>
-        Effect.promise(async () => {
+        Effect.gen(function* () {
           if (event.response.status >= 400) {
-            event.response = await KiloErrors.rewriteHttpResponse(event.response)
+            if (event.response.status === 401) yield* authRecovery.onUnauthorizedResponse(event.request)
+            event.response = yield* Effect.promise(() => KiloErrors.rewriteHttpResponse(event.response))
             return
           }
           event.response = KiloStream.transformResponse(event.response, (meta) => {
@@ -1027,7 +1024,9 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
               return yield* Effect.fail(context.error("failed", "Organization conflicts with the Kilo token scope"))
             }
             const profile = yield* KiloProfile.get(resolved.account.server, resolved.account.token).pipe(
-              Effect.mapError((error) => context.error("failed", error.message)),
+              Effect.mapError((error) =>
+                context.error(error.reason.kind === "unauthorized" ? "unauthorized" : "failed", error.message),
+              ),
             )
             if (input.organizationID === null && profile.hasPersonalAccount === false)
               return yield* Effect.fail(context.error("failed", "This Kilo account has no personal account"))
@@ -1135,7 +1134,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
             if (target.provider === "kilo" && !scopeCompatible()) return Effect.fail(context.error("unauthorized", "Organization conflicts with the Kilo token scope"))
             return Effect.succeed(target)
           }),
-        "catalog.status": () => Effect.sync(() => catalogStatus(catalog)),
+        "catalog.status": () => Effect.sync(() => GatewayCatalog.status(catalog)),
         "autocomplete.fim": (input, context) =>
           Effect.gen(function* () {
             const target = KiloAutocomplete.resolveFimTarget(input.provider, input.model, catalog.account?.baseURL ?? gateway)
@@ -1173,7 +1172,9 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         (event) =>
           (event.type === "credential.switched" && event.data.integrationID === integrationID) ||
           event.type === "config.updated" ||
-          (event.type === OrganizationEvent.type && event.data.source !== instanceID),
+          (event.type === OrganizationEvent.type && event.data.source !== instanceID) ||
+          (event.type === GatewayAuthRecovery.AuthInvalidatedEvent.type &&
+            authRecovery.matchesInvalidation(event.data)),
       ),
       Stream.runForEach(() => Effect.forkIn(reload, scope, { startImmediately: true }).pipe(Effect.asVoid)),
       Effect.forkScoped({ startImmediately: true }),
@@ -1188,14 +1189,6 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     }
   }),
 })
-
-// The public reason drops the retry delay, so only a changed kind or status is a change. A failed catalog without a
-// reason is a changed scope that is still loading.
-function catalogStatus(catalog: CatalogState): KiloGatewayRpc.CatalogStatus {
-  if (!catalog.failed || !catalog.failure) return { failure: null }
-  const failure = catalog.failure
-  return { failure: { kind: failure.kind, ...(failure.status === undefined ? {} : { status: failure.status }) } }
-}
 
 function isLoopback(server: string): boolean {
   if (!URL.canParse(server)) return false
