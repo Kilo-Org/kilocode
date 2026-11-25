@@ -1,5 +1,6 @@
 ---
 "@kilocode/cli": patch
+"kilo-code": patch
 ---
 
-Report an expired or revoked Kilo login as signed out instead of a temporary profile error.
+Tell an expired or revoked Kilo login apart from a temporary outage: the profile asks you to sign in again only when Kilo rejects the login, and keeps your account with a retry when Kilo is unreachable.
