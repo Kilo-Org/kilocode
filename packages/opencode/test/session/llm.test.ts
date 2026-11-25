@@ -2483,5 +2483,155 @@ describe("session.llm.stream", () => {
       }),
     },
   )
+
+  // kilocode_change start - GLM models served on the Mistral API stream tool calls
+  // as fragments: only the first delta carries the tool call `id`, continuation
+  // fragments omit it (real Mistral models emit the whole tool call in one chunk).
+  // The patched @ai-sdk/mistral must correlate fragments by `index` and emit a
+  // single complete tool call instead of failing chunk validation.
+  it.instance(
+    "accumulates fragmented mistral tool call deltas that omit id",
+    () =>
+      Effect.gen(function* () {
+        const fixture = loadFixture(mistralFixture.providerID, mistralFixture.modelID)
+        waitRequest(
+          "/chat/completions",
+          createEventResponse(
+            [
+              {
+                id: "chatcmpl-glm",
+                object: "chat.completion.chunk",
+                created: 0,
+                model: fixture.model.id,
+                choices: [
+                  {
+                    index: 0,
+                    delta: {
+                      role: "assistant",
+                      content: [
+                        {
+                          type: "thinking",
+                          thinking: [{ type: "text", text: "need to read the file" }],
+                          closed: true,
+                        },
+                      ],
+                    },
+                    finish_reason: null,
+                  },
+                ],
+              },
+              {
+                id: "chatcmpl-glm",
+                object: "chat.completion.chunk",
+                created: 0,
+                model: fixture.model.id,
+                choices: [
+                  {
+                    index: 0,
+                    delta: {
+                      tool_calls: [
+                        {
+                          id: "chatcmpl-tool-1",
+                          type: "function",
+                          function: { name: "read", arguments: '{"filePath": "/ho' },
+                          index: 0,
+                        },
+                      ],
+                      content: "",
+                    },
+                    finish_reason: null,
+                  },
+                ],
+              },
+              {
+                id: "chatcmpl-glm",
+                object: "chat.completion.chunk",
+                created: 0,
+                model: fixture.model.id,
+                choices: [
+                  {
+                    index: 0,
+                    delta: {
+                      tool_calls: [
+                        {
+                          type: "function",
+                          function: { name: "", arguments: 'me/notes.txt"}' },
+                          index: 0,
+                        },
+                      ],
+                      content: "",
+                    },
+                    finish_reason: null,
+                  },
+                ],
+              },
+              {
+                id: "chatcmpl-glm",
+                object: "chat.completion.chunk",
+                created: 0,
+                model: fixture.model.id,
+                choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }],
+                usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+              },
+            ],
+            true,
+          ),
+        )
+
+        const resolved = yield* Provider.use.getModel(
+          ProviderV2.ID.make(mistralFixture.providerID),
+          ModelV2.ID.make(fixture.model.id),
+        )
+        const sessionID = SessionID.make("session-test-mistral-fragmented-tool")
+        const agent = {
+          name: "test",
+          mode: "primary",
+          options: {},
+          permission: [{ permission: "*", pattern: "*", action: "allow" }],
+        } satisfies Agent.Info
+
+        const user = {
+          id: MessageID.make("msg_user-mistral-fragmented-tool"),
+          sessionID,
+          role: "user",
+          time: { created: Date.now() },
+          agent: agent.name,
+          model: { providerID: ProviderV2.ID.make(mistralFixture.providerID), modelID: resolved.id },
+        } satisfies MessageV2.User
+
+        const events = Array.from(
+          yield* collect({
+            user,
+            sessionID,
+            model: resolved,
+            agent,
+            system: ["You are a helpful assistant."],
+            messages: [{ role: "user", content: "Read /home/notes.txt" }],
+            tools: {
+              read: tool({
+                description: "Read a file",
+                inputSchema: z.object({ filePath: z.string() }),
+                execute: async () => ({ output: "stub" }),
+              }),
+            },
+          }),
+        )
+
+        const calls = events.filter((event) => event.type === "tool-call")
+        expect(calls).toHaveLength(1)
+        expect(calls[0].name).toBe("read")
+        expect(calls[0].input).toEqual({ filePath: "/home/notes.txt" })
+      }),
+    {
+      config: () => ({
+        enabled_providers: [mistralFixture.providerID],
+        provider: {
+          [mistralFixture.providerID]: {
+            options: { apiKey: "test-key", baseURL: `${state.server!.url.origin}/v1` },
+          },
+        },
+      }),
+    },
+  )
   // kilocode_change end
 })
