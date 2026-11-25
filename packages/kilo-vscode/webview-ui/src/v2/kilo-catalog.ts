@@ -4,13 +4,17 @@
 import type { OpenCodeClient } from "@opencode/client"
 import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
 import { createEffect, createSignal, on, onCleanup, type Accessor } from "solid-js"
+import type { Failure } from "./error"
 
-type Failure = KiloGatewayRpc.CatalogFailure
+type CatalogFailure = KiloGatewayRpc.CatalogFailure
 
 export const catalogEvent = `rpc.${KiloGatewayRpc.Definition.id}.catalog` as const
 
 /** The localized reason, or undefined without a failure. The copy matches the TUI. */
-export function failureMessage(t: (key: string, vars?: { status: number }) => string, failure: Failure | undefined) {
+export function failureMessage(
+  t: (key: string, vars?: { status: number }) => string,
+  failure: CatalogFailure | undefined,
+) {
   switch (failure?.kind) {
     case undefined:
       return undefined
@@ -38,8 +42,37 @@ export function failureMessage(t: (key: string, vars?: { status: number }) => st
 }
 
 /** Whether the reason offers the Kilo sign-in action: the credentials are missing or were rejected. */
-export function failureNeedsSignIn(failure: Failure) {
+export function failureNeedsSignIn(failure: CatalogFailure) {
   return failure.kind === "unauthorized" || failure.kind === "unauthenticated"
+}
+
+/** Returns `onSignIn` only when `failure` can be resolved by signing in again. */
+export function signInAction(failure: CatalogFailure | undefined, onSignIn: () => void) {
+  return failure && failureNeedsSignIn(failure) ? onSignIn : undefined
+}
+
+/**
+ * Converts an auth-related Kilo Gateway catalog failure into a chat banner failure so the composer can show the
+ * reason with a Sign-In action. Returns undefined when there is no failure or sign-in would not resolve it.
+ */
+export function catalogAuthFailure(failure: CatalogFailure | undefined): Failure | undefined {
+  if (!failure || !failureNeedsSignIn(failure)) return undefined
+  if (failure.kind === "unauthenticated") {
+    return { key: "provider.failure.unauthenticated", message: "Not signed in.", auth: true }
+  }
+  if (failure.status) {
+    return {
+      key: "provider.failure.unauthorized",
+      message: `Credentials rejected (HTTP ${failure.status}). Sign in again.`,
+      params: { status: failure.status },
+      auth: true,
+    }
+  }
+  return {
+    key: "provider.failure.unauthorizedNoStatus",
+    message: "Credentials rejected. Sign in again.",
+    auth: true,
+  }
 }
 
 /**
@@ -52,9 +85,9 @@ export function createKiloCatalog(input: {
   directory: Accessor<string | undefined>
   status: Accessor<string>
   on: (type: typeof catalogEvent, handler: () => void) => () => void
-}): Accessor<Failure | undefined> {
+}): Accessor<CatalogFailure | undefined> {
   const rpc = input.api.rpc(KiloGatewayRpc.Definition)
-  const [failure, setFailure] = createSignal<Failure>()
+  const [failure, setFailure] = createSignal<CatalogFailure>()
   const state = { read: 0 }
   const refresh = () => {
     const directory = input.directory()

@@ -1,5 +1,6 @@
 // The model of a new session, ported from v1 `resolveModelSelection` (context/model-selection.ts).
-import type { ConfigEntry } from "@opencode/client"
+import type { ConfigEntry, ModelInfo, ModelRef } from "@opencode/client"
+import { createEffect, createSignal, on, onCleanup } from "solid-js"
 
 type Ref = { providerID: string; id: string; variant?: string }
 
@@ -63,4 +64,51 @@ export function configuredModel(entries: readonly ConfigEntry[] | undefined): Re
   const slash = value?.indexOf("/") ?? -1
   if (!value || slash <= 0) return undefined
   return { providerID: value.slice(0, slash), id: value.slice(slash + 1) }
+}
+
+/**
+ * The server default model of the directory, the fallback of every composer after its own choice, the agent model and
+ * Kilo Auto Free. Sign-in, sign-out and a team switch reload the catalog, so the default follows the catalog. Only the
+ * latest read writes or reports errors, so a slow Wave-1 answer cannot overwrite a newer authenticated default.
+ */
+export function createDefaultModel(v2: {
+  directory: string
+  data: { location: { model: { list: () => readonly ModelInfo[] | undefined } } }
+  api: {
+    model: {
+      default: (input: {
+        location: { directory: string }
+      }) => Promise<{ data?: { id: string; providerID: string } | null | undefined }>
+    }
+  }
+  report: (err: unknown) => void
+}) {
+  const [model, setModel] = createSignal<ModelRef>()
+  const state = { read: 0 }
+  onCleanup(() => {
+    state.read++
+  })
+  createEffect(
+    on(
+      () => v2.data.location.model.list(),
+      (list) => {
+        if (!list) {
+          state.read++
+          return
+        }
+        const read = ++state.read
+        void v2.api.model
+          .default({ location: { directory: v2.directory } })
+          .then((response) => {
+            if (read !== state.read) return
+            setModel(response.data ? { id: response.data.id, providerID: response.data.providerID } : undefined)
+          })
+          .catch((error: unknown) => {
+            if (read !== state.read) return
+            v2.report(error)
+          })
+      },
+    ),
+  )
+  return model
 }

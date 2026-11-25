@@ -1,3 +1,4 @@
+import type { AgentInfo } from "@opencode/client"
 import { batch, createMemo, createSignal } from "solid-js"
 import { preserveVariant } from "../src/v2/variant"
 import { type ModelAllocations, MAX_MULTI_VERSIONS, totalAllocations } from "./multi-model-utils"
@@ -6,6 +7,34 @@ import { type ModelAllocations, MAX_MULTI_VERSIONS, totalAllocations } from "./m
 export const DEFAULT_VARIANT = "default"
 
 export type ModelSelection = { providerID: string; modelID: string }
+
+export type DialogSelections = {
+  agent?: string
+  model?: ModelSelection
+  variant?: string
+}
+
+export function readDialogSelections(value: unknown): DialogSelections {
+  if (typeof value !== "object" || value === null) return {}
+  const record = value as Record<string, unknown>
+  const model = record.model
+  return {
+    agent: typeof record.agent === "string" ? record.agent : undefined,
+    variant: typeof record.variant === "string" ? record.variant : undefined,
+    model:
+      typeof model === "object" &&
+      model !== null &&
+      typeof (model as ModelSelection).providerID === "string" &&
+      typeof (model as ModelSelection).modelID === "string"
+        ? { providerID: (model as ModelSelection).providerID, modelID: (model as ModelSelection).modelID }
+        : undefined,
+  }
+}
+
+export function restoreAgent(value: string | undefined, list: AgentInfo[], base: string): string {
+  if (value && list.some((item) => item.id === value)) return value
+  return base
+}
 
 export function createDialogModels(opts: {
   saved?: ModelSelection

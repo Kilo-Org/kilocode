@@ -24,14 +24,19 @@ import { useLanguage } from "../src/context/language"
 import { useModelPreferences } from "../src/context/model-preferences"
 import { configuredModel, initialModel } from "../src/v2/model-default"
 import { kiloTeam } from "../src/v2/kilo-models"
-import { failureMessage } from "../src/v2/kilo-catalog"
+import { failureMessage, signInAction } from "../src/v2/kilo-catalog"
 import { useBridge } from "./v2/vscode"
 import { convertToMentionPath, insertPathMentions } from "../src/utils/path-mentions"
 import { isEnterKeyCommitNotIme } from "../src/utils/ime-enter"
 import { BranchSelect, BranchSelectPopover } from "../src/components/shared/BranchSelect"
 import { shiftTabCyclesVariant } from "../src/v2/kilo-settings"
 import type { V2 } from "../src/v2/scope"
-import { createDialogPreferences, DEFAULT_VARIANT, type ModelSelection } from "./new-worktree-models"
+import {
+  createDialogPreferences,
+  DEFAULT_VARIANT,
+  readDialogSelections,
+  restoreAgent,
+} from "./new-worktree-models"
 import { createDialogCommandMenu } from "./dialog-commands"
 import { useImageAttachments, type ImageAttachment } from "../src/hooks/useImageAttachments"
 import { useWorktreeMention, segmentMentionText, type MentionResult } from "./worktree-mention"
@@ -62,34 +67,6 @@ const WORKTREE_PROMPT_SCOPE = "agent-manager-worktree-prompt"
 const WORKTREE_MENTION_MODEL_TRIGGER = "agent-manager-worktree-mention-model"
 
 type DialogTab = "new" | "import"
-
-type DialogSelections = {
-  agent?: string
-  model?: ModelSelection
-  variant?: string
-}
-
-function readDialogSelections(value: unknown): DialogSelections {
-  if (typeof value !== "object" || value === null) return {}
-  const record = value as Record<string, unknown>
-  const model = record.model
-  return {
-    agent: typeof record.agent === "string" ? record.agent : undefined,
-    variant: typeof record.variant === "string" ? record.variant : undefined,
-    model:
-      typeof model === "object" &&
-      model !== null &&
-      typeof (model as ModelSelection).providerID === "string" &&
-      typeof (model as ModelSelection).modelID === "string"
-        ? { providerID: (model as ModelSelection).providerID, modelID: (model as ModelSelection).modelID }
-        : undefined,
-  }
-}
-
-function restoreAgent(value: string | undefined, list: AgentInfo[], base: string): string {
-  if (value && list.some((item) => item.id === value)) return value
-  return base
-}
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 
@@ -1031,6 +1008,9 @@ export const NewWorktreeDialog: Component<{
                         descriptionRenderer={ModelDescription}
                         // The same reason the sidebar composer shows when the Kilo catalog leaves no usable model.
                         failure={failureMessage(t, props.store.kiloFailure())}
+                        onFailureAction={signInAction(props.store.kiloFailure(), () =>
+                          vscode.postMessage({ type: "openProfile", login: true }),
+                        )}
                         onSelect={selectModel}
                         onPick={restorePrompt}
                         onCancel={restorePrompt}

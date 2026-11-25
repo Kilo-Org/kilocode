@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { ClientError } from "@opencode/client"
 import { dict } from "../webview-ui/src/i18n/en"
-import { failureText, isSignedOutError, readableMessage, toFailure } from "../webview-ui/src/v2/error"
+import { failureText, isAuthSessionError, isSignedOutError, readableMessage, toFailure } from "../webview-ui/src/v2/error"
 
 const t = (key: string, params?: Record<string, string | number | boolean>) =>
   (dict as Record<string, string>)[key]?.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(params?.[name] ?? "")) ??
@@ -68,6 +68,43 @@ describe("chat error text", () => {
     const failure = toFailure(new Error("boom"))
     expect(failure.message).toBe("boom")
     expect(failure.details).toContain("Error: boom")
+    expect(failure.auth).toBeUndefined()
+  })
+
+  test("marks auth failures without tagging unrelated errors", () => {
+    expect(toFailure(new ClientError("UnexpectedStatus", { cause: { status: 401 }, detail: "401" })).auth).toBe(true)
+    expect(toFailure({ type: "provider.auth", message: "Invalid API key" }).auth).toBe(true)
+    expect(toFailure({ type: "unauthorized", message: "Not signed in to Kilo Gateway" }).auth).toBe(true)
+    expect(toFailure({ status: 401, message: "Unauthorized" }).auth).toBe(true)
+    expect(toFailure({ error: { type: "provider.auth", message: "Expired" } }).auth).toBe(true)
+
+    const authErr = new Error("Expired token")
+    authErr.name = "AuthorizationError"
+    expect(toFailure(authErr).auth).toBe(true)
+
+    expect(toFailure(new ClientError("UnexpectedStatus", { cause: { status: 408 }, detail: "408" })).auth).toBeUndefined()
+    expect(toFailure(new ClientError("UnexpectedStatus", { cause: { status: 500 }, detail: "500" })).auth).toBeUndefined()
+    expect(toFailure({ type: "provider.rate-limit", status: 429, message: "Slow down" }).auth).toBeUndefined()
+  })
+})
+
+describe("isAuthSessionError", () => {
+  test("detects provider.auth and HTTP 401 session errors", () => {
+    expect(isAuthSessionError({ type: "provider.auth" })).toBe(true)
+    expect(isAuthSessionError({ type: "provider.auth", status: 403 })).toBe(true)
+    expect(isAuthSessionError({ type: "provider.auth", status: 401 })).toBe(true)
+    expect(isAuthSessionError({ type: "provider.authentication", status: 401 })).toBe(true)
+    expect(isAuthSessionError({ type: "unknown", status: 401 })).toBe(true)
+    expect(isAuthSessionError({ status: 401 })).toBe(true)
+  })
+
+  test("ignores non-auth session errors", () => {
+    expect(isAuthSessionError({ type: "provider.rate-limit", status: 429 })).toBe(false)
+    expect(isAuthSessionError({ type: "provider.quota", status: 402 })).toBe(false)
+    expect(isAuthSessionError({ type: "provider.no-route" })).toBe(false)
+    expect(isAuthSessionError({ type: "provider.transport" })).toBe(false)
+    expect(isAuthSessionError({ type: "aborted" })).toBe(false)
+    expect(isAuthSessionError({})).toBe(false)
   })
 })
 
