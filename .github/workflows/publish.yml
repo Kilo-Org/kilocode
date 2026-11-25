@@ -713,7 +713,6 @@ jobs:
           AUR_KEY: ${{ secrets.AUR_KEY }}
           GITHUB_TOKEN: ${{ steps.committer.outputs.token }}
           NPM_CONFIG_PROVENANCE: true
-          VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
           OPENVSX_TOKEN: ${{ secrets.OVSX_TOKEN }}
           SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }} # kilocode_change
 
