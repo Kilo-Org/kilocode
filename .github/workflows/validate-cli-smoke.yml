@@ -8,8 +8,7 @@
 # source), not the standalone binary.
 #
 # This builds the CLI for the host platform only (--single) and runs the same smoke
-# step, covering the four targets that failed in runs 37371543591 / 37336767041:
-# darwin-arm64, darwin-x64, windows-x64, linux-x64. No signing, no release, no
+# step on the enabled native targets. No signing, no release, no
 # publish, no ~1 GB artifact hand-off.
 #
 # Bubblewrap bundling is skipped so the Linux build does not need the Zig toolchain
@@ -37,11 +36,12 @@ jobs:
       matrix:
         include:
           - target: darwin-arm64
-            runner: macos-15
+            runner: blacksmith-6vcpu-macos-15
             package: "@kilocode/cli-darwin-arm64"
-          - target: darwin-x64
-            runner: macos-15-intel
-            package: "@kilocode/cli-darwin-x64"
+          # Paused until Blacksmith offers an Intel macOS runner.
+          # - target: darwin-x64
+          #   runner: macos-15-intel
+          #   package: "@kilocode/cli-darwin-x64"
           - target: linux-x64
             runner: ubuntu-24.04
             package: "@kilocode/cli-linux-x64"

@@ -205,15 +205,16 @@ jobs:
       matrix:
         include:
           - target: darwin-arm64
-            runner: macos-15
+            runner: blacksmith-6vcpu-macos-15
             uname: arm64
             package: "@kilocode/cli-darwin-arm64"
             mode: host
-          - target: darwin-x64
-            runner: macos-15-intel
-            uname: x86_64
-            package: "@kilocode/cli-darwin-x64"
-            mode: host
+          # Paused until Blacksmith offers an Intel macOS runner.
+          # - target: darwin-x64
+          #   runner: macos-15-intel
+          #   uname: x86_64
+          #   package: "@kilocode/cli-darwin-x64"
+          #   mode: host
           - target: linux-arm64
             runner: ubuntu-24.04-arm
             uname: aarch64
