@@ -318,6 +318,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "Verwijderen van toegestane lijst",
   "ui.permission.rule.addToDenied": "Toevoegen aan geweigerde lijst",
   "ui.permission.rule.removeFromDenied": "Verwijderen van geweigerde lijst",
+  "ui.permission.rule.fromConfig": "Beheerd door een configuratiebestand",
   "ui.permission.toolLabel.read": "Lezen",
   "ui.permission.toolLabel.edit": "Bewerken",
   "ui.permission.toolLabel.write": "Schrijven",
@@ -808,6 +809,7 @@ export const dict = {
 
   "dialog.model.noProviders": "Geen providers",
   "dialog.model.unavailable": "Kilo-modellen niet beschikbaar",
+  "dialog.model.loadFailed": "Kan de providers voor dit project niet laden.",
 
   "prompt.placeholder.connecting": "Verbinden met server...",
   "prompt.placeholder.default":
@@ -861,8 +863,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "Telemetrie",
   "settings.aboutKiloCode.telemetry.description":
-    'Telemetrie wordt beheerd door de ingebouwde telemetrie-instelling van VS Code. Om dit uit te schakelen, gaat u naar Instellingen > Telemetrie > Telemetrieniveau en stelt u dit in op "off". Herstart VS Code om de wijziging toe te passen.',
-  "settings.aboutKiloCode.telemetry.openSettings": "Telemetrie-instellingen openen",
+    "Gebruik deze schakelaar om uw telemetrievoorkeur voor Kilo te wijzigen. Telemetrie blijft uitgeschakeld als VS Code of de omgeving deze uitschakelt.",
+  "settings.aboutKiloCode.telemetry.toggle": "Telemetrie inschakelen",
+  "settings.aboutKiloCode.telemetry.saveFailed": "De telemetrie-instelling kon niet worden gewijzigd",
 
   "settings.agentBehaviour.subtab.agents": "Agenten",
   "settings.agentBehaviour.subtab.mcpServers": "MCP Servers",
@@ -1322,6 +1325,8 @@ export const dict = {
 
   "profile.personalAccount": "Persoonlijk Account",
   "profile.switchingAccount": "Account wisselen…",
+  "profile.unavailableAccount": "Niet-beschikbaar account",
+  "profile.switchFailed": "Kon de accountwissel niet bevestigen.",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/en.ts
 
@@ -1408,6 +1413,9 @@ export const dict = {
   "settings.saveBar.cancel": "Annuleren",
   "settings.saveBar.saving": "Bezig met opslaan…",
   "settings.saveBar.saveFailed": "Instellingen konden niet worden opgeslagen",
+  "settings.saveBar.dismissError": "Negeren",
+  "settings.saveBar.unconfirmedWrite": "“{{name}}” is niet bevestigd door de extensiehost.",
+  "settings.saveBar.unconfirmedSave": "Het opslaan is niet bevestigd door de extensiehost. Probeer het opnieuw.",
   "notifications.action.next": "Volgende",
   "notifications.action.close": "Sluiten",
   "notifications.action.tryModel": "Probeer {{model}}",

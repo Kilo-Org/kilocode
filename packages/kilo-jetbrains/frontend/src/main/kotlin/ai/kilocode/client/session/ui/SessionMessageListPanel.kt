@@ -28,6 +28,7 @@ import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.session.views.failureText
 import ai.kilocode.rpc.dto.HostedSystemEventDto
+import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.client.util.EdtDrain
 import ai.kilocode.client.util.edtLater
 import com.intellij.openapi.application.ApplicationManager
@@ -50,7 +51,7 @@ import javax.swing.JComponent
  * [TurnRemoved] for structural changes, and to [ContentAdded], [ContentUpdated],
  * [ContentRemoved], [ContentDelta] for fine-grained part updates.
  *
- * [HistoryLoaded] and [Cleared] both trigger a full rebuild from the model.
+ * [HistoryLoaded] and [Cleared] replace or remove the turn views without detaching the footer.
  *
  * A [ProgressPanel] is always kept as the last child — it appears at the
  * bottom of the transcript inside the scroll pane and shows a spinner while
@@ -139,14 +140,17 @@ class SessionMessageListPanel(
 
     var onHover: ((PartView, Boolean) -> Unit)? = null
     var onReflow: ((Boolean) -> Unit)? = null
+    @set:RequiresEdt
     var outcome: SessionOutcomeView? = null
         set(value) {
             if (field === value) return
             field?.let { remove(it) }
             field = value
-            value?.applyStyle(style)
+            if (value != null) {
+                value.applyStyle(style)
+                add(value, getComponentZOrder(banner ?: progress))
+            }
             syncActive(model.state)
-            anchorFooter()
             refresh()
         }
 
@@ -159,7 +163,6 @@ class SessionMessageListPanel(
         if (preparationFailure == next) return
         preparationFailure = next
         syncActive(model.state)
-        anchorFooter()
         refresh()
     }
 
@@ -171,11 +174,14 @@ class SessionMessageListPanel(
     /** Progress footer — always the last child inside the scroll. */
     val progress = ProgressPanel(model, parent)
 
+    private val footer = listOfNotNull<JComponent>(question, permission, login, banner, progress)
+
     init {
         Disposer.register(parent, this)
         (layout as? SessionLayout)?.maxWidth = { view ->
             SessionUiStyle.SessionLayout.readableWidth(view, style.transcriptFont)
         }
+        footer.forEach { add(it) }
         applyStyle(style)
 
         model.addListener(parent) { event ->
@@ -471,7 +477,6 @@ class SessionMessageListPanel(
         finishTurn(turn.id, turn)
         syncFailures()
         syncReverted()
-        anchorFooter()
         refresh()
         searchInvalidated()
     }
@@ -514,7 +519,6 @@ class SessionMessageListPanel(
         Disposer.dispose(tv)
         syncFailures()
         syncSettled()
-        anchorFooter()
         refresh()
         searchInvalidated()
     }
@@ -544,7 +548,9 @@ class SessionMessageListPanel(
         tv.setDiffs(diffsOf(turn))
         tv.syncCopyToolbars()
         syncQueued(tv)
-        add(tv)
+        // Insert ahead of the footer without detaching it or scanning the turns for its index.
+        val tail = footer.size + (if (outcome == null) 0 else 1)
+        add(tv, componentCount - tail)
     }
 
     /** One rebuild slice: build every turn that is not yet on the panel. */
@@ -562,7 +568,6 @@ class SessionMessageListPanel(
         // Whole-transcript syncs run once per slice, not per turn, so a long rebuild stays linear.
         syncFailures()
         syncReverted()
-        anchorFooter()
         refresh()
         searchInvalidated()
     }
@@ -583,7 +588,6 @@ class SessionMessageListPanel(
         syncReverted()
         syncReverting(model.state)
         banner?.update()
-        anchorFooter()
         scheduleReflow()
         refresh()
         onRebuilt?.invoke()
@@ -599,7 +603,6 @@ class SessionMessageListPanel(
         turnViews.clear()
         msgToTurn.clear()
         msgToView.clear()
-        removeAll()
 
         // Drop any turns still queued from a previous rebuild before enqueueing this one.
         rebuild.cancel()
@@ -616,7 +619,20 @@ class SessionMessageListPanel(
     private fun tail(): String? = turnViews.values.lastOrNull()?.messageIds()?.lastOrNull()
 
     /** Failure the transcript already explains for the tail message, or null when it explains nothing. */
-    private fun explained(): String? = tail()?.let { failureText(model.message(it)?.info?.error) }
+    private fun explained(): String? = tail()?.let { id ->
+        val item = model.message(id)
+        failureText(item?.info?.error) ?: item?.terminal?.let(::terminalText)
+    }
+
+    private fun terminalText(event: ChatEventDto.MessageTerminal): String? = when (event.status) {
+        "failed" -> when {
+            !event.accepted -> KiloBundle.message("session.cloud.message.failed.notAccepted")
+            event.delivery != "sent" -> KiloBundle.message("session.cloud.message.failed.notSent")
+            else -> KiloBundle.message("session.cloud.message.failed")
+        }
+        "interrupted" -> KiloBundle.message("session.cloud.message.interrupted")
+        else -> null
+    }
 
     /** Apply failure visibility policy to every turn. */
     private fun syncFailures(): Boolean {
@@ -642,8 +658,8 @@ class SessionMessageListPanel(
      * - a turn whose final message succeeded says nothing, because a failure it recovered from is not
      *   that turn's outcome.
      *
-     * Native errors and the Retry footer describe the tail. Cloud prompt failures never introduce
-     * global retry or execution actions.
+     * Native errors and the Retry footer describe the tail. A failed Cloud prompt offers send-again
+     * only while it is the exact transcript tail; older correlated cards stay passive.
      */
     private fun syncFailures(view: TurnView): Boolean {
         val live = turnViews.values.lastOrNull() === view
@@ -653,10 +669,11 @@ class SessionMessageListPanel(
         for (id in ids) {
             val msg = msgToView[id] ?: continue
             val item = model.message(id)
-            val status = item?.terminal?.status
+            val terminal = item?.terminal
+            val status = terminal?.status
             val error = when (status) {
-                "failed" -> MessageErrorDto("CloudMessageFailed", KiloBundle.message("session.cloud.message.failed"))
-                "interrupted" -> MessageErrorDto("CloudMessageInterrupted", KiloBundle.message("session.cloud.message.interrupted"))
+                "failed" -> item.info.error ?: MessageErrorDto("CloudMessageFailed", terminalText(terminal))
+                "interrupted" -> MessageErrorDto("CloudMessageInterrupted", terminalText(terminal))
                 else -> item?.info?.error?.takeIf { live && id == last }
             }
             changed = msg.syncError(error) || changed
@@ -692,13 +709,11 @@ class SessionMessageListPanel(
         msgToTurn.clear()
         msgToView.clear()
         revertingMessage = null
-        removeAll()
         syncActive(model.state)
         syncSettled(model.state)
         syncQueued()
         syncReverting(model.state)
         banner?.update()
-        anchorFooter()
         scheduleReflow()
         refresh()
         searchInvalidated()
@@ -706,8 +721,7 @@ class SessionMessageListPanel(
 
     /**
      * Show or hide active question/permission/login views based on [state].
-     * All views are always kept as children of this panel (added in [anchorFooter]),
-     * but visibility is controlled here.
+     * The footer stays attached; [SessionLayout] skips invisible cards.
      */
     private fun syncActive(state: SessionState = model.state) {
         if (preparationFailure(state) != null) {
@@ -789,11 +803,15 @@ class SessionMessageListPanel(
         banner?.setReverting(state)
     }
 
-    /** Fan out the hidden question tool ref to all registered [MessageView]s. */
+    @RequiresEdt
     private fun setHiddenQuestionTool(ref: ToolCallRef?) {
-        if (hiddenTool == ref) return
+        val prev = hiddenTool
+        if (prev == ref) return
         hiddenTool = ref
-        for (mv in msgToView.values) mv.setHiddenQuestionTool(ref)
+        if (prev != null && prev.messageId != ref?.messageId) {
+            if (msgToView[prev.messageId]?.setHiddenQuestionTool(null) == true) forgetTurn(prev.messageId)
+        }
+        if (ref != null && msgToView[ref.messageId]?.setHiddenQuestionTool(ref) == true) forgetTurn(ref.messageId)
     }
 
     @RequiresEdt
@@ -844,7 +862,6 @@ class SessionMessageListPanel(
         syncSettled(state)
         syncReverted()
         syncReverting(state)
-        anchorFooter()
         refresh()
         searchInvalidated()
     }
@@ -860,29 +877,6 @@ class SessionMessageListPanel(
 
     private fun syncQueued(view: TurnView) {
         view.setQueued(model.isQueued(view.id)) { id -> deleteQueued?.invoke(id) }
-    }
-
-    /**
-     * Re-insert [question], [permission], [login], and [progress] as the last children
-     * so active views always render after all turn views, and progress is last.
-     *
-     * All active views are added even when invisible — [SessionLayout] skips
-     * invisible children, so no extra space is consumed, and the component tree
-     * remains stable for tests.
-     */
-    private fun anchorFooter() {
-        if (question != null) remove(question)
-        if (permission != null) remove(permission)
-        if (login != null) remove(login)
-        if (outcome != null) remove(outcome)
-        if (banner != null) remove(banner)
-        remove(progress)
-        if (question != null) add(question)
-        if (permission != null) add(permission)
-        if (login != null) add(login)
-        if (outcome != null) add(outcome)
-        if (banner != null) add(banner)
-        add(progress)
     }
 
     private fun diffsOf(turn: ai.kilocode.client.session.model.Turn) =

@@ -25,7 +25,12 @@ type Ctx = { kv: ReturnType<typeof useKV>; project: ReturnType<typeof useProject
 
 // kilocode_change start
 // optional TUI args for tests
-export async function mount(override?: FetchHandler, state?: string, args?: Args) {
+export async function mount(
+  override?: FetchHandler,
+  state?: string,
+  args?: Args,
+  onExit?: (error: unknown) => void, // kilocode_change - observe an exit request in tests
+) {
   // kilocode_change end
   const calls = createFetch(override)
   const events = createEventSource()
@@ -61,7 +66,7 @@ export async function mount(override?: FetchHandler, state?: string, args?: Args
               <PermissionProvider>
                 <ProjectProvider>
                   {/* kilocode_change start - SyncProvider consumes the exit context */}
-                  <ExitProvider exit={() => {}}>
+                  <ExitProvider exit={(error) => onExit?.(error)}>
                     <SyncProvider>
                       <Probe />
                     </SyncProvider>

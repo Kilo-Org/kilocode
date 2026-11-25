@@ -6,6 +6,7 @@ import ai.kilocode.backend.app.KiloAppState
 import ai.kilocode.backend.app.KiloBackendAppService
 import ai.kilocode.backend.telemetry.KiloBackendTelemetry
 import ai.kilocode.backend.app.LoadError
+import ai.kilocode.backend.app.LoadFailure
 import ai.kilocode.backend.app.LoadProgress
 import ai.kilocode.backend.app.ProfileResult
 import ai.kilocode.backend.cli.KiloCliPlatform
@@ -34,6 +35,7 @@ import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.ProfileKiloPassDto
 import ai.kilocode.rpc.dto.ProfileOrganizationDto
 import ai.kilocode.rpc.dto.ProfileStatusDto
+import ai.kilocode.rpc.dto.ProfileSyncDto
 import ai.kilocode.rpc.dto.RetentionStatusDto
 import ai.kilocode.rpc.dto.SpeechModelDto
 import ai.kilocode.rpc.dto.SpeechRequestDto
@@ -158,6 +160,11 @@ class KiloAppRpcApiImpl internal constructor(
         return appStateDto(app.updateConfig(patch), app.capabilities.value)
     }
 
+    override suspend fun setTelemetryLevel(enabled: Boolean): KiloAppStateDto {
+        app.requireReady()
+        return appStateDto(app.setTelemetryLevel(enabled), app.capabilities.value)
+    }
+
     override suspend fun retentionStatus(): RetentionStatusDto = app.retention.status()
 
     override suspend fun runRetention(force: Boolean): RetentionStatusDto = app.retention.run(force)
@@ -188,6 +195,8 @@ class KiloAppRpcApiImpl internal constructor(
     }
 
     override suspend fun refreshProfile(): ProfileDto? = app.refreshProfile()?.let(::profileDto)
+
+    override suspend fun refreshAccount(): ProfileSyncDto = sync { app.refreshAccount() }
 
     override suspend fun transcriptionModels(directory: String?): List<SpeechModelDto> {
         app.requireReady()
@@ -245,13 +254,24 @@ class KiloAppRpcApiImpl internal constructor(
 
     override suspend fun startLogin(directory: String?): DeviceAuthDto = app.startLogin(directory)
 
-    override suspend fun completeLogin(directory: String?): ProfileDto? =
-        app.completeLogin(directory)?.let(::profileDto)
+    override suspend fun completeLogin(directory: String?): ProfileSyncDto =
+        sync { app.completeLogin(directory) }
 
     override suspend fun logout(): Boolean = app.logout()
 
-    override suspend fun setOrganization(organizationId: String?): ProfileDto? =
-        app.setOrganization(organizationId)?.let(::profileDto)
+    override suspend fun setOrganization(organizationId: String?): ProfileSyncDto =
+        sync { app.setOrganization(organizationId) }
+
+    /**
+     * Run one account step and report its outcome. A completed step reports the profile, null when
+     * the CLI reports nobody signed in. A step whose profile read could not complete reports the
+     * error, so the caller keeps the account it already has.
+     */
+    private suspend fun sync(step: suspend () -> KiloProfile200Response?): ProfileSyncDto = try {
+        ProfileSyncDto(profile = step()?.let(::profileDto))
+    } catch (e: LoadFailure) {
+        ProfileSyncDto(error = error(e.error))
+    }
 
     override suspend fun captureTelemetry(capture: TelemetryCaptureDto) {
         service<KiloBackendTelemetry>().capture(app.http, app.port, capture.event, capture.properties)

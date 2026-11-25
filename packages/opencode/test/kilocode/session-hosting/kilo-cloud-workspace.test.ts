@@ -1,10 +1,11 @@
 import { Auth } from "@/auth"
 import { PROVIDER, provider as kiloCloud } from "@/kilocode/session-hosting/kilo-cloud"
-import { deletionDispatched } from "@/kilocode/session-hosting/types"
+import { deletionDispatched, HostedFailure } from "@/kilocode/session-hosting/types"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
-import { expect } from "bun:test"
+import { describe, expect } from "bun:test"
 import { Effect, Layer, Schema } from "effect"
 import { testEffect } from "../../lib/effect"
+import contract from "./fixtures/hosted-workspace-v5.json"
 
 const it = testEffect(Layer.empty)
 
@@ -989,4 +990,347 @@ it.effect("rejects a malformed deletion response after dispatch", () => {
     expect(error).toMatchObject({ code: "invalid_response", retryable: false })
     expect(deletionDispatched(error)).toBe(true)
   }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
+})
+
+describe("Kilo Cloud v5 hosted workspace repositories", () => {
+  const [list, create] = contract.requests.map((entry) => entry.example)
+  const [listed, created] = contract.responses.map((entry) => entry.example)
+  const version = 1 as const
+  if (
+    listed.hostedAdditionalRepositoriesVersion !== version ||
+    !listed.repositories ||
+    !created.workspaceId ||
+    !created.kiloSessionId
+  ) {
+    throw new Error("Cloud v5 producer response examples are invalid")
+  }
+  const discovery = "/api/trpc/organizations.cloudAgentNext.listGitHubRepositories"
+  const procedure = "listHostedWorkspaceRepositories"
+  const catalog = `/trpc/${procedure}`
+  const mutation = "/trpc/createHostedWorkspace"
+  const issuer = "/api/cloud-agent-next/token"
+  const scope = { organizationID: list.organizationId!, primaryRepo: list.primaryRepo! }
+  const pin = list.integrationId!
+  const primary = {
+    id: 1001,
+    name: "primary",
+    fullName: scope.primaryRepo.toUpperCase(),
+    private: true,
+    platformIntegrationId: pin,
+  }
+  const inventory = {
+    integrationInstalled: true,
+    syncedAt: null,
+    repositories: [primary, { ...primary, fullName: "other/primary", platformIntegrationId: PROFILE }],
+  }
+  const { additionalRepositoryIds: ids, ...legacy } = create
+  const repository = { type: "github" as const, repo: create.repository!.repo, branch: create.repository!.branch }
+  const input = {
+    organizationID: scope.organizationID,
+    integrationID: pin,
+    repository,
+    additionalRepositoryIDs: ids!,
+    operationKey: create.operationKey!,
+    agent: create.agent!,
+  }
+  const result = {
+    workspace: { providerID: PROVIDER, workspaceID: created.workspaceId },
+    session: { providerID: PROVIDER, sessionID: created.kiloSessionId },
+    replayed: false,
+  }
+  const codes = new Map([
+    ["BAD_REQUEST", [400, -32600]],
+    ["FORBIDDEN", [403, -32003]],
+    ["NOT_FOUND", [404, -32004]],
+    ["CONFLICT", [409, -32009]],
+    ["SERVICE_UNAVAILABLE", [503, -32603]],
+  ])
+  const paths = (calls: Call[]) => calls.map((call) => call.path)
+  const query = (call: Call) => JSON.parse(new URLSearchParams(call.search).get("input")!)
+  const envelope = (data: unknown) => Response.json({ result: { data } })
+
+  function code(key: string) {
+    const value = codes.get(key)
+    if (!value) throw new Error(`Unsupported test tRPC code: ${key}`)
+    return value
+  }
+
+  function failure(err: { code: string; message: string }, path: string) {
+    const [status, rpc] = code(err.code)
+    return Response.json(
+      {
+        error: {
+          message: err.message,
+          code: rpc,
+          data: {
+            code: err.code,
+            httpStatus: status,
+            path,
+            clientError: { ...err, retryable: status === 503 },
+          },
+        },
+      },
+      { status },
+    )
+  }
+
+  const upstream = Effect.acquireRelease(
+    Effect.sync(() => {
+      const state = {
+        discovery: () => envelope(inventory),
+        catalog: () => envelope(listed),
+        create: () => envelope(created),
+      }
+      const web: Call[] = []
+      const worker: Call[] = []
+      function serve(calls: Call[], handle: (path: string) => Response) {
+        return Bun.serve({
+          hostname: "127.0.0.1",
+          port: 0,
+          async fetch(request) {
+            const url = new URL(request.url)
+            calls.push({
+              method: request.method,
+              path: url.pathname,
+              search: url.search,
+              auth: request.headers.get("authorization"),
+              org: request.headers.get("x-kilocode-organizationid"),
+              body: request.method === "POST" ? await request.text() : "",
+            })
+            return handle(url.pathname)
+          },
+        })
+      }
+
+      const app = serve(web, (path) => {
+        if (path === discovery) return state.discovery()
+        if (path === issuer) {
+          return Response.json({ token: CONTROL, expiresAt: "2026-11-21T00:10:00.000Z" })
+        }
+        return new Response("Unexpected Web request", { status: 400 })
+      })
+      const agent = serve(worker, (path) => {
+        if (path === catalog) return state.catalog()
+        if (path === mutation) return state.create()
+        return new Response("Unexpected Worker request", { status: 400 })
+      })
+      const cloud = kiloCloud({
+        auth: auth(signedIn()),
+        env: { KILO_WEB_APP_URL: app.url.origin, CLOUD_AGENT_NEXT_BASE_URL: agent.url.origin, KILO_ORG_ID: ORG },
+        clock: () => Date.parse("2026-11-21T00:00:00.000Z"),
+      })
+      return { web, worker, state, cloud, stop: () => Promise.all([app.stop(true), agent.stop(true)]) }
+    }),
+    (app) => Effect.promise(app.stop),
+  )
+
+  it.live("discovers the exact primary in either Web envelope and uses the pinned Worker for the next page", () =>
+    Effect.gen(function* () {
+      const app = yield* upstream
+      const lookup = app.cloud.listWorkspaceRepositories!
+      const expected = {
+        ...listed,
+        hostedAdditionalRepositoriesVersion: version,
+        repositories: listed.repositories,
+        integrationID: pin,
+      }
+
+      expect(yield* lookup({ ...scope, page: list.page })).toEqual(expected)
+      expect(paths(app.web)).toEqual([discovery, issuer])
+      expect(app.web[0]).toMatchObject({ method: "GET", path: discovery, auth: `Bearer ${TOKEN}`, body: "" })
+      expect(query(app.web[0])).toEqual({ organizationId: scope.organizationID })
+      expect(app.web[1]).toMatchObject({ method: "POST", path: issuer, auth: `Bearer ${TOKEN}` })
+      expect(JSON.parse(app.web[1].body)).toEqual({ organizationId: scope.organizationID })
+      expect(app.worker[0]).toMatchObject({
+        method: "GET",
+        path: catalog,
+        auth: `Bearer ${CONTROL}`,
+        org: scope.organizationID,
+      })
+      expect(query(app.worker[0])).toEqual(list)
+
+      app.state.discovery = () => envelope({ json: inventory, meta: { v: 1 } })
+      app.state.catalog = () =>
+        envelope({
+          ...listed,
+          workerMetadata: "private worker detail",
+          repositories: expected.repositories.map((repo) => ({ ...repo, installationToken: "private token" })),
+        })
+      const first = yield* lookup(scope)
+      expect(first).toEqual(expected)
+      expect(query(app.worker[1])).toEqual({
+        organizationId: list.organizationId,
+        integrationId: pin,
+        primaryRepo: list.primaryRepo,
+      })
+
+      const last = { hostedAdditionalRepositoriesVersion: version, repositories: [] }
+      app.state.catalog = () => envelope(last)
+      expect(yield* lookup({ ...scope, integrationID: first.integrationID, page: first.nextPage })).toEqual({
+        ...last,
+        integrationID: pin,
+      })
+      expect(paths(app.web)).toEqual([discovery, issuer, discovery])
+      expect(paths(app.worker)).toEqual([catalog, catalog, catalog])
+      expect(query(app.worker[2])).toEqual({ ...list, page: listed.nextPage })
+    }),
+  )
+
+  it.live("refuses ambiguous or incomplete Web discovery before contacting the Worker", () =>
+    Effect.gen(function* () {
+      const app = yield* upstream
+      const lookup = app.cloud.listWorkspaceRepositories!
+      app.state.discovery = () =>
+        envelope({
+          ...inventory,
+          repositories: [primary, { ...primary, fullName: scope.primaryRepo, platformIntegrationId: PROFILE }],
+        })
+      expect(yield* lookup(scope).pipe(Effect.flip)).toMatchObject({
+        reason: "hosted_workspace_repository_integration_ambiguous",
+        status: 409,
+        retryable: false,
+      })
+
+      for (const response of [
+        { ...inventory, partial: true },
+        { ...inventory, integrationInstalled: false },
+        { ...inventory, errorMessage: "sensitive upstream diagnostic" },
+        { ...inventory, repositories: [{ ...primary, platformIntegrationId: undefined }] },
+        { ...inventory, repositories: [primary, { ...primary, platformIntegrationId: undefined }] },
+        { ...inventory, repositories: [{ ...primary, platformIntegrationId: "not-a-uuid" }] },
+        { ...inventory, repositories: [{ ...primary, fullName: "other/primary" }] },
+      ]) {
+        app.state.discovery = () => envelope(response)
+        const err = yield* lookup(scope).pipe(Effect.flip)
+        expect(err).toBeInstanceOf(HostedFailure)
+        expect(err.message).not.toContain("sensitive upstream diagnostic")
+      }
+      expect(app.web.every((call) => call.path === discovery)).toBe(true)
+      expect(app.worker).toEqual([])
+    }),
+  )
+
+  it.live("requires exact Worker v1 support before posting a selected create", () =>
+    Effect.gen(function* () {
+      const app = yield* upstream
+      const lookup = app.cloud.listWorkspaceRepositories!
+      const { repositories, nextPage } = listed
+      const unversioned = { repositories, nextPage }
+      const unsupported = { reason: "hosted_workspace_repository_unsupported", status: 503, retryable: false }
+      for (const response of [
+        () => envelope(unversioned),
+        () => envelope({ ...unversioned, hostedAdditionalRepositoriesVersion: version + 1 }),
+        () => envelope({ ...unversioned, hostedAdditionalRepositoriesVersion: String(version) }),
+        () => failure({ code: "NOT_FOUND", message: `No procedure found on path "${procedure}"` }, procedure),
+      ]) {
+        app.state.catalog = response
+        app.worker.length = 0
+        expect(yield* lookup({ ...scope, integrationID: pin }).pipe(Effect.flip)).toMatchObject(unsupported)
+        expect(yield* app.cloud.createWorkspace(input).pipe(Effect.flip)).toMatchObject(unsupported)
+        expect(paths(app.worker)).toEqual([catalog, catalog])
+        expect(query(app.worker[1])).toEqual(list)
+      }
+
+      app.worker.length = 0
+      app.state.catalog = () => envelope({ ...listed, repositories: [{ id: "1002" }] })
+      expect(yield* app.cloud.createWorkspace(input).pipe(Effect.flip)).toMatchObject({
+        code: "invalid_response",
+        retryable: false,
+      })
+      expect(paths(app.worker)).toEqual([catalog])
+    }),
+  )
+
+  it.live("preserves selected create identity and scope when retrying a promptless operation", () =>
+    Effect.gen(function* () {
+      const app = yield* upstream
+      expect(yield* app.cloud.createWorkspace(input)).toEqual(result)
+      app.state.create = () => envelope({ ...created, replayed: true })
+      expect(yield* app.cloud.createWorkspace(input)).toEqual({ ...result, replayed: true })
+
+      expect(paths(app.web)).toEqual([issuer])
+      expect(JSON.parse(app.web[0].body)).toEqual({ organizationId: scope.organizationID })
+      expect(paths(app.worker)).toEqual([catalog, mutation, catalog, mutation])
+      for (const call of app.worker) {
+        expect(call).toMatchObject({ auth: `Bearer ${CONTROL}`, org: scope.organizationID })
+        if (call.path === catalog) {
+          expect(call.method).toBe("GET")
+          expect(query(call)).toEqual(list)
+        } else {
+          expect(call.method).toBe("POST")
+          expect(JSON.parse(call.body)).toEqual(create)
+        }
+      }
+    }),
+  )
+
+  it.live(
+    "returns typed Worker failures for stale selections without downgrading or posting after a failed probe",
+    () =>
+      Effect.gen(function* () {
+        const app = yield* upstream
+        for (const err of contract.errors) {
+          const [status] = code(err.code)
+          const expected = { reason: err.message, status, retryable: status === 503 }
+          app.worker.length = 0
+          app.state.create = () => failure(err, "createHostedWorkspace")
+          expect(yield* app.cloud.createWorkspace(input).pipe(Effect.flip)).toMatchObject(expected)
+          expect(paths(app.worker)).toEqual([catalog, mutation])
+          expect(JSON.parse(app.worker[1].body)).toEqual(create)
+
+          if (status === 403 || status === 404 || status === 503) {
+            app.worker.length = 0
+            app.state.catalog = () => failure(err, procedure)
+            expect(yield* app.cloud.createWorkspace(input).pipe(Effect.flip)).toMatchObject(expected)
+            expect(paths(app.worker)).toEqual([catalog])
+            app.state.catalog = () => envelope(listed)
+          }
+        }
+      }),
+  )
+
+  it.live("rejects invalid selected create inputs without any Cloud request", () =>
+    Effect.gen(function* () {
+      const app = yield* upstream
+      const unscoped = { reason: "hosted_workspace_repository_scope_required", status: 400 }
+      const duplicate = { reason: "hosted_workspace_repository_duplicate", status: 400 }
+      const invalid = { code: "invalid_request" }
+      for (const [patch, expected] of [
+        [{ organizationID: undefined }, unscoped],
+        [{ organizationID: "not-a-uuid" }, unscoped],
+        [{ integrationID: undefined }, unscoped],
+        [{ integrationID: "not-a-uuid" }, invalid],
+        [{ repository: { type: "gitlab", url: "https://gitlab.com/example/primary" } }, unscoped],
+        [{ repository: { ...repository, repo: "not-owner-and-repo" } }, unscoped],
+        [{ additionalRepositoryIDs: [1002, 1002] }, duplicate],
+        [{ additionalRepositoryIDs: [0] }, invalid],
+        [{ additionalRepositoryIDs: [-1] }, invalid],
+        [{ additionalRepositoryIDs: [1.5] }, invalid],
+        [{ additionalRepositoryIDs: [Number.MAX_SAFE_INTEGER + 1] }, invalid],
+        [{ additionalRepositoryIDs: [1, 2, 3, 4, 5, 6] }, invalid],
+      ] as const) {
+        expect(yield* app.cloud.createWorkspace({ ...input, ...patch }).pipe(Effect.flip)).toMatchObject({
+          ...expected,
+          retryable: false,
+        })
+      }
+      expect(app.web).toEqual([])
+      expect(app.worker).toEqual([])
+    }),
+  )
+
+  it.live("uses the original create payload and skips the catalog for omitted or empty selections", () =>
+    Effect.gen(function* () {
+      const app = yield* upstream
+      expect(
+        yield* app.cloud.createWorkspace({ ...input, integrationID: undefined, additionalRepositoryIDs: undefined }),
+      ).toEqual(result)
+      expect(yield* app.cloud.createWorkspace({ ...input, additionalRepositoryIDs: [] })).toEqual(result)
+      expect(paths(app.worker)).toEqual([mutation, mutation])
+      expect(app.worker.map((call) => JSON.parse(call.body))).toEqual([
+        { ...legacy, repository },
+        { ...legacy, repository },
+      ])
+    }),
+  )
 })

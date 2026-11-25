@@ -128,17 +128,31 @@ for (const file of ["triage.mjs", "edit.mjs", "learn.mjs"]) {
   })
 }
 
-// 5. The deliberate --auto difference is preserved: triage/edit grant bash to the
-//    agent; the learnings extraction stays tool-free (learn.mjs:694-697).
-for (const file of ["triage.mjs", "edit.mjs"]) {
-  check(`${file} keeps --auto`, () => {
+// 5. The agent scope is enforced by config, not by --auto. Every runKilo call
+//    names a policy mode, and no docs-sync kilo invocation passes --auto.
+for (const file of ["triage.mjs", "edit.mjs", "learn.mjs"]) {
+  check(`${file} passes a policy mode to runKilo`, () => {
+    const src = read(`.github/docs-sync/${file}`)
+    assert.match(src, /runKilo\(\{\s*\n\s*mode: MODE\.(docsWrite|toolsDenied),/, `${file} must pass mode: MODE.* to runKilo`)
+  })
+  check(`${file} does not pass --auto`, () => {
     const arrays = runKiloArgArrays(read(`.github/docs-sync/${file}`))
-    for (const args of arrays) assert.ok(args.includes('"--auto"'), `argv is missing --auto: ${args}`)
+    for (const args of arrays) assert.ok(!args.includes('"--auto"'), `${file} must not pass --auto: ${args}`)
   })
 }
-check("learn.mjs stays without --auto", () => {
-  const arrays = runKiloArgArrays(read(".github/docs-sync/learn.mjs"))
-  for (const args of arrays) assert.ok(!args.includes('"--auto"'), `learn.mjs must not pass --auto: ${args}`)
+check("agent-policy.mjs exports both modes", () => {
+  const src = read(".github/docs-sync/agent-policy.mjs")
+  assert.match(src, /toolsDenied: "tools-denied"/)
+  assert.match(src, /docsWrite: "docs-write"/)
+})
+
+// 5b. The workflow's repair pass uses the same policy and no --auto.
+check("workflow fix step runs kilo under the committed policy without --auto", () => {
+  const block = stepBlock("Fix verify failures")
+  assert.ok(block, "Fix verify failures step not found")
+  assert.ok(block.includes("node .github/docs-sync/agent-policy.mjs docs-write"), "fix step must export the docs-write policy")
+  assert.ok(block.includes("KILO_CONFIG_CONTENT="), "fix step must pass KILO_CONFIG_CONTENT to kilo run")
+  assert.ok(!/\s--auto\b/.test(block), "fix step must not pass --auto")
 })
 
 // 6. The workflow's fix step passes the same effort as the scripts.

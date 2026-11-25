@@ -6,6 +6,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import java.net.ServerSocket
 import java.net.Socket
@@ -54,6 +55,11 @@ class MockCliServer : AutoCloseable {
     @Volatile var transcriptionRelease: CountDownLatch? = null
     @Volatile var configStatus = 200
     @Volatile var workspaceConfigStatus = 200
+    @Volatile var configOverlayStatus = 200
+
+    // When set, the overlay's `project` member returns this body instead of [workspaceConfig], so a
+    // test can make the raw project file differ from the resolved `/config` body.
+    @Volatile var configOverlayProject: String? = null
     @Volatile var warningsStatus = 200
     @Volatile var notificationsStatus = 200
 
@@ -62,6 +68,9 @@ class MockCliServer : AutoCloseable {
     @Volatile var authorizeStatus = 200
     @Volatile var callbackStatus = 200
     @Volatile var authRemoveStatus = 200
+
+    /** Response body of `DELETE /auth/{id}`; `false` models a CLI that refused the removal. */
+    @Volatile var authRemoveBody = "true"
     @Volatile var authPutStatus = 200
     @Volatile var disposeStatus = 200
     @Volatile var organizationSetStatus = 200
@@ -70,6 +79,10 @@ class MockCliServer : AutoCloseable {
     @Volatile var lastAuthPutBody: String? = null
     @Volatile var lastAuthDeletePath: String? = null
     @Volatile var lastConfigPatchBody: String? = null
+    @Volatile var lastTelemetryLevelBody: String? = null
+    @Volatile var telemetryGate: CountDownLatch? = null
+    @Volatile var telemetryStatus = 200
+    @Volatile var telemetryAllowed = true
     @Volatile var lastWorkspaceConfigPatchPath: String? = null
     @Volatile var lastWorkspaceConfigPatchBody: String? = null
     @Volatile var lastOrganizationSetBody: String? = null
@@ -157,6 +170,15 @@ class MockCliServer : AutoCloseable {
     @Volatile var hostedStart = """{"workspace":{"providerID":"cloud","workspaceID":"wrk_1"},"session":{"providerID":"cloud","sessionID":"ses_cloud_2"},"messageID":"msg_start","replayed":false}"""
     @Volatile var hostedDelete = """{"workspace":{"providerID":"cloud","workspaceID":"wrk_1"},"success":true}"""
     @Volatile var hostedManagementStatus = 200
+    @Volatile var hostedPullRequest = """{"id":{"providerID":"cloud","workspaceID":"wrk_1"},"state":"no_pr","pullRequest":null}"""
+    @Volatile var hostedPullRequestStatus = 200
+    @Volatile var hostedPullRequestHandler: ((Socket, BufferedWriter) -> Unit)? = null
+    data class PullRequestCall(val method: String, val path: String, val body: String, val authorization: String?)
+    val hostedPullRequestCalls = CopyOnWriteArrayList<PullRequestCall>()
+    @Volatile var hostedDiff = "{}"
+    @Volatile var hostedDiffStatus = 200
+    @Volatile var hostedDiffHandler: ((Socket, BufferedWriter) -> Unit)? = null
+    val hostedDiffCalls = CopyOnWriteArrayList<PullRequestCall>()
     @Volatile var lastHostedCreateBody: String? = null
     @Volatile var lastHostedStartBody: String? = null
     @Volatile var lastHostedDeletePath: String? = null
@@ -202,6 +224,8 @@ class MockCliServer : AutoCloseable {
     @Volatile var summarizeResponse = "true"
     @Volatile var sessionsStatus = 200
     @Volatile var recentSessionsStatus = 200
+    @Volatile var moveSessionStatus = 200
+    val moveSessionBodies = CopyOnWriteArrayList<String>()
     @Volatile var sessionCreateStatus = 200
     @Volatile var sessionGetStatus = 200
     @Volatile var sessionDeleteStatus = 200
@@ -244,6 +268,18 @@ class MockCliServer : AutoCloseable {
     @Volatile var pendingQuestions = "[]"
     @Volatile var pendingQuestionsStatus = 200
     val pendingQuestionsStatuses = ConcurrentLinkedQueue<Int>()
+    @Volatile var permissionReplyStatus = 200
+    @Volatile var permissionRulesStatus = 200
+    @Volatile var questionReplyStatus = 200
+    @Volatile var questionRejectStatus = 200
+    @Volatile var lastPermissionReplyPath: String? = null
+    @Volatile var lastPermissionReplyBody: String? = null
+    @Volatile var lastPermissionRulesPath: String? = null
+    @Volatile var lastPermissionRulesBody: String? = null
+    @Volatile var lastQuestionReplyPath: String? = null
+    @Volatile var lastQuestionReplyBody: String? = null
+    @Volatile var lastQuestionRejectPath: String? = null
+    @Volatile var lastQuestionRejectBody: String? = null
     @Volatile var instanceReloadStatus = 200
     @Volatile var lastInstanceReloadPath: String? = null
 
@@ -252,6 +288,9 @@ class MockCliServer : AutoCloseable {
 
     /** Optional gate for REST responses; SSE stays unblocked so the app can enter Loading. */
     @Volatile var responseGate: CountDownLatch? = null
+
+    /** Optional gate for `POST /global/dispose`, so a stalled CLI can be modelled. */
+    @Volatile var disposeGate: CountDownLatch? = null
 
     /** Optional gate for config warnings only. */
     @Volatile var warningsGate: CountDownLatch? = null
@@ -272,11 +311,31 @@ class MockCliServer : AutoCloseable {
     }
     private val feeds = ConcurrentHashMap<String, Feed>()
     private val openings = ConcurrentHashMap<String, AtomicInteger>()
+    private val closings = ConcurrentHashMap<String, AtomicInteger>()
 
     fun awaitFeed(path: String, target: Int = 1, timeout: Long = 5_000): Boolean {
         val end = System.currentTimeMillis() + timeout
         synchronized(streams) {
             while ((openings[path]?.get() ?: 0) < target) {
+                val wait = end - System.currentTimeMillis()
+                if (wait <= 0) return false
+                streams.wait(wait)
+            }
+            return true
+        }
+    }
+
+    /** Number of times the SSE feed for [path] opened, so a test can spot a re-open. */
+    fun feedCount(path: String): Int = openings[path]?.get() ?: 0
+
+    /** Number of times the client closed the SSE feed for [path]. */
+    fun feedClosedCount(path: String): Int = closings[path]?.get() ?: 0
+
+    /** Waits until the client has closed the SSE feed for [path] [target] times. */
+    fun awaitFeedClosed(path: String, target: Int = 1, timeout: Long = 5_000): Boolean {
+        val end = System.currentTimeMillis() + timeout
+        synchronized(streams) {
+            while (feedClosedCount(path) < target) {
                 val wait = end - System.currentTimeMillis()
                 if (wait <= 0) return false
                 streams.wait(wait)
@@ -379,7 +438,7 @@ class MockCliServer : AutoCloseable {
     }
 
     /** Wait until an SSE client has connected (up to [timeout] ms). */
-    fun awaitSseConnection(timeout: Long = 5_000): Boolean =
+    fun awaitSseConnection(timeout: Long = 30_000): Boolean =
         sseConnected.await(timeout, TimeUnit.MILLISECONDS)
 
     /** Push an SSE event to the connected client. */
@@ -445,12 +504,16 @@ class MockCliServer : AutoCloseable {
             val path = parts[1]
 
             var len = 0
+            var authorization: String? = null
             while (true) {
                 val header = input.readLine()
                 if (header.isNullOrBlank()) break
                 val parts = header.split(":", limit = 2)
                 if (parts.size == 2 && parts[0].equals("Content-Length", ignoreCase = true)) {
                     len = parts[1].trim().toIntOrNull() ?: 0
+                }
+                if (parts.size == 2 && parts[0].equals("Authorization", ignoreCase = true)) {
+                    authorization = parts[1].trim()
                 }
             }
             val body = if (len > 0) CharArray(len).also { input.read(it, 0, len) }.concatToString() else ""
@@ -479,8 +542,34 @@ class MockCliServer : AutoCloseable {
                     config = mergeConfig(config, body)
                     respond(output, configStatus, config)
                 }
-                bare == "/global/dispose" && method == "POST" -> respond(output, disposeStatus, "true")
+                bare == "/telemetry/level" && telemetryStatus != 200 -> respond(output, telemetryStatus, "{}")
+                bare == "/telemetry/level" && method == "GET" -> {
+                    val prefs = JSON.parseToJsonElement(config).jsonObject["experimental"] as? JsonObject
+                    val enabled = telemetryAllowed && prefs?.get("openTelemetry") != JsonPrimitive(false)
+                    respond(output, 200, """{"enabled":$enabled}""")
+                }
+                bare == "/telemetry/level" && method == "POST" -> {
+                    lastTelemetryLevelBody = body
+                    telemetryGate?.await()
+                    val enabled = JSON.parseToJsonElement(body).jsonObject.getValue("enabled")
+                    config = mergeConfig(config, """{"experimental":{"openTelemetry":$enabled}}""")
+                    respond(output, 200, """{"enabled":${telemetryAllowed && enabled == JsonPrimitive(true)}}""")
+                }
+                bare == "/global/dispose" && method == "POST" -> {
+                    disposeGate?.await()
+                    respond(output, disposeStatus, "true")
+                }
                 path.startsWith("/config/warnings") -> respond(output, warningsStatus, warnings)
+                bare == "/config/overlay" && method == "GET" -> {
+                    // Reports each config file's raw content so a caller can tell a project-scope
+                    // setting from one inherited from the global file. A non-200 answer has no body.
+                    if (configOverlayStatus == 200) {
+                        val project = configOverlayProject ?: workspaceConfig
+                        respond(output, configOverlayStatus, """{"scope":"project","global":$config,"project":$project}""")
+                    } else {
+                        respond(output, configOverlayStatus, "")
+                    }
+                }
                 bare == "/config/overlay" && method == "PATCH" -> {
                     if (body.contains("\"scope\":\"global\"")) {
                         lastConfigPatchBody = body
@@ -526,7 +615,7 @@ class MockCliServer : AutoCloseable {
                 }
                 bare.matches(Regex("/auth/[^/]+")) && method == "DELETE" -> {
                     lastAuthDeletePath = bare
-                    respond(output, authRemoveStatus, "true")
+                    respond(output, authRemoveStatus, authRemoveBody)
                 }
                 bare.matches(Regex("/auth/[^/]+")) && method == "PUT" -> {
                     lastAuthPutBody = body
@@ -640,6 +729,10 @@ class MockCliServer : AutoCloseable {
                     recentGate?.await()
                     respond(output, recentSessionsStatus, recentSessions)
                 }
+                bare == "/experimental/control-plane/move-session" && method == "POST" -> {
+                    moveSessionBodies.add(body)
+                    respond(output, moveSessionStatus, "")
+                }
                 bare == "/experimental/capabilities" -> {
                     lastCapabilitiesPath = path
                     respond(output, capabilitiesStatus, capabilities)
@@ -654,6 +747,16 @@ class MockCliServer : AutoCloseable {
                     respond(output, cloudSessionImportStatus, cloudSessionImport)
                 }
                 bare == "/kilocode/session-host/provider" -> respond(output, 200, hostedProviders)
+                bare.matches(Regex("/kilocode/session-host/workspace/[^/]+/[^/]+/(changes(/refresh|/file)?|pull-request-diff(/file)?)")) -> {
+                    hostedDiffCalls.add(PullRequestCall(method, path, body, authorization))
+                    val handler = hostedDiffHandler
+                    if (handler != null) handler(socket, output) else respond(output, hostedDiffStatus, hostedDiff)
+                }
+                bare.matches(Regex("/kilocode/session-host/workspace/[^/]+/[^/]+/pull-request(/refresh)?")) -> {
+                    hostedPullRequestCalls.add(PullRequestCall(method, path, body, authorization))
+                    val handler = hostedPullRequestHandler
+                    if (handler != null) handler(socket, output) else respond(output, hostedPullRequestStatus, hostedPullRequest)
+                }
                 bare == "/kilocode/session-host/workspace/profiles" && method == "GET" -> {
                     lastHostedProfilesPath = path
                     respond(output, hostedManagementStatus, hostedProfiles)
@@ -718,6 +821,26 @@ class MockCliServer : AutoCloseable {
                     respond(output, pendingPermissionsStatuses.poll() ?: pendingPermissionsStatus, pendingPermissions)
                 bare == "/question" && method == "GET" ->
                     respond(output, pendingQuestionsStatuses.poll() ?: pendingQuestionsStatus, pendingQuestions)
+                bare.matches(Regex("/permission/[^/]+/reply")) && method == "POST" -> {
+                    lastPermissionReplyPath = path
+                    lastPermissionReplyBody = body
+                    respond(output, permissionReplyStatus, if (permissionReplyStatus in 200..299) "true" else """{"error":"refused"}""")
+                }
+                bare.matches(Regex("/permission/[^/]+/always-rules")) && method == "POST" -> {
+                    lastPermissionRulesPath = path
+                    lastPermissionRulesBody = body
+                    respond(output, permissionRulesStatus, if (permissionRulesStatus in 200..299) "true" else """{"error":"refused"}""")
+                }
+                bare.matches(Regex("/question/[^/]+/reply")) && method == "POST" -> {
+                    lastQuestionReplyPath = path
+                    lastQuestionReplyBody = body
+                    respond(output, questionReplyStatus, if (questionReplyStatus in 200..299) "true" else """{"error":"refused"}""")
+                }
+                bare.matches(Regex("/question/[^/]+/reject")) && method == "POST" -> {
+                    lastQuestionRejectPath = path
+                    lastQuestionRejectBody = body
+                    respond(output, questionRejectStatus, if (questionRejectStatus in 200..299) "true" else """{"error":"refused"}""")
+                }
                 bare == "/session" && method == "GET" -> respond(output, sessionsStatus, sessions)
                 bare == "/session" && method == "POST" -> respond(output, sessionCreateStatus, sessionCreate)
                 bare.matches(Regex("/session/ses_[^/]+")) && method == "GET" ->
@@ -853,6 +976,8 @@ class MockCliServer : AutoCloseable {
         // Client cancellation must release passive discovery streams without a test-side close.
         socket.getInputStream().read()
         feeds.remove(path, feed)
+        closings.computeIfAbsent(path) { AtomicInteger() }.incrementAndGet()
+        synchronized(streams) { streams.notifyAll() }
         feed.latch.countDown()
     }
 

@@ -1,16 +1,20 @@
 package ai.kilocode.e2e
 
 import com.intellij.driver.client.Driver
+import com.intellij.driver.client.Remote
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.ui.components.UiComponent
 import com.intellij.driver.sdk.ui.components.common.ideFrame
+import com.intellij.driver.sdk.ui.components.settings.SettingsDialogUiComponent
 import com.intellij.driver.sdk.ui.remote.Component
 import com.intellij.driver.sdk.ui.remote.SwingHierarchyService
 import com.intellij.driver.sdk.ui.ui
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import javax.swing.JDialog
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Small page-object layer over the real IntelliJ component tree and public services.
@@ -231,6 +235,18 @@ class SessionOpenPage(private val ide: KiloIdePage, private val watchdog: Watchd
 
     fun awaitModel(scope: UiComponent? = null): TranscriptState =
         watchdog.value("transcript model loaded") { readModel(scope) }
+
+    /** Id of the session the visible transcript belongs to, or null when no panel is showing. */
+    fun sessionId(scope: UiComponent? = null): String? {
+        val component = showingTranscript(scope) ?: return null
+        val panel = runCatching { ide.driver.cast(component.component, SessionMessageListPanel::class) }.getOrNull()
+            ?: return null
+        return runCatching { ide.driver.withContext(OnDispatcher.EDT) { panel.sessionId() } }.getOrNull()
+    }
+
+    /** Visible text of the transcript component, including rendered cards. */
+    fun transcriptText(scope: UiComponent? = null): String =
+        showingTranscript(scope)?.let(::componentText).orEmpty()
 
     fun awaitLoaded(scope: UiComponent? = null): PromptState =
         watchdog.value("transcript model loaded") { readPrompt(scope)?.takeIf(::loaded) }
@@ -453,5 +469,152 @@ class SessionOpenPage(private val ide: KiloIdePage, private val watchdog: Watchd
         const val ACTIVE_LIST = "ai.kilocode.client.ui.list.ActiveList"
         const val HOSTED_EDITOR = "ai.kilocode.client.agentManager.hosted.HostedWorkspaceEditorPanel"
         val settled = setOf("Idle", "Error", "TurnEnded", "LoginRequired")
+    }
+}
+
+/**
+ * Kilo Code > Advanced settings, reached through the public settings dialog. The telemetry switch
+ * is the first OnOffButton on the page: the Privacy section precedes Logging and Indexing.
+ */
+class TelemetrySettingsPage(private val ide: KiloIdePage, private val watchdog: Watchdog) {
+    fun open() {
+        ide.driver.ideFrame().openSettingsDialog()
+        val dialog = watchdog.value("settings dialog is showing") { dialog() }
+        val tree = dialog.settingsTree
+        tree.expandAll()
+        val parts = listOf(
+            listOf("Tools", "Kilo Code", "Advanced"),
+            listOf("Kilo Code", "Advanced"),
+        ).firstOrNull { tree.findExpandedPath(*it.toTypedArray(), fullMatch = true) != null }
+            ?: error("Advanced settings path not found; paths: ${tree.collectExpandedPathsAsStrings()}")
+        val row = tree.findExpandedPath(*parts.toTypedArray(), fullMatch = true)!!.row
+        // Robot clicks do not reach the off-screen Starter window; select through the tree model.
+        val remote = ide.driver.cast(tree.component, JTreeSelection::class)
+        ide.driver.withContext(OnDispatcher.EDT) {
+            remote.setSelectionPath(remote.getPathForRow(row))
+        }
+        watchdog.await("Advanced settings page visible", timeout = 30.seconds) { visible() }
+    }
+
+    fun visible(): Boolean = runCatching {
+        page()?.component?.isShowing() == true
+    }.getOrDefault(false)
+
+    fun hasTelemetryRow(): Boolean =
+        page()?.getAllTexts()?.any { it.text.contains(TELEMETRY_TITLE) } == true
+
+    fun isEnabled(): Boolean {
+        val toggle = watchdog.value("telemetry toggle visible") {
+            page()?.xx { byType(TOGGLE_CLASS) }?.list()?.firstOrNull()
+        }
+        val remote = ide.driver.cast(toggle.component, OnOffButton::class)
+        return ide.driver.withContext(OnDispatcher.EDT) { remote.isSelected() }
+    }
+
+    fun setEnabled(value: Boolean) {
+        if (isEnabled() == value) return
+        val toggle = page()?.xx { byType(TOGGLE_CLASS) }?.list()?.firstOrNull()
+            ?: error("telemetry toggle disappeared")
+        val remote = ide.driver.cast(toggle.component, OnOffButton::class)
+        // Robot clicks do not reach the off-screen Starter window; fire the same action listener.
+        ide.driver.withContext(OnDispatcher.EDT) { remote.doClick() }
+        watchdog.await("telemetry toggle is $value") { isEnabled() == value }
+    }
+
+    fun apply() {
+        press(dialog()?.okButton ?: error("settings dialog is not open"))
+        watchdog.await("settings dialog closed") { dialog() == null }
+    }
+
+    fun cancel() {
+        press(dialog()?.cancelButton ?: error("settings dialog is not open"))
+        watchdog.await("settings dialog closed") { dialog() == null }
+    }
+
+    private fun press(button: UiComponent) {
+        val remote = ide.driver.cast(button.component, JButtonRef::class)
+        ide.driver.withContext(OnDispatcher.EDT) { remote.doClick() }
+    }
+
+    private fun page(): UiComponent? = runCatching {
+        dialog()
+            ?.xx { byType(ADVANCED_PAGE) }
+            ?.list()
+            ?.firstOrNull { it.component.isShowing() }
+    }.getOrNull()
+
+    /** A disposed Settings dialog can linger in the tree; always drive the one that is showing. */
+    private fun dialog(): SettingsDialogUiComponent? = runCatching {
+        ide.driver.ui.xx(SettingsDialogUiComponent::class.java) {
+            and(byType(JDialog::class.java), byAccessibleName("Settings"))
+        }.list().firstOrNull { it.component.isShowing() }
+    }.getOrNull()
+
+    companion object {
+        const val ADVANCED_PAGE = "ai.kilocode.client.settings.AdvancedSettingsUi"
+        const val TOGGLE_CLASS = "com.intellij.ui.components.OnOffButton"
+        const val TELEMETRY_TITLE = "Send usage data"
+    }
+}
+
+/** A plain Swing toggle or button inside a rendered card, driven through the real component. */
+@Remote("javax.swing.AbstractButton")
+interface ButtonRef {
+    fun doClick()
+    fun getActionCommand(): String?
+    fun getText(): String?
+}
+
+/** Application-level IDE properties; the mode picker persists `kilo.session.agent` here. */
+@Remote("com.intellij.ide.util.PropertiesComponent")
+interface PropertiesComponentUtility {
+    fun getInstance(): PropertiesComponentRef
+}
+
+@Remote("com.intellij.ide.util.PropertiesComponent")
+interface PropertiesComponentRef {
+    fun setValue(key: String, value: String?)
+    fun getValue(key: String): String?
+}
+
+/**
+ * Plan-mode follow-up. When the plan agent finishes with `plan_exit`, the CLI asks its
+ * "Ready to implement?" question; answering `Start new session` makes the CLI create the follow-up
+ * session. Everything here goes through the real question card and its footer buttons.
+ */
+class PlanFollowupPage(private val ide: KiloIdePage, private val watchdog: Watchdog) {
+    fun awaitVisible() = ide.awaitAny("plan follow-up question visible", QUESTION_VIEW)
+
+    fun card(): UiComponent = watchdog.value("plan follow-up question card") { ide.showing(QUESTION_VIEW) }
+
+    fun text(card: UiComponent): String = runCatching {
+        card.getAllTexts().joinToString("\n") { it.text }
+    }.getOrDefault("")
+
+    fun select(card: UiComponent, label: String): Boolean =
+        click(card, RADIO_CLASS) { it.getActionCommand() == label }
+
+    fun submit(card: UiComponent): Boolean =
+        click(card, BUTTON_CLASS) { it.getText() == SUBMIT }
+
+    fun awaitGone() = watchdog.await("plan follow-up question answered") { ide.showing(QUESTION_VIEW) == null }
+
+    private fun click(card: UiComponent, javaClass: String, match: (ButtonRef) -> Boolean): Boolean = runCatching {
+        val target = card.xx { byType(javaClass) }.list().firstOrNull { remote(it)?.let(match) == true }
+            ?: return@runCatching false
+        val button = remote(target) ?: return@runCatching false
+        ide.driver.withContext(OnDispatcher.EDT) { button.doClick() }
+        true
+    }.getOrDefault(false)
+
+    private fun remote(component: UiComponent): ButtonRef? =
+        runCatching { ide.driver.cast(component.component, ButtonRef::class) }.getOrNull()
+
+    companion object {
+        const val QUESTION_VIEW = "ai.kilocode.client.session.views.question.QuestionView"
+        const val RADIO_CLASS = "com.intellij.ui.components.JBRadioButton"
+        const val BUTTON_CLASS = "javax.swing.JButton"
+        const val SUBMIT = "Submit"
+        const val NEW_SESSION = "Start new session"
     }
 }

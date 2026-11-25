@@ -98,6 +98,7 @@ import { submitFeedback } from "@/kilocode/cli/cmd/tui/feedback"
 import { MemorySessionTui } from "@/kilocode/cli/cmd/tui/routes/session/memory"
 import { GoalRow } from "@/kilocode/cli/cmd/tui/component/goal"
 import { formatMarkdownTables } from "../../util/markdown"
+import { redoTarget } from "../../kilocode/message-order"
 // kilocode_change end
 import { LocationProvider } from "../../context/location"
 
@@ -753,8 +754,16 @@ export function Session() {
         dialog.clear()
         const messageID = session()?.revert?.messageID
         if (!messageID) return
-        const message = messages().find((x) => x.role === "user" && x.id > messageID)
-        if (!message) {
+        // kilocode_change start - advance the revert boundary in conversation order
+        const target = redoTarget(messages(), messageID)
+        if (target.kind === "absent") {
+          toast.show({
+            message: "Cannot redo: the revert boundary is not in the loaded messages.",
+            variant: "error",
+          })
+          return
+        }
+        if (target.kind === "newest") {
           void sdk.client.session.unrevert({
             sessionID: route.sessionID,
           })
@@ -763,8 +772,9 @@ export function Session() {
         }
         void sdk.client.session.revert({
           sessionID: route.sessionID,
-          messageID: message.id,
+          messageID: target.message.id,
         })
+        // kilocode_change end
       },
     },
     {

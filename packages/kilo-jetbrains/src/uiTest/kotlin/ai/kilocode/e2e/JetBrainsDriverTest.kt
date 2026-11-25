@@ -15,14 +15,18 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.extension.ExtendWith
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Headful Starter/Driver adapter for K1. One named watchdog owns every wait; a failed
@@ -55,7 +59,7 @@ class JetBrainsDriverTest {
         val evidence = DriverEvidence(request, descriptor)
         evidence.log("run=${request.runId} scenario=${request.scenario.id} lane=${request.scenario.lane}")
 
-        seedModel(descriptor, evidence)
+        seedModel(descriptor, evidence, request.scenario.id == "settings.telemetry")
         val preflight = preflight(request, evidence)
         if (!preflight) {
             evidence.write(resultPath)
@@ -86,6 +90,7 @@ class JetBrainsDriverTest {
                 withXmx(4096)
                 addSystemProperty("user.home", isolatedHome.toString())
                 addSystemProperty("idea.is.internal", "true")
+                if (request.scenario.id == "settings.telemetry") addSystemProperty("idea.plugin.in.sandbox.mode", "true")
                 addSystemProperty("idea.trust.all.projects", "true")
                 addSystemProperty("idea.suppress.statistics.report", true)
                 addSystemProperty("feature.usage.event.log.send.on.ide.close", false)
@@ -186,10 +191,14 @@ class JetBrainsDriverTest {
                 evidence.state("scenario.id", request.scenario.id)
                 evidence.state("scenario.lane", request.scenario.lane)
 
-                if (isTranscriptSessionOpen(request)) {
+                if (isPlanFollowup(request)) {
+                    planFollowup(request, ide, evidence)
+                } else if (isTranscriptSessionOpen(request)) {
                     openSession(request, descriptor, ide, toolWindow, window, evidence)
                 } else if (isPromptStream(request)) {
                     promptStream(request, descriptor, ide, toolWindow, window, evidence)
+                } else if (request.scenario.id == "settings.telemetry") {
+                    telemetrySettings(descriptor, ide, evidence, split, testName)
                 }
             }
         } catch (error: Throwable) {
@@ -200,6 +209,18 @@ class JetBrainsDriverTest {
         }
 
         evidence.write(resultPath)
+    }
+
+    private fun isPlanFollowup(request: DriverRequest): Boolean =
+        request.scenario.id == FOLLOWUP_SCENARIO
+
+    private companion object {
+        /** IDE-local mode the prompt picker persists for the next new session. */
+        const val MODE_KEY = "kilo.session.agent"
+        const val MODE = "plan"
+
+        /** K1 scenario id the plan-follow-up branch is selected by; its expectations are assertions only. */
+        const val FOLLOWUP_SCENARIO = "followup.new-session"
     }
 
     private fun isTranscriptSessionOpen(request: DriverRequest): Boolean =
@@ -216,6 +237,190 @@ class JetBrainsDriverTest {
 
     private fun isTranscriptScenario(request: DriverRequest): Boolean =
         isTranscriptSessionOpen(request) || isPromptStream(request)
+
+    /**
+     * Plan-mode follow-up. The branch is selected by the K1 scenario id `followup.new-session`;
+     * the scenario's `expected` lists are assertions only. The plan agent writes its plan and
+     * finishes with `plan_exit`, the CLI asks "Ready to implement?", the driver answers `Start new
+     * session` through the real question card, and the CLI-created follow-up session must take over
+     * the transcript with the plan handoff. The asking and adopted session ids are recorded so the
+     * two can be compared. The flow drives the local CLI, so it refuses any lane but `local`.
+     */
+    private fun planFollowup(
+        request: DriverRequest,
+        ide: KiloIdePage,
+        evidence: DriverEvidence,
+    ) {
+        if (request.scenario.lane != "local") {
+            evidence.fail(
+                "followup.local-lane",
+                "$FOLLOWUP_SCENARIO drives the local CLI only; received lane '${request.scenario.lane}'",
+            )
+            return
+        }
+
+        val token = request.scenario.prompt.token
+        val sessions = SessionOpenPage(ide, watchdog)
+        val card = PlanFollowupPage(ide, watchdog)
+
+        // A new session seeds its agent from the IDE-local mode the picker persists. Without this
+        // the session runs as `code`, the CLI never offers `plan_exit`, and no follow-up question
+        // can appear. This writes the same key the picker's selectAgent() writes.
+        val mode = runCatching {
+            val properties = ide.driver.utility(PropertiesComponentUtility::class).getInstance()
+            properties.setValue(MODE_KEY, MODE)
+            properties.getValue(MODE_KEY)
+        }
+        if (mode.getOrNull() == MODE) {
+            evidence.pass("plan.mode", "$MODE_KEY=$MODE")
+        } else {
+            evidence.fail(
+                "plan.mode",
+                "could not put the session in plan mode: ${mode.exceptionOrNull()?.let(::actionable) ?: "read back '$mode'"}"
+            )
+            evidence.state("plan.mode.readback", mode.getOrNull() ?: "unset")
+            return
+        }
+
+        runCatching { sessions.submitLocal(token) }.onFailure { error ->
+            evidence.fail("question.visible", "the plan prompt could not be submitted: ${actionable(error)}")
+            return
+        }
+        evidence.pass("session.open", "plan prompt submitted through Chat")
+
+        if (runCatching { card.awaitVisible() }.isFailure) {
+            evidence.fail("question.visible", "the plan follow-up question never appeared; see the copied IDE logs")
+            return
+        }
+        evidence.pass("question.visible", PlanFollowupPage.QUESTION_VIEW)
+
+        val asking = runCatching { sessions.sessionId() }.getOrNull()
+        evidence.state("followup.asking.session", asking ?: "unknown")
+        val question = card.card()
+        val questionText = card.text(question)
+        evidence.state("question.text", questionText.take(1200))
+        if (questionText.contains(PlanFollowupPage.NEW_SESSION)) {
+            evidence.pass("question.requested", "the card offers '${PlanFollowupPage.NEW_SESSION}'")
+        } else {
+            evidence.fail("question.requested", "the card did not offer '${PlanFollowupPage.NEW_SESSION}'")
+        }
+
+        if (!card.select(question, PlanFollowupPage.NEW_SESSION)) {
+            evidence.fail("question.answered", "the '${PlanFollowupPage.NEW_SESSION}' option was not found")
+            return
+        }
+        evidence.state("question.selected", PlanFollowupPage.NEW_SESSION)
+        if (!card.submit(question)) {
+            evidence.fail("question.answered", "the question card has no '${PlanFollowupPage.SUBMIT}' button")
+            return
+        }
+        if (runCatching { card.awaitGone() }.isFailure) {
+            evidence.fail("question.answered", "the question card did not close after Submit")
+            return
+        }
+        evidence.pass("question.answered", "'${PlanFollowupPage.NEW_SESSION}' submitted through the question card")
+
+        val marker = "Plan file:"
+        val adopted = runCatching {
+            watchdog.value("the follow-up session takes over the transcript", timeout = 5.minutes) {
+                val id = sessions.sessionId()
+                if (id == null || id == asking || !sessions.transcriptText().contains(marker)) null else id
+            }
+        }.getOrNull()
+        if (adopted == null) {
+            evidence.fail(
+                "followup.adopted",
+                "no session other than '${asking ?: "unknown"}' rendered '$marker'; transcript=" +
+                    sessions.transcriptText().take(600),
+            )
+        } else {
+            // The wait above already requires a session other than the asking one, so only record the id.
+            evidence.pass("followup.adopted", adopted)
+            evidence.state("followup.adopted.session", adopted)
+            val line = sessions.transcriptText().lineSequence().firstOrNull { it.contains(marker) }?.trim().orEmpty()
+            evidence.state("followup.plan.marker", line.take(400))
+            if (line.isNotEmpty()) evidence.pass("followup.plan.marker", line)
+            else evidence.fail("followup.plan.marker", "the adopted transcript lost the plan marker")
+            val model = runCatching { sessions.awaitModel() }.getOrNull()
+            if (model != null) evidence.pass("session.ready", "turnCount=${model.turns} in $adopted")
+            else evidence.fail("session.ready", "the adopted transcript never loaded")
+        }
+
+        runCatching { ide.snapshot("plan-followup-settled") }
+        runCatching { ide.screenshot("plan-followup-settled") }
+    }
+
+    /**
+     * E2E for Advanced > Privacy > Send usage data. The switch edits the same
+     * `experimental.openTelemetry` key the CLI reads, so the assertion covers the config-file
+     * round trip and a fresh settings read after the write, not just the toggle's local state.
+     */
+    private fun telemetrySettings(
+        descriptor: FixtureDescriptor,
+        ide: KiloIdePage,
+        evidence: DriverEvidence,
+        context: IDETestContext,
+        testName: String,
+    ) {
+        watchdog.value("core telemetry level is available", timeout = 30.seconds) {
+            ide.frontend().telemetryConfig()
+        }
+        val page = TelemetrySettingsPage(ide, watchdog)
+        page.open()
+        if (page.visible() && page.hasTelemetryRow()) {
+            evidence.pass("settings.advanced.visible", "Kilo Code > Advanced with the Privacy section")
+        } else {
+            evidence.fail("settings.advanced.visible", "Advanced page or telemetry row is missing")
+        }
+
+        val initial = page.isEnabled()
+        evidence.state("settings.telemetry.initial", initial)
+        if (!initial) evidence.pass("settings.telemetry.toggle", "effective level is off in the sandbox")
+        else evidence.fail("settings.telemetry.toggle", "sandbox did not opt out of telemetry")
+
+        captureSettingsShot(context, testName, "settings-telemetry-initial", evidence)
+        page.setEnabled(true)
+        captureSettingsShot(context, testName, "settings-telemetry-draft-on", evidence)
+        page.apply()
+
+        val files = listOf("kilo.jsonc", "kilo.json")
+            .map { Path.of(descriptor.state.config, "kilo", it) }
+        val persisted = runCatching {
+            watchdog.value("telemetry preference persisted", timeout = 60.seconds) {
+                files.firstNotNullOfOrNull { file ->
+                    val value = runCatching {
+                        jsonc.parseToJsonElement(Files.readString(file)).jsonObject
+                    }.getOrNull()
+                    value?.get("experimental")?.jsonObject?.get("openTelemetry")?.jsonPrimitive?.booleanOrNull
+                        ?.takeIf { it }
+                        ?.let { file }
+                }
+            }
+        }.getOrElse { error ->
+            evidence.fail("settings.telemetry.persisted", actionable(error))
+            null
+        }
+        if (persisted != null) {
+            evidence.pass("settings.telemetry.persisted", persisted.fileName.toString())
+            evidence.state("settings.telemetry.file", persisted.toString())
+        }
+
+        val frontend = runCatching {
+            watchdog.value("frontend telemetry config is off", timeout = 30.seconds) {
+                ide.frontend().telemetryConfig()?.takeIf { !it }
+            }
+        }.getOrNull()
+        evidence.state("settings.frontend.telemetry", frontend)
+        page.open()
+        val reloaded = runCatching { page.isEnabled() }.getOrNull()
+        evidence.state("settings.reopened.toggle", reloaded)
+        if (frontend == false && reloaded == false) {
+            evidence.pass("settings.telemetry.reload", "saved preference did not override the sandbox opt-out")
+        } else {
+            evidence.fail("settings.telemetry.reload", "config state='$frontend', reopened toggle='$reloaded'")
+        }
+        runCatching { page.cancel() }
+    }
 
     private fun setOrigin(project: String, url: String, evidence: DriverEvidence): Boolean {
         val existing = git(project, "remote", "get-url", "origin")
@@ -615,7 +820,7 @@ class JetBrainsDriverTest {
         return a != null && normalize(a) == normalize(b)
     }
 
-    private fun seedModel(descriptor: FixtureDescriptor, evidence: DriverEvidence) {
+    private fun seedModel(descriptor: FixtureDescriptor, evidence: DriverEvidence, optOut: Boolean) {
         val model = descriptor.project.model.takeIf { it.isNotBlank() } ?: return
         val file = Path.of(descriptor.state.config, "kilo", "kilo.jsonc")
         runCatching {
@@ -624,6 +829,7 @@ class JetBrainsDriverTest {
             val fields = jsonc.parseToJsonElement(existing).jsonObject.toMutableMap()
             fields["model"] = JsonPrimitive(model)
             fields["small_model"] = JsonPrimitive(model)
+            if (optOut) fields["experimental"] = JsonObject(mapOf("openTelemetry" to JsonPrimitive(false)))
             Files.writeString(file, JsonObject(fields).toString())
         }.onSuccess {
             evidence.state("model.seeded", model)
@@ -631,6 +837,48 @@ class JetBrainsDriverTest {
             evidence.fail("model.seeded", actionable(error))
         }
     }
+
+    /**
+     * Starter captures the real dialog window once a heartbeat, while a driver screenshot on this
+     * headless display comes back black. Wait for a heartbeat newer than this step and copy it into
+     * the run evidence so the PR can show the actual settings page.
+     */
+    private fun captureSettingsShot(
+        context: IDETestContext,
+        testName: String,
+        name: String,
+        evidence: DriverEvidence,
+    ) {
+        // Heartbeat screenshots live under the frontend IDE test home of a split-mode run.
+        val frontend = (context as? IDERemDevTestContext)?.frontendIDEContext ?: context
+        val homes = listOf(frontend.paths.testHome, context.paths.testHome).distinct()
+        val started = System.currentTimeMillis()
+        val shot = runCatching {
+            watchdog.value("fresh Starter screenshot for $name", timeout = 2.minutes) {
+                homes.firstNotNullOfOrNull { home -> freshShot(home, started) }
+            }
+        }.getOrElse { error ->
+            evidence.fail(
+                "settings.screenshot.$name",
+                "${actionable(error)}; homes=$homes; logs=${homes.map { findLogDir(it, testName) }}",
+            )
+            return
+        }
+        val dest = evidence.artifactsDir.resolve("screenshots").resolve("$name.png")
+        Files.createDirectories(dest.parent)
+        Files.copy(shot, dest, StandardCopyOption.REPLACE_EXISTING)
+        evidence.artifact("screenshot", dest)
+        evidence.pass("settings.screenshot.$name", dest.fileName.toString())
+    }
+
+    private fun freshShot(home: Path, started: Long): Path? = runCatching {
+        Files.walk(home, 8).use { stream ->
+            stream.iterator().asSequence()
+                .filter { it.fileName.toString() == "dialog1.png" }
+                .filter { Files.getLastModifiedTime(it).toMillis() > started }
+                .maxByOrNull { Files.getLastModifiedTime(it).toMillis() }
+        }
+    }.getOrNull()
 
     private fun preflight(request: DriverRequest, evidence: DriverEvidence): Boolean {
         val inherited = System.getenv("KILO_E2E_RUN_ID")

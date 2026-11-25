@@ -300,6 +300,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "从允许列表移除",
   "ui.permission.rule.addToDenied": "添加到拒绝列表",
   "ui.permission.rule.removeFromDenied": "从拒绝列表移除",
+  "ui.permission.rule.fromConfig": "由配置文件管理",
   "ui.permission.toolLabel.read": "读取",
   "ui.permission.toolLabel.edit": "编辑",
   "ui.permission.toolLabel.write": "写入",
@@ -788,6 +789,7 @@ export const dict = {
 
   "dialog.model.noProviders": "无供应商",
   "dialog.model.unavailable": "Kilo 模型不可用",
+  "dialog.model.loadFailed": "无法加载此项目的供应商。",
 
   "prompt.placeholder.connecting": "正在连接服务器...",
   "prompt.placeholder.error": "连接失败。请检查输出面板或重启扩展。",
@@ -834,8 +836,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "遥测",
   "settings.aboutKiloCode.telemetry.description":
-    '遥测由 VS Code 的内置遥测设置控制。若要将其禁用，请转到「设置」>「遥测」>「遥测级别」并将其设置为 "off"。重启 VS Code 以应用更改。',
-  "settings.aboutKiloCode.telemetry.openSettings": "打开遥测设置",
+    "使用此开关更改 Kilo 的遥测设置。如果 VS Code 或运行环境禁用了遥测，遥测将保持关闭。",
+  "settings.aboutKiloCode.telemetry.toggle": "启用遥测",
+  "settings.aboutKiloCode.telemetry.saveFailed": "无法更新遥测设置",
 
   "settings.agentBehaviour.subtab.agents": "代理",
   "settings.agentBehaviour.subtab.mcpServers": "MCP 服务器",
@@ -1258,6 +1261,8 @@ export const dict = {
   "dialog.model.notSet": "未设置",
   "profile.personalAccount": "个人账户",
   "profile.switchingAccount": "正在切换账户…",
+  "profile.unavailableAccount": "不可用的账户",
+  "profile.switchFailed": "无法确认账户切换。",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/zh.ts
 
   "question.summary": "第 {{n}} / {{total}} 个问题",
@@ -1340,6 +1345,9 @@ export const dict = {
   "settings.saveBar.saveAnyway": "仍然保存",
   "settings.saveBar.saving": "保存中…",
   "settings.saveBar.saveFailed": "无法保存设置",
+  "settings.saveBar.dismissError": "忽略",
+  "settings.saveBar.unconfirmedWrite": "扩展宿主未确认「{{name}}」。",
+  "settings.saveBar.unconfirmedSave": "扩展宿主未确认保存。请重试。",
   "settings.saveBar.cancel": "取消",
   "notifications.action.next": "下一个",
   "notifications.action.close": "关闭",

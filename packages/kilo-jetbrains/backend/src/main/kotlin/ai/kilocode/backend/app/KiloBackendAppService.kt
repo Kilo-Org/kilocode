@@ -2,7 +2,12 @@ package ai.kilocode.backend.app
 
 import ai.kilocode.backend.cli.CliServer
 import ai.kilocode.backend.cli.KiloBackendCliManager
+import ai.kilocode.backend.cli.KiloBackendHttpClients
 import ai.kilocode.backend.cli.KiloCliDataParser
+import ai.kilocode.backend.cli.ResponseFailure
+import ai.kilocode.backend.cli.bodyName
+import ai.kilocode.backend.cli.bodySummary
+import ai.kilocode.backend.cli.responseFailure
 import ai.kilocode.backend.migration.KiloBackendLegacyMigrationStoreService
 import ai.kilocode.backend.migration.LegacyMigrationDetection
 import ai.kilocode.backend.migration.LegacyMigrationStatus
@@ -49,6 +54,7 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -101,6 +107,11 @@ class KiloBackendAppService private constructor(
         private const val RETRY_DELAY_MS = 1000L
         private const val APP_LOAD_TIMEOUT_MS = 30_000L
         private const val READY_TIMEOUT_MS = 120_000L
+        /** Sign-out must not wait on a stalled CLI; matches the provider-settings call bound. */
+        private const val DISPOSE_TIMEOUT_SECONDS = 15L
+
+        /** Sign-out waits at most this long for the lifecycle mutex before dropping state alone. */
+        private const val CLOSE_TIMEOUT_MS = 5_000L
 
         /** Test factory — no IntelliJ deps needed. */
         internal fun create(
@@ -112,6 +123,7 @@ class KiloBackendAppService private constructor(
     }
 
     private val mutex = Mutex()
+    private val telemetryLock = Mutex()
     private val connection = KiloConnectionService(cs, server, onReconnect = {
         cs.launch { reconnect() }
     }, appLoadTimeoutMs = loadTimeoutMs, log = log)
@@ -306,13 +318,19 @@ class KiloBackendAppService private constructor(
             log.warn("Global config patch: config reload failed after save $summary")
             return (_appState.value as? KiloAppState.Ready) ?: current
         }
-        val state = _appState.value
-        if (state is KiloAppState.Ready && state.data === current.data && connection.state.value == connected) {
-            config = cfg
-            setAppReady(current.data.copy(config = cfg))
-        }
+        publishConfig(connected, current.data, cfg)
         log.info("Global config patch: state refreshed $summary")
         return (_appState.value as? KiloAppState.Ready) ?: current
+    }
+
+    suspend fun setTelemetryLevel(enabled: Boolean): KiloAppState = telemetryLock.withLock {
+        val connected = connection.state.value as? ConnectionState.Connected ?: throw IllegalStateException("Not connected")
+        val http = connection.apiClient ?: throw IllegalStateException("Not connected")
+        requireReady()
+        val level = KiloBackendTelemetry(log).setLevel(http, connected.port, enabled)
+        log.info("Telemetry level saved: requested=$enabled effective=$level")
+        publishTelemetry(connected, level)
+        _appState.value
     }
 
     internal suspend fun resumeAfterMigration() {
@@ -415,13 +433,25 @@ class KiloBackendAppService private constructor(
                         coroutineScope {
                         launch {
                             val result = fetchProfile()
+                            val held = profile
+                            // A reload keeps the account it already holds whenever its own read did not
+                            // produce one: a definitive signed-out answer alone may clear it.
+                            val keep = held != null && !result.signedOut
                             val status = when {
-                                result.error != null -> {
+                                result.error != null && !keep -> {
                                     errors.add(result.error)
                                     throw LoadFailure(result.error)
                                 }
+                                result.error != null -> {
+                                    prof = held
+                                    ProfileResult.LOADED
+                                }
                                 result.value != null -> {
                                     prof = result.value
+                                    ProfileResult.LOADED
+                                }
+                                keep -> {
+                                    prof = held
                                     ProfileResult.LOADED
                                 }
                                 else -> ProfileResult.NOT_LOGGED_IN
@@ -467,7 +497,6 @@ class KiloBackendAppService private constructor(
                     activity.start(sessions.statuses, { id -> hosted.directory(id) ?: sessions.sessionDirectory(id) }, chat.events)
                     workspaces.start(connection.api!!, connection.apiClient!!, connection.port, connection.events)
                     startWatchingGlobalSseEvents()
-                    setTelemetry(true)
                     captureBackend("Backend Connected", mapOf("portKnown" to "true"))
                     captureLoad("Backend Load Completed", start, mapOf(
                         "profileStatus" to if (prof != null) "loaded" else "not_logged_in",
@@ -491,6 +520,7 @@ class KiloBackendAppService private constructor(
                     // socket and fail an otherwise-successful load. Ready therefore starts with the
                     // capability off and flips once the probe answers.
                     cs.launch { refreshCapabilities() }
+                    cs.launch { refreshTelemetry() }
                 } catch (e: TimeoutCancellationException) {
                     val err = LoadError(
                         resource = "app",
@@ -537,16 +567,6 @@ class KiloBackendAppService private constructor(
                     props + mapOf("durationMs" to (System.currentTimeMillis() - start).toString()),
                 )
             }.onFailure { log.info("Skipping backend load telemetry: ${it.message}") }
-        }
-    }
-
-    private fun setTelemetry(enabled: Boolean) {
-        val http = connection.apiClient
-        val port = connection.port
-        cs.launch {
-            runCatching {
-                service<KiloBackendTelemetry>().setEnabled(http, port, enabled)
-            }.onFailure { log.info("Skipping telemetry setEnabled: ${it.message}") }
         }
     }
 
@@ -598,38 +618,58 @@ class KiloBackendAppService private constructor(
     }
 
     /**
-     * Fetch the user profile. Returns [FetchResult.ok] with the response
-     * on success, [FetchResult.ok] with `null` when not logged in or when
-     * the server cannot reach the profile endpoint. Never throws.
+     * Fetch the user profile. Returns [FetchResult.ok] with the response on success, and a
+     * [FetchResult] whose value and error follow [strict]. Never throws: a failed read is a value.
      *
-     * Profile is optional — 401 (not logged in), 400 (missing/corrupt local
-     * auth), and 5xx (gateway/network errors) are all non-fatal.
+     * Profile is optional on the startup load and a background refresh: 401 (not logged in),
+     * 400 (missing/corrupt local auth, or an upstream profile failure), and 5xx (gateway/network
+     * errors) are all non-fatal there.
+     *
+     * The startup load and a background refresh treat a 400 or a 5xx as signed out. A read that
+     * follows a completed account step passes [strict]: there a 401 is the only signed-out answer,
+     * and any other status, including a 400, is a failure, so the caller keeps the account it
+     * already published.
+     *
+     * A caller can tell a signed-out answer ([FetchResult.signedOut]) from a read that could not
+     * complete ([FetchResult.error]). [load] keeps an account it already holds when a reload's read
+     * does not answer signed out.
      */
-    private suspend fun fetchProfile(): FetchResult<KiloProfile200Response?> {
+    private suspend fun fetchProfile(strict: Boolean = false): FetchResult<KiloProfile200Response?> {
         val client = connection.appLoadApi
-            ?: return FetchResult.ok(null)
+            ?: return if (strict) FetchResult.fail("profile", detail = "Not connected") else FetchResult.ok(null)
         return try {
             val response = client.kiloProfile()
             log.info("Profile: ${response.profile.email}")
             FetchResult.ok(response)
         } catch (e: ClientException) {
-            if (e.statusCode == 400 || e.statusCode == 401) {
+            // The CLI answers 400 for an upstream profile failure and 401 only when it holds no
+            // credential, so 401 is the only definitive signed-out answer, in both modes. The
+            // startup load and the background refresh also tolerate a 400, which is a read that
+            // could not complete and publishes no value for that load.
+            if (e.statusCode == 401) {
+                log.info("Profile: unavailable (${e.statusCode})")
+                logResponseBody("profile", e)
+                return FetchResult.signedOut()
+            }
+            if (e.statusCode == 400 && !strict) {
                 log.info("Profile: unavailable (${e.statusCode})")
                 logResponseBody("profile", e)
                 return FetchResult.ok(null)
             }
-            log.warn("Profile fetch failed: HTTP ${e.statusCode}", e)
-            logResponseBody("profile", e)
+            logFailure("Profile fetch failed", e)
             FetchResult.fail("profile", e)
         } catch (e: ServerException) {
-            // 5xx from the CLI — profile endpoint is unreachable (no auth,
-            // gateway down, etc.). Treat the same as not-logged-in.
-            log.warn("Profile fetch: server error (${e.statusCode}) — treating as unavailable", e)
-            logResponseBody("profile", e)
-            FetchResult.ok(null)
+            // The startup load and the background refresh treat a 5xx as signed out on purpose:
+            // the local CLI cannot tell a revoked token from a gateway failure at this point.
+            // It is still a read that could not complete, not a definitive sign-out, so a reload
+            // keeps an account it already holds.
+            logFailure("Profile fetch: server error — treating as unavailable", e)
+            if (strict) FetchResult.fail("profile", e) else FetchResult.ok(null)
+        } catch (e: CancellationException) {
+            // A cancelled read is not a read that failed: rethrow so the caller's scope sees it.
+            throw e
         } catch (e: Exception) {
-            log.warn("Profile fetch failed: ${e.message}", e)
-            logResponseBody("profile", e)
+            logFailure("Profile fetch failed", e)
             FetchResult.fail("profile", e)
         }
     }
@@ -650,10 +690,7 @@ class KiloBackendAppService private constructor(
                     try {
                         val text = call.execute().use { response ->
                             val text = response.body?.string().orEmpty()
-                            if (!response.isSuccessful) {
-                                log.warn("Global config fetch failed: HTTP ${response.code} ${response.message} $text")
-                                throw IllegalStateException("Global config fetch failed: HTTP ${response.code} ${response.message}")
-                            }
+                            if (!response.isSuccessful) throw responseFailure(response.code, response.message, text)
                             text
                         }
                         if (cont.isActive) cont.resume(text)
@@ -666,7 +703,8 @@ class KiloBackendAppService private constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            log.warn("Global config fetch failed: ${e.message}", e)
+            val line = "Global config fetch failed: ${failureLogDetail(e)}"
+            if (e is ResponseFailure) log.warn(line) else log.warn(line, e)
             FetchResult.fail("config", e)
         }
     }
@@ -677,8 +715,7 @@ class KiloBackendAppService private constructor(
         return try {
             FetchResult.ok(client.kiloNotifications())
         } catch (e: Exception) {
-            log.warn("Notifications fetch failed: ${e.message}", e)
-            logResponseBody("notifications", e)
+            logFailure("Notifications fetch failed", e)
             FetchResult.fail("notifications", e)
         }
     }
@@ -698,7 +735,7 @@ class KiloBackendAppService private constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            log.warn("Experimental capabilities fetch failed: ${e.message}", e)
+            logFailure("Experimental capabilities fetch failed", e)
             false
         }
     }
@@ -714,15 +751,48 @@ class KiloBackendAppService private constructor(
         _capabilities.value = enabled
     }
 
+    private suspend fun refreshTelemetry() = telemetryLock.withLock {
+        val conn = connection.state.value as? ConnectionState.Connected ?: return@withLock
+        val http = connection.apiClient ?: return@withLock
+        val level = try {
+            KiloBackendTelemetry(log).level(http, conn.port)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("Could not read effective telemetry level: ${e.message}", e)
+            null
+        }
+        publishTelemetry(conn, level)
+    }
+
+    private fun publishTelemetry(conn: ConnectionState.Connected, level: Boolean?) {
+        synchronized(loadLock) {
+            val state = _appState.value as? KiloAppState.Ready ?: return
+            if (connection.state.value != conn || state.data.config.telemetry == level) return
+            val cfg = state.data.config.copy(telemetry = level)
+            config = cfg
+            setAppReady(state.data.copy(config = cfg))
+        }
+    }
+
     private suspend fun refreshConfigState() {
         val current = _appState.value as? KiloAppState.Ready ?: return
         val connection = connection.state.value as? ConnectionState.Connected ?: return
         val cfg = fetchConfig().value ?: return
-        val state = _appState.value
-        if (state !is KiloAppState.Ready || state.data !== current.data) return
-        if (this.connection.state.value != connection) return
-        config = cfg
-        setAppReady(current.data.copy(config = cfg))
+        publishConfig(connection, current.data, cfg)
+    }
+
+    private fun publishConfig(conn: ConnectionState.Connected?, before: AppData, cfg: ConfigDto) {
+        synchronized(loadLock) {
+            val state = _appState.value as? KiloAppState.Ready ?: return
+            if (connection.state.value != conn) return
+            // A telemetry probe updates the snapshot independently of the global config read.
+            val previous = state.data.config.copy(telemetry = before.config.telemetry)
+            if (state.data.copy(config = previous) != before) return
+            val next = cfg.copy(telemetry = state.data.config.telemetry)
+            config = next
+            setAppReady(state.data.copy(config = next))
+        }
     }
 
     private fun setAppReady(data: AppData) {
@@ -765,20 +835,29 @@ class KiloBackendAppService private constructor(
     }
 
     /**
-     * Dump the HTTP response body from a failed API call for debugging.
+     * Log the resource, status and size of the response from a failed API call.
      * The generated client wraps the response in [ClientException.response]
      * or [ServerException.response] as a [ClientError] / [ServerError] with
-     * a `body` field containing the raw response string.
+     * a `body` field.
      */
     private fun logResponseBody(resource: String, e: Exception) {
-        val body = when (e) {
-            is ClientException -> (e.response as? ClientError<*>)?.body
-            is ServerException -> (e.response as? ServerError<*>)?.body
-            else -> null
+        val body = failureBody(e) ?: return
+        log.warn("$resource response failed: status=${failureStatus(e)} chars=${body.toString().length}")
+    }
+
+    /**
+     * Log a failed CLI call with its status and body size. The throwable is passed only when the
+     * call carried no response body and the body did not fail to decode — the formatter otherwise
+     * writes the throwable with its stack trace.
+     */
+    private fun logFailure(message: String, e: Exception) {
+        val line = "$message: ${failureLogDetail(e)}"
+        val bodyOnly = failureBody(e) != null || e is SerializationException || e is ResponseFailure
+        if (bodyOnly) {
+            log.warn(line)
+            return
         }
-        if (body != null) {
-            log.warn("$resource response body: $body")
-        }
+        log.warn(line, e)
     }
 
     private suspend fun <T> fetchWithRetry(
@@ -825,6 +904,7 @@ class KiloBackendAppService private constructor(
                             launch {
                                 refreshConfigState()
                                 log.info("Config reloaded successfully")
+                                refreshTelemetry()
                             }
                         }
                         "global.disposed" -> {
@@ -904,19 +984,41 @@ class KiloBackendAppService private constructor(
         sessions.stop()
     }
 
+    private fun publishProfile(fresh: KiloProfile200Response?) {
+        // Background telemetry and config refreshes also republish Ready. Serialize the
+        // read-modify-write so a late publish cannot restore the snapshot taken before this update.
+        synchronized(loadLock) {
+            val current = _appState.value
+            if (current is KiloAppState.Ready) {
+                setAppReady(current.data.copy(profile = fresh))
+            }
+            profile = fresh
+        }
+    }
+
     /**
      * Refresh the user profile from the CLI backend.
      * Returns the latest profile data, or null when not logged in.
      * Updates the current [KiloAppState.Ready] profile in-place if the app is ready.
      */
     suspend fun refreshProfile(): KiloProfile200Response? {
-        val result = fetchProfile()
+        val fresh = fetchProfile().value
+        publishProfile(fresh)
+        return fresh
+    }
+
+    /**
+     * Re-read the account on demand. Used by the two account steps and by the account-details
+     * retry in the UI.
+     *
+     * A definitive signed-out answer publishes null and clears the account; a read that could not
+     * complete keeps the published account and reports the failure.
+     */
+    internal suspend fun refreshAccount(): KiloProfile200Response? {
+        val result = fetchProfile(strict = true)
+        result.error?.let { throw LoadFailure(it) }
         val fresh = result.value
-        val current = _appState.value
-        if (current is KiloAppState.Ready) {
-            setAppReady(current.data.copy(profile = fresh))
-        }
-        profile = fresh
+        publishProfile(fresh)
         return fresh
     }
 
@@ -939,33 +1041,96 @@ class KiloBackendAppService private constructor(
     /**
      * Complete the Kilo device auth login flow.
      * Blocks until the user completes authentication on the browser side.
-     * Returns the user profile on success, or null if the login could not be completed.
+     * Returns the user profile on success; null only when the CLI reports nobody signed in.
      */
     suspend fun completeLogin(directory: String?): KiloProfile200Response? {
         val client = connection.api ?: throw IllegalStateException("Not connected")
         client.providerOauthCallback(providerID = "kilo", directory = directory, providerOauthCallbackRequest = ProviderOauthCallbackRequest(method = 0.0))
-        return refreshProfile()
+        return refreshAccount()
     }
 
     /**
      * Log out from Kilo Gateway.
-     * Removes credentials and clears the profile from app state.
+     * Removes credentials and clears the profile from app state. A successful sign-out also drops
+     * the hosted session state derived from that credential — attachments, transcripts, statuses,
+     * retained owners — and asks the CLI to rebuild its global state, so the next sign-in starts
+     * from an empty hosted manager. A refused removal changes nothing.
      */
     suspend fun logout(): Boolean {
         val client = connection.api ?: throw IllegalStateException("Not connected")
         val result = client.authRemove(providerID = "kilo")
-        val current = _appState.value
-        if (current is KiloAppState.Ready) {
-            profile = null
-            setAppReady(current.data.copy(profile = null))
+        if (!result) return false
+        // Close before start: close() forgets retained owners, while start() on a started manager
+        // only rebinds transports and would restore the previous credential's continuity.
+        // Under the lifecycle mutex, so a concurrent CLI restart cannot swap the transport between
+        // the read below and the bind, which would leave the manager on a replaced client. That
+        // mutex is also held across a CLI download, so the wait is bounded: dropping the
+        // credential-derived state matters, binding to the replacement transport does not, and a
+        // later load() starts the manager on it.
+        var rebound = false
+        val bound = withTimeoutOrNull(CLOSE_TIMEOUT_MS) {
+            mutex.withLock {
+                hosted.close()
+                val api = connection.api
+                val http = connection.apiClient
+                val port = connection.port
+                // The CLI may already be gone; the manager just stays closed instead of throwing.
+                if (api != null && http != null && port != 0) hosted.start(api, http, port, chat)
+                rebound = true
+            }
         }
+        if (bound == null && !rebound) {
+            // The wait expired before the block ran; dropping the credential-derived state is the
+            // part that matters, and the next load() starts the manager on its transport.
+            log.info("Sign-out: lifecycle busy, dropping hosted state without rebinding")
+            hosted.close()
+        }
+        // Clear the snapshot first: the CLI rebuild is best-effort, while the credential
+        // removal above is already final.
+        synchronized(loadLock) {
+            val current = _appState.value
+            if (current is KiloAppState.Ready) {
+                profile = null
+                setAppReady(current.data.copy(profile = null))
+            }
+        }
+        // After the credential removal: the CLI rebuilds global state without the account. Reads the
+        // transport again, so a restart in between is rebuilt from as well.
+        disposeGlobal(connection.apiClient, connection.port)
         return result
+    }
+
+    /**
+     * Best-effort `POST /global/dispose` so the CLI rebuilds global state; a failure never blocks
+     * sign-out. The client is bounded, because the shared API client has no call timeout and a
+     * stalled CLI would otherwise hold sign-out open.
+     */
+    private suspend fun disposeGlobal(http: OkHttpClient?, port: Int) {
+        if (http == null || port == 0) return
+        val request = Request.Builder()
+            .url("http://127.0.0.1:$port/global/dispose")
+            .header("Accept", "application/json")
+            .post("{}".toRequestBody("application/json".toMediaType()))
+            .build()
+        try {
+            withContext(Dispatchers.IO) {
+                KiloBackendHttpClients.bounded(http, DISPOSE_TIMEOUT_SECONDS)
+                    .newCall(request)
+                    .execute()
+                    .use { it.body?.string() }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.debug { "Global dispose skipped after logout: ${e.message}" }
+        }
     }
 
     /**
      * Switch the active account context.
      * Pass null for personal account, an organization ID for org context.
-     * Returns the updated profile after the switch.
+     * A successful switch starts a fresh hosted context; a refused switch changes nothing.
+     * Returns the updated profile after the switch; null only when the CLI reports nobody signed in.
      */
     suspend fun setOrganization(organizationId: String?): KiloProfile200Response? {
         val http = connection.apiClient ?: throw IllegalStateException("Not connected")
@@ -984,7 +1149,8 @@ class KiloBackendAppService private constructor(
                 }
             }
         }
-        return refreshProfile()
+        hosted.resetContext()
+        return refreshAccount()
     }
 
     override fun dispose() {
@@ -1009,18 +1175,28 @@ private fun summary(patch: ConfigPatchDto): String {
 }
 
 /**
- * Result of a data fetch — either a value or an error with details.
+ * Result of a data fetch — either a value, an error with details, or a definitive signed-out answer.
+ *
+ * [signedOut] separates a definitive "nobody is signed in" answer from a read that could not
+ * complete: both carry no value and no error, but only the former may clear an account a caller
+ * already holds. A tolerant 400 or 5xx is a read that could not complete, not a sign-out.
  */
-private data class FetchResult<T>(val value: T?, val error: LoadError?) {
+private data class FetchResult<T>(
+    val value: T?,
+    val error: LoadError?,
+    val signedOut: Boolean = false,
+) {
     companion object {
         fun <T> ok(value: T) = FetchResult<T>(value, null)
+
+        fun <T> signedOut() = FetchResult<T>(value = null, error = null, signedOut = true)
 
         fun <T> fail(resource: String, exception: Exception) = FetchResult<T>(
             value = null,
             error = LoadError(
                 resource = resource,
-                status = httpStatus(exception),
-                detail = httpDetail(exception),
+                status = failureStatus(exception),
+                detail = failureDetail(exception),
             ),
         )
 
@@ -1028,27 +1204,48 @@ private data class FetchResult<T>(val value: T?, val error: LoadError?) {
             value = null,
             error = LoadError(resource = resource, detail = detail),
         )
-
-        private fun httpStatus(e: Exception): Int? =
-            when (e) {
-                is ClientException -> e.statusCode
-                is ServerException -> e.statusCode
-                else -> null
-            }
-
-        private fun httpDetail(e: Exception): String? =
-            when (e) {
-                is ClientException -> "HTTP ${e.statusCode}: ${e.message}"
-                is ServerException -> "HTTP ${e.statusCode}: ${e.message}"
-                is ConnectException -> "Connection refused: ${e.message}"
-                is SocketTimeoutException -> "Timeout: ${e.message}"
-                else -> e.message
-            }
     }
 }
 
+/** HTTP status of a failed CLI call, or null when the call never reached the server. */
+private fun failureStatus(e: Exception): Int? = when (e) {
+    is ClientException -> e.statusCode
+    is ServerException -> e.statusCode
+    else -> null
+}
+
+/** Raw response body of a failed CLI call. */
+private fun failureBody(e: Exception): Any? = when (e) {
+    is ClientException -> (e.response as? ClientError<*>)?.body
+    is ServerException -> (e.response as? ServerError<*>)?.body
+    else -> null
+}
+
+/** User-facing detail of a failed call: the status and, when the body carries one, the error name. */
+private fun failureDetail(e: Exception): String? {
+    val status = failureStatus(e)
+    val name = bodyName(failureBody(e)?.toString().orEmpty())
+    return when {
+        status != null && name != null -> "HTTP $status $name"
+        status != null -> "HTTP $status"
+        e is ConnectException -> "Connection refused: ${e.message}"
+        e is SocketTimeoutException -> "Timeout: ${e.message}"
+        e is SerializationException -> "Response parse error: ${e.javaClass.simpleName}"
+        else -> e.message
+    }
+}
+
+/** Status and body size for the log line of a failed call. */
+private fun failureLogDetail(e: Exception): String {
+    if (e is ResponseFailure) return e.summary
+    val status = failureStatus(e)
+    val body = failureBody(e)
+    if (status != null && body != null) return "HTTP $status: ${bodySummary(body.toString())}"
+    return failureDetail(e).orEmpty()
+}
+
 /** Thrown when a required data fetch exhausts all retries. */
-private class LoadFailure(val error: LoadError) : Exception("Failed to load ${error.resource}")
+internal class LoadFailure(val error: LoadError) : Exception("Failed to load ${error.resource}")
 
 /** Why a startup migration offer is or is not made. */
 internal enum class MigrationGate { Proceed, Suppressed, AlreadyOffered, StatusSet }

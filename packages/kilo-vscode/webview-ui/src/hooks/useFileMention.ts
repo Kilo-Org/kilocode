@@ -102,8 +102,8 @@ export interface FileMention {
   setMentionIndex: (index: number) => void
   closeMention: () => void
   parseFileAttachments: (text: string) => FileAttachment[]
-  /** Register paths as active mentions (used by drag-and-drop). Pass cwd to ensure buildFileAttachments resolves correctly. */
-  addPaths: (paths: string[], cwd: string) => void
+  /** Register paths as active mentions (used by drag-and-drop). */
+  addPaths: (paths: string[]) => void
   /**
    * Handle backspace for atomic mention removal. Returns true if the
    * event was consumed.
@@ -161,6 +161,7 @@ export interface FileMention {
 
 export function useFileMention(
   vscode: VSCodeContext,
+  root: Accessor<string>,
   sessionID?: Accessor<string | undefined>,
   git?: Accessor<boolean>,
   worktrees?: Accessor<WorktreeReference[]>,
@@ -177,7 +178,6 @@ export function useFileMention(
   const [modelPicker, setModelPicker] = createSignal(false)
   const [worktreePicker, setWorktreePicker] = createSignal(false)
   const worktreeCandidates = () => worktrees?.().filter((worktree) => !worktree.disabled) ?? []
-  let workspaceDir = ""
   const cache = new Map<string, FileSearchCache>()
   const dirs = new Map<string, string>()
   // Accumulates every path ever mentioned so syncMentionedPaths can
@@ -276,7 +276,6 @@ export function useFileMention(
     fileSearchRevision++
     fileSearchRequest = undefined
     prewarmRequest = undefined
-    workspaceDir = dirs.get(value) ?? ""
     sessionScope = undefined
     sessionsInFlight = false
     pending = undefined
@@ -515,10 +514,7 @@ export function useFileMention(
     if (request.revision < fileSearchRevision) return
 
     const items = message.items ?? message.paths.map((path) => ({ path, type: "file" as const }))
-    if (message.dir) {
-      writeDir(request.scope, message.dir)
-      workspaceDir = message.dir
-    }
+    if (message.dir) writeDir(request.scope, message.dir)
     if (!request.query) writeCache(message.dir, items, request.revision)
     if (!showMention() || request.query !== mentionQuery()) return
     applyFiles(request.query, items)
@@ -834,7 +830,6 @@ export function useFileMention(
     }
     if (drop.kind === "terminal") return insertToken(TERMINAL_MENTION, textarea, setText, onSelect)
     const resolved = convertToMentionPath(drop.path, cwd)
-    if (cwd) workspaceDir = cwd
     // Register before execCommand so the input sync finds the path.
     knownPaths.add(resolved)
     return insertToken(resolved, textarea, setText, onSelect)
@@ -872,7 +867,7 @@ export function useFileMention(
     dead = undefined
     touched = false
     setMentionQuery(query)
-    const items = readCache(workspaceDir)
+    const items = readCache(dirs.get(scope()) ?? "")
     if (!query) {
       const empty = results("", items)
       setMentionResults(empty)
@@ -941,8 +936,7 @@ export function useFileMention(
     return false
   }
 
-  const addPaths = (paths: string[], cwd: string) => {
-    if (cwd) workspaceDir = cwd
+  const addPaths = (paths: string[]) => {
     for (const p of paths) knownPaths.add(p)
     setMentionedPaths((prev) => {
       const next = new Set(prev)
@@ -965,7 +959,7 @@ export function useFileMention(
       [..._syncMentionedPaths(knownPaths, text)].filter((path) => !knownWorktrees.has(path) && !keys?.has(path)),
     )
     return [
-      ...buildFileAttachments(text, paths, workspaceDir),
+      ...buildFileAttachments(text, paths, root()),
       ...buildSessionAttachments(text, mentionedSessions()),
       ...buildWorktreeAttachments(text, worktrees),
     ]

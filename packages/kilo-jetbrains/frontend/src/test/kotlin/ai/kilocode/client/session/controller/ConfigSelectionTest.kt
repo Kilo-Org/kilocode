@@ -3,6 +3,7 @@ package ai.kilocode.client.session.controller
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.rpc.dto.AgentDto
 import ai.kilocode.rpc.dto.AgentConfigDto
+import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
@@ -48,23 +49,32 @@ class ConfigSelectionTest : SessionControllerTestBase() {
     }
 
     fun `test hosted retry replays the optimistic prompt with a new message id`() {
-        val hosted = controller("hosted:kilo-cloud:worktree_1:ses_one")
+        val id = "hosted:kilo-cloud:worktree_1:ses_one"
+        rpc.session = rpc.session.copy(id = id)
+        val hosted = controller(id)
         collect(hosted)
         flush()
         edt { hosted.prompt("retry me") }
         flush()
         val first = rpc.prompts.single().third
         assertTrue(hosted.model.isOptimistic(first.messageID!!))
-        assertTrue(hosted.canRetryPreparation())
+        val info = hosted.model.message(first.messageID!!)!!.info
+        emit(ChatEventDto.MessageUpdated(id, info))
+        emit(ChatEventDto.MessageTerminal(id, first.messageID!!, "failed", "sent", true))
+        assertTrue(hosted.canRetryTerminal())
 
-        edt { hosted.retryPreparation() }
+        edt {
+            hosted.retryTerminal()
+            hosted.retryTerminal()
+        }
         flush()
 
         assertEquals(2, rpc.prompts.size)
-        val second = rpc.prompts[1].third
+        val second = rpc.prompts.last().third
         assertEquals("retry me", second.parts.single().text)
         assertTrue(first.messageID != second.messageID)
-        assertNull(hosted.model.message(first.messageID!!))
+        assertEquals("failed", hosted.model.message(first.messageID!!)?.terminal?.status)
+        assertFalse(hosted.canRetryTerminal())
     }
 
     fun `test selectModel stays in its session`() {

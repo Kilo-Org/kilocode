@@ -1,8 +1,8 @@
 package ai.kilocode.client.actions
 
-import ai.kilocode.client.agentManager.SidePanelKeys
-import ai.kilocode.client.agentManager.hosted.HostedWorkspaceDataKeys
-import ai.kilocode.client.agentManager.worktree.WorktreeDataKeys
+import ai.kilocode.client.agentManager.AgentManagerAvailability
+import ai.kilocode.client.agentManager.AgentManagerCommand
+import ai.kilocode.client.agentManager.AgentManagerKeys
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.tree.ActiveTreeColors
 import com.intellij.openapi.actionSystem.ActionGroup
@@ -20,37 +20,41 @@ class MoveAgentManagerItemGroup : ActionGroup(
 
     @RequiresEdt
     override fun update(e: AnActionEvent) {
-        val panel = e.getData(SidePanelKeys.WORKTREE_PANEL)
-        val key = target(e)
-        e.presentation.isEnabledAndVisible = when {
-            panel == null || key == null || !panel.canMove(key) -> false
-            else -> panel.sections().any { it.key != panel.section(key) }
-        }
+        val facade = e.getData(AgentManagerKeys.FACADE)
+        val element = e.getData(AgentManagerKeys.ELEMENT)
+        val state = element?.let { facade?.availability(it, AgentManagerCommand.MOVE) } ?: AgentManagerAvailability.HIDDEN
+        e.presentation.isVisible = state.visible
+        e.presentation.isEnabled = state.enabled
     }
 
     @RequiresEdt
     override fun getChildren(e: AnActionEvent?): Array<AnAction> {
-        val panel = e?.getData(SidePanelKeys.WORKTREE_PANEL)
-        val key = e?.let(::target)
-        if (panel == null || key == null || !panel.canMove(key)) return emptyArray()
-        return panel.sections().map { section ->
-
+        val facade = e?.getData(AgentManagerKeys.FACADE) ?: return emptyArray()
+        val element = e.getData(AgentManagerKeys.ELEMENT) ?: return emptyArray()
+        if (!facade.availability(element, AgentManagerCommand.MOVE).enabled) return emptyArray()
+        return facade.destinations(element).map { section ->
             object : DumbAwareAction(section.title, null, ActiveTreeColors.icon(section.color)) {
                 override fun getActionUpdateThread() = ActionUpdateThread.EDT
 
                 @RequiresEdt
                 override fun update(e: AnActionEvent) {
-                    e.presentation.isEnabled = panel.canMove(key) && panel.section(key) != section.key &&
-                        panel.sections().any { it.key == section.key }
-                    e.presentation.icon = ActiveTreeColors.icon(section.color)
+                    val state = facade.availability(element, AgentManagerCommand.MOVE)
+                    val current = facade.destinations(element).firstOrNull { it.key == section.key }
+                    e.presentation.isVisible = state.visible && current != null
+                    e.presentation.isEnabled = state.enabled && current?.enabled == true
+                    if (current != null) {
+                        e.presentation.text = current.title
+                        e.presentation.icon = ActiveTreeColors.icon(current.color)
+                    }
                 }
 
                 @RequiresEdt
-                override fun actionPerformed(e: AnActionEvent) = panel.relocate(key, section.key)
+                override fun actionPerformed(e: AnActionEvent) {
+                    if (!facade.availability(element, AgentManagerCommand.MOVE).enabled) return
+                    if (facade.destinations(element).none { it.key == section.key && it.enabled }) return
+                    facade.perform(element, AgentManagerCommand.MOVE, section.key)
+                }
             }
         }.toTypedArray()
     }
-
-    private fun target(e: AnActionEvent): String? =
-        e.getData(WorktreeDataKeys.WORKTREE)?.id ?: e.getData(HostedWorkspaceDataKeys.WORKSPACE)?.ref?.key
 }

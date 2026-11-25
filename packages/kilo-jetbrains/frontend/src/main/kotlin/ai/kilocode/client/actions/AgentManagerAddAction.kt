@@ -20,11 +20,9 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.ui.popup.ListPopup
-import com.intellij.openapi.util.text.HtmlChunk
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import javax.swing.JComponent
-import javax.swing.SwingConstants
 
 class AgentManagerAddAction : ActionGroup(
     KiloBundle.message("action.Kilo.AgentManager.Add.text"),
@@ -66,9 +64,6 @@ class AgentManagerAddAction : ActionGroup(
             JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
             true,
         )
-        // Plain advertising text is wrapped to the menu width before popup sizing.
-        popup.setAdText(HtmlChunk.text(KiloBundle.message("agentManager.add.hint")).wrapWith("html").toString(),
-            SwingConstants.LEFT)
         popup.setMinimumSize(JBUI.size(360, 1))
         return popup
     }

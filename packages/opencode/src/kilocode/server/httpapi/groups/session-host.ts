@@ -30,6 +30,8 @@ import {
   WorkspaceProfileDefaultInput,
   WorkspaceProfileDefaultResult,
   WorkspaceProfilePage,
+  WorkspaceRepositoryListInput,
+  WorkspaceRepositoryPage,
   WorkspacePullRequestResult,
   WorkspaceSessionStartBody,
   WorkspaceSessionStartResult,
@@ -38,6 +40,7 @@ import { described } from "@/server/routes/instance/httpapi/groups/metadata"
 import {
   ApiNotFoundError,
   ConflictError,
+  ForbiddenError,
   InvalidRequestError,
   ServiceUnavailableError,
   UnauthorizedError,
@@ -59,6 +62,7 @@ export const SessionHostPaths = {
   workspace: `${root}/workspace`,
   workspaceContinue: `${root}/workspace/continue`,
   workspaceProfiles: `${root}/workspace/profiles`,
+  workspaceRepositories: `${root}/workspace/repositories`,
   workspaceProfilePersonalDefault: `${root}/workspace/profiles/personal-default`,
   workspaceProfilePersonalDefaultDetail: `${root}/workspace/profiles/personal-default/:profileID`,
   workspaceDetail: `${root}/workspace/:providerID/:workspaceID`,
@@ -80,6 +84,17 @@ export class SessionHostPaymentRequiredError extends Schema.ErrorClass<SessionHo
 export class SessionHostGoneError extends Schema.ErrorClass<SessionHostGoneError>("SessionHostGoneError")(
   { code: Schema.String, message: Schema.String },
   { httpApiStatus: 410 },
+) {}
+
+export class SessionHostCreateConflictError extends Schema.ErrorClass<SessionHostCreateConflictError>(
+  "SessionHostCreateConflictError",
+)(
+  {
+    code: Schema.Literals(["creation_in_progress", "operation_key_reuse_mismatch", "session_create_intent_conflict"]),
+    message: Schema.String,
+    retryable: Schema.Boolean,
+  },
+  { httpApiStatus: 409 },
 ) {}
 
 /**
@@ -158,6 +173,11 @@ const WorkspaceGetQuery = Schema.Struct({
 })
 
 const WorkspaceProfilesQuery = Schema.Struct({ organizationID: Schema.optional(OrganizationID) })
+
+const WorkspaceRepositoriesQuery = WorkspaceRepositoryListInput.mapFields((fields) => ({
+  ...fields,
+  page: Schema.optional(Schema.NumberFromString.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 100 }))),
+}))
 
 const WorkspaceStatusQuery = Schema.Struct({ organizationID: Schema.optional(OrganizationID) })
 
@@ -301,13 +321,13 @@ export const SessionHostApi = HttpApi.make("session-host")
         HttpApiEndpoint.post("createWorkspace", SessionHostPaths.workspace, {
           payload: CreateWorkspaceInput,
           success: described(CreateWorkspaceResult, "Hosted workspace created"),
-          error: SessionErrors,
+          error: [...SessionErrors, ForbiddenError, SessionHostCreateConflictError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "sessionHost.createWorkspace",
             summary: "Create a hosted workspace",
             description:
-              "Create a hosted workspace and, optionally, its root initial turn and explicit profile. Omit prompt and messageID to create an empty workspace; Cloud applies the effective default profile when profile is omitted. Reuse the same operation key and message ID to retry safely.",
+              "Create a hosted workspace and, optionally, its initial turn, explicit profile, and additional repositories. For a nonempty selection, send the organization and integrationID from the repository catalog. Omit prompt and messageID to create an empty workspace. For a retryable create conflict, reuse the same operation key and unchanged intent.",
           }),
         ),
         HttpApiEndpoint.post("continueWorkspace", SessionHostPaths.workspaceContinue, {
@@ -332,6 +352,18 @@ export const SessionHostApi = HttpApi.make("session-host")
             summary: "List workspace creation profiles",
             description:
               "List personal and organization profile summaries for workspace creation with their default flags. Secret and environment values are never returned.",
+          }),
+        ),
+        HttpApiEndpoint.get("listWorkspaceRepositories", SessionHostPaths.workspaceRepositories, {
+          query: WorkspaceRepositoriesQuery,
+          success: described(WorkspaceRepositoryPage, "Eligible additional repositories"),
+          error: [...SessionErrors, ForbiddenError],
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.listWorkspaceRepositories",
+            summary: "List eligible additional workspace repositories",
+            description:
+              "Passively list authorized repositories for a GitHub primary in the selected organization. Preserve the returned integrationID for subsequent pages and create. Only a successful supported catalog response enables additional repositories.",
           }),
         ),
         HttpApiEndpoint.post("setWorkspacePersonalDefaultProfile", SessionHostPaths.workspaceProfilePersonalDefault, {

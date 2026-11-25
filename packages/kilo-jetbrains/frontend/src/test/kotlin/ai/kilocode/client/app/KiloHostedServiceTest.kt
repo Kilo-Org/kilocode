@@ -14,6 +14,17 @@ import ai.kilocode.rpc.dto.HostedWorkspaceListDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.rpc.dto.HostedWorkspaceSessionDto
 import ai.kilocode.rpc.dto.HostedWorkspaceStatusDto
+import ai.kilocode.rpc.dto.HostedWorkspaceChangesDto
+import ai.kilocode.rpc.dto.HostedWorkspaceChangesRefreshDto
+import ai.kilocode.rpc.dto.HostedWorkspaceChangeFileResultDto
+import ai.kilocode.rpc.dto.HostedWorkspacePullRequestDiffDto
+import ai.kilocode.rpc.dto.HostedWorkspacePullRequestDiffFileResultDto
+import ai.kilocode.rpc.dto.KiloAppStateDto
+import ai.kilocode.rpc.dto.KiloAppStatusDto
+import ai.kilocode.rpc.dto.LoadProgressDto
+import ai.kilocode.rpc.dto.ProfileDto
+import ai.kilocode.rpc.dto.ProfileStatusDto
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -28,13 +39,17 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.Job
 import java.awt.EventQueue
 import javax.swing.SwingUtilities
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertFailsWith
+import kotlin.test.assertSame
 import com.intellij.openapi.util.Disposer
 
 class KiloHostedServiceTest {
@@ -44,6 +59,164 @@ class KiloHostedServiceTest {
     @AfterTest
     fun tearDown() {
         cs.cancel()
+    }
+
+    @Test
+    fun `diff delegates preserve exact arguments results and current organization on every call`() = runBlocking {
+        val ref = HostedWorkspaceRefDto("cloud", "one")
+        val snapshot = HostedWorkspaceChangesDto(ref, "not_captured", null, null, false, null)
+        val refreshed = HostedWorkspaceChangesRefreshDto("offline", snapshot)
+        val file = HostedWorkspaceChangeFileResultDto("stale", null, null, null, 5)
+        val pull = HostedWorkspacePullRequestDiffDto(ref, "not_linked", "no_pull_request", null, false, emptyList())
+        val patch = HostedWorkspacePullRequestDiffFileResultDto("omitted", "src/file.kt", null, "provider_omitted", "a".repeat(64), null)
+        val calls = mutableListOf<Pair<String, String?>>()
+        val rpc = object : KiloHostedRpcApi by FakeRpc() {
+            override suspend fun workspaceChanges(ref: HostedWorkspaceRefDto, organizationID: String?): HostedWorkspaceChangesDto {
+                assertEquals(snapshot.ref, ref)
+                calls += "changes" to organizationID
+                return snapshot
+            }
+            override suspend fun refreshWorkspaceChanges(ref: HostedWorkspaceRefDto, organizationID: String?): HostedWorkspaceChangesRefreshDto {
+                assertEquals(snapshot.ref, ref)
+                calls += "refresh" to organizationID
+                return refreshed
+            }
+            override suspend fun workspaceChangeFile(ref: HostedWorkspaceRefDto, path: String, scope: String?, expectedRevision: Long, organizationID: String?): HostedWorkspaceChangeFileResultDto {
+                assertEquals(snapshot.ref, ref)
+                assertEquals("src/file.kt", path)
+                assertNull(scope)
+                assertEquals(9_007_199_254_740_991L, expectedRevision)
+                calls += "file" to organizationID
+                return file
+            }
+            override suspend fun workspacePullRequestDiff(ref: HostedWorkspaceRefDto, organizationID: String?): HostedWorkspacePullRequestDiffDto {
+                assertEquals(snapshot.ref, ref)
+                calls += "pull" to organizationID
+                return pull
+            }
+            override suspend fun workspacePullRequestDiffFile(ref: HostedWorkspaceRefDto, path: String, expectedHeadSha: String, organizationID: String?): HostedWorkspacePullRequestDiffFileResultDto {
+                assertEquals(snapshot.ref, ref)
+                assertEquals("src/file.kt", path)
+                assertEquals("a".repeat(64), expectedHeadSha)
+                calls += "patch" to organizationID
+                return patch
+            }
+        }
+        val app = KiloAppService(cs, null)
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = ProfileDto(email = "test@test.com", currentOrgId = "org_one"))
+        val service = KiloHostedService(cs, rpc, app, gate = { true }, log = TestLog())
+
+        assertSame(snapshot, service.workspaceChanges(ref))
+        assertSame(refreshed, service.refreshWorkspaceChanges(ref))
+        assertSame(file, service.workspaceChangeFile(ref, "src/file.kt", null, 9_007_199_254_740_991L))
+        assertSame(pull, service.workspacePullRequestDiff(ref))
+        assertSame(patch, service.workspacePullRequestDiffFile(ref, "src/file.kt", "a".repeat(64)))
+        assertEquals<List<Pair<String, String?>>>(listOf("changes", "refresh", "file", "pull", "patch").map { it to "org_one" }, calls)
+        app._state.value = app.state.value.copy(profile = ProfileDto(email = "test@test.com", currentOrgId = "org_two"))
+        service.workspaceChanges(ref)
+        assertEquals("changes" to "org_two", calls.last())
+    }
+
+    @Test
+    fun `diff delegates reject transient states without personal fallback and recover the confirmed organization`() = runBlocking {
+        val ready = KiloAppStateDto(KiloAppStatusDto.READY,
+            profile = ProfileDto("test@test.com", currentOrgId = "org_one"))
+        val app = KiloAppService(cs, null)
+        app._state.value = ready
+        val rpc = DiffRpc()
+        val service = KiloHostedService(cs, rpc, app, gate = { true }, log = TestLog())
+        val states = KiloAppStatusDto.entries.filter { it != KiloAppStatusDto.READY }.map { KiloAppStateDto(it) } +
+            KiloAppStateDto(KiloAppStatusDto.LOADING, progress = LoadProgressDto(profile = ProfileStatusDto.LOADED))
+
+        for (state in states) {
+            app._state.value = state
+            for (delegate in delegates(service)) {
+                val error = assertFailsWith<IllegalStateException> { delegate() }
+                assertEquals("Cloud comparison is unavailable", error.message)
+            }
+            assertTrue(rpc.calls.isEmpty())
+            app._state.value = ready
+            for (delegate in delegates(service)) delegate()
+            assertEquals<List<String?>>(List(5) { "org_one" }, rpc.calls)
+            rpc.calls.clear()
+        }
+    }
+
+    @Test
+    fun `diff delegates accept confirmed personal accounts and isolated services without an app`() = runBlocking {
+        val app = KiloAppService(cs, null)
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = ProfileDto("test@test.com"))
+        for (context in listOf(app, null)) {
+            val rpc = DiffRpc()
+            val service = KiloHostedService(cs, rpc, context, gate = { true }, log = TestLog())
+            for (delegate in delegates(service)) delegate()
+            assertEquals<List<String?>>(List(5) { null }, rpc.calls)
+        }
+    }
+
+    @Test
+    fun `diff delegates reject explicit signout and READY without a profile`() = runBlocking {
+        val progress = LoadProgressDto(profile = ProfileStatusDto.NOT_LOGGED_IN)
+        for (state in listOf(
+            KiloAppStateDto(KiloAppStatusDto.LOADING, progress = progress),
+            KiloAppStateDto(KiloAppStatusDto.READY, progress = progress, profile = ProfileDto("test@test.com")),
+            KiloAppStateDto(KiloAppStatusDto.READY),
+            KiloAppStateDto(KiloAppStatusDto.READY, progress = LoadProgressDto(profile = ProfileStatusDto.LOADED)),
+        )) {
+            val app = KiloAppService(cs, null)
+            app._state.value = state
+            val rpc = DiffRpc()
+            val service = KiloHostedService(cs, rpc, app, gate = { true }, log = TestLog())
+            for (delegate in delegates(service)) {
+                val error = assertFailsWith<IllegalStateException> { delegate() }
+                assertEquals("Cloud comparison is unavailable", error.message)
+            }
+            assertTrue(rpc.calls.isEmpty())
+        }
+    }
+
+    @Test
+    fun `diff delegates reject gate disable and hosted signout even while the profile is READY`() = runBlocking {
+        val app = KiloAppService(cs, null)
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY,
+            profile = ProfileDto("test@test.com", currentOrgId = "org_one"))
+        val rpc = DiffRpc(mapOf(null to HostedWorkspaceListDto(signedOut = true)))
+        var enabled = true
+        val scope = CoroutineScope(cs.coroutineContext + Dispatchers.Unconfined)
+        val service = KiloHostedService(scope, rpc, app, gate = { enabled }, log = TestLog(), repo = { "repo" })
+        enabled = false
+        for (delegate in delegates(service)) {
+            val error = assertFailsWith<IllegalStateException> { delegate() }
+            assertEquals("Cloud comparison is unavailable", error.message)
+        }
+        assertTrue(rpc.calls.isEmpty())
+        enabled = true
+        service.refresh("/repo")
+        withTimeout(WAIT) { service.state.first { it.signedOut } }
+        for (delegate in delegates(service)) {
+            val error = assertFailsWith<IllegalStateException> { delegate() }
+            assertEquals("Cloud comparison is unavailable", error.message)
+        }
+        assertTrue(rpc.calls.isEmpty())
+    }
+
+    @Test
+    fun `diff delegates propagate transport errors and cancellation instead of returning domain absence`() = runBlocking {
+        val ref = HostedWorkspaceRefDto("cloud", "one")
+        val app = KiloAppService(cs, null)
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = ProfileDto("test@test.com"))
+        val service = KiloHostedService(cs, FakeRpc(), app, gate = { true }, log = TestLog())
+        assertFailsWith<IllegalStateException> { service.workspaceChanges(ref) }
+        assertFailsWith<IllegalStateException> { service.refreshWorkspaceChanges(ref) }
+        assertFailsWith<IllegalStateException> { service.workspaceChangeFile(ref, "file.kt", null, 1) }
+        assertFailsWith<IllegalStateException> { service.workspacePullRequestDiff(ref) }
+        assertFailsWith<IllegalStateException> { service.workspacePullRequestDiffFile(ref, "file.kt", "a".repeat(40)) }
+        val error = CancellationException("cancelled")
+        val rpc = object : KiloHostedRpcApi by FakeRpc() {
+            override suspend fun workspaceChanges(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = throw error
+        }
+        val cancelled = KiloHostedService(cs, rpc, app, gate = { true }, log = TestLog())
+        assertSame(error, assertFailsWith<CancellationException> { cancelled.workspaceChanges(ref) })
     }
 
     @Test
@@ -88,6 +261,70 @@ class KiloHostedServiceTest {
         // A session created after the sandbox came up has no preparation events of its own; it must
         // not look like it is preparing forever.
         assertEquals(HostedReadiness.Ready, state.readiness(ref, "${ref.key}:new"))
+    }
+
+    @Test
+    fun `reload closes every workspace feed before reconnecting without affecting another workspace`() = runBlocking {
+        val first = HostedWorkspaceRefDto("cloud", "first")
+        val second = HostedWorkspaceRefDto("cloud", "second")
+        val rpc = FakeRpc()
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog())
+        val parent = Disposer.newDisposable()
+        try {
+            service.observe(first, "one", parent)
+            service.observe(first, "two", parent)
+            service.observe(second, "three", parent)
+            repeat(3) { withTimeout(WAIT) { rpc.opened.receive() } }
+            val reconnected = CompletableDeferred<Boolean>()
+            lateinit var reload: Job
+
+            SwingUtilities.invokeAndWait {
+                reload = service.reload(first) {
+                    reconnected.complete(EventQueue.isDispatchThread())
+                }!!
+            }
+
+            repeat(2) { withTimeout(WAIT) { rpc.closed.receive() } }
+            reload.join()
+            assertEquals(true, reconnected.await())
+            assertEquals(1, rpc.events.subscriptionCount.value)
+
+            service.observe(first, "one", parent)
+            withTimeout(WAIT) { rpc.opened.receive() }
+            assertEquals(2, rpc.events.subscriptionCount.value)
+        } finally { Disposer.dispose(parent) }
+    }
+
+    @Test
+    fun `reload coalesces repeated requests and reconnects only after every close barrier`() {
+        runBlocking {
+            val ref = HostedWorkspaceRefDto("cloud", "one")
+            val rpc = FakeRpc()
+            val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog())
+            val parent = Disposer.newDisposable()
+            try {
+                service.observe(ref, "one", parent)
+                withTimeout(WAIT) { rpc.opened.receive() }
+                val gate = CompletableDeferred<Unit>()
+                val calls = mutableListOf<String>()
+                lateinit var reload: Job
+
+                SwingUtilities.invokeAndWait {
+                    reload = service.reload(ref, close = { suspend { gate.await(); calls += "closed" } }) {
+                        calls += "reconnected"
+                    }!!
+                    assertNull(service.reload(ref) { calls += "duplicate" })
+                }
+
+                withTimeout(WAIT) { rpc.closed.receive() }
+                assertTrue(service.reloading(ref))
+                assertTrue(calls.isEmpty())
+                gate.complete(Unit)
+                reload.join()
+                assertEquals(listOf("closed", "reconnected"), calls)
+                assertFalse(service.reloading(ref))
+            } finally { Disposer.dispose(parent) }
+        }
     }
 
     @Test
@@ -269,6 +506,32 @@ class KiloHostedServiceTest {
             rpc.send(step.copy(step = null, action = "attempt_failed", failure = "workspace_setup_failed",
                 revision = 8, observedAt = 110.0))
             assertEquals("workspace_setup_failed", service.state.value.failure(key)?.failure)
+        } finally { Disposer.dispose(parent) }
+    }
+
+    @Test
+    fun `step failure remains nonterminal when the preparation attempt completes`() = runBlocking {
+        val ref = HostedWorkspaceRefDto("cloud", "one")
+        val key = "${ref.key}:same"
+        val rpc = FakeRpc()
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog())
+        val parent = Disposer.newDisposable()
+        try {
+            service.observe(ref, "same", parent)
+            withTimeout(WAIT) { rpc.opened.receive() }
+            val step = HostedSystemEventDto(key, "preparing", step = "session_setup_commands",
+                action = "step_failed", attemptID = "attempt_1", revision = 27, observedAt = 100.0)
+            rpc.send(step)
+            assertNull(service.state.value.failure(key))
+            assertEquals("step_failed", service.state.value.preparation(key)?.action)
+
+            rpc.send(step.copy(action = "step_completed", revision = 28, observedAt = 110.0))
+            rpc.send(step.copy(step = null, action = "attempt_completed", revision = 35, observedAt = 120.0))
+
+            assertNull(service.state.value.failure(key))
+            assertNull(service.state.value.preparation(key))
+            assertEquals("attempt_completed", service.state.value.preparations[key]?.action)
+            assertEquals("ready", service.state.value.preparations[key]?.cloudStatus)
         } finally { Disposer.dispose(parent) }
     }
 
@@ -1040,10 +1303,49 @@ class KiloHostedServiceTest {
         updated = 1.0,
     )
 
+    private fun delegates(service: KiloHostedService): List<suspend () -> Unit> {
+        val ref = HostedWorkspaceRefDto("cloud", "one")
+        return listOf<suspend () -> Unit>(
+            { service.workspaceChanges(ref) },
+            { service.refreshWorkspaceChanges(ref) },
+            { service.workspaceChangeFile(ref, "file.kt", null, 1) },
+            { service.workspacePullRequestDiff(ref) },
+            { service.workspacePullRequestDiffFile(ref, "file.kt", "a".repeat(40)) },
+        )
+    }
+
+    private class DiffRpc(pages: Map<String?, HostedWorkspaceListDto> = emptyMap()) : KiloHostedRpcApi by FakeRpc(pages) {
+        val calls = mutableListOf<String?>()
+
+        override suspend fun workspaceChanges(ref: HostedWorkspaceRefDto, organizationID: String?) =
+            HostedWorkspaceChangesDto(ref, "not_captured", null, null, false, null).also { calls += organizationID }
+
+        override suspend fun refreshWorkspaceChanges(ref: HostedWorkspaceRefDto, organizationID: String?) =
+            HostedWorkspaceChangesRefreshDto("offline", HostedWorkspaceChangesDto(ref, "not_captured", null, null, false, null))
+                .also { calls += organizationID }
+
+        override suspend fun workspaceChangeFile(ref: HostedWorkspaceRefDto, path: String, scope: String?, expectedRevision: Long, organizationID: String?) =
+            HostedWorkspaceChangeFileResultDto("not_captured", null, null, null, null).also { calls += organizationID }
+
+        override suspend fun workspacePullRequestDiff(ref: HostedWorkspaceRefDto, organizationID: String?) =
+            HostedWorkspacePullRequestDiffDto(ref, "not_linked", null, null, false, emptyList()).also { calls += organizationID }
+
+        override suspend fun workspacePullRequestDiffFile(ref: HostedWorkspaceRefDto, path: String, expectedHeadSha: String, organizationID: String?) =
+            HostedWorkspacePullRequestDiffFileResultDto("not_linked", path, null, null, null, null).also { calls += organizationID }
+    }
+
     private class FakeRpc(
         private val pages: Map<String?, HostedWorkspaceListDto> = emptyMap(),
         private val sessionPages: Map<String?, HostedWorkspaceDto> = emptyMap(),
     ) : KiloHostedRpcApi {
+        override suspend fun workspaceChanges(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
+        override suspend fun refreshWorkspaceChanges(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
+        override suspend fun workspaceChangeFile(ref: HostedWorkspaceRefDto, path: String, scope: String?, expectedRevision: Long, organizationID: String?): Nothing = error("unused")
+        override suspend fun workspacePullRequestDiff(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
+        override suspend fun workspacePullRequestDiffFile(ref: HostedWorkspaceRefDto, path: String, expectedHeadSha: String, organizationID: String?): Nothing = error("unused")
+        override suspend fun workspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
+        override suspend fun refreshWorkspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
+
         var workspaceCalls = 0
             private set
         val requests = mutableListOf<Pair<String?, String?>>()

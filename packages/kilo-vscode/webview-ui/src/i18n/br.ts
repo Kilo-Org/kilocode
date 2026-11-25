@@ -86,7 +86,7 @@ export const dict = {
   "revert.banner.count_other": "{{count}} mensagens revertidas",
   "revert.banner.redo": "Refazer",
   "revert.banner.redo.all": "Refazer Tudo",
-  "revert.banner.hint": "You can redo these changes until you send a new message",
+  "revert.banner.hint": "Você pode refazer estas alterações até enviar uma nova mensagem",
   "session.compaction.queued": "Compactação na fila",
   "session.compaction.queued.busy": "Compactação na fila. Ela começará quando a etapa atual terminar.",
   "revert.banner.workspace.snapshotsDisabled":
@@ -127,13 +127,13 @@ export const dict = {
   "provider.connect.apiKey.description":
     "Digite sua chave de API do {{provider}} para conectar sua conta e usar modelos do {{provider}} no Kilo.",
   "provider.connect.apiKey.description.local":
-    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+    "Conecte-se ao seu servidor {{provider}} local. Deixe a chave de API vazia se o servidor não exigir uma (padrão para localhost).",
   "provider.connect.atomicChat.description":
-    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
+    "Conecte-se ao Atomic Chat na sua máquina (padrão http://127.0.0.1:1337). Nenhuma chave de API é necessária para o servidor local — inicie o Atomic Chat, carregue um modelo e conecte.",
   "provider.connect.apiKey.label": "Chave de API do {{provider}}",
-  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
+  "provider.connect.apiKey.label.optional": "Chave de API do {{provider}} (opcional)",
   "provider.connect.apiKey.placeholder": "Chave de API",
-  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
+  "provider.connect.apiKey.placeholder.optional": "Deixe vazio para o servidor local",
   "provider.connect.apiKey.required": "A chave de API é obrigatória",
   "provider.connect.prompt.required": "{{field}} é obrigatório",
   "provider.connect.azure.endpointType.label": "Selecionar configuração de endpoint do Azure",
@@ -221,10 +221,10 @@ export const dict = {
   "prompt.action.enhance": "Melhorar prompt",
   "prompt.action.more": "Mais ações",
   "prompt.paste.expand": "Clique para expandir o texto colado",
-  "prompt.issues.title": "Kudennoù estez",
+  "prompt.issues.title": "Problemas da sessão",
   "prompt.mcp.provider": "MCP {{name}}",
-  "prompt.mcp.openSettings": "Digeriñ en Arventennoù",
-  "prompt.mcp.signIn.busy": "O kennaskañ…",
+  "prompt.mcp.openSettings": "Abrir nas Configurações",
+  "prompt.mcp.signIn.busy": "Fazendo login…",
   "prompt.action.autoApprove.enable": "Ativar aprovação automática",
   "prompt.action.autoApprove.disable": "Desativar aprovação automática",
   "prompt.action.autoApprove.enabled":
@@ -319,6 +319,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "Remover da lista de permitidos",
   "ui.permission.rule.addToDenied": "Adicionar à lista de negados",
   "ui.permission.rule.removeFromDenied": "Remover da lista de negados",
+  "ui.permission.rule.fromConfig": "Gerenciada por um arquivo de configuração",
   "ui.permission.toolLabel.read": "Ler",
   "ui.permission.toolLabel.edit": "Editar",
   "ui.permission.toolLabel.write": "Escrever",
@@ -482,7 +483,7 @@ export const dict = {
   "provider.custom.field.providerID.description": "Letras minúsculas, números, hifens ou underscores",
   "provider.custom.field.name.label": "Nome de exibição",
   "provider.custom.field.name.placeholder": "Meu Provedor de IA",
-  "provider.custom.field.package.label": "Provider API",
+  "provider.custom.field.package.label": "API do provedor",
   "provider.custom.field.baseURL.label": "URL base",
   "provider.custom.field.baseURL.placeholder": "https://api.myprovider.com/v1",
   "provider.custom.field.apiKey.label": "Chave de API",
@@ -780,8 +781,8 @@ export const dict = {
     "Para trabalhar com outra pasta, abra-a em uma janela própria ou adicione-a como um projeto no Agent Manager.",
   "session.workspaceScope.dismiss": "Ocultar dica sobre o escopo do espaço de trabalho",
   "session.messages.scrollToBottom": "Rolar para o final",
-  "session.messages.initializing": "O teraouiñ...",
-  "session.messages.taskStarting": "O kregiñ...",
+  "session.messages.initializing": "Inicializando...",
+  "session.messages.taskStarting": "Iniciando...",
   "session.prompts.navLabel": "Navegador de prompts",
   "session.prompts.tick": "Prompt {{index}} de {{total}}: {{prompt}}",
   "session.prompts.noAnswer": "Sem resposta ainda",
@@ -822,6 +823,7 @@ export const dict = {
 
   "dialog.model.noProviders": "Nenhum provedor",
   "dialog.model.unavailable": "Modelos Kilo indisponíveis",
+  "dialog.model.loadFailed": "Não foi possível carregar os provedores deste projeto.",
 
   "prompt.placeholder.connecting": "Conectando ao servidor...",
   "prompt.placeholder.error": "Conexão falhou. Verifique o painel de saída ou reinicie a extensão.",
@@ -857,7 +859,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Isso redefine apenas as configurações específicas da extensão VS Code para seus valores padrão. As configurações compartilhadas com o CLI, como modos e regras de aprovação automática, são armazenadas na configuração do CLI e não serão redefinidas.",
   "settings.aboutKiloCode.resetSettings.button": "Redefinir Todas as Configurações",
-  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Redefinir notificações lidas",
   "settings.aboutKiloCode.settingsTransfer.title": "Transferência de configurações",
   "settings.aboutKiloCode.settingsTransfer.description":
     "Exporte ou importe suas configurações para transferi-las entre instâncias do VS Code.",
@@ -875,8 +877,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "Telemetria",
   "settings.aboutKiloCode.telemetry.description":
-    'A telemetria é controlada pela configuração de telemetria integrada do VS Code. Para desativá-la, vá para Configurações > Telemetria > Nível de Telemetria e defina como "off". Reinicie o VS Code para aplicar a alteração.',
-  "settings.aboutKiloCode.telemetry.openSettings": "Abrir Configurações de Telemetria",
+    "Use este controle para alterar sua preferência de telemetria no Kilo. A telemetria permanece desativada se o VS Code ou o ambiente a desativar.",
+  "settings.aboutKiloCode.telemetry.toggle": "Ativar telemetria",
+  "settings.aboutKiloCode.telemetry.saveFailed": "Não foi possível atualizar a configuração de telemetria",
 
   "settings.agentBehaviour.subtab.agents": "Agentes",
   "settings.agentBehaviour.subtab.mcpServers": "Servidores MCP",
@@ -1086,7 +1089,7 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.confirm":
     'Remover o servidor MCP "{{name}}"? Isso o removerá da sua configuração.',
   "settings.agentBehaviour.removeMcp.bundleConfirm":
-    "Dilemel an dafariad MCP \"{{name}}\" hag e giz kenseurt? Dilemel a raio an dafariad ha pep c'hiz dalc'het gant an staliadur Marc'had-mañ.",
+    'Remover o servidor MCP "{{name}}" e suas habilidades complementares? Isso remove o servidor e todas as habilidades desta instalação do Marketplace.',
   "settings.agentBehaviour.removeMcp.button": "Remover",
   "settings.agentBehaviour.editMcp": "Editar Servidor MCP",
   "settings.agentBehaviour.editMcp.transportLocal": "Servidor local (transporte stdio)",
@@ -1095,21 +1098,21 @@ export const dict = {
   "settings.agentBehaviour.editMcp.env.help": "Variáveis passadas para o processo do servidor MCP.",
   "settings.agentBehaviour.editMcp.oauth": "OAuth",
   "settings.agentBehaviour.editMcp.oauth.help":
-    "Laoskit war Emgefreek nemet ma ranka an dafariad ur c'hliant enrollet a-raok. Un arvar kliant a vez kadavet en ho restr kefluniañ Kilo.",
-  "settings.agentBehaviour.editMcp.oauth.mode": "Mod",
-  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "Emgefreek",
-  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "Dizweredekaet",
-  "settings.agentBehaviour.editMcp.oauth.mode.custom": "Kliant personelaet",
-  "settings.agentBehaviour.editMcp.oauth.clientId": "ID kliant",
-  "settings.agentBehaviour.editMcp.oauth.clientSecret": "Arvar kliant",
-  "settings.agentBehaviour.editMcp.oauth.scope": "Ledenn",
-  "settings.agentBehaviour.editMcp.oauth.callbackPort": "Porzh distro",
-  "settings.agentBehaviour.editMcp.oauth.redirectUri": "URI adkas",
+    "Deixe em Automático a menos que o servidor exija um cliente pré-registrado. Um segredo do cliente é armazenado no seu arquivo de configuração do Kilo.",
+  "settings.agentBehaviour.editMcp.oauth.mode": "Modo",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "Automático",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "Desativado",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "Cliente personalizado",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "ID do cliente",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "Segredo do cliente",
+  "settings.agentBehaviour.editMcp.oauth.scope": "Escopo",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "Porta de retorno",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "URI de redirecionamento",
   "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
-    "Dre ziouer: http://127.0.0.1:19876/mcp/oauth/callback, a zilez ar porzh distro.",
-  "settings.agentBehaviour.editMcp.oauth.port.invalid": "Roit ur porzh etre 1 ha 65535.",
-  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "Un arvar kliant a c'houlenn un ID kliant.",
-  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "Roit un URI adkas reizh.",
+    "O padrão é http://127.0.0.1:19876/mcp/oauth/callback, que substitui a porta de retorno.",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "Informe uma porta entre 1 e 65535.",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "Um segredo do cliente exige um ID do cliente.",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "Informe um URI de redirecionamento válido.",
   "settings.agentBehaviour.addMcp.command": "Comando",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "Argumentos",
@@ -1124,7 +1127,7 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.confirm":
     'Remover a habilidade "{{name}}"? Isso excluirá os arquivos da habilidade do disco.',
   "settings.agentBehaviour.removeSkill.bundleConfirm":
-    "Dilemel ar c'hiz \"{{name}}\"? Dizentus ivez a raio an dafariad MCP {{mcp}} ha pep c'hiz kenseurt eus an hevelep staliadur Marc'had.",
+    'Remover a habilidade "{{name}}"? Isso também desinstala o servidor MCP {{mcp}} e todas as habilidades complementares da mesma instalação do Marketplace.',
   "settings.agentBehaviour.removeSkill.button": "Remover",
   "settings.agentBehaviour.rules.description":
     "Regras são arquivos de instrução que orientam o comportamento do agente. Elas são incluídas no prompt do sistema para cada conversa. Adicione caminhos de arquivos abaixo para incluir regras adicionais.",
@@ -1141,12 +1144,12 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.command": "Comando",
   "settings.agentBehaviour.mcpDetail.args": "Argumentos",
   "settings.agentBehaviour.mcpDetail.env": "Ambiente",
-  "settings.agentBehaviour.mcpSignIn.cancel": "Nullañ ar c'hennaskañ",
-  "settings.agentBehaviour.mcpRemoving": "O tilemel…",
-  "settings.agentBehaviour.mcpResetAuth": "Adderaouekaat ar c'hennaskañ",
-  "settings.agentBehaviour.mcpResetAuth.title": "Adderaouekaat kennaskañ MCP",
+  "settings.agentBehaviour.mcpSignIn.cancel": "Cancelar login",
+  "settings.agentBehaviour.mcpRemoving": "Removendo…",
+  "settings.agentBehaviour.mcpResetAuth": "Redefinir login",
+  "settings.agentBehaviour.mcpResetAuth.title": "Redefinir login do MCP",
   "settings.agentBehaviour.mcpResetAuth.confirm":
-    "Skarzhañ ar c'hennaskañ kadaviet evit \"{{name}}\"? Ret e vo deoc'h kennaskañ en-dro.",
+    'Limpar o login armazenado de "{{name}}"? Você precisará fazer login novamente.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Explorar Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "Nenhum servidor MCP configurado. Adicione servidores MCP em kilo.jsonc ou peça ao agente para adicioná-los.",
@@ -1257,20 +1260,21 @@ export const dict = {
   "settings.context.memory.autoSave.title": "Salvar memória do projeto automaticamente",
   "settings.context.memory.autoSave.description":
     "Salva automaticamente fatos duradouros do projeto a partir de turnos concluídos quando a memória está ativada.",
-  "settings.context.memory.storage.title": "Storage",
+  "settings.context.memory.storage.title": "Armazenamento",
   "settings.context.memory.status.notLoaded": "Não carregada",
   "settings.context.memory.status.disabled": "Desativada",
-  "settings.context.memory.status.enabledTokens": "Enabled - ~{{tokens}} stored tokens",
+  "settings.context.memory.status.enabledTokens": "Ativada - ~{{tokens}} tokens armazenados",
   "settings.context.memory.storage.path": "{{path}}",
-  "settings.context.memory.storage.enable": "Enable memory to create project memory files.",
+  "settings.context.memory.storage.enable": "Ative a memória para criar arquivos de memória do projeto.",
   "settings.context.memory.inspect": "Inspecionar",
   "chat.memory.project.disabled": "Memória do projeto desativada",
-  "chat.memory.project.empty": "This project doesn't have any memory yet. It will start showing after you use Kilo.",
+  "chat.memory.project.empty":
+    "Este projeto ainda não tem memória. Ela começará a aparecer depois que você usar o Kilo.",
   "chat.memory.command.failed": "Comando de memória falhou",
-  "chat.memory.updated": "Memory updated",
-  "chat.memory.rebuild": "Memory index rebuilt",
+  "chat.memory.updated": "Memória atualizada",
+  "chat.memory.rebuild": "Índice de memória reconstruído",
 
-  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.title": "Mensagem de commit",
   "settings.commitMessage.override.title": "Usar prompt personalizado",
   "settings.commitMessage.override.description":
     "Substituir o prompt padrão de commit message. Quando ativado, o seu prompt personalizado substitui totalmente o prompt integrado de conventional commits.",
@@ -1337,8 +1341,8 @@ export const dict = {
     "Mostra por que uma chamada de ferramenta foi aprovada automaticamente, como uma regra de permissão correspondente ou um padrão do agente.",
 
   "chat.throughput.tooltip":
-    "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
-  "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
+    "Média de {{speed}} tokens/s neste turno. Inclui tokens de saída e de raciocínio; exclui a execução de ferramentas e o tempo de espera.",
+  "chat.throughput.tooltip.missing": "Métricas de taxa de tokens indisponíveis para este turno.",
 
   "settings.providers.defaultModel.title": "Modelo padrão",
   "settings.providers.defaultModel.description": "Modelo principal para conversas",
@@ -1352,6 +1356,8 @@ export const dict = {
   "dialog.model.notSet": "Não definido",
   "profile.personalAccount": "Conta pessoal",
   "profile.switchingAccount": "Trocando de conta…",
+  "profile.unavailableAccount": "Conta indisponível",
+  "profile.switchFailed": "Não foi possível confirmar a troca de conta.",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/br.ts
 
@@ -1437,6 +1443,9 @@ export const dict = {
   "settings.saveBar.cancel": "Cancelar",
   "settings.saveBar.saving": "Salvando…",
   "settings.saveBar.saveFailed": "Não foi possível salvar as configurações",
+  "settings.saveBar.dismissError": "Descartar",
+  "settings.saveBar.unconfirmedWrite": "O host da extensão não confirmou “{{name}}”.",
+  "settings.saveBar.unconfirmedSave": "O host da extensão não confirmou o salvamento. Tente novamente.",
   "notifications.action.next": "Próximo",
   "notifications.action.close": "Fechar",
   "notifications.action.tryModel": "Experimentar {{model}}",

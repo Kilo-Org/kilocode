@@ -1,9 +1,10 @@
 package ai.kilocode.client.agentManager
 
+import ai.kilocode.client.ui.active.ActiveBadge
 import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.active.ActiveMove
-import ai.kilocode.client.ui.tree.ActiveTreeNode
 import ai.kilocode.client.ui.tree.ActiveTreeColors
+import ai.kilocode.client.ui.tree.ActiveTreeNode
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.util.concurrency.annotations.RequiresEdt
@@ -16,10 +17,17 @@ import java.util.UUID
 @Suppress("TooManyFunctions")
 internal class AgentManagerLayout(private val properties: PropertiesComponent? = null) {
     @Serializable
-    data class Section(override val key: String, override val title: String, val color: String? = null) : ActiveItem {
-        // A section is structure, not a selectable target: it keeps the selected backdrop so it reads
-        // as a constant group header instead of flickering on hover or selection.
-        override val alwaysSelected = true
+    data class Section(override val key: String, override val title: String, val color: String? = null) : ActiveItem
+
+    /**
+     * A section header as rendered in the tree. The persisted [Section] stays free of display state;
+     * the count is computed on each refresh so it never participates in [Section] equality.
+     */
+    data class Header(val section: Section, val count: Int) : ActiveItem {
+        override val key get() = section.key
+        override val title get() = section.title
+        override val badges get() = listOf(ActiveBadge(count.toString()))
+        override val inlineBadges get() = true
     }
 
     @Serializable
@@ -154,16 +162,19 @@ internal class AgentManagerLayout(private val properties: PropertiesComponent? =
     fun nodes(items: List<ActiveItem>, pin: String? = null): List<ActiveTreeNode> {
         pinned = pin ?: pinned
         assign()
-        val sections = state.sections.associateBy { it.key }
-        val grouped = items.groupBy { state.membership[it.key]?.takeIf(sections::containsKey) ?: ROOT }
+        // The tree is keyed, so a repeated item or a corrupted section list must not emit two nodes
+        // with one key. Keep the first occurrence, which is the caller's preferred ordering.
+        val sections = state.sections.distinctBy { it.key }.associateBy { it.key }
+        val grouped = items.distinctBy { it.key }.groupBy { state.membership[it.key]?.takeIf(sections::containsKey) ?: ROOT }
         fun sorted(parent: String, rows: List<ActiveItem>): List<ActiveItem> {
             val rank = state.order[parent].orEmpty().withIndex().associate { it.value to it.index }
             return rows.sortedBy { rank[it.key] ?: Int.MAX_VALUE }
         }
-        val nodes = sorted(ROOT, grouped[ROOT].orEmpty() + state.sections).map { item ->
-            ActiveTreeNode(item, sections[item.key]?.let { section ->
-                sorted(section.key, grouped[section.key].orEmpty()).map { ActiveTreeNode(it) }
-            }, color = ActiveTreeColors.color(sections[item.key]?.color))
+        val roots = (grouped[ROOT].orEmpty() + sections.values).distinctBy { it.key }
+        val nodes = sorted(ROOT, roots).map { item ->
+            val section = sections[item.key] ?: return@map ActiveTreeNode(item)
+            val children = sorted(section.key, grouped[section.key].orEmpty()).map { ActiveTreeNode(it) }
+            ActiveTreeNode(Header(section, children.size), children, ActiveTreeColors.color(section.color))
         }
         // Retain temporarily undiscovered Cloud rows so a refresh cannot lose their placement.
         val visible = mapOf(ROOT to nodes.map { it.item.key }) + nodes.mapNotNull { node ->

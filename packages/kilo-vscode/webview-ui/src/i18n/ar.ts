@@ -308,6 +308,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "أزل من قائمة المسموح",
   "ui.permission.rule.addToDenied": "أضف إلى قائمة المرفوض",
   "ui.permission.rule.removeFromDenied": "أزل من قائمة المرفوض",
+  "ui.permission.rule.fromConfig": "تتم الإدارة بواسطة ملف تكوين",
   "ui.permission.toolLabel.read": "قراءة",
   "ui.permission.toolLabel.edit": "تعديل",
   "ui.permission.toolLabel.write": "كتابة",
@@ -802,6 +803,7 @@ export const dict = {
 
   "dialog.model.noProviders": "لا يوجد موفرون",
   "dialog.model.unavailable": "نماذج Kilo غير متاحة",
+  "dialog.model.loadFailed": "تعذّر تحميل الموفرين لهذا المشروع.",
 
   "prompt.placeholder.connecting": "جارٍ الاتصال بالخادم...",
   "prompt.placeholder.error": "فشل الاتصال. تحقق من لوحة الإخراج أو أعد تشغيل الإضافة.",
@@ -849,8 +851,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "Telemetry",
   "settings.aboutKiloCode.telemetry.description":
-    'يتم التحكم في Telemetry بواسطة إعداد Telemetry المدمج في VS Code. لتعطيله، انتقل إلى الإعدادات > Telemetry > Telemetry Level واضبطه على "off". أعد تشغيل VS Code لتطبيق التغيير.',
-  "settings.aboutKiloCode.telemetry.openSettings": "فتح إعدادات Telemetry",
+    "استخدم هذا المفتاح لتغيير إعداد القياس عن بُعد في Kilo. يظل القياس عن بُعد معطّلًا إذا عطّله VS Code أو عطّلته بيئة التشغيل.",
+  "settings.aboutKiloCode.telemetry.toggle": "تفعيل القياس عن بُعد",
+  "settings.aboutKiloCode.telemetry.saveFailed": "تعذّر تحديث إعداد القياس عن بُعد",
 
   "settings.agentBehaviour.subtab.agents": "الوكلاء",
   "settings.agentBehaviour.subtab.mcpServers": "خوادم MCP",
@@ -1302,6 +1305,8 @@ export const dict = {
   "dialog.model.notSet": "غير محدد",
   "profile.personalAccount": "حساب شخصي",
   "profile.switchingAccount": "جارٍ تبديل الحساب…",
+  "profile.unavailableAccount": "حساب غير متاح",
+  "profile.switchFailed": "تعذّر تأكيد تبديل الحساب.",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/ar.ts
 
@@ -1387,6 +1392,9 @@ export const dict = {
   "settings.saveBar.cancel": "إلغاء",
   "settings.saveBar.saving": "جارٍ الحفظ…",
   "settings.saveBar.saveFailed": "تعذر حفظ الإعدادات",
+  "settings.saveBar.dismissError": "رفض",
+  "settings.saveBar.unconfirmedWrite": "لم يؤكد مضيف الإضافة «{{name}}».",
+  "settings.saveBar.unconfirmedSave": "لم يؤكد مضيف الإضافة عملية الحفظ. حاول مرة أخرى.",
   "notifications.action.next": "التالي",
   "notifications.action.close": "إغلاق",
   "notifications.action.tryModel": "جرّب {{model}}",
