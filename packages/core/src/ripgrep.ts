@@ -20,7 +20,6 @@ import { RipgrepBinary } from "./ripgrep/binary"
  */
 
 const ERROR_BYTES = 8 * 1024
-const MAX_RECORD_BYTES = 64 * 1024
 const MAX_SUBMATCHES = 100
 
 const RawMatch = Schema.Struct({
@@ -304,13 +303,12 @@ const layer = Layer.effect(
             input.file ?? ".",
           ],
           parse: (line) =>
-            (Buffer.byteLength(line, "utf8") > MAX_RECORD_BYTES
-              ? Effect.fail(failure(`Ripgrep JSON record exceeded ${MAX_RECORD_BYTES} bytes`))
-              : Effect.try({
-                  try: () => JSON.parse(line) as unknown,
-                  catch: (cause) => failure("Invalid ripgrep JSON output", cause),
-                })
-            ).pipe(
+            // kilocode_change start - parse oversized records too; the line preview is bounded below
+            Effect.try({
+              try: () => JSON.parse(line) as unknown,
+              catch: (cause) => failure("Invalid ripgrep JSON output", cause),
+            }).pipe(
+              // kilocode_change end
               Effect.flatMap((json) => {
                 if (
                   !json ||
