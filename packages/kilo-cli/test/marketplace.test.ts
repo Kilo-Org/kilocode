@@ -133,7 +133,7 @@ test("lists, installs and removes skills and MCPs through the generated client",
               expect((await client.skill.list(options)).data.some((skill) => skill.id === "demo")).toBe(false)
               const input = { registry: "kilo", kind: "skill" as const, id: "demo", scope }
               const record = await rpc.install(input, options)
-              const target = path.join(directory, scope === "global" ? "global" : ".kilo2", "skills", "demo")
+              const target = path.join(directory, scope === "global" ? "global" : ".kilo", "skills", "demo")
               expect(record).toMatchObject({ resources: [{ id: "demo" }] })
               expect(JSON.stringify([record.resources, record.config])).not.toContain(directory)
               // Retain explicit reload coverage separately from the real watcher test below.
@@ -156,7 +156,7 @@ test("lists, installs and removes skills and MCPs through the generated client",
             }
             const skill = { registry: "kilo", kind: "skill", id: "demo", scope: "project" } as const
             const record = await rpc.install(skill, options)
-            const target = path.join(directory, ".kilo2", "skills", "demo")
+            const target = path.join(directory, ".kilo", "skills", "demo")
             expect(record).toMatchObject({ scope: "project", resources: [{ id: "demo" }] })
             expect(await Bun.file(path.join(target, "SKILL.md")).text()).toContain("Body")
             expect(await rpc.installed({}, options)).toEqual([record])
@@ -172,7 +172,7 @@ test("lists, installs and removes skills and MCPs through the generated client",
               { ...mcp, option: "NPX", params: { API_KEY: "private-preview-value" } },
               options,
             )
-            expect(preview.config).toBe(path.join(directory, "kilo2.json"))
+            expect(preview.config).toBe(path.join(directory, "kilo.json"))
             expect(JSON.parse(preview.server)).toEqual({
               type: "local",
               command: ["npx", "-y", "demo"],
@@ -185,7 +185,7 @@ test("lists, installs and removes skills and MCPs through the generated client",
             expect(await rpc.installed({}, options)).toEqual(before)
             await expect(rpc.preview(mcp, options)).rejects.toMatchObject({ type: "invalid_params" })
             const server = await rpc.install({ ...mcp, option: "NPX", params: { API_KEY: "secret" } }, options)
-            const config = path.join(directory, "kilo2.json")
+            const config = path.join(directory, "kilo.json")
             expect(server).toMatchObject({ config, server: "demo-mcp", option: "NPX" })
             // The stored record keeps the method, so a repair can offer the same configuration again.
             expect((await rpc.installed({}, options)).find((record) => record.id === mcp.id)?.option).toBe("NPX")
@@ -201,8 +201,8 @@ test("lists, installs and removes skills and MCPs through the generated client",
             expect(await Bun.file(config).json()).toEqual({ mcp: { servers: {} } })
             // The database keeps no file locations: a higher-priority config appearing later is simply where the
             // next install writes, and a copy left in an older file is never deleted without ownership.
-            const older = path.join(directory, "kilo2.jsonc")
-            const replacement = path.join(directory, ".kilo2", "kilo2.jsonc")
+            const older = path.join(directory, "kilo.jsonc")
+            const replacement = path.join(directory, ".kilo", "kilo.jsonc")
             await Bun.write(older, JSON.stringify({ mcp: { servers: { "demo-mcp": oldServer } } }))
             await Bun.write(replacement, "{}")
             const reinstalled = await rpc.install({ ...mcp, params: { API_KEY: "replacement" } }, options)
@@ -216,7 +216,7 @@ test("lists, installs and removes skills and MCPs through the generated client",
             expect((await Bun.file(older).json()).mcp.servers["demo-mcp"]).toEqual(oldServer)
             expect((await rpc.installed({}, options)).some((record) => record.id === mcp.id)).toBe(false)
             expect(await rpc.uninstall(skill, options)).toEqual({})
-            expect(await readdir(path.join(directory, ".kilo2", "skills"))).toEqual([])
+            expect(await readdir(path.join(directory, ".kilo", "skills"))).toEqual([])
             expect(await rpc.installed({}, options)).toEqual([])
             await expect(rpc.uninstall(skill, options)).rejects.toMatchObject({ type: "not_found" })
             expect(
@@ -333,7 +333,7 @@ test("native watchers activate and remove installed skills and MCPs without loca
               expect((await client.mcp.list(options)).data.some((server) => server.name === "watcher-mcp")).toBe(false)
               const skill = { registry: "kilo", kind: "skill", id: "watcher", scope } as const
               const installed = await rpc.install(skill, options)
-              const skillRoot = path.join(directory, scope === "global" ? "global" : ".kilo2", "skills", "watcher")
+              const skillRoot = path.join(directory, scope === "global" ? "global" : ".kilo", "skills", "watcher")
               expect(installed).toMatchObject({ resources: [{ id: "watcher" }] })
               expect(await Bun.file(path.join(skillRoot, "references", "guide.md")).text()).toBe("Supporting resource")
               await eventually(

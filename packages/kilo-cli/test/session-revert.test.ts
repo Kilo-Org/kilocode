@@ -160,7 +160,7 @@ describe("KiloSessionRevert workspace outcomes", () => {
         })
 
         yield* Effect.promise(async () => {
-          await Bun.write(path.join(directory, "kilo2.json"), JSON.stringify({ snapshots: false }))
+          await Bun.write(path.join(directory, "kilo.json"), JSON.stringify({ snapshots: false }))
         })
         yield* LocationServiceMap.reload()
 

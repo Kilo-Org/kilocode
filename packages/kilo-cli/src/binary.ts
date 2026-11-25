@@ -1,1 +1,1 @@
-export const KiloBinary = "kilo2"
+export const KiloBinary = "kilo"

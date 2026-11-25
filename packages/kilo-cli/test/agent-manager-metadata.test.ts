@@ -24,7 +24,7 @@ const boot =
     using backend = fixture()
     const root = await mkdtemp(path.join(os.tmpdir(), "kilo-agent-manager-metadata-"))
     const directory = path.join(root, "repo")
-    await Bun.write(path.join(directory, "kilo2.json"), JSON.stringify({ model: "test/large", provider }))
+    await Bun.write(path.join(directory, "kilo.json"), JSON.stringify({ model: "test/large", provider }))
     const previous = { KILO_API_URL: process.env.KILO_API_URL, KILO_API_KEY: process.env.KILO_API_KEY }
     process.env.KILO_API_URL = backend.url
     delete process.env.KILO_API_KEY

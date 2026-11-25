@@ -221,7 +221,7 @@ for the git path.
   `content` skipped, `/plugins` is the only plugin request path; keep the existing "only Kilo skills and MCP
   catalog endpoints" test extended to plugins.
 - `packages/kilo-plugin/test/marketplace-plugin.test.ts` — the catalog fixture answers `/plugins` with a
-  `git:<local repo>` spec. Add RPC cases: install writes `plugins: [spec]` in `<project>/kilo2.json` and a record
+  `git:<local repo>` spec. Add RPC cases: install writes `plugins: [spec]` in `<project>/kilo.json` and a record
   with `{plugin}` + `config` reads `ready`; reinstall with a changed spec replaces the entry; uninstall removes
   only the owned entry; a hand-edited spec reads `modified` and both reinstall and uninstall fail `conflict`;
   uninstall after a project move still finds the entry.
@@ -322,7 +322,7 @@ From the repository root unless noted:
 - Map: `bun script/upstream/progress.ts --list marketplace` shows no open cell, then regenerate if the PR
   workflow asks for it.
 - Manual: `bun dev` with `KILO_V2_PROFILE=$(mktemp -d)`, open `/marketplace`, Plugins tab, install a small
-  catalog plugin globally and into a project, confirm `kilo2.json` (or `.kilo2/kilo2.json`) is unchanged apart
+  catalog plugin globally and into a project, confirm `kilo.json` (or `.kilo/kilo.json`) is unchanged apart
   from the new entry, `/plugins` shows it active, then uninstall and confirm the entry and the record are gone.
 
 ## Out of scope

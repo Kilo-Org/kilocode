@@ -1,9 +1,9 @@
 /**
- * Browser benchmark: runs the built `kilo2 run` against local fixture pages for every task × repetition × backend,
+ * Browser benchmark: runs the built `kilo run` against local fixture pages for every task × repetition × backend,
  * then writes one JSONL row per run and a Markdown summary.
  *
  *   xvfb-run -a bun --env-file=<file with OPENROUTER_API_KEY> script/browser-bench/run.ts \
- *     --binary <kilo2> --backends playwright,extension --runs 3 --out <dir>
+ *     --binary <kilo> --backends playwright,extension --runs 3 --out <dir>
  *
  * Options: --tasks <ids or groups>, --model <provider/model>, --observation full|diff|none (default: unset, so the
  * CLI's own default applies), --timeout <s>, --budget <USD>, --extension <built chrome-mv3 dir>, --chromium <path>,
@@ -45,7 +45,7 @@ function parseArgs(argv: string[]) {
       .filter((item) => item.length > 0)
   const requested = list(read("tasks"))
   const binary = read("binary") ?? process.env.KILO_BIN
-  if (!binary) throw new Error("pass --binary <kilo2> or set KILO_BIN")
+  if (!binary) throw new Error("pass --binary <kilo> or set KILO_BIN")
   const backends = (list(read("backends")) ?? BACKENDS) as Backend[]
   for (const backend of backends) {
     if (!BACKENDS.includes(backend)) throw new Error(`unknown backend ${backend}; choose ${BACKENDS.join(", ")}`)
@@ -177,7 +177,7 @@ function priceAt(pricing: Pricing, time: number): Price {
   return found?.price ?? pricing.base
 }
 
-/** Totals from `kilo2 run --format json`: step, tool, text and error events, one JSON object per line. */
+/** Totals from `kilo run --format json`: step, tool, text and error events, one JSON object per line. */
 function parseRun(stdout: string, pricing: Pricing | undefined): Metrics {
   const metrics: Metrics = {
     input: 0,
@@ -332,8 +332,8 @@ async function runOnce(input: {
   const data = join(root, "data")
   await mkdir(join(root, "work"), { recursive: true })
   if (backend === "playwright" && process.env.PLAYWRIGHT_BROWSERS_PATH) {
-    await mkdir(join(data, "kilo2", "browser"), { recursive: true })
-    await symlink(process.env.PLAYWRIGHT_BROWSERS_PATH, join(data, "kilo2", "browser", "browsers"))
+    await mkdir(join(data, "kilo", "browser"), { recursive: true })
+    await symlink(process.env.PLAYWRIGHT_BROWSERS_PATH, join(data, "kilo", "browser", "browsers"))
   }
   const started = performance.now()
   const proc = Bun.spawn(
@@ -400,7 +400,7 @@ async function main() {
 
   console.log(`fixtures ${fixtures.url}`)
   console.log(`matrix: ${args.runs} runs × ${args.tasks.length} tasks × ${args.backends.join("/")}`)
-  console.log(`kilo2: ${args.binary}; model ${args.model}; observation ${args.observation ?? "default"}`)
+  console.log(`kilo: ${args.binary}; model ${args.model}; observation ${args.observation ?? "default"}`)
   console.log(`out: ${args.out}`)
   console.log(`list pricing: ${pricing ? JSON.stringify(pricing.base) : "unavailable (only CLI-recorded cost)"}`)
 

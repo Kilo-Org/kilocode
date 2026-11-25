@@ -235,7 +235,7 @@ async function flow(observation: string) {
   ])
   // The last request carries the whole conversation: its results are navigate, snapshot, click, screenshot.
   const last = record.steps.at(-1) ?? { calls: [], results: [] }
-  const output = path.join(root, "data", "kilo2", "browser", "output")
+  const output = path.join(root, "data", "kilo", "browser", "output")
   // The backend keeps its own screenshots in `.auto/`; the run's files are both directories.
   const auto = await fs.readdir(path.join(output, ".auto")).catch(() => [] as string[])
   const files = [...(await fs.readdir(output).catch(() => [] as string[])), ...auto.map((file) => `.auto/${file}`)]

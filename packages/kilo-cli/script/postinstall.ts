@@ -18,7 +18,7 @@ export function transformPostinstall(source: string) {
     '    encoding: "utf8",',
     "    windowsHide: true,",
     "  })",
-    '  return result.status === 0 && `${result.stdout || ""}`.trim() === `kilo2 v${packageJson.version}`',
+    '  return result.status === 0 && `${result.stdout || ""}`.trim() === `kilo v${packageJson.version}`',
     "}",
   ].join("\n")
   const verify = [

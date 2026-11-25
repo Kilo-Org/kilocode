@@ -92,6 +92,7 @@ const mockVscode = {
     },
   },
   StatusBarAlignment: { Left: 1, Right: 2 },
+  ProgressLocation: { Notification: 15 },
   ThemeColor: class {
     constructor(public id: string) {}
   },
@@ -117,6 +118,8 @@ const mockVscode = {
     showQuickPick: async () => undefined,
     showErrorMessage: async () => undefined,
     showWarningMessage: async () => undefined,
+    withProgress: async (_options: unknown, task: (progress: { report: (value: unknown) => void }) => unknown) =>
+      task({ report: noop }),
     createTerminal: () => ({ show: noop, sendText: noop, dispose: noop }),
     createOutputChannel: () => ({
       name: "",

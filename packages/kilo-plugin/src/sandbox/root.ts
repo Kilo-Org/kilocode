@@ -8,7 +8,7 @@ function canonical(dir: string) {
 }
 
 /**
- * Sandbox state under the kilo2 state directory. The state directory is writable inside the sandbox, so the profile
+ * Sandbox state under the kilo state directory. The state directory is writable inside the sandbox, so the profile
  * denies writes to this subtree, and the directory exists before any sandboxed process starts (bubblewrap protects
  * only paths that exist).
  */

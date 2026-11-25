@@ -6,10 +6,6 @@ import path from "node:path"
 const script = path.join(import.meta.dir, "fixtures", "config-discovery.ts")
 
 const files = {
-  "kilo2.json": JSON.stringify({ username: "root-kilo2" }),
-  ".kilo2/kilo2.jsonc": JSON.stringify({ shell: "dot-kilo2" }),
-  ".kilo2/command/internal.md": "Internal command",
-  ".kilo2/skills/internal/SKILL.md": "---\nname: internal\ndescription: Internal skill\n---\nInternal",
   "kilo.json": JSON.stringify({ username: "root-kilo" }),
   // An existing repository config with v1 keys, which the v2 reader accepts.
   ".kilo/kilo.jsonc": JSON.stringify({
@@ -24,7 +20,7 @@ const files = {
 
 // The fixture runs in a child process because `KiloConfigFiles` reads the variable when it loads. HOME and the XDG
 // bases point into the temporary root so the child touches no real Kilo data.
-async function discover(release: boolean) {
+async function discover() {
   const dir = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-release-config-")))
   await using tmp = { dir, [Symbol.asyncDispose]: () => rm(dir, { recursive: true, force: true }) }
   const project = path.join(tmp.dir, "repo")
@@ -34,7 +30,7 @@ async function discover(release: boolean) {
     await writeFile(path.join(project, file), content)
   }
   const child = Bun.spawn(
-    [process.execPath, script, project, path.join(tmp.dir, "global"), release ? "release" : "internal"],
+    [process.execPath, script, project, path.join(tmp.dir, "global"), "release"],
     {
       cwd: path.join(import.meta.dir, ".."),
       env: {
@@ -44,7 +40,6 @@ async function discover(release: boolean) {
         XDG_CONFIG_HOME: path.join(tmp.dir, "config"),
         XDG_STATE_HOME: path.join(tmp.dir, "state"),
         XDG_CACHE_HOME: path.join(tmp.dir, "cache"),
-        KILO_USE_RELEASE_CONFIG: release ? "1" : undefined,
       },
       stdout: "pipe",
       stderr: "pipe",
@@ -59,18 +54,8 @@ async function discover(release: boolean) {
   return JSON.parse(stdout) as { config: string[]; commands: string[]; skills: string[] }
 }
 
-test("by default the server reads kilo2.json and .kilo2 and ignores .kilo", async () => {
-  const result = await discover(false)
-  expect(result.config).toEqual(["kilo2.json", ".kilo2/kilo2.jsonc", ".kilo2"])
-  expect(result.commands).toContain("internal")
-  expect(result.commands).not.toContain("release")
-  expect(result.commands).not.toContain("inline")
-  expect(result.skills).toContain("internal")
-  expect(result.skills).not.toContain("release")
-}, 30_000)
-
-test("KILO_USE_RELEASE_CONFIG=1 reads kilo.json and .kilo and ignores .kilo2", async () => {
-  const result = await discover(true)
+test("stable config, commands and skills load without a runtime switch", async () => {
+  const result = await discover()
   expect(result.config).toEqual(["kilo.json", ".kilo/kilo.jsonc", ".kilo"])
   expect(result.commands).toContain("release")
   expect(result.commands).toContain("inline")

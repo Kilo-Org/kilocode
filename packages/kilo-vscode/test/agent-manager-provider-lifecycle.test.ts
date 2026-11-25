@@ -383,7 +383,7 @@ describe("Agent Manager worktree lifecycle", () => {
     expect(state.getTabOrder()[worktree.id]).toEqual(["other"])
 
     await state.flush()
-    const saved = JSON.parse(fs.readFileSync(path.join(root, ".kilo2", "agent-manager.json"), "utf8"))
+    const saved = JSON.parse(fs.readFileSync(path.join(root, ".kilo", "agent-manager.json"), "utf8"))
     expect(saved.sessions.closed).toBeUndefined()
     expect(saved.tabOrder[worktree.id]).toEqual(["other"])
 

@@ -58,7 +58,7 @@ async function profile(
   const lock = path.join(lockDirectory, Hash.fast("kilo-cli-upgrade") + ".lock", "meta.json")
   const lockProof = path.join(root, "held-lock")
   await Bun.write(manifest, JSON.stringify({ name: packageName, version: options.binaryVersion ?? current }))
-  if (options.policy) await Bun.write(path.join(root, "kilo2.jsonc"), JSON.stringify({ update: options.policy }))
+  if (options.policy) await Bun.write(path.join(root, "kilo.jsonc"), JSON.stringify({ update: options.policy }))
   const requests: string[] = []
   const installs: string[] = []
   const ownership = { active: true }
@@ -85,7 +85,7 @@ async function profile(
       {
         channel: options.channel ?? "v2",
         version: current,
-        executable: path.join(root, "kilo2.exe"),
+        executable: path.join(root, "kilo.exe"),
         request: async (url) => {
           requests.push(url)
           if (url.endsWith(".tgz"))
@@ -117,7 +117,7 @@ async function profile(
               }
             : undefined,
         ),
-      () => [process.execPath, "-e", "console.log(process.argv[1])", options.reported ?? `kilo2 v${next}`],
+      () => [process.execPath, "-e", "console.log(process.argv[1])", options.reported ?? `kilo v${next}`],
     ),
   )
   return {
@@ -238,7 +238,7 @@ test("rechecks ownership before applying an earlier notification", async () => {
 })
 
 test("an updated manifest cannot disguise a stale executable", async () => {
-  await using temp = await profile({ reported: `kilo2 v${current}` })
+  await using temp = await profile({ reported: `kilo v${current}` })
   await temp.run(
     Effect.gen(function* () {
       const updater = yield* Updater.Service

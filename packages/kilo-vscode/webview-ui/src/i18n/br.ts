@@ -1191,11 +1191,11 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "Tempo limite do catálogo (ms)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "Tempo limite de execução (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "Nenhum servidor MCP configurado. Adicione servidores MCP em kilo2.json ou peça ao agente para adicioná-los.",
+    "Nenhum servidor MCP configurado. Adicione servidores MCP em kilo.json ou peça ao agente para adicioná-los.",
   "settings.agentBehaviour.workflows.description":
     "Os fluxos de trabalho são comandos personalizados definidos na sua configuração ou em arquivos Markdown de comandos. Você pode definir um modelo e uma variante de raciocínio para cada fluxo de trabalho.",
   "settings.agentBehaviour.workflows.empty":
-    "Nenhum comando personalizado encontrado. Adicione comandos ao kilo2.json ou a um arquivo Markdown em .kilo2/command.",
+    "Nenhum comando personalizado encontrado. Adicione comandos ao kilo.json ou a um arquivo Markdown em .kilo/command.",
   "settings.agentBehaviour.workflows.detail.description": "Descrição",
   "settings.agentBehaviour.workflows.detail.template": "Modelo",
   "settings.agentBehaviour.workflows.model": "modelo",

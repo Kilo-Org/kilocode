@@ -2,10 +2,13 @@ import { afterEach, describe, expect, it } from "bun:test"
 import os from "node:os"
 import path from "node:path"
 import fs from "node:fs/promises"
+import { activeProfile, useProfile } from "../src/active-profile"
 import { locate, poolDir, poolHome } from "../src/agent-manager/pool/home"
 
 const dirs: string[] = []
 const xdg = process.env.XDG_DATA_HOME
+const profileEnv = process.env.KILO_V2_PROFILE
+const savedProfile = activeProfile
 
 async function temp(): Promise<string> {
   const dir = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "kilo-pool-home-")))
@@ -16,16 +19,32 @@ async function temp(): Promise<string> {
 afterEach(async () => {
   if (xdg === undefined) delete process.env.XDG_DATA_HOME
   else process.env.XDG_DATA_HOME = xdg
-  await Promise.all(dirs.splice(0).map((dir) => fs.rm(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })))
+  if (profileEnv === undefined) delete process.env.KILO_V2_PROFILE
+  else process.env.KILO_V2_PROFILE = profileEnv
+  useProfile(savedProfile)
+  await Promise.all(
+    dirs.splice(0).map((dir) => fs.rm(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })),
+  )
 })
 
 describe("worktree pool home", () => {
-  it("lives next to the kilo2 CLI data, apart from the Kilo v1 pool, and honors XDG_DATA_HOME", () => {
+  it("lives next to the kilo CLI data, apart from the Kilo v1 pool, and honors activeProfile, KILO_V2_PROFILE and XDG_DATA_HOME", () => {
+    delete process.env.KILO_V2_PROFILE
+    useProfile(undefined)
     process.env.XDG_DATA_HOME = path.join(os.tmpdir(), "data")
-    expect(poolHome()).toBe(path.join(os.tmpdir(), "data", "kilo2", "worktree-pool"))
+    expect(poolHome()).toBe(path.join(os.tmpdir(), "data", "kilo", "worktree-pool-v2"))
     delete process.env.XDG_DATA_HOME
-    expect(poolHome()).toBe(path.join(os.homedir(), ".local", "share", "kilo2", "worktree-pool"))
+    expect(poolHome()).toBe(path.join(os.homedir(), ".local", "share", "kilo", "worktree-pool-v2"))
     expect(poolHome()).not.toBe(path.join(os.homedir(), ".local", "share", "kilo", "worktree-pool"))
+    process.env.KILO_V2_PROFILE = path.join(os.tmpdir(), "dev-profile")
+    expect(poolHome()).toBe(path.join(os.tmpdir(), "dev-profile", "data", "kilo", "worktree-pool-v2"))
+    useProfile({
+      source: path.join(os.tmpdir(), "active", "kilo.db"),
+      data: path.join(os.tmpdir(), "active"),
+      config: path.join(os.tmpdir(), "active-cfg"),
+      state: path.join(os.tmpdir(), "active-state"),
+    })
+    expect(poolHome()).toBe(path.join(os.tmpdir(), "active", "worktree-pool-v2"))
   })
 
   it("gives every repository a stable, readable directory", async () => {

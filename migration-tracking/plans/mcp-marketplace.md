@@ -77,7 +77,7 @@ No feature code. Only PR B below (record the decisions in the map) is required t
 
 - **C. MCP env inheritance (security).** Decide whether local MCP servers should stop inheriting
   Kilo secrets: `OPENCODE_SERVER_PASSWORD`/`OPENCODE_SERVER_USERNAME` (when the user exported them),
-  `OPENCODE_CONFIG*`, `KILO2_CONFIG*`/`KILO2_DB`, and VS Code's `KILO_BROWSER_BROKER_*` and
+  `OPENCODE_CONFIG*`, `KILO_CONFIG*`/`KILO_DB`, and VS Code's `KILO_BROWSER_BROKER_*` and
   `KILO_NOTEBOOK_BROKER_*`. If yes: add a host env filter and pass the filtered environment through
   `McpStdio.make` from `client.ts`; `packages/core/src/mcp/stdio.ts:107` is where the child is
   spawned with `extendEnv: true`, so the hook must replace that environment or the spawner call must

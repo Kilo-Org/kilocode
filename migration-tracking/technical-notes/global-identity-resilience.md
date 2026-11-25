@@ -13,7 +13,7 @@ As built, two details differ from the plan below. All the wiring of step 1 excep
 - test `packages/core/test/kilocode/global.test.ts` (v1): the `resolveState` suite.
 - patches `global:b9f635c56864` (global.ts:7), `global:2886e1a24503` (global.ts:49), `global:9f5a3867e9ba` (global.ts:57): the v1 `kilocode_change` hunks that wired `app="kilo"`, XDG `clean()`, `resolveState`, `ensureRealDir` and `markNoIndex` into upstream `core/src/global.ts`.
 
-The app-dir-name part of those hunks is already done (`OPENCODE_APP_DIR_NAME="kilo2"`, `kilo_port(global:0e189a57d108)`); this plan ports the remaining resilience/Spotlight behavior.
+The app-dir-name part of those hunks is already done (`OPENCODE_APP_DIR_NAME="kilo"`, `kilo_port(global:0e189a57d108)`); this plan ports the remaining resilience/Spotlight behavior.
 
 ## Key constraint (why placement is forced)
 
@@ -38,18 +38,18 @@ Wiring:
 1. **`env.ts` (paths, before load):**
    - add `TEST_HOME` to `names` so `KILO_TEST_HOME → OPENCODE_TEST_HOME`;
    - call `cleanEnv(process.env)`;
-   - compute `preferred = <clean XDG_STATE_HOME or ~/.local/state>/kilo2` and (only when `XDG_STATE_HOME` is unset) a fallback under the data dir, run `resolveState`, and set `process.env.XDG_STATE_HOME` to the chosen parent so `roots("kilo2")` yields the resolved state dir.
+   - compute `preferred = <clean XDG_STATE_HOME or ~/.local/state>/kilo` and (only when `XDG_STATE_HOME` is unset) a fallback under the data dir, run `resolveState`, and set `process.env.XDG_STATE_HOME` to the chosen parent so `roots("kilo")` yields the resolved state dir.
 2. **Early boot step (dirs, before the `acquire` layer builds):** a module imported right after `env.ts` (top-level await, like the entry already uses) that reads `Global.Path`, runs `ensureRealDir` on every leaf `acquire` later mkdirs/realpaths (`data/config/state/cache/tmp/log/bin/repos`, matching v1's repaired set) and `markNoIndex` on `data/cache/state`. `acquire`'s later `mkdir -p` is then a healthy no-op. This runs in every host-started process (they all import `env`/boot first), matching v1 coverage.
 
 ### `os.homedir()` is cached, so cleaning `HOME` is not enough
 
-`roots()` defaults its XDG bases from `os.homedir()`, and `os.homedir()` caches `$HOME` as read at **process start** — a trailing shell newline on `HOME` survives in `os.homedir()` even after `cleanEnv` strips `process.env.HOME`, which `roots()` never reads. So the boot step resolves the home once via `resolveHome` (cleaned `process.env.HOME`/`USERPROFILE`, falling back to a stripped `os.homedir()`) and **pins each unset `XDG_{DATA,CACHE,CONFIG}_HOME`** to a clean base under it before `util/global` loads. `roots()` then reads these clean values from the environment via its `||` and never reaches its cached `os.homedir()` default. This is also why the boot step uses `||` (not `??`) and treats a now-empty `XDG_STATE_HOME` as unset: an empty base matches `roots()` and avoids a relative `kilo2` directory in the process CWD.
+`roots()` defaults its XDG bases from `os.homedir()`, and `os.homedir()` caches `$HOME` as read at **process start** — a trailing shell newline on `HOME` survives in `os.homedir()` even after `cleanEnv` strips `process.env.HOME`, which `roots()` never reads. So the boot step resolves the home once via `resolveHome` (cleaned `process.env.HOME`/`USERPROFILE`, falling back to a stripped `os.homedir()`) and **pins each unset `XDG_{DATA,CACHE,CONFIG}_HOME`** to a clean base under it before `util/global` loads. `roots()` then reads these clean values from the environment via its `||` and never reaches its cached `os.homedir()` default. This is also why the boot step uses `||` (not `??`) and treats a now-empty `XDG_STATE_HOME` as unset: an empty base matches `roots()` and avoids a relative `kilo` directory in the process CWD.
 
 The same cached-`os.homedir()` problem reaches `Global.Path.home`, which the XDG-base pinning does not fix: its getter still reads `os.homedir()`, and `home` feeds `resolvePath`'s `~` expansion (`core/src/file-access.ts`) and the provider credential paths (bedrock/vertex). v1 fixed this with a `.trim()` in the getter (a `kilocode_change` on the shared file). v2 keeps the same identity seam already present in `packages/util/src/global.ts` (the `OPENCODE_APP_DIR_NAME` knob) and extends it with a second generic knob, `OPENCODE_HOME_DIR`, read before `os.homedir()` with upstream's default unchanged. The boot step pins it to the cleaned home; `OPENCODE_TEST_HOME` still wins, so a test home override is unaffected. This is one marked line on an already-patched shared file (rung 3), recorded in `shared-patches.json` with the `markedLines` limit raised by one. A host-only fix is not possible here: `os.homedir()` is cached process-wide and the getter has no other host-reachable override.
 
 ### Known deviation (accepted, documented)
 
-`roots()` always appends the app name, so the env approach cannot reproduce v1's literal `<data>/state` fallback dir — it becomes `<data>/kilo2`-style (still a writable state dir under data). Functionally equivalent; noted because it is not byte-identical to v1. Exact fidelity would need a small state-path seam (rung 3); not proposed.
+`roots()` always appends the app name, so the env approach cannot reproduce v1's literal `<data>/state` fallback dir — it becomes `<data>/kilo`-style (still a writable state dir under data). Functionally equivalent; noted because it is not byte-identical to v1. Exact fidelity would need a small state-path seam (rung 3); not proposed.
 
 ## Tests (Kilo-owned, `packages/kilo-cli/test/`)
 
@@ -58,7 +58,7 @@ The same cached-`os.homedir()` problem reaches `Global.Path.home`, which the XDG
 - `markNoIndex`: writes the marker on darwin, is a no-op elsewhere, ignores EEXIST.
 - `cleanEnv`: newline stripping + `OPENCODE_TEST_HOME` trim; `KILO_TEST_HOME` translation (extend `env.test.ts`/`app-dirs.test.ts`).
 - `resolveHome`: strips a newline from the home env var; falls back to a stripped `os.homedir()` when unset/empty.
-- Boot wiring (`app-dirs.test.ts`, end to end through the real entry): a newline-only `XDG_STATE_HOME` falls back to the default state dir with no stray CWD `kilo2`; a trailing newline on `HOME` still resolves the directories under the clean home; `KILO_TEST_HOME` overrides the reported home.
+- Boot wiring (`app-dirs.test.ts`, end to end through the real entry): a newline-only `XDG_STATE_HOME` falls back to the default state dir with no stray CWD `kilo`; a trailing newline on `HOME` still resolves the directories under the clean home; `KILO_TEST_HOME` overrides the reported home.
 
 Close the `global.test.ts` cell with a `kilo_port(global:…)` on the ported test.
 
@@ -74,4 +74,4 @@ Recommendation: **port all five** behaviors. v1 history shows none are v1-specif
 
 - DB-preflight actionable "not writable" error / self-heal — separate `db-preflight` feature.
 - Any v1-Kilo → v2 user-data migration — deferred release-migration slices (U-E3-03/U-E8-02).
-- The `installation` cells belong to #15311. The [v2 preview updater](v2-cli-updates.md) covers supported global package-manager installs, not all v1 distributions. The isolated `kilo2 uninstall` check (dry run and cleanup without removing package-manager files) is covered by `packages/kilo-cli/test/uninstall.test.ts` (#16082).
+- The `installation` cells belong to #15311. The [v2 preview updater](v2-cli-updates.md) covers supported global package-manager installs, not all v1 distributions. The isolated `kilo uninstall` check (dry run and cleanup without removing package-manager files) is covered by `packages/kilo-cli/test/uninstall.test.ts` (#16082).

@@ -70,9 +70,9 @@ test("no core prompt template names OpenCode", async () => {
   }
 })
 
-test("brands the lowercase prompt names to Kilo and the tool namespace, not the kilo2 command", async () => {
+test("brands the lowercase prompt names to Kilo and the tool namespace, not the kilo command", async () => {
   // Without their structural transform or override, the command rule turns these lowercase `opencode`
-  // tokens into `kilo2`, which the no-OpenCode check above and the audit both accept.
+  // tokens into `kilo`, which the no-OpenCode check above and the audit both accept.
   for (const [file, expected] of [
     ["core/src/plugin/command/automation.txt", "the `kilo` namespace"],
     ["core/src/plugin/system-prompt/trinity.txt", "You are Kilo, an interactive"],
@@ -80,7 +80,7 @@ test("brands the lowercase prompt names to Kilo and the tool namespace, not the 
     const filename = path.join(repo, "packages", file)
     const branded = KiloBranding.transform(filename, await Bun.file(filename).text())
     expect(branded, file).toContain(expected)
-    expect(branded, file).not.toContain("kilo2")
+    expect(branded, file).not.toContain("`opencode` namespace")
   }
 })
 
@@ -97,12 +97,12 @@ test("brands the listed server, core and plugin text, and nothing else in those 
   }
 })
 
-test("names the product, not the kilo2 command, in the branded core text", () => {
-  // The command rule turns a lowercase `opencode` into `kilo2` and the product rule leaves "an" before Kilo; both
+test("names the product, not the kilo command, in the branded core text", () => {
+  // The command rule turns a lowercase `opencode` into `kilo` and the product rule leaves "an" before Kilo; both
   // read wrong where the product is meant, so those two texts have an override.
   for (const [file, , to] of coreText) {
     expect(to, file).toContain("Kilo")
-    expect(to, file).not.toMatch(/kilo2|\ban Kilo\b/)
+    expect(to, file).not.toMatch(/kilo|\ban Kilo\b/)
   }
 })
 
@@ -179,7 +179,7 @@ test("does not rename a trace span, in any of its call shapes", () => {
     source
       // A string in the options of a span call.
       .replace('label: "OpenCode label"', 'label: "Kilo label"')
-      .replace('hint: "Restart opencode"', 'hint: "Restart kilo2"')
+      .replace('hint: "Restart opencode"', 'hint: "Restart kilo"')
       // A string inside an expression of a template name, and a second string after the name.
       .replace('"OpenCode failed"', '"Kilo failed"')
       .replace('"OpenCode text"', '"Kilo text"')
@@ -246,7 +246,6 @@ test("config hints name a file that the Kilo host reads and writes", async () =>
     const filename = path.join(repo, "packages", file)
     const branded = KiloBranding.transform(filename, await Bun.file(filename).text())
     expect(branded).toContain(KiloConfigFiles.newFile)
-    expect(branded).not.toContain("kilo.json")
     expect(branded).not.toContain("opencode.json")
   }
 })
@@ -282,7 +281,7 @@ test("brands user-visible text dynamically instead of failing on an unknown anch
   // not an error: the rule engine brands what it recognizes and leaves the rest
   // for the branding audit, rather than throwing like the old exact list.
   expect(KiloBranding.transform("/repo/packages/tui/src/util/error.ts", 'const help = "Restart opencode now"')).toBe(
-    'const help = "Restart kilo2 now"',
+    'const help = "Restart kilo now"',
   )
   expect(KiloBranding.transform("/repo/packages/tui/src/util/error.ts", 'const ok = "nothing to rebrand"')).toBe(
     'const ok = "nothing to rebrand"',
@@ -342,7 +341,7 @@ for (const args of [["--help"], ["auth", "logout", "--help"]]) {
   test(`Kilo CLI help: ${args.join(" ")}`, async () => {
     await using root = await temporary()
     const output = await run([process.execPath, "run", "dev", ...args], root.path, true)
-    expect(output).toContain("kilo2")
+    expect(output).toContain("kilo")
     expect(output).not.toContain("OpenCode")
     expect(output).not.toContain("opencode ")
   }, 60_000)
@@ -381,10 +380,10 @@ function checkPages(output: string, hosted: boolean) {
   expect(pages.catchUp).toContain(`conversation history from ${product} that you have not seen`)
   for (const output of [pages.update, pages.updateSession]) {
     const text = Bun.stripANSI(output)
-    expect(text).toContain(`Run ${hosted ? "kilo2" : "opencode"} to use 2.1.4`)
-    expect(text).not.toContain(hosted ? "opencode" : "kilo2")
+    expect(text).toContain(`Run ${hosted ? "kilo" : "opencode"} to use 2.1.4`)
+    expect(text).not.toContain(hosted ? "opencode" : "kilo")
   }
-  expect(Bun.stripANSI(pages.updateSession)).toContain(`${hosted ? "kilo2" : "opencode"} -s test-session`)
+  expect(Bun.stripANSI(pages.updateSession)).toContain(`${hosted ? "kilo" : "opencode"} -s test-session`)
   expect(pages.relative).toBe(pages.success)
   for (const html of [pages.success, pages.error, pages.bootstrap]) {
     expect(html).toContain(hosted ? "· Kilo</title>" : "· OpenCode</title>")
@@ -396,5 +395,5 @@ function checkPages(output: string, hosted: boolean) {
   expect(pages.bootstrap).toContain('var TOKEN_URL=new URL("/callback",window.location.origin).href')
   expect(pages.success).not.toContain("setTimeout(function(){try{window.close()}")
   expect(pages.modelError).toContain(`config (${hosted ? KiloConfigFiles.newFile : "opencode.json"})`)
-  expect(pages.modelError).not.toContain("kilo.json")
+  expect(pages.modelError).not.toContain(hosted ? "opencode.json" : "kilo.json")
 }

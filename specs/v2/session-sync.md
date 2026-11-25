@@ -26,7 +26,7 @@ An account switch pauses a pinned workspace instead of transferring its enrollme
 Organization policy can prohibit synchronization.
 
 To turn sync off for all workspaces, set the global-only `session_sync` setting in the global
-Kilo config directory's `kilo2.jsonc` (normally `~/.config/kilo2/kilo2.jsonc`):
+Kilo config directory's `kilo.jsonc` (normally `~/.config/kilo/kilo.jsonc`):
 
 ```jsonc
 {
@@ -34,7 +34,7 @@ Kilo config directory's `kilo2.jsonc` (normally `~/.config/kilo2/kilo2.jsonc`):
 }
 ```
 
-Global `kilo2.json` is read first, then `kilo2.jsonc`; the last setting wins.
+Global `kilo.json` is read first, then `kilo.jsonc`; the last setting wins.
 Workspace config cannot enable or disable sync.
 Atomic setting replacement makes up to eight attempts for transient file-sharing errors, with at most 700 ms of backoff.
 If a reader still denies replacement, the command returns a retryable `settings_unavailable` error and leaves the original file intact; it never truncates the file in place.
@@ -56,10 +56,10 @@ Tests inject an isolated peer through the service constructor, not a CLI flag, c
 ## Current commands
 
 ```sh
-kilo2 sync enable /absolute/workspace
-kilo2 sync status --json /absolute/workspace
-kilo2 sync flush --json /absolute/workspace
-kilo2 sync disable /absolute/workspace
+kilo sync enable /absolute/workspace
+kilo sync status --json /absolute/workspace
+kilo sync flush --json /absolute/workspace
+kilo sync disable /absolute/workspace
 ```
 
 `enable` and `disable` persist the global setting for all workspaces without deleting cloud state.
@@ -251,7 +251,7 @@ A transcript path alone never authorizes a filesystem read, even inside an opted
 For a legacy file without native provenance, approve that exact regular file explicitly:
 
 ```sh
-kilo2 sync enable --allow-asset /absolute/legacy-output.txt /absolute/workspace
+kilo sync enable --allow-asset /absolute/legacy-output.txt /absolute/workspace
 ```
 
 Repeat `--allow-asset` for each file.
@@ -311,7 +311,7 @@ An abrupt exit retains recoverable work on disk.
 
 ## Native remote viewing and control
 
-`kilo2 remote` starts a private headless host, advertises kind `remote`, and waits until a signal.
+`kilo remote` starts a private headless host, advertises kind `remote`, and waits until a signal.
 It requires Kilo sign-in and synchronization. It never enables control on an unrelated background daemon.
 The launch directory is the boundary for new sessions and directory discovery; canonical paths reject symlink escapes.
 The TUI supplies its launch workspace through the authenticated RPC location, explicitly rather than inheriting
@@ -321,7 +321,7 @@ canonical launch root, and a session can have only one owning host in a server p
 An organization argument cannot change the active signed-in organization.
 
 Ordinary hosts default to control disabled. `/remote` toggles the launch workspace host and shows a header indicator.
-`remote_control: true` in global `kilo2.jsonc` or `KILO_REMOTE=1` enables control at startup.
+`remote_control: true` in global `kilo.jsonc` or `KILO_REMOTE=1` enables control at startup.
 The authenticated local API exposes `GET /remote/status`, `POST /remote/enable` and `POST /remote/disable`.
 Each returns `{enabled, connected}`; repeated enable/disable calls are idempotent.
 

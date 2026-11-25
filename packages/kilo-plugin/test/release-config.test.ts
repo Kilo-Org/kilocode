@@ -6,7 +6,7 @@ const planFile = pathToFileURL(path.join(import.meta.dir, "../src/plan/plan-file
 const skillConfig = pathToFileURL(path.join(import.meta.dir, "../src/skill/config.ts")).href
 
 // The config names are fixed when `KiloConfigFiles` loads, so each variant runs in a child process.
-async function load(value: string | undefined) {
+async function load() {
   const child = Bun.spawn(
     [
       process.execPath,
@@ -28,7 +28,6 @@ async function load(value: string | undefined) {
     ],
     {
       cwd: path.join(import.meta.dir, ".."),
-      env: { ...process.env, KILO_USE_RELEASE_CONFIG: value },
       stdout: "pipe",
       stderr: "pipe",
     },
@@ -42,10 +41,6 @@ async function load(value: string | undefined) {
   return JSON.parse(stdout) as { plans: string; skill: string }
 }
 
-test("by default plans live in .kilo2 and the config skill starts with the guide", async () => {
-  expect(await load(undefined)).toEqual({ plans: path.join(".kilo2", "plans"), skill: "# Kilo" })
-}, 30_000)
-
-test("KILO_USE_RELEASE_CONFIG=1 moves plans to .kilo and leads the config skill with the name note", async () => {
-  expect(await load("1")).toEqual({ plans: path.join(".kilo", "plans"), skill: "# Config names in this process" })
+test("by default plans live in .kilo and the config skill starts with the guide", async () => {
+  expect(await load()).toEqual({ plans: path.join(".kilo", "plans"), skill: "# Kilo" })
 }, 30_000)

@@ -24,7 +24,7 @@ test("the host's server names the Kilo command when a pairing link expired", asy
     })
     expect(response.status).toBe(401)
     expect(await response.text()).toBe(
-      "This pairing link expired or was already used. Run `kilo2 pair` to get a new one.",
+      "This pairing link expired or was already used. Run `kilo pair` to get a new one.",
     )
   })
 }, 60_000)

@@ -1177,11 +1177,11 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "Katalogtimeout (ms)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "Udførelsestimeout (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "Ingen MCP-servere konfigureret. Tilføj MCP-servere i kilo2.json, eller bed agenten om at tilføje dem.",
+    "Ingen MCP-servere konfigureret. Tilføj MCP-servere i kilo.json, eller bed agenten om at tilføje dem.",
   "settings.agentBehaviour.workflows.description":
     "Workflows er brugerdefinerede kommandoer, der er defineret i din konfiguration eller i Markdown-kommandofiler. Du kan angive en model og en ræsonneringsvariant for hver workflow.",
   "settings.agentBehaviour.workflows.empty":
-    "Ingen brugerdefinerede kommandoer fundet. Føj kommandoer til kilo2.json eller en Markdown-fil i .kilo2/command.",
+    "Ingen brugerdefinerede kommandoer fundet. Føj kommandoer til kilo.json eller en Markdown-fil i .kilo/command.",
   "settings.agentBehaviour.workflows.detail.description": "Beskrivelse",
   "settings.agentBehaviour.workflows.detail.template": "Skabelon",
   "settings.agentBehaviour.workflows.model": "model",

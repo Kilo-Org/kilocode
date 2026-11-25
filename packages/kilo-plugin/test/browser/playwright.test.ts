@@ -211,7 +211,7 @@ describe("output directory", () => {
   })
 
   test("containment is separator- and case-correct on win32 and posix", () => {
-    const win = "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\kilo\\data\\kilo2\\browser\\output"
+    const win = "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\kilo\\data\\kilo\\browser\\output"
     expect(contained(`${win}\\page.png`, win, path.win32)).toBe(true)
     // A drive-letter or directory case difference is the same directory on Windows.
     expect(contained(`${win.toLowerCase()}\\nested\\page.png`, win, path.win32)).toBe(true)

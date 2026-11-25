@@ -139,7 +139,7 @@ CLI list) change: all three already render `needs_auth`
 3. `packages/kilo-cli/test/mcp-auth-failure.test.ts` — end to end through the real host, modelled on
    `packages/kilo-cli/test/marketplace-oauth.test.ts` (same `createRoutes(..., KiloHost.overrides)`,
    `OpenCode.make` with a `HttpEffect.toWebHandlerWith` fetch, `eventually` helper, 30s timeout).
-   Write `kilo2.json` in a temp directory with two remote servers pointing at one `Bun.serve` that
+   Write `kilo.json` in a temp directory with two remote servers pointing at one `Bun.serve` that
    answers 403: `plain-403` (no `oauth`) and `no-auth` (`"oauth": false`). Assert via
    `client.mcp.list(options)` that `plain-403` settles on `needs_auth` with "403" in `error` and
    `no-auth` on `failed`. This is also the PR proof that the host override reaches the server graph.

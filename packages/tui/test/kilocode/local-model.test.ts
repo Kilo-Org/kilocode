@@ -7,7 +7,7 @@ import { directory, json } from "../fixture/tui-client"
 
 const previous = process.env.OPENCODE_APP_DIR_NAME
 beforeEach(() => {
-  process.env.OPENCODE_APP_DIR_NAME = "kilo2"
+  process.env.OPENCODE_APP_DIR_NAME = "kilo"
 })
 afterEach(() => {
   if (previous === undefined) delete process.env.OPENCODE_APP_DIR_NAME
@@ -119,7 +119,7 @@ test("unhosted TUI neither restores nor overwrites Kilo's per-agent selection", 
     await expectModel(upstream, "Build", "global")
     await pick(upstream, "Build", "beta")
   }
-  process.env.OPENCODE_APP_DIR_NAME = "kilo2"
+  process.env.OPENCODE_APP_DIR_NAME = "kilo"
   await using hosted = await launch(state.path)
   await expectModel(hosted, "Build", "alpha")
 })

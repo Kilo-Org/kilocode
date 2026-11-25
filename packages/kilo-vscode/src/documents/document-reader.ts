@@ -44,9 +44,9 @@ export function plansDir(): string {
   return serverPlans ?? dataPlans(process.env)
 }
 
-/** The plan directory in the Kilo data directory, derived as the server does: `<XDG data>/kilo2/plans`. */
+/** The plan directory in the Kilo data directory, derived as the server does: `<XDG data>/kilo/plans`. */
 export function dataPlans(env: NodeJS.ProcessEnv, home = os.homedir()): string {
-  return path.join(env.XDG_DATA_HOME || path.join(home, ".local", "share"), "kilo2", "plans")
+  return path.join(env.XDG_DATA_HOME || path.join(home, ".local", "share"), "kilo", "plans")
 }
 
 /** Whether `resolved` lives in the plan directory (realpath-folded for tmpfs/symlink cases). */

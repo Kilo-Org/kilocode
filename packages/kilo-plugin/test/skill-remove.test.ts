@@ -6,7 +6,7 @@ const directory = path.resolve("/project")
 const home = path.resolve("/home/user")
 const cache = path.join(home, ".cache", "kilo", "skills")
 const entries: Entry[] = [
-  { type: "directory", path: path.join(directory, ".kilo2") },
+  { type: "directory", path: path.join(directory, ".kilo") },
   {
     type: "document",
     info: { skills: ["./custom-skills", "https://example.com/skills", "~/shared-skills", "/opt/skills"] },
@@ -19,8 +19,8 @@ const check = (file: string, skills = [{ path: file }], skillRoots = roots, cach
 describe("skill removal roots", () => {
   test("reads directory and configured path roots but not URLs", () => {
     expect(roots).toEqual([
-      path.join(directory, ".kilo2", "skill"),
-      path.join(directory, ".kilo2", "skills"),
+      path.join(directory, ".kilo", "skill"),
+      path.join(directory, ".kilo", "skills"),
       path.join(directory, "custom-skills"),
       path.join(home, "shared-skills"),
       path.resolve("/opt/skills"),
@@ -30,8 +30,8 @@ describe("skill removal roots", () => {
 
 describe("skill removal target", () => {
   test("accepts a directory skill and a flat top-level skill", () => {
-    const directorySkill = path.join(directory, ".kilo2", "skills", "demo", "SKILL.md")
-    const flatSkill = path.join(directory, ".kilo2", "skills", "demo.md")
+    const directorySkill = path.join(directory, ".kilo", "skills", "demo", "SKILL.md")
+    const flatSkill = path.join(directory, ".kilo", "skills", "demo.md")
     expect(check(directorySkill)).toEqual({ _tag: "target", path: directorySkill })
     expect(check(flatSkill)).toEqual({ _tag: "target", path: flatSkill })
   })
@@ -44,7 +44,7 @@ describe("skill removal target", () => {
   })
 
   test("rejects an unregistered skill", () => {
-    const file = path.join(directory, ".kilo2", "skills", "demo", "SKILL.md")
+    const file = path.join(directory, ".kilo", "skills", "demo", "SKILL.md")
     expect(check(file, [])).toEqual({ _tag: "failure", reason: "not_found" })
   })
 
@@ -59,22 +59,22 @@ describe("skill removal target", () => {
   })
 
   test("rejects traversal that resolves outside the root", () => {
-    const file = path.join(directory, ".kilo2", "skills", "..", "..", "elsewhere", "SKILL.md")
+    const file = path.join(directory, ".kilo", "skills", "..", "..", "elsewhere", "SKILL.md")
     expect(check(file)).toEqual({ _tag: "failure", reason: "not_removable" })
   })
 
   test("rejects the root itself", () => {
-    const root = path.join(directory, ".kilo2", "skills")
+    const root = path.join(directory, ".kilo", "skills")
     expect(check(root, [{ path: root }])).toEqual({ _tag: "failure", reason: "not_removable" })
   })
 
   test("rejects a nested file that is not a manifest", () => {
-    const file = path.join(directory, ".kilo2", "skills", "demo", "reference.md")
+    const file = path.join(directory, ".kilo", "skills", "demo", "reference.md")
     expect(check(file)).toEqual({ _tag: "failure", reason: "not_removable" })
   })
 
   test("rejects a file that is not markdown", () => {
-    const file = path.join(directory, ".kilo2", "skills", "demo.txt")
+    const file = path.join(directory, ".kilo", "skills", "demo.txt")
     expect(check(file)).toEqual({ _tag: "failure", reason: "not_removable" })
   })
 
@@ -92,9 +92,9 @@ describe("skill removal target", () => {
 
 describe("skill removal targets", () => {
   test("returns only the removable registrations", () => {
-    const directorySkill = path.join(directory, ".kilo2", "skills", "demo", "SKILL.md")
+    const directorySkill = path.join(directory, ".kilo", "skills", "demo", "SKILL.md")
     const flatSkill = path.join(directory, "custom-skills", "flat.md")
-    const nested = path.join(directory, ".kilo2", "skills", "demo", "reference.md")
+    const nested = path.join(directory, ".kilo", "skills", "demo", "reference.md")
     const builtin = path.resolve("/builtin/opencode.md")
     const cached = path.join(cache, "demo", "SKILL.md")
     expect(

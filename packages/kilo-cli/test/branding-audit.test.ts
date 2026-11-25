@@ -281,8 +281,8 @@ test("reports product text in a text asset at its own line", async () => {
   const file = "kilo-plugin/src/skill/kilo-config.txt"
   const source = await read(file)
   const added = source.replace(
-    "Use only the `kilo2` names.",
-    "Use only the `kilo2` names. Restart opencode afterwards.",
+    "Use only the `kilo` names.",
+    "Use only the `kilo` names. Restart opencode afterwards.",
   )
   const line = added.split("\n").findIndex((text) => text.includes("Restart opencode afterwards.")) + 1
   expect(line).toBeGreaterThan(20)

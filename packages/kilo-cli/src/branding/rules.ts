@@ -22,7 +22,7 @@ export const overrides = [
     to: "Install the latest Kilo v2 npm preview update",
   },
   { file: "cli/src/acp/service.ts", from: "Login with opencode", to: "Login with Kilo" },
-  // The lowercase product name as the agent's identity, which the command rule would turn into `kilo2`.
+  // The lowercase product name as the agent's identity, which the command rule would turn into `kilo`.
   {
     file: "core/src/plugin/system-prompt/trinity.txt",
     from: "You are opencode, an interactive",
@@ -70,6 +70,6 @@ export function brandSpan(text: string, options: { bareStringLiteral: boolean })
   let out = text
   for (const [from, to] of sortedLiterals) if (out.includes(from)) out = out.split(from).join(to)
   out = out.replace(PRODUCT, "Kilo")
-  if (!(options.bareStringLiteral && text === "opencode")) out = out.replace(COMMAND, "kilo2")
+  if (!(options.bareStringLiteral && text === "opencode")) out = out.replace(COMMAND, "kilo")
   return out
 }

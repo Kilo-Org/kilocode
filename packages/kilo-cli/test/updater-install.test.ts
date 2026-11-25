@@ -68,7 +68,7 @@ async function withTemp<A>(body: (directory: string) => Promise<A>) {
 }
 
 async function install(directory: string, input: { version?: string; name?: string; bin?: string } = {}) {
-  const executable = path.join(directory, "bin", "kilo2.exe")
+  const executable = path.join(directory, "bin", "kilo.exe")
   await mkdir(path.dirname(executable), { recursive: true })
   await writeFile(executable, "#!/bin/sh\n")
   await writeFile(
@@ -76,14 +76,14 @@ async function install(directory: string, input: { version?: string; name?: stri
     JSON.stringify({
       name: input.name ?? packageName,
       version: input.version ?? "0.0.0-v2-226",
-      bin: { kilo2: input.bin ?? "./bin/kilo2.exe" },
+      bin: { kilo: input.bin ?? "./bin/kilo.exe" },
     }),
   )
   return executable
 }
 
 async function legacyShim(directory: string, executable: string) {
-  const file = path.join(directory, "kilo2")
+  const file = path.join(directory, "kilo")
   await mkdir(directory, { recursive: true })
   const relative = path.relative(directory, executable)
   await writeFile(
@@ -104,7 +104,7 @@ exit $?
 }
 
 async function markedShim(directory: string, executable: string) {
-  const file = path.join(directory, "kilo2")
+  const file = path.join(directory, "kilo")
   await mkdir(directory, { recursive: true })
   await writeFile(
     file,
@@ -117,9 +117,9 @@ async function windowsShims(directory: string, executable: string) {
   await mkdir(directory, { recursive: true })
   const relative = path.relative(directory, executable)
   const command = relative.split("/").join("\\")
-  await writeFile(path.join(directory, "kilo2"), `#!/bin/sh\nexec "$basedir/${relative}" "$@"\n`)
-  await writeFile(path.join(directory, "kilo2.cmd"), `@SETLOCAL\r\n@"%~dp0\\${command}" %*\r\n`)
-  await writeFile(path.join(directory, "kilo2.ps1"), `#!/usr/bin/env pwsh\n& "$basedir/${relative}" $args\n`)
+  await writeFile(path.join(directory, "kilo"), `#!/bin/sh\nexec "$basedir/${relative}" "$@"\n`)
+  await writeFile(path.join(directory, "kilo.cmd"), `@SETLOCAL\r\n@"%~dp0\\${command}" %*\r\n`)
+  await writeFile(path.join(directory, "kilo.ps1"), `#!/usr/bin/env pwsh\n& "$basedir/${relative}" $args\n`)
 }
 
 async function pnpm10(directory: string) {
@@ -180,7 +180,7 @@ posix("detects an npm global under a custom POSIX prefix", async () => {
     const root = path.join(prefix, "lib", "node_modules", "@kilocode", "cli")
     const executable = await install(root)
     await mkdir(path.join(prefix, "bin"))
-    await symlink(executable, path.join(prefix, "bin", "kilo2"))
+    await symlink(executable, path.join(prefix, "bin", "kilo"))
     const canonical = await realpath(prefix)
     const { calls, exec } = fake({
       [`npm root -g --prefix ${canonical}`]: ok(`${path.join(canonical, "lib", "node_modules")}\n`),
@@ -263,12 +263,12 @@ test("rejects the v1 line that shares the package name before probing", async ()
   })
 })
 
-test("rejects a package whose kilo2 bin is not the running executable", async () => {
+test("rejects a package whose kilo bin is not the running executable", async () => {
   await withTemp(async (directory) => {
     const root = path.join(directory, "custom", "lib", "node_modules", "@kilocode", "cli")
     await install(root, { bin: "./bin/other" })
 
-    expect(await detected(fake().exec, path.join(root, "bin", "kilo2.exe"))).toBeUndefined()
+    expect(await detected(fake().exec, path.join(root, "bin", "kilo.exe"))).toBeUndefined()
   })
 })
 
@@ -327,7 +327,7 @@ posix("keeps the pnpm 11 hash link as the manifest for a later global install", 
     await symlink(current, link, "dir")
     const bin = path.join(directory, "pnpm", "bin")
     // pnpm points the shim at the stable hash link, not the disposable physical install directory.
-    await markedShim(bin, path.join(link, "node_modules", "@kilocode", "cli", "bin", "kilo2.exe"))
+    await markedShim(bin, path.join(link, "node_modules", "@kilocode", "cli", "bin", "kilo.exe"))
     const { exec } = fake({
       "pnpm --version": ok("11.1.1\n"),
       // pnpm has written warnings to stdout before the path. The last absolute line is still the root.
@@ -461,7 +461,7 @@ posix("rejects a pnpm global bin slot that belongs to another install", async ()
   await withTemp(async (directory) => {
     const { executable, bin, root } = await pnpm10(directory)
     const other = await install(path.join(directory, "other"))
-    await symlink(other, path.join(bin, "kilo2"))
+    await symlink(other, path.join(bin, "kilo"))
     const { exec } = fake(pnpm10Responses(root, bin))
 
     expect(await detected(exec, executable)).toBeUndefined()
@@ -471,12 +471,12 @@ posix("rejects a pnpm global bin slot that belongs to another install", async ()
 posix("rejects a pnpm global bin slot that is not a verifiable shim", async () => {
   await withTemp(async (directory) => {
     const { executable, bin, root } = await pnpm10(directory)
-    await writeFile(path.join(bin, "kilo2"), '#!/bin/sh\nexec /opt/other/kilo2 "$@"\n')
+    await writeFile(path.join(bin, "kilo"), '#!/bin/sh\nexec /opt/other/kilo "$@"\n')
     const { exec } = fake(pnpm10Responses(root, bin))
 
     expect(await detected(exec, executable)).toBeUndefined()
 
-    await writeFile(path.join(bin, "kilo2"), "not a shim")
+    await writeFile(path.join(bin, "kilo"), "not a shim")
     expect(await detected(exec, executable)).toBeUndefined()
   })
 })
@@ -502,20 +502,20 @@ posix("preserves owned pnpm Windows shims and rejects foreign slots", async () =
 
     // npm's cmd shims use %dp0% and also reference the same native target.
     const own = path.relative(bin, executable).split("/").join("\\")
-    await writeFile(path.join(bin, "kilo2.cmd"), `@ECHO off\r\n"%dp0%\\${own}" %*\r\n`)
+    await writeFile(path.join(bin, "kilo.cmd"), `@ECHO off\r\n"%dp0%\\${own}" %*\r\n`)
     expect(await binOwned(bin, executable, "win32")).toBe(true)
 
     await windowsShims(bin, executable)
     const foreign = path.relative(bin, other).split("/").join("\\")
-    await writeFile(path.join(bin, "kilo2.cmd"), `@SETLOCAL\r\n@"%~dp0\\${foreign}" %*\r\n`)
+    await writeFile(path.join(bin, "kilo.cmd"), `@SETLOCAL\r\n@"%~dp0\\${foreign}" %*\r\n`)
     expect(await binOwned(bin, executable, "win32")).toBe(false)
 
     await windowsShims(bin, executable)
-    await copyFile(executable, path.join(bin, "kilo2.exe"))
+    await copyFile(executable, path.join(bin, "kilo.exe"))
     expect(await binOwned(bin, executable, "win32")).toBe(false)
 
-    await unlink(path.join(bin, "kilo2.exe"))
-    await symlink(executable, path.join(bin, "kilo2.exe"))
+    await unlink(path.join(bin, "kilo.exe"))
+    await symlink(executable, path.join(bin, "kilo.exe"))
     expect(await binOwned(bin, executable, "win32")).toBe(true)
   })
 })
@@ -525,7 +525,7 @@ posix("requires the pnpm shim invocation and marker to agree with the verified e
     const executable = await install(path.join(directory, "install"))
     const other = await install(path.join(directory, "other"))
     const bin = path.join(directory, "bin")
-    const file = path.join(bin, "kilo2")
+    const file = path.join(bin, "kilo")
     await mkdir(bin, { recursive: true })
     const relative = (target: string) => path.relative(bin, target)
 
@@ -551,7 +551,7 @@ posix("requires the pnpm shim invocation and marker to agree with the verified e
     await writeFile(file, `#!/bin/sh\nexec echo "$basedir/${relative(executable)}" "$@"\n`)
     expect(await binOwned(bin, executable, "linux")).toBe(false)
 
-    await writeFile(file, `#!/bin/sh\n# "$basedir/${relative(executable)}"\nexec /opt/other/kilo2 "$@"\n`)
+    await writeFile(file, `#!/bin/sh\n# "$basedir/${relative(executable)}"\nexec /opt/other/kilo "$@"\n`)
     expect(await binOwned(bin, executable, "linux")).toBe(false)
 
     const owned = `#!/bin/sh\nexec "$basedir_abs"/'${relative(executable)}' "$@"\nexit $?\n# cmd-shim-target=${executable}\n`
@@ -569,7 +569,7 @@ posix("accepts a pnpm Windows executable slot that is a hard link to the verifie
     const executable = await install(path.join(directory, "install"))
     const bin = path.join(directory, "bin")
     await mkdir(bin, { recursive: true })
-    await link(executable, path.join(bin, "kilo2.exe"))
+    await link(executable, path.join(bin, "kilo.exe"))
 
     expect(await binOwned(bin, executable, "win32")).toBe(true)
   })
@@ -581,7 +581,7 @@ posix("leaves Bun globals to manual updates because its scoped registry cannot b
     const executable = await install(root)
     const bin = path.join(directory, "bun", "bin")
     await mkdir(bin, { recursive: true })
-    await symlink(executable, path.join(bin, "kilo2"))
+    await symlink(executable, path.join(bin, "kilo"))
     const { calls, exec } = fake({ "bun pm bin -g": ok(`${bin}\n`) })
 
     expect(await detected(exec, executable)).toBeUndefined()
@@ -597,7 +597,7 @@ posix("detects Yarn Classic through its global directory and owning bin prefix",
     const prefix = path.join(directory, "commands")
     const bin = path.join(prefix, "bin")
     await mkdir(bin, { recursive: true })
-    await symlink(executable, path.join(bin, "kilo2"))
+    await symlink(executable, path.join(bin, "kilo"))
     const yarn = {
       "yarn --no-default-rc --version": ok("1.22.22\n"),
       "yarn --no-default-rc global dir": ok(`${home}\n`),
@@ -631,8 +631,8 @@ posix("detects Yarn Classic through its global directory and owning bin prefix",
     })
     expect(await detected(custom.exec, executable)).toBeUndefined()
     const other = await install(path.join(directory, "another-install"))
-    await unlink(path.join(bin, "kilo2"))
-    await symlink(other, path.join(bin, "kilo2"))
+    await unlink(path.join(bin, "kilo"))
+    await symlink(other, path.join(bin, "kilo"))
     expect(await detected(exec, executable)).toBeUndefined()
   })
 })
@@ -667,7 +667,7 @@ test("fails closed for Volta, mise, standalone and unverifiable copies", async (
       expect(await detected(fake().exec, executable)).toBeUndefined()
     }
 
-    const standalone = path.join(directory, "standalone", "bin", "kilo2")
+    const standalone = path.join(directory, "standalone", "bin", "kilo")
     await mkdir(path.dirname(standalone), { recursive: true })
     await writeFile(standalone, "binary")
     expect(await detected(fake().exec, standalone)).toBeUndefined()

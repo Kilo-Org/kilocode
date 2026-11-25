@@ -1,0 +1,102 @@
+import { Database } from "bun:sqlite"
+import { expect, test } from "bun:test"
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import path from "node:path"
+import { tmpdir } from "../../core/test/fixture/tmpdir"
+
+test("conflicting DB and file sign-ins block publication; explicit recovery preserves stable enterprise OAuth", async () => {
+  await using fixture = await tmpdir()
+  const root = fixture.path
+  const stable = path.join(root, "data/kilo/auth.json")
+  const source = path.join(path.dirname(stable), "kilo.db")
+  for (const dir of [path.dirname(stable), path.join(root, ".git")]) mkdirSync(dir, { recursive: true })
+  {
+    using db = new Database(source)
+    db.exec(readFileSync(path.join(import.meta.dir, "fixture/kilo-v1-schema.sql"), "utf8"))
+    db.run("INSERT INTO project (id,worktree,time_created,time_updated,sandboxes) VALUES ('global','/',1,1,'[]')")
+    db.run(
+      "INSERT INTO session (id,project_id,slug,directory,title,version,time_created,time_updated) VALUES ('ses_auth','global','auth',?,'Synthetic sign-in rehearsal','7',1,2)",
+      [root],
+    )
+  }
+  {
+    using db = new Database(source)
+    db.run(
+      "INSERT INTO credential(id,integration_id,label,value,active,time_created,time_updated) VALUES('crd_existing','provider','API key',?,1,1,1)",
+      [JSON.stringify({ type: "key", key: "synthetic-preview-key", metadata: { org: "fixture" } })],
+    )
+  }
+  const before = readFileSync(source)
+  const legacyKey = { type: "api", key: "synthetic-legacy-key" }
+  const previewKey = { type: "api", key: "synthetic-preview-key", metadata: { org: "fixture" } }
+  const oauth = {
+    type: "oauth",
+    access: "synthetic-access",
+    refresh: "synthetic-refresh",
+    expires: 123456789,
+    accountId: "synthetic-account",
+    enterpriseUrl: "https://synthetic.example.invalid",
+  }
+  writeFileSync(stable, JSON.stringify({ provider: legacyKey }), { mode: 0o600 })
+  const previewText = JSON.stringify({ provider: previewKey, openai: oauth })
+
+  async function run(...args: string[]) {
+    const child = Bun.spawn(
+      [process.execPath, path.resolve(import.meta.dir, "../../../script/dev-isolated.ts"), "migrate", ...args],
+      {
+        cwd: root,
+        env: {
+          PATH: process.env.PATH,
+          SystemRoot: process.env.SystemRoot,
+          HOME: root,
+          USERPROFILE: root,
+          KILO_V2_PROFILE: root,
+        },
+        stdin: "ignore",
+        stdout: "pipe",
+        stderr: "pipe",
+      },
+    )
+    const [code, stdout, stderr] = await Promise.all([
+      child.exited,
+      new Response(child.stdout).text(),
+      new Response(child.stderr).text(),
+    ])
+    for (const secret of [legacyKey.key, previewKey.key, oauth.access, oauth.refresh])
+      expect((stdout + stderr).includes(secret)).toBe(false)
+    return { code, stdout, stderr }
+  }
+  const consent = "--accept-jetbrains-breakage"
+  const blocked = await run("apply", consent)
+  expect(blocked.code).not.toBe(0)
+  expect(readFileSync(source)).toEqual(before)
+  expect(existsSync(`${source}.pre-v2`)).toBe(false)
+  expect(readFileSync(stable, "utf8")).toBe(JSON.stringify({ provider: legacyKey }))
+  const unsupported = "Safe database replacement requires local"
+  if (process.platform === "win32" || blocked.stderr.includes(unsupported)) {
+    expect(blocked.stderr).toContain(unsupported)
+    return
+  }
+  expect(blocked.stderr).toContain(`Stored sign-in differs from ${stable}`)
+  expect(JSON.parse((await run("preflight")).stdout).status).toBe("failed")
+  writeFileSync(stable, JSON.stringify({ other: legacyKey, ...JSON.parse(previewText) }))
+  const migrated = await run("recover", consent)
+  expect(migrated.code, migrated.stderr).toBe(0)
+  using db = new Database(source, { readonly: true })
+  const value = (id: string) =>
+    JSON.parse(
+      db.query<{ value: string }, [string]>("SELECT value FROM credential WHERE integration_id=?").get(id)!.value,
+    )
+  expect(value("other")).toMatchObject({ type: "key", key: legacyKey.key })
+  expect(value("provider")).toMatchObject({ type: "key", key: previewKey.key, metadata: previewKey.metadata })
+  expect(value("openai")).toMatchObject({
+    type: "oauth",
+    methodID: "chatgpt-browser",
+    access: oauth.access,
+    refresh: oauth.refresh,
+    expires: oauth.expires,
+    metadata: { accountID: oauth.accountId, enterpriseUrl: oauth.enterpriseUrl },
+  })
+  expect(db.query("SELECT id FROM credential WHERE integration_id='provider'").get()).toEqual({ id: "crd_existing" })
+  expect(JSON.parse((await run("preflight")).stdout).status).toBe("completed")
+}, 90_000)

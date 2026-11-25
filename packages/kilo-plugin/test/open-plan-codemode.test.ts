@@ -22,7 +22,7 @@ import { KiloPlanPlugin } from "../src/plan"
 import { code, created, sessionID, workspace } from "./plan-harness"
 
 const session = { id: sessionID, time: { created, updated: created } } as unknown as Session.Info
-const planPath = ".kilo2/plans/1000-dark-mode-plan.md"
+const planPath = ".kilo/plans/1000-dark-mode-plan.md"
 
 const registryLayer = AppNodeBuilder.build(LayerNode.group([Tool.node, PluginHooks.node]), [
   Config.node.replace(Config.testLayer()),

@@ -189,7 +189,7 @@ test("nothing is minted or registered while Pages is off", async () => {
 test("the last document that sets pages.enabled wins", async () => {
   const on = mintServer(minted)
   await harness({
-    documents: [{ info: { pages: { enabled: false } } }, { info: enabled, path: "/elsewhere/project/kilo2.json" }],
+    documents: [{ info: { pages: { enabled: false } } }, { info: enabled, path: "/elsewhere/project/kilo.json" }],
     server: on.url,
     run: async (pages) => {
       await pages.until((status) => status.state === "connecting")
@@ -198,7 +198,7 @@ test("the last document that sets pages.enabled wins", async () => {
   }).finally(on.stop)
   const off = mintServer(minted)
   await harness({
-    documents: [{ info: enabled }, { info: { pages: { enabled: false } }, path: "/elsewhere/project/kilo2.json" }],
+    documents: [{ info: enabled }, { info: { pages: { enabled: false } }, path: "/elsewhere/project/kilo.json" }],
     server: off.url,
     run: async (pages) => {
       await pages.until((status) => status.state === "disabled")

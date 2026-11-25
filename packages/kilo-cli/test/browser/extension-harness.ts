@@ -1,6 +1,6 @@
 // Shared harness for the real extension-backend runners (extension-e2e, ux-e2e, perf, bench; firefox-e2e uses the
 // browser-neutral half): a real Chromium launch with the built MV3 extension, the "Allow local agents" switch, a
-// loopback hub with its pairing page, a scripted OpenAI-compatible model and real `kilo2 run` invocations. Not a
+// loopback hub with its pairing page, a scripted OpenAI-compatible model and real `kilo run` invocations. Not a
 // `bun test` file.
 //
 // API (everything else in this file is a helper these use):
@@ -17,7 +17,7 @@
 //   const { panel } = await enableLocalAgents(browser)          // side panel → Settings → "Allow local agents"
 //   const bridge: Bridge = { base, binary, browser, model }
 //   const result = await runAgent(bridge, plan, settings, { pair })
-//       // fresh home + `kilo2 browser hub --loopback` + pairing.url + pairing page + `kilo2 run`, then stops the hub
+//       // fresh home + `kilo browser hub --loopback` + pairing.url + pairing page + `kilo run`, then stops the hub
 //
 // Browser-neutral pieces (no Playwright is loaded for them): startModel, prepareHome, cliConfig, cliEnvironment,
 // startHub, hubRequest, pairingUrl, runCli, portPool, html/attachment, startFrameServer, until/tap/refOf/decodePng.
@@ -1124,7 +1124,7 @@ export async function downloadItems(worker: Worker): Promise<Record<string, unkn
 }
 
 // ---------------------------------------------------------------------------------------------
-// Hub: start `kilo2 browser hub --loopback`, ask it for a pairing URL over its CLI socket, open that page.
+// Hub: start `kilo browser hub --loopback`, ask it for a pairing URL over its CLI socket, open that page.
 // ---------------------------------------------------------------------------------------------
 
 export type HubEntry = { hubId: string; paired?: boolean; port?: number; socket?: string }
@@ -1212,7 +1212,7 @@ export function cliEnvironment(
     PWD: root,
     KILO_API_KEY: "",
     KILO_AUTH_CONTENT: "",
-    KILO_BROWSER_DATA_DIR: path.join(root, "data", "kilo2", "browser"),
+    KILO_BROWSER_DATA_DIR: path.join(root, "data", "kilo", "browser"),
     ...(extensionId === undefined ? {} : { KILO_BROWSER_EXTRA_EXTENSION_IDS: extensionId }),
     KILO_BROWSER_RUN_DIR: path.join(run, "browser"),
     KILO_CONFIG_CONTENT: JSON.stringify(config),
@@ -1254,7 +1254,7 @@ export async function readHubEntry(root: string): Promise<HubEntry | undefined> 
 }
 
 /**
- * Starts `kilo2 browser hub --loopback` and waits until it registers. `nextPort` picks the port; a hub that exits
+ * Starts `kilo browser hub --loopback` and waits until it registers. `nextPort` picks the port; a hub that exits
  * with EADDRINUSE (an assigned range can overlap the kernel's ephemeral range) is retried on the next one, up to 5.
  */
 export async function startHub(
@@ -1350,7 +1350,7 @@ export async function hubRequest(socketPath: string, method: string, params: unk
   return promise
 }
 
-/** The hub's one-time pairing URL, asked over its CLI socket the way `kilo2` asks for it. */
+/** The hub's one-time pairing URL, asked over its CLI socket the way `kilo` asks for it. */
 export async function pairingUrl(hub: Hub): Promise<string> {
   const entry = await hub.entry()
   if (entry?.socket === undefined) throw new Error("the hub registry has no socket")
@@ -1380,7 +1380,7 @@ export async function pair(hub: Hub, launched: Launched) {
 }
 
 // ---------------------------------------------------------------------------------------------
-// CLI runs: a fresh home, a fresh hub, the scripted model, and `kilo2 run`.
+// CLI runs: a fresh home, a fresh hub, the scripted model, and `kilo run`.
 // ---------------------------------------------------------------------------------------------
 
 export type CliRun = {
@@ -1400,15 +1400,15 @@ export type CliRunOptions = {
   model: ScriptedModel
   plan: Plan
   root: string
-  /** Extra `kilo2 run` flags. */
+  /** Extra `kilo run` flags. */
   args?: string[]
-  /** The prompt passed to `kilo2 run`. */
+  /** The prompt passed to `kilo run`. */
   prompt?: string
   /** Kill the run after this many milliseconds (default 240 s). */
   timeout?: number
 }
 
-/** One `kilo2 run --standalone --format json` against the scripted model, answering from `plan`. */
+/** One `kilo run --standalone --format json` against the scripted model, answering from `plan`. */
 export async function runCli(options: CliRunOptions): Promise<CliRun> {
   const { model } = options
   model.history.length = 0

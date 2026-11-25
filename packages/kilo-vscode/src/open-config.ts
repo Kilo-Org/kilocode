@@ -2,7 +2,7 @@
 // so a file that exists but is not in `api.config.get` is shown as not loaded. A missing target is the only create
 // option, which keeps the quick pick short.
 import path from "node:path"
-import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
+import { configFiles } from "./active-profile"
 import type { ConfigScope } from "./protocol"
 
 export interface ConfigCandidate {
@@ -34,7 +34,7 @@ export function configDirectories(input: {
   const loaded = input.documents.flatMap((file) => {
     const directory = path.dirname(file)
     if (globalRoots.includes(directory)) return []
-    if (!KiloConfigFiles.names.includes(path.basename(file)) && !isProjectDirectory(directory)) return []
+    if (!configFiles().names.includes(path.basename(file)) && !isProjectDirectory(directory)) return []
     return [directory]
   })
   return [...new Set([input.projectRoot, ...projects.map((directory) => path.dirname(directory)), ...projects, ...loaded])]
@@ -50,7 +50,8 @@ export async function candidateConfigFiles(input: {
 }): Promise<ConfigCandidate[]> {
   const paths = new Set<string>()
   for (const directory of input.directories) {
-    const names = isProjectDirectory(directory) ? KiloConfigFiles.directoryFiles : KiloConfigFiles.names
+    const files = configFiles()
+    const names = isProjectDirectory(directory) ? files.directoryFiles : files.names
     for (const name of names) paths.add(path.join(directory, name))
   }
   paths.add(input.target)
@@ -93,5 +94,5 @@ export async function chooseConfigFile(
 }
 
 function isProjectDirectory(directory: string) {
-  return KiloConfigFiles.directories.includes(path.basename(directory))
+  return configFiles().directories.includes(path.basename(directory))
 }

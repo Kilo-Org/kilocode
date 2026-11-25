@@ -4,7 +4,7 @@ import path from "node:path"
 // The ESM entry: the extension host bundles with `Bun.build`, which leaves the UMD entry's
 // `require("./impl/format")` as a runtime require that fails in `dist/extension.js`.
 import { applyEdits, findNodeAtLocation, modify, parseTree } from "jsonc-parser/lib/esm/main.js"
-import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
+import { configFiles } from "./active-profile"
 import { aliasOf } from "./config-aliases"
 import type { ConfigEdit } from "./protocol"
 
@@ -37,7 +37,7 @@ export const configWriteQueue = serialize()
 
 /** True only for the Kilo v2 config file names, so a write never lands in another file. */
 export function isKiloConfigFile(file: string): boolean {
-  return KiloConfigFiles.names.includes(path.basename(file))
+  return configFiles().names.includes(path.basename(file))
 }
 
 /** Apply each edit in order, removing the v1 aliases of every written v2 path unless the edit preserves them. */
@@ -56,4 +56,3 @@ export function applyConfigEdits(text: string, edits: ConfigEdit[]): string {
   }
   return result
 }
-

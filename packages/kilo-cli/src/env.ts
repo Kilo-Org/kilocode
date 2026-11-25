@@ -28,38 +28,32 @@ export const names = [
 
 /**
  * The variables that point at a config file, a config directory or the database. v1 Kilo reads them as KILO_<NAME>,
- * and a v1 user can have them set to v1's own storage. If v2 used them, it would read v1's config and open v1's
- * database, and its migrations would rewrite v1's sessions and credentials. While v1 and v2 ship side by side (D-4),
- * v2 reads them only as KILO2_<NAME>, like its `kilo2.json` and `.kilo2` config names.
+ * and clients must pass the same selectors to preflight and the runtime. Translation alone never opens SQLite.
  */
 export const storage = ["CONFIG", "CONFIG_DIR", "DB"] as const
 
 /**
- * Copies each set KILO_<NAME> of `names`, and each set KILO2_<NAME> of `storage`, to OPENCODE_<NAME>. The Kilo name
- * wins when both are set. A v1 KILO_CONFIG, KILO_CONFIG_DIR or KILO_DB has no effect.
+ * Copies each supported KILO_<NAME> to OPENCODE_<NAME>. The Kilo name wins when both are set.
  */
 export function translate(env: Record<string, string | undefined>) {
-  for (const name of names) {
+  for (const name of [...names, ...storage]) {
     const value = env[`KILO_${name}`]
-    if (value !== undefined) env[`OPENCODE_${name}`] = value
-  }
-  for (const name of storage) {
-    const value = env[`KILO2_${name}`]
     if (value !== undefined) env[`OPENCODE_${name}`] = value
   }
   env.OPENCODE_TUI_USE_PINNED_MODE ??= "1"
   env.OPENCODE_TUI_OVERLAP_STARTUP ??= "1"
 }
 
-/**
- * Kilo v2's app directory name (D-4): config, data, cache, state and tmp are `<XDG base>/kilo2`, apart from both
- * upstream's `opencode` and v1 Kilo's `kilo` directories during internal releases. Release migration to `kilo`
- * is explicit (U-E3-03, U-E8-02); v1 storage remains separate while v1 clients ship. The upstream
- * global paths read it when their module loads (`packages/util/src/global.ts`), so every path follows it: the
- * `Global` service, logs, locks, tmp and the database. Every process the host starts runs this module first. The
- * database file name is Kilo's too (./database).
- */
-export const directory = "kilo2"
+/** Set before importing modules that capture Global.Path at module load. */
+export const directory = "kilo"
+
+/** Pin the verified stable selectors before global-boot, for the CLI and its children. */
+export function releaseProfile(file: string, config: string, explicitFile?: string) {
+  process.env.OPENCODE_APP_DIR_NAME = directory
+  process.env.OPENCODE_DB = file
+  process.env.OPENCODE_CONFIG_DIR = config
+  if (explicitFile) process.env.OPENCODE_CONFIG = explicitFile
+}
 
 translate(process.env)
 process.env.OPENCODE_APP_DIR_NAME = directory // kilo_port(global:0e189a57d108)

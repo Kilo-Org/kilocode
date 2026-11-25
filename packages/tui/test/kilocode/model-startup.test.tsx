@@ -12,7 +12,7 @@ const savedModel = { providerID: selected.providerID, id: selected.id, variant: 
 const originalHost = process.env.OPENCODE_APP_DIR_NAME
 beforeEach(async () => {
   await import("../../src/app") // Do not change other tests' process-wide built-in plugin registry.
-  process.env.OPENCODE_APP_DIR_NAME = "kilo2"
+  process.env.OPENCODE_APP_DIR_NAME = "kilo"
 })
 afterEach(() => {
   if (originalHost === undefined) delete process.env.OPENCODE_APP_DIR_NAME

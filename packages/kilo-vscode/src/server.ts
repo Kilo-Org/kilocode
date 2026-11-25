@@ -8,6 +8,7 @@ import path from "node:path"
 import { local } from "./local"
 import { launch } from "./process"
 import { dataPlans } from "./documents/document-reader"
+import { activeProfile } from "./active-profile"
 
 export type Command = { cmd: string; args: string[]; env: Record<string, string> }
 export type Server = { url: string; authorization: string; process: ChildProcess }
@@ -62,7 +63,7 @@ const BROWSER = ["KILO_BROWSER_BROKER_URL", "KILO_BROWSER_BROKER_TOKEN"]
 const NOTEBOOK = ["KILO_NOTEBOOK_BROKER_URL", "KILO_NOTEBOOK_BROKER_TOKEN"]
 
 /**
- * The bundled `bin/kilo2` when it exists. Otherwise, in a repository checkout, the isolated dev entry
+ * The bundled `bin/kilo` when it exists. Otherwise, in a repository checkout, the isolated dev entry
  * `script/dev-isolated.ts` with its own profile: `KILO_V2_PROFILE`, or a `profile` directory in the extension storage.
  */
 export function command(input: {
@@ -72,7 +73,7 @@ export function command(input: {
   platform?: NodeJS.Platform
 }): Command | undefined {
   const platform = input.platform ?? process.platform
-  const bin = path.join(input.extension, "bin", platform === "win32" ? "kilo2.exe" : "kilo2")
+  const bin = path.join(input.extension, "bin", platform === "win32" ? "kilo.exe" : "kilo")
   if (existsSync(bin)) return { cmd: bin, args: ARGS, env: {} }
   const script = path.join(input.extension, "..", "..", "script", "dev-isolated.ts")
   if (!existsSync(script)) return undefined
@@ -85,8 +86,9 @@ export function command(input: {
 
 /** The global plan directory the server writes. The isolated dev profile moves the data directory into the profile. */
 export function serverPlans(cmd: Command | undefined, env: NodeJS.ProcessEnv): string {
+  if (activeProfile) return path.join(activeProfile.data, "plans")
   const profile = cmd?.env.KILO_V2_PROFILE
-  if (profile) return path.join(path.resolve(profile), "data", "kilo2", "plans")
+  if (profile) return path.join(path.resolve(profile), "data", "kilo", "plans")
   return dataPlans(env)
 }
 
@@ -334,6 +336,7 @@ export function manager(input: {
   cwd: string
   env: NodeJS.ProcessEnv
   settings?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>)
+  beforeStart?: (command: Command, settings?: Record<string, string>) => Promise<void>
   log?: (text: string) => void
   onError?: (error: Error) => void
   onStart?: (server: Server) => void
@@ -345,9 +348,10 @@ export function manager(input: {
     const promise = (async () => {
       const found = input.command()
       if (!found)
-        throw new Error("No Kilo v2 server found. Put a kilo2 binary in bin/ or run the extension from the repository.")
+        throw new Error("No Kilo v2 server found. Put a kilo binary in bin/ or run the extension from the repository.")
       // Settings may await host work, such as the loopback notebook and Integrated Browser broker endpoints.
       const settings = typeof input.settings === "function" ? await input.settings() : input.settings
+      if (input.beforeStart) await input.beforeStart(found, settings)
       return start({
         command: found,
         cwd: input.cwd,

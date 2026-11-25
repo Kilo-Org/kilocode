@@ -217,10 +217,10 @@ describe("resolveDocumentPath", () => {
 
 describe("dataPlans", () => {
   it("uses the Kilo data plan directory", () => {
-    expect(dataPlans({ XDG_DATA_HOME: "/tmp/data" }, "/tmp/home")).toEqual(path.join("/tmp/data", "kilo2", "plans"))
+    expect(dataPlans({ XDG_DATA_HOME: "/tmp/data" }, "/tmp/home")).toEqual(path.join("/tmp/data", "kilo", "plans"))
     // The server ignores an empty XDG_DATA_HOME and a test home override.
     expect(dataPlans({ XDG_DATA_HOME: "", OPENCODE_TEST_HOME: "/tmp/test" }, "/tmp/home")).toEqual(
-      path.join("/tmp/home", ".local", "share", "kilo2", "plans"),
+      path.join("/tmp/home", ".local", "share", "kilo", "plans"),
     )
   })
 })

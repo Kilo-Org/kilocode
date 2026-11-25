@@ -6,15 +6,15 @@ import { uninstalled } from "../src/commands/uninstall"
 import { KiloLoginService } from "../src/service/login"
 import { fakeSupervisor, prependPath } from "./fixtures/login-supervisor"
 
-// `kilo2 uninstall` is the upstream handler behind the Kilo host, whose updater reports no install method
-// (src/updater.ts). Each test boots the real host entry in a scratch home that holds a kilo2 installation next to a
-// Kilo v1 installation, an OpenCode installation and shell rc files with their PATH lines. The handler stops the
-// kilo2 background services and removes the kilo2 cache directory; data, config and state stay, and nothing outside
-// the kilo2 directories changes.
+// `kilo uninstall` is the upstream handler behind the Kilo host, whose updater reports no install method
+// (src/updater.ts). Each test boots the real host entry in a scratch home that holds a shared Kilo profile,
+// an OpenCode installation and shell rc files with their PATH lines. The handler stops the
+// kilo background services and removes the kilo cache directory; data, config and state stay, and nothing outside
+// the kilo directories changes.
 
 const entry = path.join(import.meta.dir, "../src/index.ts")
 // One transpiler cache for every host boot of this file. Bun would otherwise keep it under the scratch home
-// (`~/Library/Caches/bun` on macOS), where it would count as a change outside the kilo2 directories.
+// (`~/Library/Caches/bun` on macOS), where it would count as a change outside the kilo directories.
 const transpiled = await mkdtemp(path.join(os.tmpdir(), "kilo-uninstall-transpiler-"))
 afterAll(() => rm(transpiled, { recursive: true, force: true }))
 
@@ -28,7 +28,7 @@ beforeAll(async () => {
   expect(result.code, result.output).toBe(0)
   boot.artifacts = added(before, await snapshot(install.home))
   expect(
-    boot.artifacts.filter((file) => !/^(\.config|\.local\/share|\.local\/state|\.cache)\/kilo2\//.test(file)),
+    boot.artifacts.filter((file) => !/^(\.config|\.local\/share|\.local\/state|\.cache)\/kilo\//.test(file)),
   ).toEqual([])
 }, 60_000)
 
@@ -41,14 +41,14 @@ const summary = (install: Awaited<ReturnType<typeof seed>>) => [
   "Could not detect the installation method. Remove the installation manually after cleanup.",
 ]
 
-test("a dry run lists only the kilo2 cache and service, in Kilo wording, and changes nothing", async () => {
+test("a dry run lists only the kilo cache and service, in Kilo wording, and changes nothing", async () => {
   await using install = await seed()
   const before = await snapshot(install.home)
 
   const result = await host(install, "uninstall", "--dry-run")
 
   expect(result.code, result.output).toBe(0)
-  // Every line the user reads: no package, binary or shell PATH step, and no path outside the kilo2 directories.
+  // Every line the user reads: no package, binary or shell PATH step, and no path outside the kilo directories.
   expect(messages(result.output)).toEqual([...summary(install), "Dry run - no changes made", "Done"])
   expect(result.output.replaceAll(install.root, "")).not.toMatch(/opencode/i)
   await untouched(install, before)
@@ -116,7 +116,7 @@ test.skipIf(process.platform === "win32")(
   60_000,
 )
 
-test("a forced run stops the kilo2 service and removes the kilo2 cache, and nothing else", async () => {
+test("a forced run stops the kilo service and removes the kilo cache, and nothing else", async () => {
   await using install = await seed()
   const before = await snapshot(install.home)
 
@@ -134,16 +134,15 @@ test("a forced run stops the kilo2 service and removes the kilo2 cache, and noth
   expect(visible).not.toMatch(/Package|Shell PATH|Binary|Running |Run manually|To finish removing/)
   expect(visible).not.toMatch(/opencode/i)
 
-  // The registered kilo2 service is stopped and its registration is gone. The services that the Kilo v1 and
-  // OpenCode state directories register keep running.
+  // Only the service registered in Kilo's active state directory is stopped.
   await Promise.race([install.service.exited, Bun.sleep(10_000)])
   expect(install.running()).toEqual({ service: false, decoy: true })
 
   const after = await snapshot(install.home)
   const removed = (file: string) =>
-    file === ".cache/kilo2" || file.startsWith(".cache/kilo2/") || file === ".local/state/kilo2/service-local.json"
+    file === ".cache/kilo" || file.startsWith(".cache/kilo/") || file === ".local/state/kilo/service-local.json"
   expect(Object.keys(after).filter(removed)).toEqual([])
-  // Session data, configuration and state stay, as does every Kilo v1, OpenCode and shell rc file.
+  // Session data, configuration and state stay, along with the installed binaries and shell rc files.
   expect(after).toMatchObject(Object.fromEntries(Object.entries(before).filter(([file]) => !removed(file))))
   expect(added(before, after).filter((file) => !boot.artifacts.includes(file))).toEqual([])
 }, 60_000)
@@ -154,7 +153,7 @@ const unit = KiloLoginService.unit({
   log: "/tmp/log",
   config: "/tmp/config",
   uid: process.getuid?.() ?? 0,
-  app: "kilo2",
+  app: "kilo",
   channel: "local",
 })
 
@@ -165,7 +164,7 @@ test.skipIf(unit === undefined)(
     await using install = await seed()
     const app = path.join(install.root, "app")
     await mkdir(app, { recursive: true })
-    const executable = path.join(app, process.platform === "win32" ? "kilo2.exe" : "kilo2")
+    const executable = path.join(app, process.platform === "win32" ? "kilo.exe" : "kilo")
     await writeFile(executable, "#!/bin/sh\n", { mode: 0o755 })
 
     const setup = await host(install, "service", "install", "--command", executable)
@@ -210,7 +209,7 @@ test.skipIf(unit === undefined)(
   60_000,
 )
 
-// A scratch home with a kilo2, a Kilo v1 and an OpenCode installation, each with a registered background service.
+// A scratch home with registered background services under Kilo and other state directories.
 // The services are idle processes of this test behind a stub that answers no health request, so stopping one only
 // signals a process the test owns.
 async function seed() {
@@ -255,17 +254,16 @@ async function seed() {
   // The PATH lines a curl install of OpenCode and of Kilo v1 leave behind.
   const rc = "# opencode\nexport PATH=$HOME/.opencode/bin:$PATH\n# kilo\nexport PATH=$HOME/.kilo/bin:$PATH\n"
   const files = {
-    ".config/kilo2/marker.txt": "kilo2 config",
-    ".local/share/kilo2/marker.txt": "kilo2 data",
-    ".local/state/kilo2/marker.txt": "kilo2 state",
-    ".local/state/kilo2/service-local.json": registered(service.pid),
-    ".cache/kilo2/marker.txt": "kilo2 cache",
-    ".cache/kilo2/bin/marker.txt": "kilo2 cached binary",
-    ".config/kilo/kilo.json": "kilo v1 config",
-    ".local/share/kilo/kilo.db": "kilo v1 sessions",
-    ".local/share/kilo/auth.json": "kilo v1 credentials",
-    ".local/state/kilo/service.json": registered(decoy.pid),
-    ".cache/kilo/marker.txt": "kilo v1 cache",
+    ".config/kilo/marker.txt": "kilo config",
+    ".local/share/kilo/marker.txt": "kilo data",
+    ".local/state/kilo/marker.txt": "kilo state",
+    ".local/state/kilo/service-local.json": registered(service.pid),
+    ".cache/kilo/marker.txt": "kilo cache",
+    ".cache/kilo/bin/marker.txt": "kilo cached binary",
+    ".config/kilo/kilo.json": JSON.stringify({ username: "fixture" }),
+    ".local/share/kilo/history-backup": "saved sessions",
+    ".local/share/kilo/auth.json": JSON.stringify({ provider: { type: "api", key: "synthetic-uninstall-key" } }),
+    ".local/state/other/service.json": registered(decoy.pid),
     ".kilo/bin/kilo": "kilo v1 binary",
     ".kilocode/marker.txt": "kilo v1 legacy config",
     ".config/opencode/opencode.json": "opencode config",
@@ -290,8 +288,8 @@ async function seed() {
     service,
     requests,
     calls: sup.calls,
-    cache: path.join(home, ".cache/kilo2"),
-    registration: path.join(home, ".local/state/kilo2/service-local.json"),
+    cache: path.join(home, ".cache/kilo"),
+    registration: path.join(home, ".local/state/kilo/service-local.json"),
     env: prependPath(environment(root), sup.bin),
     running: () => ({
       service: service.exitCode === null && !service.signalCode,
@@ -307,7 +305,7 @@ function environment(root: string) {
   const inherited = Object.fromEntries(
     Object.entries(process.env).filter(
       ([key]) =>
-        !key.startsWith("XDG_") && !/^(OPENCODE|KILO2?)_/.test(key) && key !== "ZDOTDIR" && key !== "FORCE_COLOR",
+        !key.startsWith("XDG_") && !/^(OPENCODE|KILO?)_/.test(key) && key !== "ZDOTDIR" && key !== "FORCE_COLOR",
     ),
   )
   return {

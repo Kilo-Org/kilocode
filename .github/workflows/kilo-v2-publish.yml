@@ -3,7 +3,7 @@ run-name: "${{ github.event_name == 'workflow_dispatch' && (inputs.dry_run && 'p
 
 # Publishes the Kilo v2 CLI (packages/kilo-cli) to npm as `@kilocode/cli` with the `kilo-v2` dist-tag. v1 owns the
 # `latest` and `rc` dist-tags of the same packages. The build channel stays `v2` (npm rejects `v2` as a dist-tag because
-# it is a semver range), so the database and service files match the `bun run install:alpha` builds.
+# it is a semver range). The distribution channel does not select a different session database.
 #
 # The build and publish scripts read the version and build channel from KILO_VERSION and KILO_CHANNEL
 # (script/kilocode/release-env.ts copies them to the OPENCODE_ names that upstream's `@opencode/script` reads).
@@ -15,7 +15,7 @@ run-name: "${{ github.event_name == 'workflow_dispatch' && (inputs.dry_run && 'p
 # `@kilocode/schema`, `@kilocode/protocol` and `@kilocode/client`, built from packages/{schema,protocol,client}.
 #
 # It also publishes the preview VS Code extension (`kilocode.kilo-code-v2`) to the VS Code Marketplace and Open VSX
-# as a pre-release. The id is separate from v1 (`kilocode.kilo-code`), so users can install both side by side. The
+# as a pre-release. The id is separate from v1 (`kilocode.kilo-code`); both use the stable local Kilo profile. The
 # extension uses a plain `0.1.<run number>` version because the Marketplace does not accept semver pre-release
 # versions. Windows and macOS binary signing and SBOM evidence are deferred for the preview.
 #
@@ -131,9 +131,7 @@ jobs:
         run: |
           prefix="$(mktemp -d)"
           npm install --prefix "$prefix" --no-audit --no-fund packages/kilo-cli/dist/cli-linux-x64/*.tgz packages/kilo-cli/dist/cli/*.tgz
-          test "$("$prefix/node_modules/.bin/kilo2" --version)" = "kilo2 v$KILO_VERSION"
-          # v2 must not install a `kilo` command, which would start v2 for v1 users.
-          test ! -e "$prefix/node_modules/.bin/kilo"
+          test "$("$prefix/node_modules/.bin/kilo" --version)" = "kilo v$KILO_VERSION"
           test ! -e "$prefix/node_modules/.bin/opencode"
           test -f "$prefix/node_modules/@kilocode/cli/bin/tree-sitter/tree-sitter.wasm"
         env:
@@ -184,7 +182,7 @@ jobs:
         run: mkdir -p dist && tar -xzf "$RUNNER_TEMP/kilo-v2-npm.tar.gz" -C dist
 
       - name: Check the Kilo host
-        run: bun script/kilocode/smoke-host.ts dist/cli-${{ matrix.target }}/bin/kilo2
+        run: bun script/kilocode/smoke-host.ts dist/cli-${{ matrix.target }}/bin/kilo
 
   smoke-windows:
     name: smoke (windows-x64)
@@ -205,7 +203,7 @@ jobs:
 
       - name: Check the Kilo host version
         shell: bash
-        run: test "$(dist/cli-windows-x64/bin/kilo2.exe --version)" = "kilo2 v${{ needs.build.outputs.version }}"
+        run: test "$(dist/cli-windows-x64/bin/kilo.exe --version)" = "kilo v${{ needs.build.outputs.version }}"
 
   publish:
     name: publish to npm
@@ -262,8 +260,8 @@ jobs:
           {
             echo "Published \`@kilocode/cli@${{ needs.build.outputs.version }}\` with dist-tag \`kilo-v2\`."
             echo ""
-            echo 'Install alongside v1 on POSIX: `npm install -g --prefix "$HOME/.local/share/kilo2-npm" @kilocode/cli@kilo-v2`.'
-            echo 'Run `$HOME/.local/share/kilo2-npm/bin/kilo2`. Keep v1 and v2 in separate npm prefixes.'
+            echo 'Install alongside v1 on POSIX: `npm install -g --prefix "$HOME/.local/share/kilo-npm" @kilocode/cli@kilo-v2`.'
+            echo 'Run `$HOME/.local/share/kilo-npm/bin/kilo`. Keep v1 and v2 in separate npm prefixes.'
           } >> "$GITHUB_STEP_SUMMARY"
 
   # Separate from the CLI publish, so a problem with one does not block the other. A rerun publishes only what is missing.

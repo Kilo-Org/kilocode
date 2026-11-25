@@ -9,7 +9,7 @@ import type { BunPlugin } from "bun"
 export const hostMirrors: Record<string, string> = {
   "tui/src/theme/v1.ts": "theme-v1.ts",
   "cli/src/acp/agent.ts": "acp-agent.ts",
-  // The project directories of the TUI's themes and local plugins (`.kilo2`, not `.opencode`).
+  // The project directories of the TUI's themes and local plugins (`.kilo`, not `.opencode`).
   "tui/src/util/config-directories.ts": "tui-config-directories.ts",
   "tui/src/plugin/discovery.ts": "tui-plugin-discovery.ts",
 }

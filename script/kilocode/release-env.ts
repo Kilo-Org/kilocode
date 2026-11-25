@@ -6,9 +6,8 @@
 // without a patch in the upstream file. The Kilo name wins when both are set. Import it before `@opencode/script`:
 // ES modules evaluate their imports in order. Child processes inherit the result.
 //
-// Without a channel, the upstream library names the channel after the current git branch. The channel names the
-// session database (packages/kilo-cli/src/database.ts), so every branch build would open a different database and
-// lose the sessions of the previous build. A Kilo build without KILO_CHANNEL is on the v2 line.
+// Without an explicit channel upstream uses the Git branch. Keep Kilo's distribution identity
+// independent of the checkout; it affects versions and updates, not the local profile name.
 process.env.KILO_CHANNEL ||= "v2"
 for (const name of ["CHANNEL", "VERSION", "BUMP", "RELEASE"]) {
   const value = process.env[`KILO_${name}`]

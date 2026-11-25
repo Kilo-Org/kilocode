@@ -445,11 +445,6 @@
         "category": "Kilo Code (v2)"
       },
       {
-        "command": "kilo-code.v2.importV1",
-        "title": "Import Sessions and Config from Kilo v1",
-        "category": "Kilo Code (v2)"
-      },
-      {
         "command": "kilo-code.v2.showChanges",
         "title": "Show Changes",
         "category": "Kilo Code (v2)"
@@ -996,11 +991,6 @@
           "command": "kilo-code.v2.settings",
           "when": "view == kilo-code.v2.chat",
           "group": "navigation@5"
-        },
-        {
-          "command": "kilo-code.v2.importV1",
-          "when": "view == kilo-code.v2.chat",
-          "group": "kilo@1"
         }
       ],
       "scm/title": [

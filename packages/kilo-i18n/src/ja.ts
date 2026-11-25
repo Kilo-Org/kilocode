@@ -1,4 +1,17 @@
 export const dict = {
+  // Session migration
+  "migration.title": "Kilo のセッションを v2 に移行しますか？",
+  "migration.summary":
+    "移行元: {{source}}\nサイズ: {{totalBytes}}（データベース: {{sourceBytes}}、WAL: {{walBytes}}）\n空き容量: {{availableBytes}}\nバックアップ先の候補: {{backup}}",
+  "migration.warning":
+    "Kilo v1 とプレビュー版のクライアントをすべて終了し、移行が完了するまでは起動しないでください。移行後は、現在の JetBrains 向け Kilo プラグインではこのデータベースを使用できなくなります。v1 クライアントで再度開かないでください。",
+  "migration.accept": "バックアップして移行",
+  "migration.notNow": "今はしない",
+  "migration.progress": "Kilo セッションを移行中",
+  "migration.stopped": "Kilo は起動しませんでした。ウィンドウを再読み込みして、もう一度お試しください。",
+  "migration.headless":
+    "移行には確認が必要です。{{preflight}} で移行内容を確認してください。同意する場合は、{{apply}} を実行してください。",
+
   // Kilo Gateway provider translations
   "provider.connect.kiloGateway.byok.prefix": "詳細な使用統計については、",
   "provider.connect.kiloGateway.byok.link": "Kilo's Gateway経由でBYOK",

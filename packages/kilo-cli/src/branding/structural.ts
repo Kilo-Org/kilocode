@@ -75,7 +75,7 @@ const logic: Record<string, ReadonlyArray<readonly [string, string, number]>> = 
   "core/src/tool/plugin/mcp-events.ts": [['namespace: "opencode"', 'namespace: "kilo"', 1]],
   // Code Mode paths of the tools an automation action may not call.
   "core/src/automation/code.ts": [['"opencode.', '"kilo.', 8]],
-  // The automation command prompt names the namespace in prose, which the command rule would turn into `kilo2`.
+  // The automation command prompt names the namespace in prose, which the command rule would turn into `kilo`.
   "core/src/plugin/command/automation.txt": [
     ["the `opencode` namespace", "the `kilo` namespace", 1],
     ["tools.opencode.automation_create", "tools.kilo.automation_create", 1],

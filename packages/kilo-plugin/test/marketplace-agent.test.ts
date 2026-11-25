@@ -220,7 +220,7 @@ describe("agent installation", () => {
   test("install writes one owned document; reinstall updates it; uninstall removes it", async () => {
     const directory = await tmp()
     const agents = path.join(directory, "agents")
-    const config = path.join(directory, "kilo2.json")
+    const config = path.join(directory, "kilo.json")
     const skills = path.join(directory, "skills")
     const first = await Installer.install({ entry: agentEntry(), skills, agents, config })
     expect(first.resources).toEqual([
@@ -249,7 +249,7 @@ describe("agent installation", () => {
     const directory = await tmp()
     const agents = path.join(directory, "agents")
     const skills = path.join(directory, "skills")
-    const config = path.join(directory, "kilo2.json")
+    const config = path.join(directory, "kilo.json")
     const written = await Installer.install({ entry: agentEntry(), skills, agents, config })
     await fs.appendFile(path.join(agents, "reviewer.md"), "\nlocal edit")
     // An agent is one resource: it must be reported and acted on once, not once through `paths` and once by id.
@@ -267,7 +267,7 @@ describe("agent installation", () => {
     const directory = await tmp()
     const agents = path.join(directory, "agents")
     const skills = path.join(directory, "skills")
-    const config = path.join(directory, "kilo2.json")
+    const config = path.join(directory, "kilo.json")
     await expect(
       Installer.install({
         entry: agentEntry(),
@@ -286,7 +286,7 @@ describe("agent installation", () => {
     const directory = await tmp()
     const agents = path.join(directory, "agents")
     const skills = path.join(directory, "skills")
-    const config = path.join(directory, "kilo2.json")
+    const config = path.join(directory, "kilo.json")
     const skill = path.join(skills, "companion")
     await fs.mkdir(skill, { recursive: true })
     // A prior record that also owns a companion skill tree, as an MCP install with companions does.
@@ -301,7 +301,7 @@ describe("agent installation", () => {
     const directory = await tmp()
     const agents = path.join(directory, "agents")
     const skills = path.join(directory, "skills")
-    const config = path.join(directory, "kilo2.json")
+    const config = path.join(directory, "kilo.json")
     const written = await Installer.install({ entry: agentEntry(), skills, agents, config })
     await Installer.uninstall({ id: "reviewer", ...written })
     expect(await fs.stat(agents).then((info) => info.isDirectory())).toBe(true)
@@ -315,7 +315,7 @@ describe("agent installation", () => {
     const directory = await tmp()
     const agents = path.join(directory, "agents")
     const skills = path.join(directory, "skills")
-    const config = path.join(directory, "kilo2.json")
+    const config = path.join(directory, "kilo.json")
     const written = await Installer.install({ entry: agentEntry(), skills, agents, config })
     const resource = written.resources![0]!
     expect(resource).toMatchObject({ agent: "reviewer", fingerprints: [expect.any(String)] })
@@ -329,7 +329,7 @@ describe("agent recovery through stored paths", () => {
     const directory = await tmp()
     const agents = path.join(directory, "agents")
     const skills = path.join(directory, "skills")
-    const config = path.join(directory, "kilo2.json")
+    const config = path.join(directory, "kilo.json")
     const written = await Installer.install({ entry: agentEntry(), skills, agents, config })
     const file = path.join(agents, "reviewer.md")
     const resource = written.resources![0]!

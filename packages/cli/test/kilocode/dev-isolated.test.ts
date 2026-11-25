@@ -58,11 +58,11 @@ test("isolated dev ignores the database, home, session and client of a parent Ki
   const preload = path.join(root, "preload.ts")
   const names = [
     "OPENCODE_DB",
-    "KILO2_DB",
+    "KILO_DB",
     "OPENCODE_CONFIG",
-    "KILO2_CONFIG",
+    "KILO_CONFIG",
     "OPENCODE_CONFIG_DIR",
-    "KILO2_CONFIG_DIR",
+    "KILO_CONFIG_DIR",
     "OPENCODE_HOME_DIR",
     "OPENCODE_SESSION_ID",
     "OPENCODE_SERVER_PASSWORD",
@@ -97,11 +97,11 @@ test("isolated dev ignores the database, home, session and client of a parent Ki
         KILO_API_KEY: undefined,
         KILO_V2_PROFILE: profile,
         OPENCODE_DB: path.join(real, "opencode.db"),
-        KILO2_DB: path.join(real, "kilo2.db"),
-        OPENCODE_CONFIG: path.join(real, "kilo2.json"),
-        KILO2_CONFIG: path.join(real, "kilo2.json"),
+        KILO_DB: path.join(real, "kilo.db"),
+        OPENCODE_CONFIG: path.join(real, "kilo.json"),
+        KILO_CONFIG: path.join(real, "kilo.json"),
         OPENCODE_CONFIG_DIR: path.join(real, "config"),
-        KILO2_CONFIG_DIR: path.join(real, "config"),
+        KILO_CONFIG_DIR: path.join(real, "config"),
         OPENCODE_HOME_DIR: real,
         OPENCODE_SESSION_ID: "ses_parent",
         OPENCODE_SERVER_PASSWORD: "parent",
@@ -129,9 +129,9 @@ test("isolated dev ignores the database, home, session and client of a parent Ki
     expect(JSON.parse(line?.slice("KILO_DEV_ENV ".length) ?? "null"), stderr).toEqual({
       KILO_TEST_HOME: path.join(root, "test-home"),
     })
-    expect(await Bun.file(path.join(profile, "data", "kilo2", "kilo2-local.db")).exists()).toBe(true)
+    expect(await Bun.file(path.join(profile, "data", "kilo", "kilo.db")).exists()).toBe(true)
     expect(await Bun.file(path.join(real, "opencode.db")).exists()).toBe(false)
-    expect(await Bun.file(path.join(real, "kilo2.db")).exists()).toBe(false)
+    expect(await Bun.file(path.join(real, "kilo.db")).exists()).toBe(false)
   } finally {
     child.kill()
     await child.exited

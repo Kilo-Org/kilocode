@@ -63,7 +63,7 @@ const record: KiloMarketplaceRpc.Installed = {
   id: "demo",
   scope: "project",
   project: directory,
-  config: "kilo2.json",
+  config: "kilo.json",
   server: "demo",
   resources: [{ id: "companion" }, { server: "demo" }],
   installedAt: 1,
@@ -171,7 +171,7 @@ async function mount(
             ? [
                 {
                   type: "document",
-                  path: "/other/kilo2.json",
+                  path: "/other/kilo.json",
                   info: { mcp: { servers: { demo: { type: "remote", url: "https://other.test/mcp" } } } },
                 },
               ]
@@ -313,7 +313,9 @@ test("unified external search retains headings, provenance and category empty st
   expect(both).toContain("Plugins")
   app.mockInput.pressKey("u", { ctrl: true })
   await app.mockInput.typeText("Skill author")
-  await app.waitForFrame((frame) => frame.includes("No mcps match") && frame.includes("Writing Skill") && frame.includes("No agents match"))
+  await app.waitForFrame(
+    (frame) => frame.includes("No mcps match") && frame.includes("Writing Skill") && frame.includes("No agents match"),
+  )
   app.mockInput.pressKey("u", { ctrl: true })
   await app.mockInput.typeText("no-such-item")
   const empty = await app.waitForFrame((frame) => frame.includes("No results."))
@@ -340,7 +342,9 @@ test("tabs filter by kind with arrow keys and list rows omit descriptions", asyn
   expect(list()).not.toContain("Polish documents")
   expect(list()).toContain("Reviewer Agent")
   // The strip keeps every title, so compare the tab order rather than the active tab.
-  const strip = list().split("\n").find((line) => line.includes("All"))!
+  const strip = list()
+    .split("\n")
+    .find((line) => line.includes("All"))!
   for (const [before, after] of [
     ["All", "Installed"],
     ["Installed", "Agents"],
@@ -392,9 +396,7 @@ test.each([70, 120])(
     app.mockInput.pressArrow("right")
     await app.waitForFrame((frame) => frame.includes("No installed skills") && frame.includes("demo"))
     app.mockInput.pressKey("d", { ctrl: true })
-    await app.waitForFrame(
-      (frame) => frame.includes("Source: retained-source") && frame.includes("Skill: companion"),
-    )
+    await app.waitForFrame((frame) => frame.includes("Source: retained-source") && frame.includes("Skill: companion"))
     expect(app.captureCharFrame()).not.toContain("private-evidence")
     app.mockInput.pressEscape()
     await app.waitForFrame((frame) => frame.includes("No installed skills"))
@@ -449,7 +451,9 @@ test("Installed keeps duplicate source/scope identities and failed removal retai
   await choose(app, "Uninstall")
   await app.waitForFrame((frame) => frame.includes("Uninstall demo (global)?"))
   app.mockInput.pressEnter()
-  await app.waitForFrame((frame) => frame.includes("No installed skills") && frame.includes("409"))
+  await app.waitForFrame(
+    (frame) => frame.includes("No installed skills") && frame.includes("409") && frame.includes("demo"),
+  )
   expect(app.calls.find((call) => call.path.endsWith("/uninstall"))?.body?.input.scope).toBe("global")
   expect(app.captureCharFrame()).toContain("demo")
 })

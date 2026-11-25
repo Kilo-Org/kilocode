@@ -38,7 +38,7 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
     await Promise.all(
       projects.map((directory) =>
         writeFile(
-          path.join(directory, "kilo2.json"),
+          path.join(directory, "kilo.json"),
           JSON.stringify({
             experimental: { automations: directory !== projects[2] },
             permission: { execute: "allow" },

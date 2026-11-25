@@ -2,7 +2,7 @@
   "module:packages/core/src/kilocode/db-preflight.ts": {
     "state": "native",
     "v2": "packages/core/src/database/database.ts",
-    "note": "v1's DbPreflight.assertWritable existed so a read-only database did not crash startup at PRAGMA wal_checkpoint. v2 gained restrictToOwner (packages/core/src/database/database.ts:87), which chmods the db and its -wal/-shm to 0o600 (restoring the write bit for an owned file on POSIX) in layer() before the pragmas run, so on POSIX the crash the preflight guarded is already prevented natively. Accepted gap: restrictToOwner returns early on win32 (database.ts:88), so unlike v1's chmodSync (which clears the Windows read-only attribute) v2 does not repair a read-only db or sidecar on Windows, and such a file still fails at PRAGMA wal_checkpoint; this needs an externally set read-only attribute and was judged too rare for a shared-file patch. The other residual v1 behavior not carried is turning a few rare opaque errors (a non-owned file, or a custom KILO2_DB in a bad directory) into actionable messages; that enhancement was likewise judged not worth a shared-file patch (PR #15800).",
+    "note": "v1's DbPreflight.assertWritable existed so a read-only database did not crash startup at PRAGMA wal_checkpoint. v2 gained restrictToOwner (packages/core/src/database/database.ts:87), which chmods the db and its -wal/-shm to 0o600 (restoring the write bit for an owned file on POSIX) in layer() before the pragmas run, so on POSIX the crash the preflight guarded is already prevented natively. Accepted gap: restrictToOwner returns early on win32 (database.ts:88), so unlike v1's chmodSync (which clears the Windows read-only attribute) v2 does not repair a read-only db or sidecar on Windows, and such a file still fails at PRAGMA wal_checkpoint; this needs an externally set read-only attribute and was judged too rare for a shared-file patch. The other residual v1 behavior not carried is turning a few rare opaque errors (a non-owned file, or a custom KILO_DB in a bad directory) into actionable messages; that enhancement was likewise judged not worth a shared-file patch (PR #15800).",
     "by": "db-preflight-native"
   },
   "module:packages/core/test/kilocode/db-preflight.test.ts": {
@@ -37,7 +37,7 @@
   },
   "module:packages/opencode/src/kilocode/storage/json-migration.ts": {
     "state": "dropped",
-    "note": "v1 lazily migrated the JSON file store (storage/**/*.json) into SQLite on first access. v2 replaced the JSON store with an event-sourced SQLite store, so there is no JSON tree to migrate. Legacy import is handled natively at the SQLite level by packages/core/src/database/v1-migration.bun.ts, and D-4 isolation (packages/kilo-cli/src/env.ts keeps CONFIG/CONFIG_DIR/DB out of the translated OPENCODE_* names) keeps v2 out of v1's store. The JSON migrator is obsolete.",
+    "note": "v1 lazily migrated the JSON file store (storage/**/*.json) into SQLite on first access. v2 replaced the JSON store with an event-sourced SQLite store, so there is no JSON tree to migrate. Legacy import is handled natively at the SQLite level by packages/core/src/database/v1-migration.bun.ts, and the Kilo pre-boot gate requires consent before converting a v1 SQLite store. The JSON migrator is obsolete.",
     "by": "store-paths"
   },
   "module:packages/opencode/test/kilocode/storage/json-migration.test.ts": {
@@ -48,7 +48,7 @@
   "module:packages/opencode/test/kilocode/storage/db.test.ts": {
     "state": "ported",
     "v2": "packages/kilo-cli/test/database.test.ts",
-    "note": "Tested the v1 fallback in getChannelPath (packages/opencode/src/storage/db.ts): for a non-release channel, when kilo-<channel>.db did not exist and an older opencode-<channel>.db did, v1 opened the old file, so a build after the file rename kept its sessions. v2 carries that continuity in the host: KiloDatabase.select (packages/kilo-cli/src/database.ts) names the store kilo2.db or kilo2-<channel>.db and, when that file does not exist yet, its adopt helper copies an earlier opencode*.db from the same kilo2 data directory to it once. The mechanism differs on purpose: v2 copies instead of opening the old file in place, so select returns the Kilo file, not the old path. Because the copy happens once, what an earlier build writes to the old file afterwards does not reach the Kilo file (the first test named below asserts it); that is the one user-visible difference from v1's in-place use. v2 also covers the shared opencode.db of the release channels and prefers the earlier file with the most sessions. packages/kilo-cli/test/database.test.ts carries the assertion ('the database of an earlier build is copied once, with the pages still in its WAL'; 'release channels and KILO_DISABLE_CHANNEL_DB copy the earlier shared file'), and 'the first boot copies the database of an earlier build to the Kilo file' in packages/kilo-cli/test/app-dirs.test.ts covers it through the real entry. v2 still does not use v1's own store as its database: a v1 KILO_DB has no effect (the storage list in packages/kilo-cli/src/env.ts), and refuseV1Store and the guard in adopt refuse a Kilo v1 store, which only kilo2 import v1 brings forward.",
+    "note": "The host selects the explicitly configured file or stable kilo.db independent of distribution channel. A lone legacy channel file is eligible for consent-gated conversion in place; ambiguous alternatives require explicit KILO_DB selection. Tests: packages/kilo-cli/test/database.test.ts, migration-preflight.test.ts and migration-cutover.test.ts.",
     "by": "identity-store-notes"
   },
   "module:packages/opencode/test/kilocode/storage/storage-init.test.ts": {
@@ -857,7 +857,7 @@
   "module:packages/opencode/src/kilocode/skills/kilo-config.md": {
     "state": "ported",
     "v2": "packages/kilo-plugin/src/skill/kilo-config.txt",
-    "note": "The Kilo config guide uses the v2 names: kilo2.json, kilo2.jsonc, .kilo2 and the kilo2 global directory, with the managed system directory on its stable names. It records config precedence, the linked-worktree primary-checkout fallback, config directory contents, common fields, environment variables and Agent Manager setup, run and state files. The v1 skill-shell injection, trust gates and v1 config-fallback sections are not carried.",
+    "note": "The Kilo config guide uses the v2 names: kilo.json, kilo.jsonc, .kilo and the kilo global directory, with the managed system directory on its stable names. It records config precedence, the linked-worktree primary-checkout fallback, config directory contents, common fields, environment variables and Agent Manager setup, run and state files. The v1 skill-shell injection, trust gates and v1 config-fallback sections are not carried.",
     "by": "builtin-config-skill"
   },
   "module:packages/opencode/test/kilocode/builtin-skills.test.ts": {
@@ -881,7 +881,7 @@
   "api:POST /kilocode/agent/remove": {
     "state": "ported",
     "v2": "packages/schema/src/kilocode/agent.ts",
-    "note": "The Kilo plugin RPC kilocode.agent remove replaces the v1 POST /kilocode/agent/remove route. It deletes the markdown file the config agent plugin discovered (under <root>/{agent,agents,mode,modes}/ in the project .kilo2 or the global config directory) and publishes config.updated so the registry rescans. A config-only or built-in agent has no file and is never offered. A config-defined agent (`agents.<id>` in kilo2.jsonc) is still a real agent on v2 and is removed by unsetting that key, which the Agents subtab keeps on the config path. The VS Code Agents subtab calls remove for the agents the RPC lists.",
+    "note": "The Kilo plugin RPC kilocode.agent remove replaces the v1 POST /kilocode/agent/remove route. It deletes the markdown file the config agent plugin discovered (under <root>/{agent,agents,mode,modes}/ in the project .kilo or the global config directory) and publishes config.updated so the registry rescans. A config-only or built-in agent has no file and is never offered. A config-defined agent (`agents.<id>` in kilo.jsonc) is still a real agent on v2 and is removed by unsetting that key, which the Agents subtab keeps on the config path. The VS Code Agents subtab calls remove for the agents the RPC lists.",
     "by": "agent-removal"
   },
   "api:POST /kilocode/skill/remove": {
@@ -1046,7 +1046,7 @@
   "module:packages/opencode/src/kilocode/permission/headless.ts": {
     "state": "native",
     "v2": "packages/cli/src/run/noninteractive.ts",
-    "note": "v1 KiloHeadless marked the root session of a plain `kilo run` (not --attach, --auto or --yolo), and Permission.ask failed an ask from one of its child sessions with DeniedError, so a subagent did not wait for a reply nobody could give (#11903). Upstream v2 `kilo2 run` covers the same case in the client: runNonInteractivePrompt answers every permission.asked event whose session is in the run's tree (ownsSession walks parentID) with `reject` and the feedback 'This non-interactive run cannot ask the user for permission', or with `once` under --auto (noninteractive.ts:84-112; the --auto exception for requests marked `interactive` is the Kilo sandbox seam on line 108). Differences: the rejection carries feedback, so the model continues instead of seeing a denied tool, and the same path also serves the root session and attached servers, which v1 handled in run.ts. Not part of this module, and not tracked by the progress map: v1 run.ts also failed the run with exit 1 ('run ended with an auto-rejected permission; pass --auto for autonomous use') after a client-side reject. Those v1 run.ts and run-process.test.ts hunks are unattributed, so no cell covers them; v2 exits by the session outcome, and #16373 tracks the gap.",
+    "note": "v1 KiloHeadless marked the root session of a plain `kilo run` (not --attach, --auto or --yolo), and Permission.ask failed an ask from one of its child sessions with DeniedError, so a subagent did not wait for a reply nobody could give (#11903). Upstream v2 `kilo run` covers the same case in the client: runNonInteractivePrompt answers every permission.asked event whose session is in the run's tree (ownsSession walks parentID) with `reject` and the feedback 'This non-interactive run cannot ask the user for permission', or with `once` under --auto (noninteractive.ts:84-112; the --auto exception for requests marked `interactive` is the Kilo sandbox seam on line 108). Differences: the rejection carries feedback, so the model continues instead of seeing a denied tool, and the same path also serves the root session and attached servers, which v1 handled in run.ts. Not part of this module, and not tracked by the progress map: v1 run.ts also failed the run with exit 1 ('run ended with an auto-rejected permission; pass --auto for autonomous use') after a client-side reject. Those v1 run.ts and run-process.test.ts hunks are unattributed, so no cell covers them; v2 exits by the session outcome, and #16373 tracks the gap.",
     "by": "permission-cell-dispositions"
   },
   "module:packages/opencode/test/kilocode/edit-permission-filediff.test.ts": {
@@ -1101,7 +1101,7 @@
   "module:packages/opencode/src/kilocode/agent-manager/protection.ts": {
     "state": "ported",
     "v2": "packages/kilo-plugin/src/agent-manager/protection.ts",
-    "note": "packages/kilo-plugin/src/agent-manager/protection.ts assertMutablePath rejects a direct edit of agent-manager.json in .kilo2 and .kilo, and packages/kilo-plugin/src/agent-manager/guard.ts applies it to the mutation tools. The .kilocode directory is not in the v2 state directory list; the PR records that as a known gap.",
+    "note": "packages/kilo-plugin/src/agent-manager/protection.ts assertMutablePath rejects a direct edit of agent-manager.json in .kilo, and packages/kilo-plugin/src/agent-manager/guard.ts applies it to the mutation tools. The .kilocode directory is not in the v2 state directory list; the PR records that as a known gap.",
     "by": "am-progress-map"
   },
   "module:packages/opencode/src/kilocode/agent-manager/event.ts": {
@@ -1233,7 +1233,7 @@
   "module:packages/opencode/test/kilocode/worktree-project-skills.test.ts": {
     "state": "ported",
     "v2": "packages/core/test/kilocode/config/discovery.test.ts",
-    "note": "packages/core/src/kilocode/config/discovery.ts walks from the location to the project checkout root, so a session in a managed worktree reads the primary kilo2.json and .kilo config; packages/core/test/kilocode/config/discovery.test.ts covers the walk bound. Nested primary package directories are not mirrored as separate roots.",
+    "note": "packages/core/src/kilocode/config/discovery.ts walks from the location to the project checkout root, so a session in a managed worktree reads the primary kilo.json and .kilo config; packages/core/test/kilocode/config/discovery.test.ts covers the walk bound. Nested primary package directories are not mirrored as separate roots.",
     "by": "am-progress-map"
   },
   "module:packages/opencode/test/kilocode/worktree-remove-lock.test.ts": {
@@ -1436,13 +1436,13 @@
   "module:packages/opencode/src/kilocode/sandbox/policy.ts": {
     "state": "ported",
     "v2": "packages/kilo-plugin/src/sandbox/policy.ts",
-    "note": "Copied with the boundary rewritten: the Runtime service (directory, worktree, config, session, children, active, background, publish) replaces v1 Config/Database/Instance/Bus. Subagent sessions inherit the parent's snapshot through Session.Info.parentID (lazy, no token). executeEscalated, executeMcp, retire and peek are gone: escalation is the shell hook in index.ts, MCP goes through executeTool with the mcp flag. Profile deny list protects <state>/sandbox and the kilo2 config dir and denies the KILO2_/OPENCODE_ config and server variables.",
+    "note": "Copied with the boundary rewritten: the Runtime service (directory, worktree, config, session, children, active, background, publish) replaces v1 Config/Database/Instance/Bus. Subagent sessions inherit the parent's snapshot through Session.Info.parentID (lazy, no token). executeEscalated, executeMcp, retire and peek are gone: escalation is the shell hook in index.ts, MCP goes through executeTool with the mcp flag. Profile deny list protects <state>/sandbox and the kilo config dir and denies the KILO_/OPENCODE_ config and server variables.",
     "by": "sandbox-port"
   },
   "module:packages/opencode/src/kilocode/sandbox/preference.ts": {
     "state": "ported",
     "v2": "packages/kilo-plugin/src/sandbox/preference.ts",
-    "note": "Copied; the root is <kilo2 state>/sandbox/preference (root.ts) instead of a sibling of the opencode state dir.",
+    "note": "Copied; the root is <kilo state>/sandbox/preference (root.ts) instead of a sibling of the opencode state dir.",
     "by": "sandbox-port"
   },
   "module:packages/opencode/src/kilocode/sandbox/state.ts": {
@@ -1454,7 +1454,7 @@
   "module:packages/opencode/src/kilocode/sandbox/store.ts": {
     "state": "ported",
     "v2": "packages/kilo-plugin/src/sandbox/store.ts",
-    "note": "Copied; the root is <kilo2 state>/sandbox/policy (root.ts).",
+    "note": "Copied; the root is <kilo state>/sandbox/policy (root.ts).",
     "by": "sandbox-port"
   },
   "module:packages/core/test/kilocode/linux-sandbox.test.ts": {
@@ -2001,13 +2001,13 @@
   "module:packages/opencode/src/kilocode/config/overlay.ts": {
     "state": "ported",
     "v2": "packages/kilo-plugin/src/settings.ts",
-    "note": "Write half: target/projectTarget/globalTarget/revision/patch and Scope/Patch/Target -> the kilocode.settings RPC (packages/kilo-plugin/src/settings.ts, contract packages/schema/src/kilocode/settings.ts, #15837): target resolves to the reader's highest-precedence kilo2.json for the scope with a sha256 revision, write applies set/unset with target-changed/revision-conflict guards. The v2 target is the reader's effective document, not v1's first-existing candidate, which also replaces shadow (#15837 decision: a write resolves to the effective document instead of failing 422). project/projectDirs/globalDirs/withAgents (project and global config loading with agents) are native upstream Config discovery with the Kilo layout (packages/core/src/kilocode/config/discovery.ts). resolve and its Result read model had four v1 consumers: kilo-console (effective/global/project/sources/fields/collections/targets; console retired by #15320 U-E8-03, not carried), VS Code config-snapshot.ts (targets and collections.mcp source; v2 VS Code derives both from the native api.config.get document entries in packages/kilo-vscode/src/settings-host.ts targets and webview-ui/src/v2/settings-config.tsx source(path), managed flag in src/config-policy.ts), TUI dialog-indexing (overlay global/project indexing; v2 kilocode.indexing config/config.update RPC), and marketplace/paths.ts (targets; v2 KiloConfigFiles.writeCandidates in kilo-plugin/src/marketplace). The console-only fields (fields, Resolved.editable/reason, sources in the response) are dropped with the console.",
+    "note": "Write half: target/projectTarget/globalTarget/revision/patch and Scope/Patch/Target -> the kilocode.settings RPC (packages/kilo-plugin/src/settings.ts, contract packages/schema/src/kilocode/settings.ts, #15837): target resolves to the reader's highest-precedence kilo.json for the scope with a sha256 revision, write applies set/unset with target-changed/revision-conflict guards. The v2 target is the reader's effective document, not v1's first-existing candidate, which also replaces shadow (#15837 decision: a write resolves to the effective document instead of failing 422). project/projectDirs/globalDirs/withAgents (project and global config loading with agents) are native upstream Config discovery with the Kilo layout (packages/core/src/kilocode/config/discovery.ts). resolve and its Result read model had four v1 consumers: kilo-console (effective/global/project/sources/fields/collections/targets; console retired by #15320 U-E8-03, not carried), VS Code config-snapshot.ts (targets and collections.mcp source; v2 VS Code derives both from the native api.config.get document entries in packages/kilo-vscode/src/settings-host.ts targets and webview-ui/src/v2/settings-config.tsx source(path), managed flag in src/config-policy.ts), TUI dialog-indexing (overlay global/project indexing; v2 kilocode.indexing config/config.update RPC), and marketplace/paths.ts (targets; v2 KiloConfigFiles.writeCandidates in kilo-plugin/src/marketplace). The console-only fields (fields, Resolved.editable/reason, sources in the response) are dropped with the console.",
     "by": "v2-config-closeout"
   },
   "module:packages/opencode/src/kilocode/config/writer.ts": {
     "state": "ported",
     "v2": "packages/core/src/kilocode/config/write.ts",
-    "note": "KiloConfigWriter (core/src/kilocode/config/write.ts, #15789) carries the JSONC-preserving edit, revision guard and atomic write; the kilocode.settings RPC (kilo-plugin/src/settings.ts, #15837) carries write() with target-changed and revision-conflict (target-not-writable maps to the RPC's failed error for a target outside the scope, or an io failure). Ported here: excess-key validation (KiloConfigValidate.unknownKeys against KiloConfigPolicy.Info, the full v2 kilo2.json schema; reader-migrated legacy names such as permission or autoupdate are refused for set, a null removal is allowed for any key, and the derived workflow_models is refused), lower+validate before write (KiloConfigValidate.check runs the reader's ConfigNormalize + KiloConfigPolicy.parse pipeline on the edited text and refuses new invalid/unsupported issues or such issues on a set path with the RPC invalid error, file untouched; a native-over-legacy conflict does not block; invalid display layouts now report a diagnostic so they are caught too), and patchJsonc's scalar-to-object replacement plus no-op removal of an absent path (RPC expandSet and writer). Not carried: the permission '*' merge (it targets v1's permission.<tool> map; v2 permissions is an ordered rule array and the v1 key is refused on write), sandboxChanged (v1 emitted config.updated{sandbox} for sandbox/policy.ts; v2 kilo-plugin/src/sandbox/index.ts reconciles on every config.updated, which the watcher emits after a settings write, #15861), beforeWrite (test-only hook in config-overlay.test.ts; the v2 guard is the writer's revision check under its lock). Mode: v1 kept the existing mode and created project files with the umask; v2 writes 0600 always (#15789 decision).",
+    "note": "KiloConfigWriter (core/src/kilocode/config/write.ts, #15789) carries the JSONC-preserving edit, revision guard and atomic write; the kilocode.settings RPC (kilo-plugin/src/settings.ts, #15837) carries write() with target-changed and revision-conflict (target-not-writable maps to the RPC's failed error for a target outside the scope, or an io failure). Ported here: excess-key validation (KiloConfigValidate.unknownKeys against KiloConfigPolicy.Info, the full v2 kilo.json schema; reader-migrated legacy names such as permission or autoupdate are refused for set, a null removal is allowed for any key, and the derived workflow_models is refused), lower+validate before write (KiloConfigValidate.check runs the reader's ConfigNormalize + KiloConfigPolicy.parse pipeline on the edited text and refuses new invalid/unsupported issues or such issues on a set path with the RPC invalid error, file untouched; a native-over-legacy conflict does not block; invalid display layouts now report a diagnostic so they are caught too), and patchJsonc's scalar-to-object replacement plus no-op removal of an absent path (RPC expandSet and writer). Not carried: the permission '*' merge (it targets v1's permission.<tool> map; v2 permissions is an ordered rule array and the v1 key is refused on write), sandboxChanged (v1 emitted config.updated{sandbox} for sandbox/policy.ts; v2 kilo-plugin/src/sandbox/index.ts reconciles on every config.updated, which the watcher emits after a settings write, #15861), beforeWrite (test-only hook in config-overlay.test.ts; the v2 guard is the writer's revision check under its lock). Mode: v1 kept the existing mode and created project files with the umask; v2 writes 0600 always (#15789 decision).",
     "by": "v2-config-closeout"
   },
   "module:packages/opencode/test/kilocode/patch-jsonc.test.ts": {
@@ -2024,7 +2024,7 @@
   "module:packages/opencode/src/kilocode/plan-file.ts": {
     "state": "ported",
     "v2": "packages/kilo-plugin/src/plan/plan-file.ts",
-    "note": "PlanFile: plan directory (.kilo2/plans in a version-controlled project, <Kilo data>/plans otherwise, the v2 form of .kilo/plans and Global.Path.data/plans), the default <created>-plan.md path, resolve, locate (exact target vs newer sibling by mtime, then the last plan a planning message wrote), display, ensure.",
+    "note": "PlanFile: plan directory (.kilo/plans in a version-controlled project, <Kilo data>/plans otherwise, the v2 form of .kilo/plans and Global.Path.data/plans), the default <created>-plan.md path, resolve, locate (exact target vs newer sibling by mtime, then the last plan a planning message wrote), display, ensure.",
     "by": "plan-handoff"
   },
   "module:packages/opencode/src/kilocode/plan-followup.ts": {
@@ -2462,7 +2462,7 @@
   "module:packages/opencode/test/kilocode/plugin-git-source.test.ts": {
     "state": "ported",
     "v2": "packages/kilo-plugin/test/plugin-git-source.test.ts",
-    "note": "Spec parsing, identity normalization, and resolution cases are ported to packages/kilo-plugin/test/plugin-git-source.test.ts against PluginGitSource in packages/kilo-plugin/src/plugin/git-source.ts: repo/ref/subpath parsing, credential and option-injection rejection, identity normalization (including Windows and POSIX paths), subpath resolution with symlink containment, ref checkout from a shallow clone, per-ref cache entries, staging cleanup after a failed clone, and `~` expansion. The v1 install/detect/remove case needs the marketplace plugin kind (plan phase 3) and lands in packages/kilo-plugin/test/marketplace-plugin-kind.test.ts; the shared `resolvePluginTarget` entrypoint became the `PluginModule.Options.pluginSource` seam, covered end to end by the host test packages/kilo-cli/test/plugin-git-source.test.ts, which loads a `git:` plugin from kilo2.json.",
+    "note": "Spec parsing, identity normalization, and resolution cases are ported to packages/kilo-plugin/test/plugin-git-source.test.ts against PluginGitSource in packages/kilo-plugin/src/plugin/git-source.ts: repo/ref/subpath parsing, credential and option-injection rejection, identity normalization (including Windows and POSIX paths), subpath resolution with symlink containment, ref checkout from a shallow clone, per-ref cache entries, staging cleanup after a failed clone, and `~` expansion. The v1 install/detect/remove case needs the marketplace plugin kind (plan phase 3) and lands in packages/kilo-plugin/test/marketplace-plugin-kind.test.ts; the shared `resolvePluginTarget` entrypoint became the `PluginModule.Options.pluginSource` seam, covered end to end by the host test packages/kilo-cli/test/plugin-git-source.test.ts, which loads a `git:` plugin from kilo.json.",
     "by": "plugin-git-sources"
   },
   "module:packages/opencode/src/kilocode/wakeup/index.ts": {
@@ -2600,7 +2600,7 @@
   "module:packages/opencode/test/kilocode/headless-session-drain.test.ts": {
     "state": "ported",
     "v2": "packages/kilo-cli/test/session-drain.test.ts",
-    "note": "The round trip through the generated client (token event, not_found, rpc.invalid_input) against an in-process server with the host overrides. The drain is an API for programmatic callers such as Cloud Agent; `kilo2 run` does not call it. The v1 headless-run assertions are native upstream: packages/cli/src/run/noninteractive.ts (upstream #60699, #61911) waits for the background jobs, subagents and follow-up runs its prompt started before the run exits, and cancels them on abort. Dropped on purpose: the v1 assertion that a run (`--session`, `--continue`) also waits for older background work its prompt did not start, and stops it on abort. Upstream filters its wait to jobs started at or after the prompt's admission (noninteractive.ts `background`), because on a shared server another client can own older jobs; a caller that needs the whole session tree to go quiet calls the drain RPC. Summarize and intake work are executions on v2, so Session.wait covers them; the drain is keyed by session ID, so the v1 cross-directory scenarios collapse into the other-Location test of the plugin suite.",
+    "note": "The round trip through the generated client (token event, not_found, rpc.invalid_input) against an in-process server with the host overrides. The drain is an API for programmatic callers such as Cloud Agent; `kilo run` does not call it. The v1 headless-run assertions are native upstream: packages/cli/src/run/noninteractive.ts (upstream #60699, #61911) waits for the background jobs, subagents and follow-up runs its prompt started before the run exits, and cancels them on abort. Dropped on purpose: the v1 assertion that a run (`--session`, `--continue`) also waits for older background work its prompt did not start, and stops it on abort. Upstream filters its wait to jobs started at or after the prompt's admission (noninteractive.ts `background`), because on a shared server another client can own older jobs; a caller that needs the whole session tree to go quiet calls the drain RPC. Summarize and intake work are executions on v2, so Session.wait covers them; the drain is keyed by session ID, so the v1 cross-directory scenarios collapse into the other-Location test of the plugin suite.",
     "by": "kilo/graceful-tower-qr8"
   },
   "api:POST /kilocode/session/{sessionID}/drain": {

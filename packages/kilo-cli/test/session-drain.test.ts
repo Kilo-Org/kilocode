@@ -31,7 +31,7 @@ const boot = (body: (env: Env) => Promise<void>) => async () => {
   await using temporary = await tmpdir("kilo-drain-")
   const directory = temporary.path
   await Bun.write(
-    path.join(directory, "kilo2.json"),
+    path.join(directory, "kilo.json"),
     JSON.stringify({
       permissions: [{ action: "*", resource: "*", effect: "allow" }],
     }),

@@ -19,15 +19,16 @@ export function openReadonly(file: string) {
   if (before.wal) return { db: new Database(file, { readonly: true }), unchanged: () => true }
   return {
     // The URI flag makes every SQLite build parse the `immutable` parameter, whatever its compile-time default.
-    db: new Database(
-      `${pathToFileURL(file).href}?immutable=1`,
-      constants.SQLITE_OPEN_READONLY | constants.SQLITE_OPEN_URI,
-    ),
+    db: openImmutable(file),
     unchanged: () => {
       const now = state(file)
       return now.size === before.size && now.mtime === before.mtime && now.wal === before.wal && now.shm === before.shm
     },
   }
+}
+
+export function openImmutable(file: string) {
+  return new Database(`${pathToFileURL(file).href}?immutable=1`, constants.SQLITE_OPEN_READONLY | constants.SQLITE_OPEN_URI)
 }
 
 /** The error of a copy whose at-rest source changed while it was read, so the copy cannot be trusted. */

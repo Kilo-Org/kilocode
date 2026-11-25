@@ -42,25 +42,25 @@ const ctx = (space: Awaited<ReturnType<typeof workspace>>) =>
 test("plan_exit records the saved plan with the generated name", async () => {
   const result = await run((space, store) => planExit(ctx(space), store, space.data).execute({}, context))
   expect(result).toEqual({
-    output: "Plan is ready at .kilo2/plans/1000-dark-mode-plan.md. Ending planning turn.",
-    metadata: { plan: ".kilo2/plans/1000-dark-mode-plan.md" },
+    output: "Plan is ready at .kilo/plans/1000-dark-mode-plan.md. Ending planning turn.",
+    metadata: { plan: ".kilo/plans/1000-dark-mode-plan.md" },
   })
 })
 
 test("open_plan asks the client to open the plan once", async () => {
   const result = await run((space, store) => openPlan(ctx(space), store, space.data).execute({}, context))
-  expect(result.metadata).toEqual({ path: ".kilo2/plans/1000-dark-mode-plan.md", open: true })
+  expect(result.metadata).toEqual({ path: ".kilo/plans/1000-dark-mode-plan.md", open: true })
 })
 
 test("open_plan accepts an explicit null path from Code Mode", async () => {
   const result = await run((space, store) => openPlan(ctx(space), store, space.data).execute({ path: null }, context))
-  expect(result.metadata).toEqual({ path: ".kilo2/plans/1000-dark-mode-plan.md", open: true })
+  expect(result.metadata).toEqual({ path: ".kilo/plans/1000-dark-mode-plan.md", open: true })
 })
 
 test("plan_exit fails with guidance when no plan file was written", async () => {
   const error = await run((space, store) =>
     Effect.gen(function* () {
-      yield* Effect.promise(() => rm(path.join(space.project, ".kilo2", "plans"), { recursive: true }))
+      yield* Effect.promise(() => rm(path.join(space.project, ".kilo", "plans"), { recursive: true }))
       return yield* planExit(ctx(space), store, space.data)
         .execute({ path: path.join(space.root, "outside.md") }, context)
         .pipe(Effect.flip)

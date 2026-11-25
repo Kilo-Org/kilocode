@@ -1,12 +1,12 @@
 #!/usr/bin/env bun
 // Real end-to-end check of the Kilo browser bridge: the built Chrome MV3 extension loaded into a Chromium the harness
 // launches itself (a real profile, no DevTools download override), paired over loopback with the real CLI
-// (`kilo2 run`, `browser.backend: "extension"`), driven by a scripted OpenAI-compatible model. Not a `bun test` file:
+// (`kilo run`, `browser.backend: "extension"`), driven by a scripted OpenAI-compatible model. Not a `bun test` file:
 // it needs a display, a built CLI binary and the built extension. The launch, pairing, model and CLI-run steps live in
 // extension-harness.ts.
 //
-//   xvfb-run -a -s "-screen 0 1920x1080x24" bun test/browser/extension-e2e.ts <kilo2> <scenario> [--strict]
-//   xvfb-run -a -s "-screen 0 1920x1080x24" bun test/browser/extension-e2e.ts <kilo2> all [--repeat N] [--only a,b] [--out dir] [--strict]
+//   xvfb-run -a -s "-screen 0 1920x1080x24" bun test/browser/extension-e2e.ts <kilo> <scenario> [--strict]
+//   xvfb-run -a -s "-screen 0 1920x1080x24" bun test/browser/extension-e2e.ts <kilo> all [--repeat N] [--only a,b] [--out dir] [--strict]
 //
 //   E2E_EXTENSION_DIR   the built unpacked extension (default: ../../../cloud/apps/extension/.output/chrome-mv3)
 //   E2E_CHROMIUM        the Chromium executable (default: playwright-core's own build)
@@ -38,9 +38,9 @@
 // owned the downloads instead of the extension's guard.
 //
 // The product path this exercises, in order: the extension's "Allow local agents" switch (its settings page, with the
-// optional nativeMessaging prompt granted the way an accepted prompt would), `kilo2 browser hub --loopback`, the
+// optional nativeMessaging prompt granted the way an accepted prompt would), `kilo browser hub --loopback`, the
 // hub's `pairing.url` RPC over the per-user CLI socket, the pairing page opened in the browser (the extension redeems
-// the token and dials the hub), then `kilo2 run` with a scripted model.
+// the token and dials the hub), then `kilo run` with a scripted model.
 import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
@@ -83,7 +83,7 @@ import {
 
 const binaryInput = process.argv[2]
 const scenario = process.argv[3] ?? "navigate-snapshot"
-if (!binaryInput) throw new Error("usage: bun test/browser/extension-e2e.ts <kilo2> <scenario|all>")
+if (!binaryInput) throw new Error("usage: bun test/browser/extension-e2e.ts <kilo> <scenario|all>")
 // Spawned runs use a fresh HOME as their cwd, so the binary path must not depend on the harness's cwd.
 const binary = path.resolve(binaryInput)
 const extensionDirectory = defaultExtensionDirectory

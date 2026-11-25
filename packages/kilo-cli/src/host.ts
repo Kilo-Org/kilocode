@@ -146,10 +146,27 @@ export function schedulingOverrides(overrides: string | undefined) {
   return [overrides, "automations"].filter(Boolean).join(",")
 }
 
+// A long-lived server can open another project after the launching client's preflight.
+function guardedLayout(): ConfigDiscovery.Layout {
+  const layout = KiloConfigDiscovery.layout
+  return {
+    ...layout,
+    walk: (input) =>
+      layout.walk(input).pipe(
+        Effect.tap((dirs) =>
+          Effect.promise(async () => {
+            const { assertProjectDirectories } = await import("./migration/project-config")
+            assertProjectDirectories(dirs, Global.Path.home)
+          }),
+        ),
+      ),
+  }
+}
+
 /**
  * Service replacements that the Kilo host gives the server it starts. `createRoutes` applies them after its
- * standard set, so they win: the Kilo plugins, Kilo's app identity and Kilo's config discovery (`kilo2.json`,
- * `.kilo2`, worktree boundary).
+ * standard set, so they win: the Kilo plugins, Kilo's app identity and Kilo's config discovery (`kilo.json`,
+ * `.kilo`, worktree boundary).
  */
 export const overrides: LayerNode.Replacements = [
   KiloWorkflowDelivery.override,
@@ -246,7 +263,7 @@ export const overrides: LayerNode.Replacements = [
   SessionRunnerModel.node.replace(KiloGatewayModel.node),
   Session.node.replace(KiloSessionRevert.node),
   // kilo_port(unattributed:config:546539fc1643) kilo_port(unattributed:config:8cdbdec70393)
-  ConfigDiscovery.node.replace(Layer.succeed(ConfigDiscovery.LayoutService, KiloConfigDiscovery.layout)),
+  ConfigDiscovery.node.replace(Layer.succeed(ConfigDiscovery.LayoutService, guardedLayout())),
   // A sandboxed tool call spawns, writes and sends HTTP requests inside its sandbox profile.
   // kilo_port(sandbox:b09868b61af4)
   Environment.node.replace(Environment.node.mapLayer(KiloSandbox.environment)),

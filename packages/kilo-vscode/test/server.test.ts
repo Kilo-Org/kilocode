@@ -27,7 +27,7 @@ function checkout() {
 }
 
 describe("command", () => {
-  test("uses the repository dev entry with an isolated profile when bin/kilo2 is missing", () => {
+  test("uses the repository dev entry with an isolated profile when bin/kilo is missing", () => {
     const { dir, extension } = checkout()
     const found = command({ extension, storage: "/storage", env: {} })
     expect(found?.args).toEqual([path.join(dir, "script", "dev-isolated.ts"), "serve", "--port", "0", "--stdio"])
@@ -43,12 +43,12 @@ describe("command", () => {
     rmSync(dir, { recursive: true })
   })
 
-  test("prefers a bundled bin/kilo2", async () => {
+  test("prefers a bundled bin/kilo", async () => {
     const dir = await mkdtemp(path.join(tmpdir(), "kilo-vscode-"))
     await mkdir(path.join(dir, "bin"))
-    await Bun.write(path.join(dir, "bin", "kilo2"), "")
+    await Bun.write(path.join(dir, "bin", "kilo"), "")
     expect(command({ extension: dir, storage: "/storage", env: {}, platform: "darwin" })).toEqual({
-      cmd: path.join(dir, "bin", "kilo2"),
+      cmd: path.join(dir, "bin", "kilo"),
       args: ["serve", "--port", "0", "--stdio"],
       env: {},
     })
@@ -65,12 +65,12 @@ describe("command", () => {
 describe("serverPlans", () => {
   test("is the profile data plan directory for the isolated dev server", () => {
     const cmd = { cmd: "bun", args: [], env: { KILO_V2_PROFILE: path.join(tmpdir(), "profile") } }
-    expect(serverPlans(cmd, {})).toBe(path.join(tmpdir(), "profile", "data", "kilo2", "plans"))
+    expect(serverPlans(cmd, {})).toBe(path.join(tmpdir(), "profile", "data", "kilo", "plans"))
   })
 
   test("is the Kilo data plan directory for the bundled server", () => {
-    expect(serverPlans({ cmd: "kilo2", args: [], env: {} }, { XDG_DATA_HOME: "/d" })).toBe(
-      path.join("/d", "kilo2", "plans"),
+    expect(serverPlans({ cmd: "kilo", args: [], env: {} }, { XDG_DATA_HOME: "/d" })).toBe(
+      path.join("/d", "kilo", "plans"),
     )
   })
 })

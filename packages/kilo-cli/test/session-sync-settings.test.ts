@@ -54,18 +54,18 @@ test.each([
   '{"session_sync": null}', '{"session_sync": "true"}', '{"session_sync": 1}',
   '{"session_sync": []}', '{"session_sync": {}}', '{"session_sync":', "/* unterminated",
 ])("invalid roots, types and syntax are not overwritten: %s", async (text) => directory(async (root) => {
-  const file = path.join(root, "kilo2.jsonc")
+  const file = path.join(root, "kilo.jsonc")
   await fs.writeFile(file, text)
   const config = settings(root)
   expect((await Effect.runPromise(Effect.flip(config.enabled))).code).toBe("settings_unavailable")
   expect((await Effect.runPromise(Effect.flip(config.set(false)))).code).toBe("settings_unavailable")
   expect(await fs.readFile(file, "utf8")).toBe(text)
-  expect((await fs.readdir(root)).sort()).toEqual([".locks", "kilo2.jsonc"])
+  expect((await fs.readdir(root)).sort()).toEqual([".locks", "kilo.jsonc"])
 }))
 
 test("only the winning global setting changes; unrelated JSONC comments and fields survive", async () => directory(async (root) => {
-  const lower = path.join(root, "kilo2.json")
-  const winning = path.join(root, "kilo2.jsonc")
+  const lower = path.join(root, "kilo.json")
+  const winning = path.join(root, "kilo.jsonc")
   const lowerText = '{ "session_sync": true, "shell": "bash" }\n'
   const text = '// global settings\n{\n  // keep this shell\n  "shell": "zsh",\n  "session_sync": true, // keep this comment\n  "plugins": ["example"],\n}\n// footer\n'
   await fs.writeFile(lower, lowerText)
@@ -77,17 +77,17 @@ test("only the winning global setting changes; unrelated JSONC comments and fiel
 }))
 
 test("an empty higher-precedence document leaves the lower setting in force", async () => directory(async (root) => {
-  await fs.writeFile(path.join(root, "kilo2.json"), '{"session_sync": false}\n')
-  await fs.writeFile(path.join(root, "kilo2.jsonc"), "// no override\n")
+  await fs.writeFile(path.join(root, "kilo.json"), '{"session_sync": false}\n')
+  await fs.writeFile(path.join(root, "kilo.jsonc"), "// no override\n")
   expect(await Effect.runPromise(settings(root).enabled)).toBe(false)
   await Effect.runPromise(settings(root).set(true))
   expect(await Effect.runPromise(settings(root).enabled)).toBe(true)
-  expect(await fs.readFile(path.join(root, "kilo2.json"), "utf8")).toBe('{"session_sync": false}\n')
-  expect(await fs.readFile(path.join(root, "kilo2.jsonc"), "utf8")).toContain("// no override")
+  expect(await fs.readFile(path.join(root, "kilo.json"), "utf8")).toBe('{"session_sync": false}\n')
+  expect(await fs.readFile(path.join(root, "kilo.jsonc"), "utf8")).toContain("// no override")
 }))
 
 test("a write atomically replaces the config without exposing partially written content", async () => directory(async (root) => {
-  const file = path.join(root, "kilo2.jsonc")
+  const file = path.join(root, "kilo.jsonc")
   const text = '{"session_sync": true, "shell": "zsh"}\n'
   await fs.writeFile(file, text)
   const reader = await open(file, "r")
@@ -117,7 +117,7 @@ test("a write atomically replaces the config without exposing partially written 
       expect((await fs.stat(file)).mode & 0o777).toBe(0o600)
     }
     expect(parse(await fs.readFile(file, "utf8"))).toEqual({ session_sync: false, shell: "zsh" })
-    expect((await fs.readdir(root)).sort()).toEqual([".locks", "kilo2.jsonc"])
+    expect((await fs.readdir(root)).sort()).toEqual([".locks", "kilo.jsonc"])
   } finally {
     if (!closed) await reader.close()
     await changed.catch(() => undefined)
@@ -127,7 +127,7 @@ test("a write atomically replaces the config without exposing partially written 
 
 for (const code of ["EPERM", "EBUSY", "EACCES"]) {
   test(`temporary ${code} replacement failures retry without truncating the config`, async () => directory(async (root) => {
-    const file = path.join(root, "kilo2.jsonc")
+    const file = path.join(root, "kilo.jsonc")
     const text = '{"session_sync": true, "shell": "zsh"}\n'
     await fs.writeFile(file, text)
     let attempts = 0
@@ -144,11 +144,11 @@ for (const code of ["EPERM", "EBUSY", "EACCES"]) {
     }
     expect(attempts).toBe(4)
     expect(parse(await fs.readFile(file, "utf8"))).toEqual({ session_sync: false, shell: "zsh" })
-    expect((await fs.readdir(root)).sort()).toEqual([".locks", "kilo2.jsonc"])
+    expect((await fs.readdir(root)).sort()).toEqual([".locks", "kilo.jsonc"])
   }))
 
   test(`persistent ${code} replacement failures are bounded and retryable`, async () => directory(async (root) => {
-    const file = path.join(root, "kilo2.jsonc")
+    const file = path.join(root, "kilo.jsonc")
     const text = '{"session_sync": true, "shell": "zsh"}\n'
     await fs.writeFile(file, text)
     let attempts = 0
@@ -166,12 +166,12 @@ for (const code of ["EPERM", "EBUSY", "EACCES"]) {
     }
     expect(attempts).toBe(8)
     expect(await fs.readFile(file, "utf8")).toBe(text)
-    expect((await fs.readdir(root)).sort()).toEqual([".locks", "kilo2.jsonc"])
+    expect((await fs.readdir(root)).sort()).toEqual([".locks", "kilo.jsonc"])
   }))
 }
 
 test("concurrent settings instances serialize their actual filesystem writes", async () => directory(async (root) => {
-  const file = path.join(root, "kilo2.jsonc")
+  const file = path.join(root, "kilo.jsonc")
   const text = '{"session_sync": true, "shell": "zsh"}\n'
   await fs.writeFile(file, text)
   const opened = Promise.withResolvers<void>()
@@ -211,7 +211,7 @@ test("concurrent settings instances serialize their actual filesystem writes", a
     await Promise.all(pending)
     expect(writes).toBe(2)
     expect(parse(await fs.readFile(file, "utf8"))).toEqual({ session_sync: true, shell: "zsh" })
-    expect((await fs.readdir(root)).sort()).toEqual([".locks", "kilo2.jsonc"])
+    expect((await fs.readdir(root)).sort()).toEqual([".locks", "kilo.jsonc"])
   } finally {
     resume.resolve()
     await Promise.allSettled(pending)
@@ -222,8 +222,8 @@ test("concurrent settings instances serialize their actual filesystem writes", a
 
 for (const change of ["in-place edit", "atomic replacement", "same-text replacement", "higher-precedence creation"] as const) {
   test(`revision conflicts rebase a non-cooperating ${change}`, async () => directory(async (root) => {
-    const file = path.join(root, "kilo2.json")
-    const higher = path.join(root, "kilo2.jsonc")
+    const file = path.join(root, "kilo.json")
+    const higher = path.join(root, "kilo.jsonc")
     const text = '{"session_sync": true, "shell": "zsh"}\n'
     const external = '// plugin add\n{"session_sync": true, "shell": "zsh", "plugins": ["added"]}\n'
     await fs.writeFile(file, text)
@@ -263,7 +263,7 @@ for (const change of ["in-place edit", "atomic replacement", "same-text replacem
 }
 
 test("continued revision conflicts fail without overwriting external edits or leaving temporary files", async () => directory(async (root) => {
-  const file = path.join(root, "kilo2.jsonc")
+  const file = path.join(root, "kilo.jsonc")
   await fs.writeFile(file, '{"session_sync": true}\n')
   let writes = 0
   const opening = spyOn(fs, "open").mockImplementation(async (...args) => {
@@ -281,5 +281,5 @@ test("continued revision conflicts fail without overwriting external edits or le
   }
   expect(writes).toBe(8)
   expect(parse(await fs.readFile(file, "utf8"))).toEqual({ session_sync: true, external: writes })
-  expect((await fs.readdir(root)).sort()).toEqual([".locks", "kilo2.jsonc"])
+  expect((await fs.readdir(root)).sort()).toEqual([".locks", "kilo.jsonc"])
 }))

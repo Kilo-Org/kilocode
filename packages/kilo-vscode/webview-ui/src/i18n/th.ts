@@ -1162,11 +1162,11 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "หมดเวลาของแค็ตตาล็อก (มิลลิวินาที)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "หมดเวลาการทำงาน (มิลลิวินาที)",
   "settings.agentBehaviour.mcpEmpty":
-    "ไม่ได้กำหนดค่าเซิร์ฟเวอร์ MCP เพิ่มเซิร์ฟเวอร์ MCP ใน kilo2.json หรือขอให้เอเจนต์เพิ่มให้คุณ",
+    "ไม่ได้กำหนดค่าเซิร์ฟเวอร์ MCP เพิ่มเซิร์ฟเวอร์ MCP ใน kilo.json หรือขอให้เอเจนต์เพิ่มให้คุณ",
   "settings.agentBehaviour.workflows.description":
     "เวิร์กโฟลว์คือคำสั่งแบบกำหนดเองที่กำหนดไว้ในการตั้งค่าของคุณหรือในไฟล์ Markdown ของคำสั่ง คุณสามารถตั้งค่าโมเดลและตัวแปรการให้เหตุผลสำหรับแต่ละเวิร์กโฟลว์",
   "settings.agentBehaviour.workflows.empty":
-    "ไม่พบคำสั่งแบบกำหนดเอง เพิ่มคำสั่งใน kilo2.json หรือไฟล์ Markdown ใน .kilo2/command",
+    "ไม่พบคำสั่งแบบกำหนดเอง เพิ่มคำสั่งใน kilo.json หรือไฟล์ Markdown ใน .kilo/command",
   "settings.agentBehaviour.workflows.detail.description": "คำอธิบาย",
   "settings.agentBehaviour.workflows.detail.template": "เทมเพลต",
   "settings.agentBehaviour.workflows.model": "โมเดล",

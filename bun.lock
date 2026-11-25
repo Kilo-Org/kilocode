@@ -277,6 +277,7 @@
         "@clack/prompts": "1.0.0-alpha.1",
         "@effect/platform-node": "catalog:",
         "@kilocode/gateway-core": "workspace:*",
+        "@kilocode/kilo-i18n": "workspace:*",
         "@kilocode/kilo-indexing": "workspace:*",
         "@kilocode/kilo-plugin": "workspace:*",
         "@kilocode/sandbox": "workspace:*",

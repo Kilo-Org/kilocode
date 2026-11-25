@@ -1180,11 +1180,11 @@ export const dict = {
   "settings.agentBehaviour.mcp.timeout.catalog.title": "Limit czasu katalogu (ms)",
   "settings.agentBehaviour.mcp.timeout.execution.title": "Limit czasu wykonania (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "Brak skonfigurowanych serwerów MCP. Dodaj serwery MCP w kilo2.json lub poproś agenta o ich dodanie.",
+    "Brak skonfigurowanych serwerów MCP. Dodaj serwery MCP w kilo.json lub poproś agenta o ich dodanie.",
   "settings.agentBehaviour.workflows.description":
     "Przepływy pracy to niestandardowe komendy zdefiniowane w konfiguracji lub w plikach Markdown z komendami. Dla każdego przepływu pracy możesz ustawić model i wariant rozumowania.",
   "settings.agentBehaviour.workflows.empty":
-    "Nie znaleziono niestandardowych komend. Dodaj komendy do kilo2.json lub pliku Markdown w .kilo2/command.",
+    "Nie znaleziono niestandardowych komend. Dodaj komendy do kilo.json lub pliku Markdown w .kilo/command.",
   "settings.agentBehaviour.workflows.detail.description": "Opis",
   "settings.agentBehaviour.workflows.detail.template": "Szablon",
   "settings.agentBehaviour.workflows.model": "model",
