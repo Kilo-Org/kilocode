@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "bun:test"
-import { createSpeechToTextHost } from "../src/speech-to-text/host"
+import { createSpeechAuthWatcher, createSpeechToTextHost } from "../src/speech-to-text/host"
+import type { SpeechCatalogResult } from "../src/speech-to-text/catalog"
 
 type Posted = Record<string, unknown> & { type: string }
 type Capture = {
@@ -16,6 +17,7 @@ const state = {
   signedIn: true,
   capture: undefined as Capture | undefined,
   transcribe: undefined as Transcribe | undefined,
+  fetchModels: undefined as (() => Promise<SpeechCatalogResult>) | undefined,
 }
 
 const deps = {
@@ -26,10 +28,11 @@ const deps = {
   prewarm: () => Promise.resolve(),
   readSettings: async () => state.settings,
   writeTarget: () => "/tmp/kilo-speech-test.json",
-  fetchModels: async () => ({
-    ok: true as const,
-    models: [{ id: "gw/model", label: "Gateway Model", provider: "Kilo" }],
-  }),
+  fetchModels: async () =>
+    state.fetchModels?.() ?? {
+      ok: true as const,
+      models: [{ id: "gw/model", label: "Gateway Model", provider: "Kilo" }],
+    },
   signedIn: async () => state.signedIn,
   staticModels: () => [{ id: "static/model", label: "Static Model", provider: "Kilo" }],
   transcribe: (input: { signal?: AbortSignal }) =>
@@ -44,13 +47,14 @@ async function waitFor(check: () => boolean, label: string) {
   throw new Error(`timed out waiting for ${label}`)
 }
 
-function setup() {
+function setup(opts?: { onAuthChange?: (listener: () => void) => () => void; directory?: string }) {
   const posted: Posted[] = []
   const host = createSpeechToTextHost({
     server: { get: async () => ({ url: "http://127.0.0.1:1", authorization: "Basic test" }) } as never,
-    directory: "/repo",
+    directory: opts?.directory ?? "/repo",
     remote: false,
     profile: "/profile",
+    onAuthChange: opts?.onAuthChange,
     deps,
     post: (message) => posted.push(message as Posted),
   })
@@ -63,6 +67,7 @@ beforeEach(() => {
   state.signedIn = true
   state.capture = undefined
   state.transcribe = undefined
+  state.fetchModels = undefined
 })
 
 describe("speech host status", () => {
@@ -254,5 +259,210 @@ describe("speech host recording", () => {
     await waitFor(() => find("speechToTextStarted").length === 1, "started")
     host.dispose()
     await waitFor(() => cancelled === 1, "capture cancel")
+  })
+})
+
+describe("speech host auth and 401 invalidation", () => {
+  it("reuses the cached Gateway catalog within TTL while auth is unchanged", async () => {
+    let fetches = 0
+    state.fetchModels = async () => {
+      fetches++
+      return { ok: true, models: [{ id: `gw/model-${fetches}`, label: "Model", provider: "Kilo" }] }
+    }
+    const { host, find } = setup()
+
+    host.handle({ type: "speechToTextConfig" })
+    await waitFor(() => find("speechToTextConfigLoaded").length === 1, "first status")
+    host.handle({ type: "speechToTextConfig" })
+    await waitFor(() => find("speechToTextConfigLoaded").length === 2, "second status")
+
+    expect(fetches).toBe(1)
+    expect(find("speechToTextConfigLoaded")[1]?.status).toMatchObject({ model: "gw/model-1" })
+    host.dispose()
+  })
+
+  it("invalidates the cached catalog and refreshes status on a 401 transcription error", async () => {
+    let fetches = 0
+    state.fetchModels = async () => {
+      fetches++
+      return { ok: true, models: [{ id: `gw/model-${fetches}`, label: `Model ${fetches}`, provider: "Kilo" }] }
+    }
+    state.capture = {
+      start: async () => true,
+      stop: async (id) => ({ data: "AAAA", format: "m4a", model: id }),
+      cancel: async () => {},
+    }
+    state.transcribe = async () => {
+      state.signedIn = false
+      return { ok: false, error: "Sign in to Kilo to use speech input.", code: "not_authenticated" }
+    }
+
+    const { host, find } = setup()
+    host.handle({ type: "speechToTextConfig" })
+    await waitFor(() => find("speechToTextConfigLoaded").length === 1, "initial status")
+    expect(fetches).toBe(1)
+    expect(find("speechToTextConfigLoaded")[0]?.status).toMatchObject({ enabled: true, signedIn: true, model: "gw/model-1" })
+
+    host.handle({ type: "speechToTextStart", requestId: "1", model: "gw/model-1" })
+    await waitFor(() => find("speechToTextStarted").length === 1, "started")
+    host.handle({ type: "speechToTextStop", requestId: "1" })
+
+    await waitFor(() => find("speechToTextError").length === 1, "401 error")
+    await waitFor(() => find("speechToTextConfigLoaded").length === 2, "refreshed status after 401")
+
+    expect(find("speechToTextError")[0]).toMatchObject({ requestId: "1", code: "not_authenticated" })
+    expect(fetches).toBe(2)
+    expect(find("speechToTextConfigLoaded")[1]?.status).toMatchObject({
+      enabled: false,
+      signedIn: false,
+      model: "gw/model-2",
+    })
+    host.dispose()
+  })
+
+  it("invalidates catalog and pushes updated status when onAuthChange fires, without stale in-flight poisoning", async () => {
+    const authListeners = new Set<() => void>()
+    const triggerAuth = () => authListeners.forEach((fn) => fn())
+    let fetches = 0
+    let resolveStale: ((value: SpeechCatalogResult) => void) | undefined
+    state.fetchModels = () => {
+      fetches++
+      if (fetches === 1) return new Promise((resolve) => (resolveStale = resolve))
+      return Promise.resolve({ ok: true, models: [{ id: "gw/org-model", label: "Org Model", provider: "Kilo" }] })
+    }
+
+    const { host, find } = setup({
+      onAuthChange: (listener) => {
+        authListeners.add(listener)
+        return () => void authListeners.delete(listener)
+      },
+    })
+
+    // Start an initial fetch that stays in flight while auth switches.
+    host.handle({ type: "speechToTextConfig" })
+    await waitFor(() => fetches === 1, "first fetch started")
+
+    // Auth changes while first fetch is still pending.
+    triggerAuth()
+    await waitFor(() => find("speechToTextConfigLoaded").length === 1, "post-auth status")
+    expect(find("speechToTextConfigLoaded")[0]?.status).toMatchObject({ model: "gw/org-model" })
+
+    // Resolving the stale first fetch must neither post nor overwrite the cache.
+    resolveStale?.({ ok: true, models: [{ id: "gw/stale-model", label: "Stale", provider: "Kilo" }] })
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(find("speechToTextConfigLoaded")).toHaveLength(1)
+
+    host.handle({ type: "speechToTextConfig" })
+    await waitFor(() => find("speechToTextConfigLoaded").length === 2, "cached org status")
+    expect(fetches).toBe(2)
+    expect(find("speechToTextConfigLoaded")[1]?.status).toMatchObject({ model: "gw/org-model" })
+
+    // Dispose unsubscribes and prevents further pushes.
+    host.dispose()
+    expect(authListeners.size).toBe(0)
+    triggerAuth()
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(find("speechToTextConfigLoaded")).toHaveLength(2)
+  })
+
+  it("misses cache when signedIn state flips even before an auth event arrives", async () => {
+    let fetches = 0
+    state.fetchModels = async () => {
+      fetches++
+      return { ok: true, models: [{ id: `gw/model-${fetches}`, label: "Model", provider: "Kilo" }] }
+    }
+    state.signedIn = false
+    const { host, find } = setup()
+
+    host.handle({ type: "speechToTextConfig" })
+    await waitFor(() => find("speechToTextConfigLoaded").length === 1, "signed-out status")
+    expect(fetches).toBe(1)
+
+    state.signedIn = true
+    host.handle({ type: "speechToTextConfig" })
+    await waitFor(() => find("speechToTextConfigLoaded").length === 2, "signed-in status")
+    expect(fetches).toBe(2)
+    expect(find("speechToTextConfigLoaded")[1]?.status).toMatchObject({
+      enabled: true,
+      signedIn: true,
+      model: "gw/model-2",
+    })
+    host.dispose()
+  })
+})
+
+describe("createSpeechAuthWatcher", () => {
+  it("shares one host connection subscription across panels and filters auth, org, provider, and reconnect events", () => {
+    let eventRegistrations = 0
+    let stateRegistrations = 0
+    let onEvent: ((event: unknown) => void) | undefined
+    let onState: ((state: "connecting" | "connected" | "disconnected") => void) | undefined
+    let currentState: "connecting" | "connected" | "disconnected" = "connected"
+
+    const connection = {
+      state: () => currentState,
+      onEvent: (listener: (event: unknown) => void) => {
+        eventRegistrations++
+        onEvent = listener
+        return () => {
+          onEvent = undefined
+        }
+      },
+      onState: (listener: (state: "connecting" | "connected" | "disconnected") => void) => {
+        stateRegistrations++
+        onState = listener
+        return () => {
+          onState = undefined
+        }
+      },
+    }
+
+    const watcher = createSpeechAuthWatcher(connection as never)
+    let sidebarHits = 0
+    let settingsHits = 0
+    let otherDirHits = 0
+    const unsubSidebar = watcher.subscribe("/repo", () => sidebarHits++)
+    const unsubSettings = watcher.subscribe("/repo/", () => settingsHits++)
+    const unsubOther = watcher.subscribe("/other", () => otherDirHits++)
+
+    expect(eventRegistrations).toBe(1)
+    expect(stateRegistrations).toBe(1)
+
+    // Non-Kilo credential switches and unrelated events are ignored.
+    onEvent?.({ type: "credential.switched", data: { integrationID: "anthropic", credentialID: "c1" } })
+    onEvent?.({ type: "session.idle", data: { sessionID: "s1" } })
+    expect([sidebarHits, settingsHits, otherDirHits]).toEqual([0, 0, 0])
+
+    // Kilo credential switch and organization switch notify every open panel.
+    onEvent?.({ type: "credential.switched", data: { integrationID: "kilo", credentialID: "c2" } })
+    expect([sidebarHits, settingsHits, otherDirHits]).toEqual([1, 1, 1])
+
+    onEvent?.({ type: "rpc.kilocode.gateway.organization", data: { organizationID: "org_1" } })
+    expect([sidebarHits, settingsHits, otherDirHits]).toEqual([2, 2, 2])
+
+    // Directory-scoped provider.updated only notifies panels for that directory.
+    onEvent?.({ type: "provider.updated", location: { directory: "/repo" }, data: {} })
+    expect([sidebarHits, settingsHits, otherDirHits]).toEqual([3, 3, 2])
+
+    // Reconnect after a drop refreshes every open panel once connected again.
+    currentState = "connecting"
+    onState?.("connecting")
+    expect([sidebarHits, settingsHits, otherDirHits]).toEqual([3, 3, 2])
+    currentState = "connected"
+    onState?.("connected")
+    expect([sidebarHits, settingsHits, otherDirHits]).toEqual([4, 4, 3])
+    // A duplicate connected transition without a prior drop does not fire again.
+    onState?.("connected")
+    expect([sidebarHits, settingsHits, otherDirHits]).toEqual([4, 4, 3])
+
+    unsubSidebar()
+    onEvent?.({ type: "credential.switched", data: { integrationID: "kilo", credentialID: null } })
+    expect([sidebarHits, settingsHits, otherDirHits]).toEqual([4, 5, 4])
+
+    unsubSettings()
+    unsubOther()
+    watcher.dispose()
+    expect(onEvent).toBeUndefined()
+    expect(onState).toBeUndefined()
   })
 })

@@ -38,18 +38,28 @@ export class AutocompleteRequestError extends Error {
   }
 }
 
+const RECONNECT = 1_000
+const MAX_RECONNECT = 30_000
+
 /**
  * The autocomplete connection of the extension host. `started` and `stopped` follow the server manager, so
  * `connected()` is true only while a server runs. Each server start subscribes to its event stream to report
  * credential and team changes, which can lift an authentication or credit failure.
  */
-export function createConnection(input: { server: Manager; directory: string }) {
+export function createConnection(input: {
+  server: Manager
+  directory: string
+  reconnect?: number
+  maxReconnect?: number
+}) {
   const state: { connected: boolean; client?: { url: string; api: ReturnType<typeof OpenCode.make> }; events?: AbortController } = {
     connected: false,
   }
   const listeners = new Set<() => void>()
   const auth = new Set<() => void>()
   const location = { directory: input.directory }
+  const base = input.reconnect ?? RECONNECT
+  const max = Math.max(base, input.maxReconnect ?? MAX_RECONNECT)
 
   const api = async () => {
     const server = await input.server.get()
@@ -59,11 +69,38 @@ export function createConnection(input: { server: Manager; directory: string }) 
     return client
   }
   const rpc = async () => (await api()).rpc(KiloGatewayRpc.Definition)
+  const notifyAuth = () => auth.forEach((listener) => listener())
 
+  // Reconnect with exponential backoff when the SSE stream drops so credential and team changes keep lifting
+  // fatal ErrorBackoff states without requiring a server restart.
   const watch = async (signal: AbortSignal) => {
-    const client = await api()
-    for await (const event of client.event.subscribe({ signal })) {
-      if (AUTH_EVENTS.includes(event.type)) auth.forEach((listener) => listener())
+    let delay = base
+    let reconnecting = false
+    while (!signal.aborted) {
+      let established = false
+      try {
+        const client = await api()
+        if (signal.aborted) return
+        for await (const event of client.event.subscribe({ signal })) {
+          delay = base
+          if (event.type === "server.connected") {
+            // An auth or organization change during the disconnect window is lost, so notify once on reconnect.
+            if (reconnecting) {
+              reconnecting = false
+              notifyAuth()
+            }
+            established = true
+            continue
+          }
+          if (AUTH_EVENTS.includes(event.type)) notifyAuth()
+        }
+      } catch {
+        // Transient stream drop or server hiccup: retry until stopped or disposed.
+      }
+      if (signal.aborted) return
+      if (established) reconnecting = true
+      await sleep(delay, signal)
+      delay = Math.min(delay * 2, max)
     }
   }
 
@@ -115,7 +152,26 @@ export function createConnection(input: { server: Manager; directory: string }) 
 
 export type Connection = ReturnType<typeof createConnection>
 
-const AUTH_EVENTS: string[] = ["credential.updated", "credential.switched", `rpc.${KiloGatewayRpc.Definition.id}.organization`]
+// Deliberately excludes `provider.updated`, which also fires on periodic catalog refreshes and new worktree
+// locations and would spuriously reset fatal backoff / re-show credit warnings.
+const AUTH_EVENTS: readonly string[] = [
+  "credential.updated",
+  "credential.switched",
+  `rpc.${KiloGatewayRpc.Definition.id}.organization`,
+]
+
+function sleep(ms: number, signal: AbortSignal): Promise<void> {
+  if (signal.aborted) return Promise.resolve()
+  return new Promise((resolve) => {
+    const done = () => {
+      clearTimeout(timer)
+      signal.removeEventListener("abort", done)
+      resolve()
+    }
+    const timer = setTimeout(done, ms)
+    signal.addEventListener("abort", done, { once: true })
+  })
+}
 
 /** An RPC failure as an error the backoff can classify: `request` carries the status, `unauthorized` is a 401. */
 function failure(error: unknown, signal?: AbortSignal) {

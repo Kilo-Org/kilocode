@@ -8,6 +8,7 @@ import { editorPanel } from "./editor-panel"
 import type { SettingsNavigation, ToHost, ToWebview } from "./protocol"
 import type { Manager } from "./server"
 import { parseSettingsTarget } from "./settings-navigation"
+import type { SpeechAuthSubscribe } from "./speech-to-text/host"
 
 /** The last tab the user looked at. Workspace state so a closed panel reopens on it, and a new webview can be told
  *  before it finishes loading, which webview state cannot do. */
@@ -24,6 +25,7 @@ export function settings(input: {
   onReset: () => void
   /** The Agent Manager project settings handler, shared with the provider that owns the projects. */
   agentManager?: () => SettingsHandler
+  onSpeechAuthChange?: SpeechAuthSubscribe
 }) {
   const state: { target: SettingsNavigation } = {
     target: {
@@ -58,6 +60,7 @@ export function settings(input: {
     browserSettings: input.browserSettings,
     onReset: input.onReset,
     agentManager: input.agentManager,
+    onSpeechAuthChange: input.onSpeechAuthChange,
   })
   const open = (args: unknown[] = []) => {
     const requested = parseSettingsTarget(args)
