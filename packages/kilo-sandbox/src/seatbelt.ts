@@ -36,7 +36,7 @@ function policy(profile: Profile, proxy?: ProxyRuntime) {
   const allow = profile.filesystem.allowWrite.map((rule, index) => {
     const key = `ALLOW_WRITE_${index}`
     params.push({ key, value: rule.path })
-    return filter(rule, key)
+    return { rule, key }
   })
   const deny = profile.filesystem.denyWrite.flatMap((rule, index) => {
     const key = `DENY_WRITE_${index}`
@@ -44,10 +44,29 @@ function policy(profile: Profile, proxy?: ProxyRuntime) {
     return exclude(rule, key)
   })
   const names = profile.filesystem.denyNames.map((name) => `(require-not (regex #"(^|/)${escape(name)}(/|$)"))`)
-  const write =
-    allow.length === 0
-      ? ""
-      : `(allow file-write*\n  (require-all\n    (require-any ${allow.join(" ")})\n    ${[...deny, ...names].join("\n    ")}\n  )\n)`
+  const strict = allow.filter((item) => !item.rule.markers)
+  const markers = allow.filter((item) => item.rule.markers)
+  const excluded = strict.flatMap((item) => exclude(item.rule, item.key))
+  const inside = profile.filesystem.denyNames.map((name) => `(require-not (regex #"(^|/)${escape(name)}/"))`)
+  // Marker roots also let a regular file carry a denied name, but only through create and in-place
+  // data writes. Renames, swaps, links and unlinks need other operations, so an existing marker can
+  // never be replaced by a directory or symlink. Paths a strict root covers are excluded.
+  const rules = [
+    { ops: "file-write*", roots: strict, extra: names },
+    { ops: "file-write*", roots: markers, extra: [...names, ...excluded] },
+    {
+      ops: "file-write-create file-write-data",
+      roots: markers,
+      extra: [...inside, "(vnode-type REGULAR-FILE)", ...excluded],
+    },
+  ]
+  const write = rules
+    .filter((item) => item.roots.length > 0)
+    .map(
+      (item) =>
+        `(allow ${item.ops}\n  (require-all\n    (require-any ${item.roots.map((root) => filter(root.rule, root.key)).join(" ")})\n    ${[...deny, ...item.extra].join("\n    ")}\n  )\n)`,
+    )
+    .join("\n")
   return {
     value: [
       base,

@@ -243,6 +243,28 @@ describe("sandbox policy", () => {
     expect(profile(linked).filesystem.denyNames).toContain(".git")
   })
 
+  test("lets explicit writable paths hold .git marker files without reopening the workspace .git", async () => {
+    await using tmp = await fixture()
+    const dirs = tmp.extra
+    const ctx = context(dirs.local, dirs.main, dirs)
+    const policy = profile(ctx, "deny", [dirs.approved, path.dirname(dirs.main)])
+    const result = await Effect.runPromise(
+      Effect.all([
+        runSandbox(policy, assertWrite(path.join(dirs.approved, "sdists-v9", ".git")).pipe(Effect.exit)),
+        runSandbox(policy, assertWrite(path.join(dirs.main, ".git", "config")).pipe(Effect.exit)),
+        runSandbox(policy, assertWrite(path.join(dirs.local, ".git")).pipe(Effect.exit)),
+      ]),
+    )
+
+    expect(Exit.isSuccess(result[0])).toBe(true)
+    expect(Exit.isFailure(result[1])).toBe(true)
+    expect(Exit.isFailure(result[2])).toBe(true)
+    expect(policy.filesystem.allowWrite.filter((rule) => rule.markers).map((rule) => rule.path)).toEqual([
+      dirs.approved,
+      path.dirname(dirs.main),
+    ])
+  })
+
   test("does not add externally approved paths to writable roots", async () => {
     await using tmp = await fixture()
     const dirs = tmp.extra
