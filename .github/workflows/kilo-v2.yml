@@ -488,7 +488,10 @@ jobs:
           bun packages/kilo-cli/script/kilocode/bubblewrap.ts --arch x64 --output "$RUNNER_TEMP/bwrap"
           echo "KILO_BWRAP_PATH=$RUNNER_TEMP/bwrap" >> "$GITHUB_ENV"
           echo "KILO_REQUIRE_LINUX_SANDBOX=1" >> "$GITHUB_ENV"
-          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          # Only kernels with Ubuntu's AppArmor user namespace restriction expose this switch.
+          if [[ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]]; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
 
       - name: Test the Kilo sandbox engine
         working-directory: packages/kilo-sandbox
