@@ -38,14 +38,12 @@ on:
 concurrency: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.oidc_check && 'oidc-check' || inputs.version || inputs.bump }} # kilocode_change
 
 permissions:
-  id-token: write
-  contents: write
-  issues: write # kilocode_change - label automated JetBrains CLI pin bump PRs
-  packages: write
-  pull-requests: write # kilocode_change - create automated JetBrains CLI pin bump PRs
+  contents: read # kilocode_change
 
 jobs:
   version:
+    permissions: # kilocode_change
+      contents: write # kilocode_change - create the draft release
     runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.repository == 'Kilo-Org/kilocode' && !inputs.oidc_check # kilocode_change
     steps:
@@ -408,6 +406,9 @@ jobs:
   # kilo-cli-signed.tar.zst; all downstream jobs use that.
   sign-cli-windows:
     name: Sign CLI (Windows EV)
+    permissions:
+      contents: write # Replace draft release assets with signed Windows zips.
+      id-token: write # Authenticate to Azure Key Vault.
     needs: build-cli
     runs-on: blacksmith-4vcpu-windows-2025
     if: github.repository == 'Kilo-Org/kilocode'
@@ -557,6 +558,11 @@ jobs:
   # kilocode_change end
 
   build-vscode:
+    # kilocode_change start - changesets reads commit and PR metadata for the VSIX changelog
+    permissions:
+      contents: read
+      pull-requests: read
+    # kilocode_change end
     needs:
       - build-cli
       - pack-signed-cli # kilocode_change
@@ -618,6 +624,8 @@ jobs:
   # before publishing the release and package artifacts.
   smoke-test:
     name: Smoke Test (pre-publish gate)
+    permissions:
+      contents: write # The called workflow needs push access to download draft assets.
     needs:
       - version
       - build-cli
@@ -634,6 +642,12 @@ jobs:
   # kilocode_change end
 
   publish:
+    # kilocode_change start - release, tag and JetBrains PR writes use the maintainer App token
+    permissions:
+      contents: read
+      packages: write # Push to GHCR.
+      id-token: write # Trusted publishing to npm, VS Code Marketplace and Open VSX.
+    # kilocode_change end
     needs:
       - version
       - build-cli
