@@ -2,7 +2,7 @@
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
     "files": 167,
-    "markedLines": 3024,
+    "markedLines": 3048,
     "unmarkedLines": 560,
     "deletedFiles": 0
   },
@@ -46,11 +46,11 @@
     },
     ".github/actions/setup-git-committer/action.yml": {
       "rung": 4,
-      "seam": "Upstream deleted this composite action in v2.2.7 (it only used it in `bot-docs-locale.yml`, a workflow Kilo removes), but Kilo's own `kilo-v2.yml` maintainer job still uses it, so Kilo retains the whole file. It also pins `actions/create-github-app-token` to the current release (v3.3.0). No seam: a workflow cannot carry a reusable composite action's steps, and Kilo needs the action. The file is now wholly Kilo-owned content against the pin; the first-line `# kilocode_change - new file` marker covers it. The deletion turned the former single marked pin line into 41 marked lines (the whole file), which is what raises the markedLines budget in the v2.2.7 sync; the file budget (the file already had an entry) and the deletion budget are unchanged."
+      "seam": "Upstream deleted this composite action in v2.2.7 (it only used it in `bot-docs-locale.yml`, a workflow Kilo removes), but Kilo's own `kilo-v2.yml` maintainer job still uses it, so Kilo retains the whole file. It also pins `actions/create-github-app-token` to the current release (v3.3.0). No seam: a workflow cannot carry a reusable composite action's steps, and Kilo needs the action. The file is now wholly Kilo-owned content against the pin; the first-line `# kilocode_change - new file` marker covers it. The deletion turned the former single marked pin line into 41 marked lines (the whole file), which is what raises the markedLines budget in the v2.2.7 sync; the file budget (the file already had an entry) and the deletion budget are unchanged. Optional `repositories` and `permission-contents`/`permission-pull-requests`/`permission-workflows` inputs pass through to `create-github-app-token`, so a caller can narrow the token to the repositories and permissions it uses; empty inputs keep the app's full installation scope (+20 marked lines, which raise only the markedLines budget)."
     },
     ".github/workflows/check.yml": {
       "rung": 3,
-      "seam": "CI triggers and gates: run `check` on push to Kilo's `v2` integration branch (upstream's v2 line is `dev`) and for every pull request, so stacked v2 PRs that target another PR branch are checked; skip `lint:changed` on upstream sync PRs (branch `sync-v*`), whose changed files are upstream's and fail upstream's lint too. No seam: workflow triggers and step conditions cannot be extended from outside the file. Also pins `actions/checkout` (v7.0.1) to the current release; upstream's pin lags."
+      "seam": "CI triggers and gates: run `check` on push to Kilo's `v2` integration branch (upstream's v2 line is `dev`) and for every pull request, so stacked v2 PRs that target another PR branch are checked; skip `lint:changed` on upstream sync PRs (branch `sync-v*`), whose changed files are upstream's and fail upstream's lint too. No seam: workflow triggers and step conditions cannot be extended from outside the file. Also pins `actions/checkout` (v7.0.1) to the current release; upstream's pin lags. A workflow-level `permissions: contents: read` gives the job a read-only token instead of the repository default (+4 marked lines, which raise only the markedLines budget)."
     },
     ".github/workflows/check-test.yml": {
       "rung": 3,

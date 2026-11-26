@@ -8,6 +8,22 @@ inputs:
   opencode-app-secret:
     description: "OpenCode GitHub App private key"
     required: true
+  repositories:
+    description: "Repositories the token covers, comma or newline separated. Empty: every repository the app is installed on"
+    required: false
+    default: ""
+  permission-contents:
+    description: "Contents permission of the token. Leave every permission input empty for all of the app's permissions"
+    required: false
+    default: ""
+  permission-pull-requests:
+    description: "Pull requests permission of the token"
+    required: false
+    default: ""
+  permission-workflows:
+    description: "Workflows permission of the token"
+    required: false
+    default: ""
 outputs:
   token:
     description: "GitHub App token"
@@ -25,6 +41,10 @@ runs:
         app-id: ${{ inputs.opencode-app-id }}
         private-key: ${{ inputs.opencode-app-secret }}
         owner: ${{ github.repository_owner }}
+        repositories: ${{ inputs.repositories }}
+        permission-contents: ${{ inputs.permission-contents }}
+        permission-pull-requests: ${{ inputs.permission-pull-requests }}
+        permission-workflows: ${{ inputs.permission-workflows }}
 
     - name: Configure git user
       run: |

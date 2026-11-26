@@ -1,5 +1,5 @@
 name: kilo-v2-publish
-run-name: "${{ github.event_name == 'workflow_dispatch' && (inputs.dry_run && 'publish v2 (dry run)' || 'publish v2') || github.event.pull_request.title }}"
+run-name: "${{ github.event_name == 'workflow_dispatch' && (inputs.oidc_check && 'v2 trusted publishing check' || (inputs.dry_run && 'publish v2 (dry run)' || 'publish v2')) || github.event.pull_request.title }}"
 
 # Publishes the Kilo v2 CLI (packages/kilo-cli) to npm as `@kilocode/cli` with the `kilo-v2` dist-tag. v1 owns the
 # `latest` and `rc` dist-tags of the same packages. The build channel stays `v2` (npm rejects `v2` as a dist-tag because
@@ -23,6 +23,12 @@ run-name: "${{ github.event_name == 'workflow_dispatch' && (inputs.dry_run && 'p
 # package (a second trusted publisher next to v1's `publish.yml`) and the three client packages. Trusted publishing
 # needs an existing package, so the client packages need one first publish with a local npm login.
 #
+# The three publish jobs run in the `release-v2` environment, which accepts only the `v2` branch. Each one also checks
+# the branch in its first step, before it publishes anything.
+#
+# `gh workflow run kilo-v2-publish.yml --ref v2 -f oidc_check=true` only checks VS Code Marketplace trusted publishing
+# from the `release-v2` environment (the `oidc-check` job). It builds and publishes nothing.
+#
 # Pull requests that change the publish flow build every target, smoke test the executables and run a dry-run publish.
 # Pull requests that change the extension publish flow also package and upload the preview VSIXs, without publishing.
 
@@ -31,6 +37,11 @@ on:
     inputs:
       dry_run:
         description: "Build, test and pack, but do not publish"
+        required: false
+        type: boolean
+        default: false
+      oidc_check:
+        description: "Only check VS Code Marketplace trusted publishing (no build, no publish)"
         required: false
         type: boolean
         default: false
@@ -62,7 +73,7 @@ on:
       - packages/client/package.json
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}${{ inputs.oidc_check && '-oidc-check' || '' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
@@ -75,6 +86,8 @@ env:
 jobs:
   build:
     name: build
+    # Every other job needs this one, so an OIDC check dispatch skips them all.
+    if: ${{ !inputs.oidc_check }}
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 60
     steps:
@@ -215,6 +228,7 @@ jobs:
       - smoke-windows
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/v2'
     runs-on: ubuntu-24.04
+    environment: release-v2
     timeout-minutes: 30
     concurrency:
       group: kilo-v2-publish-npm
@@ -223,6 +237,13 @@ jobs:
       contents: read
       id-token: write
     steps:
+      - name: Require v2
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/v2" ]; then
+            echo "::error::Run the v2 publish workflow from v2 (got $GITHUB_REF). Nothing was published."
+            exit 1
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -275,6 +296,7 @@ jobs:
       - smoke-windows
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/v2'
     runs-on: ubuntu-24.04
+    environment: release-v2
     timeout-minutes: 20
     concurrency:
       group: kilo-v2-publish-npm-client
@@ -283,6 +305,13 @@ jobs:
       contents: read
       id-token: write
     steps:
+      - name: Require v2
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/v2" ]; then
+            echo "::error::Run the v2 publish workflow from v2 (got $GITHUB_REF). Nothing was published."
+            exit 1
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -382,6 +411,7 @@ jobs:
       - smoke-windows
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/v2'
     runs-on: ubuntu-24.04
+    environment: release-v2
     timeout-minutes: 20
     concurrency:
       group: kilo-v2-publish-vscode
@@ -390,6 +420,13 @@ jobs:
       contents: read
       id-token: write
     steps:
+      - name: Require v2
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/v2" ]; then
+            echo "::error::Run the v2 publish workflow from v2 (got $GITHUB_REF). Nothing was published."
+            exit 1
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -430,3 +467,76 @@ jobs:
             echo ""
             echo "Install: \`code --install-extension kilocode.kilo-code-v2 --pre-release\`"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # Checks the VS Code Marketplace trusted publishing policy from the `release-v2` environment without building or
+  # publishing: it exchanges the job's OIDC token for a Marketplace credential and checks that the credential may
+  # publish as `kilocode`. It uses the lockfile's vsce, the same one `publish-vscode` runs.
+  oidc-check:
+    name: check Marketplace trusted publishing
+    if: inputs.oidc_check
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    environment: release-v2
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Require v2
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/v2" ]; then
+            echo "::error::Run the v2 publish workflow from v2 (got $GITHUB_REF). Nothing was published."
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Bun and install dependencies
+        uses: ./.github/actions/setup-bun
+
+      - name: Exchange OIDC token and verify publisher access
+        working-directory: packages/kilo-vscode
+        run: |
+          set -euo pipefail
+          umask 077
+          # Tokens go to curl through --config on stdin, never on its command line.
+          oidc="$(curl --fail --silent --show-error --get --config - \
+            --header "Accept: application/json" \
+            --data-urlencode "audience=marketplace.visualstudio.com" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL" <<EOF | jq -r '.value // empty'
+          header = "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN"
+          EOF
+          )"
+          if [ -z "$oidc" ]; then
+            echo "::error::GitHub returned no OIDC token"
+            exit 1
+          fi
+          echo "::add-mask::$oidc"
+          echo "OIDC token received"
+
+          body="$RUNNER_TEMP/marketplace-token.json"
+          status="$(curl --silent --show-error --output "$body" --write-out '%{http_code}' \
+            --request POST --config - \
+            --header "Accept: application/json" \
+            --header "Content-Type: application/json" \
+            --header "User-Agent: vsce" \
+            --data '{"publisherName":"kilocode"}' \
+            "https://marketplace.visualstudio.com/_apis/gallery/token?api-version=7.2-preview.1" <<EOF
+          header = "Authorization: FederatedToken $oidc"
+          EOF
+          )"
+          echo "Marketplace token exchange: HTTP $status"
+          credential="$(jq -r '.credential // empty' "$body" 2>/dev/null || true)"
+          if [ "$status" != "200" ] || [ -z "$credential" ]; then
+            message="$(jq -j '.message // empty' "$body" 2>/dev/null | tr '\r\n' '  ' | cut -c1-300 || true)"
+            rm -f "$body"
+            echo "::error::Marketplace returned no credential${message:+: $message}"
+            exit 1
+          fi
+          rm -f "$body"
+          echo "::add-mask::$credential"
+          echo "credential received"
+
+          VSCE_PAT="$credential" npx --no-install @vscode/vsce verify-pat kilocode

@@ -249,7 +249,10 @@ jobs:
       # A PR created with the workflow GITHUB_TOKEN does not start its own checks. When the Kilo maintainer
       # app secrets are present, this step makes the bot PR an app-authored PR so the `progress` guard runs
       # on it. Without them the job falls back to the workflow token and the bot PR stays unvalidated. The
-      # action keeps its upstream input names; the values are the Kilo maintainer app secrets.
+      # action keeps its upstream input names; the values are the Kilo maintainer app secrets. The token covers
+      # only this repository: contents to push the bot branch, pull requests to open, edit, close, review-dismiss
+      # and auto-merge the bot PR, workflows because the force-push moves the branch onto a v2 tip whose commits
+      # can change workflow files, which GitHub refuses for an app token without it.
       - name: Setup Git Committer
         id: committer
         if: env.HAS_MAINTAINER_APP == 'true'
@@ -257,6 +260,10 @@ jobs:
         with:
           opencode-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
           opencode-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
+          repositories: kilocode
+          permission-contents: write
+          permission-pull-requests: write
+          permission-workflows: write
 
       - name: Open or update the progress map PR
         env:
@@ -365,11 +372,14 @@ jobs:
       contents: read
       pull-requests: write
     steps:
+      # The steps below need no git credentials: fetches of this public repository work without them, and the
+      # comment uses the workflow token through GH_TOKEN.
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           filter: blob:none
+          persist-credentials: false
 
       - name: Fetch the pinned v1 target
         run: git fetch --filter=blob:none --no-tags origin main

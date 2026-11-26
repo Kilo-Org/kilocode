@@ -12,6 +12,11 @@ concurrency:
   group: ${{ case(github.ref == 'refs/heads/dev', format('{0}-{1}', github.workflow, github.run_id), format('{0}-{1}', github.workflow, github.event.pull_request.number || github.ref)) }}
   cancel-in-progress: true
 
+# kilocode_change start - the job only reads the repository
+permissions:
+  contents: read
+# kilocode_change end
+
 jobs:
   check:
     name: typecheck
