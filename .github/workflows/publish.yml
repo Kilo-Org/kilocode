@@ -642,7 +642,7 @@ jobs:
       - validate-cli-unix # kilocode_change
       - validate-cli-windows # kilocode_change
       - smoke-test
-    runs-on: ubuntu-24.04 # kilocode_change - npm trusted publishing requires a GitHub-hosted runner.
+    runs-on: ubuntu-24.04-8core-x64 # kilocode_change - GitHub-hosted publisher with static egress for the org IP allow list.
     environment: release # kilocode_change - VS Code Marketplace trusted publishing policy
     steps:
       - uses: actions/checkout@v6 # kilocode_change
