@@ -192,7 +192,9 @@ jobs:
     if: needs.version.outputs.release != ''
     permissions:
       contents: write
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    outputs:
+      manifest-sha256: ${{ steps.transfer.outputs.sha256 }}
     steps:
       # Only trusted transfer code from the workflow commit. No dependency install.
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -221,6 +223,7 @@ jobs:
           path: ${{ runner.temp }}/sboms
 
       - name: Verify and transfer CLI assets
+        id: transfer
         env:
           VERSION: ${{ needs.version.outputs.version }}
           RELEASE: ${{ needs.version.outputs.release }}
@@ -229,6 +232,8 @@ jobs:
         run: |
           test "$(gh release view "v$VERSION" --json databaseId,isDraft --jq 'select(.isDraft) | .databaseId')" = "$RELEASE"
           node script/kilocode/cli-assets.ts "$RUNNER_TEMP/archives" "$RUNNER_TEMP/sboms" "$VERSION"
+          sum=$(sha256sum "$RUNNER_TEMP/sboms/cli-sbom-evidence.json")
+          echo "sha256=${sum%% *}" >> "$GITHUB_OUTPUT"
 
   # Bind each published CLI archive to its SBOM with a
   # signed attestation. Runs off the small sidecar artifact rather than the ~1 GB
@@ -693,6 +698,7 @@ jobs:
     needs:
       - version
       - build-cli
+      - upload-cli # kilocode_change
       - build-vscode
       - pack-signed-cli # kilocode_change
       - validate-cli-unix # kilocode_change
@@ -753,6 +759,12 @@ jobs:
         run: |
           mkdir -p packages/opencode/dist
           tar --zstd -xf /tmp/kilo-cli-signed.tar.zst -C packages/opencode/dist
+
+      - name: Verify package recipe manifest
+        env:
+          EXPECTED: ${{ needs.upload-cli.outputs.manifest-sha256 }}
+        run: |
+          printf '%s  packages/opencode/dist/cli-sbom-evidence.json\n' "$EXPECTED" | sha256sum -c -
       # kilocode_change end
       - uses: actions/download-artifact@v8
         with:
