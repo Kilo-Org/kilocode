@@ -733,7 +733,6 @@ jobs:
           AUR_KEY: ${{ secrets.AUR_KEY }}
           GITHUB_TOKEN: ${{ steps.committer.outputs.token }}
           NPM_CONFIG_PROVENANCE: true
-          OPENVSX_TOKEN: ${{ secrets.OVSX_TOKEN }}
           SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }} # kilocode_change
 
       # kilocode_change start - repackage the already-built release archives as a
