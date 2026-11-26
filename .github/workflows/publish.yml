@@ -53,10 +53,6 @@ jobs:
       # kilocode_change start - install deps for version script workspace resolution
       - name: Install dependencies
         run: bun install
-
-      - name: Install Kilo
-        if: inputs.bump || inputs.version
-        run: bun i -g @kilocode/cli
       # kilocode_change end
 
       - id: version
@@ -68,8 +64,6 @@ jobs:
           KILO_BUMP: ${{ inputs.bump }}
           KILO_VERSION: ${{ inputs.version }}
           KILO_PRE_RELEASE: ${{ inputs.pre_release }}
-          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
-          KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
     outputs:
       version: ${{ steps.version.outputs.version }}
       release: ${{ steps.version.outputs.release }}
@@ -437,6 +431,9 @@ jobs:
 
       - name: Sign Windows binaries with EV certificate
         shell: bash
+        env:
+          AZURE_KEY_VAULT_URI: ${{ secrets.AZURE_KEY_VAULT_URI }}
+          AZURE_CERT_NAME: ${{ secrets.AZURE_CERT_NAME }}
         run: |
           # AzureSignTool requires an explicit auth option (-kva/-kvi/-kvm; there is no
           # DefaultAzureCredential fallback). Mint a Key Vault token from the azure/login
@@ -444,8 +441,8 @@ jobs:
           token="$(az account get-access-token --resource https://vault.azure.net --query accessToken -o tsv)"
           for exe in dist/@kilocode/cli-windows-*/bin/kilo.exe; do
             AzureSignTool sign -v \
-              -kvu "${{ secrets.AZURE_KEY_VAULT_URI }}" \
-              -kvc "${{ secrets.AZURE_CERT_NAME }}" \
+              -kvu "$AZURE_KEY_VAULT_URI" \
+              -kvc "$AZURE_CERT_NAME" \
               -kva "$token" \
               -tr http://timestamp.digicert.com \
               -d "Kilo CLI" \
@@ -613,7 +610,10 @@ jobs:
     uses: ./.github/workflows/smoke-test.yml
     with:
       cli_version: ${{ needs.version.outputs.version }}
-    secrets: inherit
+    secrets:
+      KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
+      KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
+      BENCH_GITHUB_TOKEN: ${{ secrets.BENCH_GITHUB_TOKEN }}
   # kilocode_change end
 
   publish:

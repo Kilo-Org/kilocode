@@ -9,7 +9,8 @@
 #   - workflow_dispatch: manually from Actions tab (optionally pass a CLI version)
 #   - workflow_call: from publish.yml after draft release assets are uploaded
 #
-# Required secrets:
+# Required secrets (publish.yml passes them explicitly; a manual run reads the
+# repository secrets):
 #   KILO_API_KEY         — Kilo Gateway key
 #   KILO_ORG_ID          — Kilo org ID
 #   BENCH_GITHUB_TOKEN   — PAT with contents:read on Kilo-Org/kilo-bench (private repo)
@@ -29,6 +30,16 @@ on:
         description: "CLI version to test from draft release assets."
         required: false
         type: string
+    secrets:
+      KILO_API_KEY:
+        description: "Kilo Gateway key."
+        required: true
+      KILO_ORG_ID:
+        description: "Kilo organization ID."
+        required: true
+      BENCH_GITHUB_TOKEN:
+        description: "Token with read access to Kilo-Org/kilo-bench."
+        required: true
 
 concurrency:
   group: smoke-test
@@ -43,8 +54,6 @@ jobs:
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 30
     env:
-      KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
-      KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
       # kilo-bench's capture helper requires a Go toolchain >= 1.26. The runner
       # image pins GOTOOLCHAIN=local, so allow Go to fetch the required toolchain.
       GOTOOLCHAIN: auto
@@ -54,6 +63,7 @@ jobs:
         with:
           repository: Kilo-Org/kilo-bench
           token: ${{ secrets.BENCH_GITHUB_TOKEN }}
+          persist-credentials: false
 
       - name: Set up Go
         uses: actions/setup-go@v7
@@ -73,8 +83,10 @@ jobs:
         run: uv sync --no-dev
 
       - name: Validate API key
+        env:
+          KILO_API_KEY_SET: ${{ secrets.KILO_API_KEY != '' }}
         run: |
-          if [[ -z "$KILO_API_KEY" ]]; then
+          if [[ "$KILO_API_KEY_SET" != "true" ]]; then
             echo "::error::KILO_API_KEY secret is not set."
             exit 1
           fi
@@ -112,6 +124,8 @@ jobs:
       - name: Run smoke test — hello-world
         env:
           KILO_CLI_PATH: ${{ steps.cli.outputs.cli_path }}
+          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
+          KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
         run: |
           ./scripts/run_eval.sh \
             -m kilo/anthropic/claude-sonnet-4.6 \
@@ -122,6 +136,8 @@ jobs:
       - name: Run smoke test — log-summary-date-ranges
         env:
           KILO_CLI_PATH: ${{ steps.cli.outputs.cli_path }}
+          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
+          KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
         run: |
           ./scripts/run_eval.sh \
             -m kilo/anthropic/claude-sonnet-4.6 \
