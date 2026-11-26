@@ -84,13 +84,14 @@ jobs:
   build-cli:
     needs: version
     permissions: # kilocode_change
-      contents: write # kilocode_change - upload CLI archives and SBOMs to the draft release
+      contents: read # kilocode_change - compilation only stages workflow artifacts
     runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.repository == 'Kilo-Org/kilocode'
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0 # kilocode_change
         with:
           fetch-tags: true
+          persist-credentials: false # kilocode_change
 
       - uses: ./.github/actions/setup-bun
 
@@ -119,13 +120,9 @@ jobs:
           KILO_VERSION: ${{ needs.version.outputs.version }}
           KILO_RELEASE: ${{ needs.version.outputs.release }}
           KILO_PRE_RELEASE: ${{ inputs.pre_release }}
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
           SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }} # kilocode_change
 
-      # kilocode_change start - CRA evidence. The build already generated and
-      # uploaded a sidecar per archive; this re-checks the published set and
-      # exports the attestation subjects so signing never guesses a digest.
+      # kilocode_change start - verify local release evidence and export attestation subjects.
       - name: Verify CLI SBOM evidence
         id: sbom
         if: needs.version.outputs.release != ''
@@ -146,6 +143,17 @@ jobs:
             packages/opencode/dist/cli-sbom-evidence.json
             packages/opencode/dist/kilo-cli-SHA256SUMS
           if-no-files-found: error
+
+      - name: Stage CLI release archives
+        if: needs.version.outputs.release != ''
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: kilo-cli-archives
+          path: |
+            packages/opencode/dist/kilo-*.tar.gz
+            packages/opencode/dist/kilo-*.zip
+          compression-level: 0
+          if-no-files-found: error
       # kilocode_change end
 
       # kilocode_change start - pack dist tree into a single zstd-compressed tar before upload.
@@ -160,7 +168,10 @@ jobs:
       - name: Pack CLI dist into tar.zst
         run: |
           find packages/opencode/dist -name '*.map' -delete
-          tar --zstd -cf /tmp/kilo-cli.tar.zst -C packages/opencode/dist .
+          # Signing, validation and VSIX packaging only need the package directories.
+          # Keep the small evidence manifest for the stable package-manager checksums.
+          tar --zstd --exclude='./kilo-*.tar.gz' --exclude='./kilo-*.zip' --exclude='./kilo-*.cdx.json' \
+            -cf /tmp/kilo-cli.tar.zst -C packages/opencode/dist .
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -172,12 +183,62 @@ jobs:
       version: ${{ needs.version.outputs.version }}
       sbom-subjects: ${{ steps.sbom.outputs.subjects }} # kilocode_change
 
-  # kilocode_change start - bind each published CLI archive to its SBOM with a
+  # kilocode_change start
+  upload-cli:
+    name: Upload CLI assets to draft
+    needs: [version, build-cli]
+    if: needs.version.outputs.release != ''
+    permissions:
+      contents: write
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    outputs:
+      manifest-sha256: ${{ steps.transfer.outputs.sha256 }}
+    steps:
+      # Only trusted transfer code from the workflow commit. No dependency install.
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /script/kilocode/cli-assets.ts
+            /script/kilocode/bun.json
+            /script/kilocode/release.ts
+            /script/kilocode/sbom/artifact.ts
+
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: kilo-cli-archives
+          path: ${{ runner.temp }}/archives
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: kilo-cli-sboms
+          path: ${{ runner.temp }}/sboms
+
+      - name: Verify and transfer CLI assets
+        id: transfer
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+          RELEASE: ${{ needs.version.outputs.release }}
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$(gh release view "v$VERSION" --json databaseId,isDraft --jq 'select(.isDraft) | .databaseId')" = "$RELEASE"
+          node script/kilocode/cli-assets.ts "$RUNNER_TEMP/archives" "$RUNNER_TEMP/sboms" "$VERSION"
+          sum=$(sha256sum "$RUNNER_TEMP/sboms/cli-sbom-evidence.json")
+          echo "sha256=${sum%% *}" >> "$GITHUB_OUTPUT"
+
+  # Bind each published CLI archive to its SBOM with a
   # signed attestation. Runs off the small sidecar artifact rather than the ~1 GB
   # CLI build artifact, since attestation needs the digest, not the bytes.
   attest-cli:
     name: Attest CLI SBOM (${{ matrix.artifact }})
-    needs: build-cli
+    needs: [build-cli, upload-cli]
     if: needs.build-cli.outputs.sbom-subjects != '' && fromJSON(needs.build-cli.outputs.sbom-subjects).include[0] != null
     runs-on: blacksmith-2vcpu-ubuntu-2404
     continue-on-error: ${{ vars.SBOM_ENFORCE != 'true' }}
@@ -409,7 +470,7 @@ jobs:
     permissions:
       contents: write # Replace draft release assets with signed Windows zips.
       id-token: write # Authenticate to Azure Key Vault.
-    needs: build-cli
+    needs: [build-cli, upload-cli]
     runs-on: blacksmith-4vcpu-windows-2025
     if: github.repository == 'Kilo-Org/kilocode'
     timeout-minutes: 20
@@ -493,9 +554,9 @@ jobs:
           path: ${{ runner.temp }}/kilo-windows-signed.tar.zst
           archive: false
 
-      # build-cli already uploaded unsigned Windows zips to the draft release;
+      # upload-cli already uploaded unsigned Windows zips to the draft release;
       # replace them with signed copies so release assets match what npm/VSIX ship.
-      # One asset per invocation with retries, for the same reason build-cli uploads
+      # One asset per invocation with retries, for the same reason upload-cli uploads
       # that way: a dropped connection can commit the asset anyway, and the retry
       # inside gh then dies on "ReleaseAsset.name already exists". --clobber clears
       # that asset at the start of the next attempt.
@@ -651,6 +712,7 @@ jobs:
     needs:
       - version
       - build-cli
+      - upload-cli # kilocode_change
       - build-vscode
       - pack-signed-cli # kilocode_change
       - validate-cli-unix # kilocode_change
@@ -711,6 +773,12 @@ jobs:
         run: |
           mkdir -p packages/opencode/dist
           tar --zstd -xf /tmp/kilo-cli-signed.tar.zst -C packages/opencode/dist
+
+      - name: Verify package recipe manifest
+        env:
+          EXPECTED: ${{ needs.upload-cli.outputs.manifest-sha256 }}
+        run: |
+          printf '%s  packages/opencode/dist/cli-sbom-evidence.json\n' "$EXPECTED" | sha256sum -c -
       # kilocode_change end
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2 # kilocode_change
         with:
@@ -790,9 +858,7 @@ jobs:
           for platform in "${!archives[@]}"; do
             archive="${archives[$platform]}"
             # Re-download the exact bytes the recipe fetches so KILO_SHA256
-            # matches. The local dist copy for win-64 is stale: sign-cli-windows
-            # re-uploads a signed zip to the release that differs from the
-            # unsigned one build-cli packaged.
+            # matches, including the signed win-64 replacement from sign-cli-windows.
             curl --fail --location --retry 3 \
               "https://github.com/Kilo-Org/kilocode/releases/download/$KILO_TAG/$archive" \
               --output "$src/$archive"
