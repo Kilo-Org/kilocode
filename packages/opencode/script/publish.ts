@@ -172,11 +172,13 @@ if (!Script.preview) {
   await $`docker buildx build --platform ${platforms} ${variantTagFlags} --target openshell --provenance=mode=max --sbom=true --metadata-file ${variantMetadata} --push .`
   evidence.push(...(await describeImages(variantMetadata)))
   // kilocode_change end
-  // Calculate SHA values
-  const arm64Sha = await $`sha256sum ./dist/kilo-linux-arm64.tar.gz | cut -d' ' -f1`.text().then((x) => x.trim())
-  const x64Sha = await $`sha256sum ./dist/kilo-linux-x64.tar.gz | cut -d' ' -f1`.text().then((x) => x.trim())
-  const macX64Sha = await $`sha256sum ./dist/kilo-darwin-x64.zip | cut -d' ' -f1`.text().then((x) => x.trim())
-  const macArm64Sha = await $`sha256sum ./dist/kilo-darwin-arm64.zip | cut -d' ' -f1`.text().then((x) => x.trim())
+  // kilocode_change start - use verified archive digests without duplicating archives in the signed dist
+  const digest = await KiloSbom.digests("dist")
+  const arm64Sha = digest("kilo-linux-arm64.tar.gz")
+  const x64Sha = digest("kilo-linux-x64.tar.gz")
+  const macX64Sha = digest("kilo-darwin-x64.zip")
+  const macArm64Sha = digest("kilo-darwin-arm64.zip")
+  // kilocode_change end
 
   const [pkgver, _subver = ""] = Script.version.split(/(-.*)/, 2)
 

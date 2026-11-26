@@ -25,7 +25,6 @@ import { LanceDBRuntime } from "../src/kilocode/lancedb"
 import { KiloSandboxWorker } from "./kilocode/kilo-sandbox-worker"
 import { KiloSandboxNetwork } from "./kilocode/kilo-sandbox-network"
 import * as KiloSbom from "./kilocode/sbom"
-import * as KiloRelease from "../../../script/kilocode/release"
 import * as KiloBun from "../../../script/kilocode/bun"
 if (Bun.revision !== KiloBun.pin.revision) {
   throw new Error(`Build the CLI with Bun ${KiloBun.pin.version} (${KiloBun.pin.revision}), not ${Bun.revision}`)
@@ -469,34 +468,26 @@ for (const item of targets) {
 }
 
 if (Script.release) {
-  const archives: string[] = [] // kilocode_change
   for (const key of Object.keys(binaries)) {
     const archive = key.replace(pkg.name, "kilo") // kilocode_change
     if (key.includes("linux")) {
       // kilocode_change start
       const out = path.resolve("dist", `${archive}.tar.gz`)
       await $`tar -czf ${out} *`.cwd(`dist/${key}/bin`)
-      archives.push(out)
       // kilocode_change end
     } else {
       // kilocode_change start
       const out = path.resolve("dist", `${archive}.zip`)
       await $`zip -r ${out} *`.cwd(`dist/${key}/bin`)
-      archives.push(out)
       // kilocode_change end
     }
   }
-  // kilocode_change start - CRA evidence: describe the exact archives that were
-  // just produced, then publish the sidecars with them so the release asset and
-  // its SBOM always land together.
-  const evidence = await KiloSbom.evidence({
+  // kilocode_change start - stage evidence beside the archives for the draft uploader
+  await KiloSbom.evidence({
     dir: path.resolve(dir, "dist"),
     release: { version: Script.version, channel: Script.channel },
     expected: targets.length,
   })
-  // One `gh release upload` for the whole set cancels every in-flight upload as
-  // soon as a single transfer hiccups, so publish them one at a time instead.
-  await KiloRelease.upload({ tag: `v${Script.version}`, files: [...archives, ...evidence.files] })
   // kilocode_change end
 }
 
