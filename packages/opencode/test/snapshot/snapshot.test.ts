@@ -211,13 +211,17 @@ it.instance(
 )
 
 it.instance(
-  "large added files are skipped",
+  "snapshot size limit only applies to untracked files", // kilocode_change
   withTrackedSnapshot(({ tmp, snapshot, before }) =>
     Effect.gen(function* () {
       yield* write(`${tmp.path}/huge.txt`, new Uint8Array(2 * 1024 * 1024 + 1))
       expect((yield* snapshot.patch(before)).files).toEqual([])
       expect(yield* snapshot.diff(before)).toBe("")
       expect(yield* snapshot.track()).toBe(before)
+      // kilocode_change start
+      yield* write(`${tmp.path}/a.txt`, new Uint8Array(2 * 1024 * 1024 + 1))
+      expect((yield* snapshot.patch(before)).files).toEqual([fwd(tmp.path, "a.txt")])
+      // kilocode_change end
     }),
   ),
   { git: true },
