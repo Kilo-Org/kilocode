@@ -722,13 +722,7 @@ jobs:
           name: kilo-vscode
           path: packages/kilo-vscode/out
 
-      - name: Cache apt packages (AUR)
-        uses: actions/cache@v5 # kilocode_change
-        with:
-          path: /var/cache/apt/archives
-          key: ${{ runner.os }}-apt-aur-${{ hashFiles('.github/workflows/publish.yml') }}
-          restore-keys: |
-            ${{ runner.os }}-apt-aur-
+      # kilocode_change - no apt cache: this job publishes with release secrets, so it restores nothing from the shared cache
 
       - name: Setup SSH for AUR
         # kilocode_change start

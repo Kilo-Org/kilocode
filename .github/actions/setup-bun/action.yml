@@ -7,8 +7,11 @@ inputs:
     description: "Install and cache repository dependencies"
     required: false
     default: "true"
+  # Jobs with write scopes, secrets, or outputs that feed a signing job must pass
+  # cache: false so they never restore an entry another job saved. Read-only CI
+  # jobs keep the default.
   cache:
-    description: "Restore and save the dependency cache; set to false in jobs that hold write scopes or secrets"
+    description: "Restore and save the dependency cache; pass false in jobs with write scopes, secrets, or outputs that feed a signing job"
     required: false
     default: "true"
   # kilocode_change end

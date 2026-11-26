@@ -52,7 +52,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          cache-disabled: true # job holds security-events: write
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4

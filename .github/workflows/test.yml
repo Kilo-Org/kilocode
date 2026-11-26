@@ -164,18 +164,7 @@ jobs:
           git config --global user.name "kilo-maintainer[bot]"
         # kilocode_change end
 
-      - name: Cache Turbo
-        if: matrix.settings.run # kilocode_change
-        uses: actions/cache@v5 # kilocode_change
-        with:
-          path: .turbo/cache # kilocode_change
-          key: turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-${{ matrix.settings.os }}-${{ matrix.settings.index }}-${{ github.sha }} # kilocode_change
-          # kilocode_change start
-          restore-keys: |
-            turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-${{ matrix.settings.os }}-${{ matrix.settings.index }}-
-            turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-
-            turbo-${{ runner.os }}-
-          # kilocode_change end
+      # kilocode_change - no Turbo cache: this job holds checks: write, so it restores nothing from the shared cache
 
       # kilocode_change start - test non-CLI packages separately from sharded CLI tests
       - name: Verify package test scheduling
@@ -299,15 +288,7 @@ jobs:
           git config --global user.email "kilo-maintainer[bot]@users.noreply.github.com"
           git config --global user.name "kilo-maintainer[bot]"
 
-      - name: Cache Turbo
-        uses: actions/cache@v5
-        with:
-          path: .turbo/cache
-          key: turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-httpapi-${{ github.sha }}
-          restore-keys: |
-            turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-httpapi-
-            turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-
-            turbo-${{ runner.os }}-
+      # kilocode_change - no Turbo cache: this job holds checks: write, so it restores nothing from the shared cache
 
       - name: Check generated client
         if: runner.os == 'Linux'
