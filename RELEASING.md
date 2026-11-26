@@ -6,10 +6,11 @@ Kilo Code uses a fully automated CI pipeline triggered via GitHub Actions `workf
 
 1. Go to the [`publish` workflow](https://github.com/Kilo-Org/kilocode/actions/workflows/publish.yml) in GitHub Actions.
 2. Click **"Run workflow"**.
-3. Select the branch (typically `main`).
+3. Select the `main` branch. The `publish` job runs in the `release` environment, which only accepts `main`.
 4. Fill in the inputs:
    - **`bump`** (choice): `patch`, `minor`, or `major`. Determines how the version number is incremented.
    - **`version`** (string, optional): Override the version explicitly instead of using `bump`. Leave empty to use the bump-based calculation.
+   - **`oidc_check`** (boolean, default off): Only check VS Code Marketplace trusted publishing. See [Checking Marketplace Trusted Publishing](#checking-marketplace-trusted-publishing).
 
    > **⚠️ Do not fill in `version` unless you have a specific reason to.**
    > The default behavior — leaving `version` empty and selecting a `bump` level — is almost always what you want. The automated bump logic computes the correct next version from the current state of the repo. Only use the `version` override for exceptional cases like skipping versions or publishing a pre-release (e.g. `1.5.0-beta.1`).
@@ -76,7 +77,8 @@ Downloads all build artifacts and publishes to every distribution channel:
 
 #### VS Code Extension
 
-- Publishes platform-specific VSIX packages to the **VS Code Marketplace** via `vsce`.
+- Publishes platform-specific VSIX packages to the **VS Code Marketplace** via `vsce publish --oidc` (trusted publishing). No Marketplace token is stored: the `publish` job runs in the `release` environment, and the Marketplace trusts the GitHub OIDC token of `publish.yml` in that environment for the `kilocode` publisher.
+- Publishes the same VSIX packages to **Open VSX** with the `OVSX_TOKEN` secret.
 - Uploads all VSIX files to the **GitHub Release** as assets.
 
 #### Package Registries (stable releases only)
@@ -99,13 +101,13 @@ Downloads all build artifacts and publishes to every distribution channel:
 
 The workflow requires these GitHub token permissions:
 
-- `id-token: write` -- for npm provenance attestation
+- `id-token: write` -- for npm provenance attestation and VS Code Marketplace trusted publishing
 - `contents: write` -- for creating releases, pushing tags, and uploading assets
 - `packages: write` -- for publishing Docker images to GHCR
 
 ### Required Secrets
 
-The following secrets must be configured in the repository:
+The following secrets must be configured in the repository. The VS Code Marketplace needs no secret (see [Checking Marketplace Trusted Publishing](#checking-marketplace-trusted-publishing)).
 
 | Secret | Purpose |
 |---|---|
@@ -114,11 +116,17 @@ The following secrets must be configured in the repository:
 | `KILO_MAINTAINER_APP_ID` | GitHub App ID for the kilo-maintainer bot (used for git commits) |
 | `KILO_MAINTAINER_APP_SECRET` | GitHub App secret for the kilo-maintainer bot |
 | `NPM_TOKEN` | npm authentication token for publishing packages |
-| `VSCE_TOKEN` | VS Code Marketplace personal access token |
-| `OVSX_TOKEN` | Open VSX Registry token (currently unused but configured) |
+| `OVSX_TOKEN` | Open VSX Registry token |
 | `AUR_KEY` | SSH private key for pushing to the AUR |
 | `ANACONDA_API_KEY` | Anaconda.org API token for uploading the conda package |
 
 ### Concurrency
 
 The workflow uses concurrency control (`workflow-ref-bump/version`) to prevent parallel releases from conflicting.
+A trusted publishing check (`oidc_check`) uses its own concurrency group, so it never queues with or cancels a release.
+
+### Checking Marketplace Trusted Publishing
+
+The VS Code Marketplace publisher `kilocode` has a trusted publishing policy for the `Kilo-Org/kilocode` repository, the `publish.yml` workflow, and the `release` environment. If you rename the workflow file or the environment, update the policy in the Marketplace publisher management page first.
+
+To check the policy without building or publishing anything, run the `publish` workflow on `main` with **`oidc_check`** enabled. Only the `oidc-check` job runs: it exchanges the GitHub OIDC token for a short-lived Marketplace credential, the same way `vsce publish --oidc` does, and runs `vsce verify-pat kilocode` with that credential. All other jobs are skipped.

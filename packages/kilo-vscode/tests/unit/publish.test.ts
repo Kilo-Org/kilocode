@@ -36,3 +36,11 @@ test.each(["vsce publish", "${ovsx} publish"])("%s retries the same package and 
   expect(value("attempts")).toBe(3)
   expect(value("delay")).toBe(30_000)
 })
+
+test("vsce publish authenticates with trusted publishing, not a token", () => {
+  const shell = source
+    .getDescendantsOfKind(SyntaxKind.TaggedTemplateExpression)
+    .find((tagged) => tagged.getTemplate().getText().includes("vsce publish"))
+  expect(shell?.getTemplate().getText()).toContain("vsce publish --oidc ")
+  expect(shell?.getTemplate().getText()).not.toContain("--pat")
+})
