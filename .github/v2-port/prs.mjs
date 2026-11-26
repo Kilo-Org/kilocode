@@ -12,14 +12,17 @@
  *   - Commits with `distinct: false` already existed in the repository (a PR
  *     branch merged with a merge commit), so they are not looked up.
  *   - A commit whose file lists are missing or empty may have been truncated
- *     in the payload, so it counts as in scope. `head_commit` is always looked up.
+ *     in the payload, so it counts as in scope. `head_commit` is always looked
+ *     up, first.
  *   - At most CAP commits are looked up, newest first; the rest are reported.
- *   - A failed lookup is logged and skipped. The step fails only when every
- *     lookup failed. Rate limits and a time budget keep the job inside its timeout.
- *   - A looked-up commit with no associated PR is tried by the `(#N)` suffix of
- *     a squash merge or `Merge pull request #N` in its subject, each number
- *     checked with `GET /repos/{repo}/pulls/{N}`. If the push resolves nothing,
- *     the subjects of its other in-scope commits are tried too. A warning names
+ *   - A failed or timed-out lookup is logged and skipped. The step fails only
+ *     when every lookup failed. Request timeouts, capped rate-limit waits and a
+ *     time budget keep the job inside its timeout.
+ *   - An in-scope commit with no associated PR is tried by the `(#N)` suffix
+ *     of a squash merge or `Merge pull request #N` in its subject. The number
+ *     counts only if `GET /repos/{repo}/pulls/{N}` shows it merged into the
+ *     branch as a commit of this push. If the push resolves nothing, the
+ *     subjects of its other in-scope commits are tried too. A warning names
  *     every in-scope commit left without a PR, so it can be replayed by hand.
  *
  * Writes `prs`, a JSON array of PR numbers, to GITHUB_OUTPUT.
@@ -49,7 +52,8 @@ export function touchesScope(commit) {
 
 /**
  * Commit SHAs of a push event worth a PR lookup: distinct, in scope, plus
- * `head_commit`. Keeps the newest `cap`, with `head_commit` always last.
+ * `head_commit`. Keeps the newest `cap`. `head_commit` comes first and the
+ * rest newest first, so a run that stops early drops the oldest commits.
  */
 export function pushShas(event, cap = CAP) {
   const head = valid(event?.head_commit?.id) ? event.head_commit.id : null
@@ -59,8 +63,8 @@ export function pushShas(event, cap = CAP) {
     .filter((sha) => valid(sha) && sha !== head)
   const rest = [...new Set(picked)]
   const room = head ? cap - 1 : cap
-  const kept = rest.slice(Math.max(0, rest.length - room))
-  return { shas: head ? [...kept, head] : kept, skipped: rest.length - kept.length }
+  const kept = rest.slice(Math.max(0, rest.length - room)).reverse()
+  return { shas: head ? [head, ...kept] : kept, skipped: rest.length - kept.length }
 }
 
 /** In-scope commits of a push (distinct or not), for the message fallback. */
@@ -97,12 +101,15 @@ export function dispatchPr(value) {
   return Number(text)
 }
 
-// The prs job times out after 10 minutes. A rate limit is waited out for at
-// most MAX_RETRY_AFTER_S per request, and no new request starts after
-// BUDGET_MS, so a throttled run ends with a report instead of a timeout.
+// The prs job times out after 10 minutes. Each request is aborted after
+// REQUEST_TIMEOUT_MS, a rate limit is waited out for at most
+// MAX_RETRY_AFTER_S per wait, and no new request starts after BUDGET_MS, so a
+// slow or throttled run ends with a report instead of a timeout.
 const MAX_RETRY_AFTER_S = 30
 const BUDGET_MS = 6 * 60_000
-const LIMITS = { maxRetryAfter: MAX_RETRY_AFTER_S }
+// Test hook: V2_PORT_REQUEST_TIMEOUT_MS shortens the request timeout. The workflow never sets it.
+const REQUEST_TIMEOUT_MS = Number(process.env.V2_PORT_REQUEST_TIMEOUT_MS) || 20_000
+const LIMITS = { maxRetryAfter: MAX_RETRY_AFTER_S, timeoutMs: REQUEST_TIMEOUT_MS }
 
 async function lookup(sha, branch) {
   try {
@@ -114,10 +121,13 @@ async function lookup(sha, branch) {
 }
 
 /**
- * Verified PR numbers named in the subjects of `commits`. `budget` is shared
- * across calls: at most CAP PR reads, none after the deadline, each number read once.
+ * PRs named in the subjects of `commits` that merged into `branch` as one of
+ * this push's commits (`ids`), as `{ number, merge }`. A number that only
+ * looks like a PR reference, such as an upstream `(#N)`, is rejected. `budget`
+ * is shared across calls: at most CAP PR reads, none after the deadline, each
+ * number read once.
  */
-async function fromMessages(commits, branch, budget) {
+async function fromMessages(commits, branch, ids, budget) {
   const found = []
   for (const n of new Set(commits.flatMap((c) => prRefs(c?.message)))) {
     if (!budget.seen.has(n)) {
@@ -125,21 +135,30 @@ async function fromMessages(commits, branch, budget) {
         console.warn(`::warning::stopped reading PRs named in commit messages at the limit; #${n} was not checked`)
         break
       }
-      budget.seen.set(n, await verified(n, branch))
+      budget.seen.set(n, await verified(n, branch, ids))
     }
-    if (budget.seen.get(n)) found.push(n)
+    const merge = budget.seen.get(n)
+    if (merge) found.push({ number: n, merge })
   }
   return found
 }
 
-async function verified(n, branch) {
+/** The merge commit of PR `n` when it merged into `branch` as a commit in `ids`, else null. */
+async function verified(n, branch, ids) {
   try {
-    const ok = mergedInto([await api(`/repos/${repo()}/pulls/${n}`, LIMITS)], branch).includes(n)
-    if (!ok) console.log(`#${n} from a commit message is not merged into ${branch}`)
-    return ok
+    const pr = await api(`/repos/${repo()}/pulls/${n}`, LIMITS)
+    if (!mergedInto([pr], branch).includes(n)) {
+      console.log(`#${n} from a commit message is not merged into ${branch}`)
+      return null
+    }
+    if (!ids.has(pr.merge_commit_sha)) {
+      console.log(`#${n} from a commit message merged as ${short(pr.merge_commit_sha)}, which is not in this push`)
+      return null
+    }
+    return pr.merge_commit_sha
   } catch (err) {
     console.warn(`::warning::could not read #${n} from a commit message: ${err.message}`)
-    return false
+    return null
   }
 }
 
@@ -161,6 +180,7 @@ export async function resolve(eventName, event, pr, budgetMs = BUDGET_MS) {
 
   const head = event?.head_commit ? [event.head_commit] : []
   const byId = new Map([...(event?.commits ?? []), ...head].map((c) => [c?.id, c]))
+  const ids = new Set([...byId.keys()].filter(valid))
   const found = new Set()
   const empty = []
   let looked = 0
@@ -177,7 +197,9 @@ export async function resolve(eventName, event, pr, budgetMs = BUDGET_MS) {
       continue
     }
     console.log(`${short(sha)}: ${numbers.length > 0 ? numbers.map((n) => `#${n}`).join(", ") : "no merged PR"}`)
-    if (numbers.length === 0) empty.push(byId.get(sha) ?? { id: sha })
+    const commit = byId.get(sha) ?? { id: sha }
+    // The head commit is looked up even out of scope; only in-scope commits need a PR.
+    if (numbers.length === 0 && touchesScope(commit)) empty.push(commit)
     for (const n of numbers) found.add(n)
   }
   if (looked > 0 && failed === looked) throw new Error(`all ${failed} PR lookups failed`)
@@ -185,17 +207,20 @@ export async function resolve(eventName, event, pr, budgetMs = BUDGET_MS) {
   // A commit with no associated PR may still name its PR in its subject.
   let missing = []
   for (const commit of empty) {
-    const numbers = await fromMessages([commit], branch, budget)
-    if (numbers.length === 0) missing.push(commit)
-    for (const n of numbers) found.add(n)
+    const prs = await fromMessages([commit], branch, ids, budget)
+    if (prs.length === 0) missing.push(commit)
+    for (const pr of prs) found.add(pr.number)
   }
 
   // Still nothing: the PR may be named by a commit that was not looked up
-  // (`distinct: false`) or by the head commit.
+  // (`distinct: false`) or by the head commit. A commit that turns out to be
+  // the merge commit of a PR found this way counts as resolved.
   const scoped = scopeCommits(event)
   if (found.size === 0 && scoped.length > 0) {
-    for (const n of await fromMessages([...scoped, ...head], branch, budget)) found.add(n)
-    missing = found.size === 0 ? scoped : []
+    const prs = await fromMessages([...scoped, ...head], branch, ids, budget)
+    for (const pr of prs) found.add(pr.number)
+    const merges = new Set(prs.map((pr) => pr.merge))
+    missing = found.size === 0 ? scoped : missing.filter((c) => !merges.has(c.id))
   }
   if (missing.length > 0) {
     report(notes, `No merged PR found for in-scope commits ${missing.map((c) => short(c.id)).join(", ")}; ${REPLAY}.`)

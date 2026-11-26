@@ -37,7 +37,12 @@ function test(name, fn) {
 
 // The number leads, so the 12-character short SHA in logs tells commits apart.
 const sha = (n) => String(n).padEnd(40, "a")
-const merged = (number, base = "main") => ({ number, merged_at: "2026-11-26T00:00:00Z", base: { ref: base } })
+const merged = (number, base = "main", merge = undefined) => ({
+  number,
+  merged_at: "2026-11-26T00:00:00Z",
+  base: { ref: base },
+  merge_commit_sha: merge,
+})
 const inScope = { added: [], removed: [], modified: ["packages/opencode/src/kilocode/x.ts"] }
 const outOfScope = { added: ["docs/readme.md"], removed: [], modified: ["packages/kilo-vscode/src/a.ts"] }
 const commit = (n, files = inScope, extra = {}) => ({
@@ -60,12 +65,12 @@ test("touchesScope reads the file lists and keeps commits whose lists are missin
   assert.equal(touchesScope({ added: [], removed: [], modified: [] }), true)
 })
 
-test("pushShas keeps distinct in-scope commits, once each, and head_commit last", () => {
+test("pushShas keeps distinct in-scope commits, once each, head_commit first, then newest first", () => {
   const event = {
     commits: [commit(1), commit(2, inScope, { distinct: false }), commit(3, outOfScope), commit(4), commit(1)],
     head_commit: commit(5, outOfScope),
   }
-  assert.deepEqual(pushShas(event), { shas: [sha(1), sha(4), sha(5)], skipped: 0 })
+  assert.deepEqual(pushShas(event), { shas: [sha(5), sha(4), sha(1)], skipped: 0 })
 })
 
 test("pushShas drops malformed ids and handles an empty event", () => {
@@ -79,8 +84,9 @@ test("pushShas caps lookups at CAP, keeping the newest and head_commit", () => {
   const out = pushShas({ commits, head_commit: head })
   assert.equal(out.shas.length, CAP)
   assert.equal(out.skipped, 60 - CAP)
-  assert.equal(out.shas.at(-1), head.id)
-  assert.equal(out.shas[0], sha(100 + 60 - CAP))
+  assert.equal(out.shas[0], head.id)
+  assert.equal(out.shas[1], sha(100 + 58))
+  assert.equal(out.shas.at(-1), sha(100 + 60 - CAP))
 })
 
 test("prRefs reads squash and merge commit subjects only", () => {
@@ -120,10 +126,10 @@ function mktemp() {
 
 /**
  * Stub for `commits/{sha}/pulls` and `pulls/{n}`. A sha in `fail` answers 404,
- * a sha in `limited` answers a rate limit with a one-hour Retry-After, and a
- * sha missing from `pulls` answers an empty list.
+ * a sha in `limited` answers a rate limit with a one-hour Retry-After, a sha
+ * in `hang` never answers, and a sha missing from `pulls` answers an empty list.
  */
-function startStub({ pulls = {}, prs = {}, fail = [], limited = [] }) {
+function startStub({ pulls = {}, prs = {}, fail = [], limited = [], hang = [] }) {
   const log = []
   const server = http.createServer((req, res) => {
     const url = new URL(req.url, "http://stub")
@@ -134,6 +140,7 @@ function startStub({ pulls = {}, prs = {}, fail = [], limited = [] }) {
     }
     const bySha = url.pathname.match(/^\/repos\/acme\/repo\/commits\/([0-9a-f]{40})\/pulls$/)
     if (req.method === "GET" && bySha) {
+      if (hang.includes(bySha[1])) return
       if (fail.includes(bySha[1])) return send(404, { message: "No commit found" })
       if (limited.includes(bySha[1]))
         return send(403, { message: "API rate limit exceeded" }, { "retry-after": "3600" })
@@ -191,6 +198,7 @@ async function withPush(event, stubOptions, env = {}) {
     const result = await runPrs(dir, stub.port, { GITHUB_EVENT_NAME: "push", GITHUB_EVENT_PATH: eventPath, ...env })
     return { ...result, log: stub.log }
   } finally {
+    stub.server.closeAllConnections()
     await new Promise((r) => stub.server.close(r))
   }
 }
@@ -283,7 +291,7 @@ async function integration() {
     ]
     const r = await withPush(
       { commits, head_commit: commits[1] },
-      { prs: { 77: merged(77), 78: { number: 78, merged_at: null, base: { ref: "main" } } } },
+      { prs: { 77: merged(77, "main", sha(31)), 78: { number: 78, merged_at: null, base: { ref: "main" } } } },
     )
     assert.equal(r.status, 0, r.output)
     assert.deepEqual(r.prs, [77])
@@ -312,12 +320,47 @@ async function integration() {
     ]
     const r = await withPush(
       { commits, head_commit: commits[2] },
-      { pulls: { [sha(60)]: [merged(800)] }, prs: { 801: merged(801) } },
+      { pulls: { [sha(60)]: [merged(800)] }, prs: { 801: merged(801, "main", sha(61)) } },
     )
     assert.equal(r.status, 0, r.output)
     assert.deepEqual(r.prs, [800, 801])
     assert.match(r.output, /::warning::No merged PR found for in-scope commits 62aaaaaaaaaa;/)
     assert.doesNotMatch(r.output, /in-scope commits [^;]*6[01]aaaaaaaaaa/)
+  })
+
+  await scenario("an upstream-style (#N) naming an unrelated merged PR is not accepted", async () => {
+    const commits = [commit(63, inScope, { message: "fix(session): port upstream retry (#555)" })]
+    const r = await withPush({ commits, head_commit: commits[0] }, { prs: { 555: merged(555, "main", sha(999)) } })
+    assert.equal(r.status, 0, r.output)
+    assert.deepEqual(r.prs, [])
+    assert.ok(r.log.includes(`/repos/${REPO}/pulls/555`))
+    assert.match(r.output, /#555 from a commit message merged as 999aaaaaaaaa, which is not in this push/)
+    assert.match(r.output, /::warning::No merged PR found for in-scope commits 63aaaaaaaaaa;/)
+  })
+
+  await scenario("the head commit is looked up first and, out of scope, never named", async () => {
+    const commits = [commit(64), commit(65, outOfScope)]
+    const r = await withPush({ commits, head_commit: commits[1] }, { pulls: { [sha(64)]: [merged(810)] } })
+    assert.equal(r.status, 0, r.output)
+    assert.deepEqual(r.prs, [810])
+    assert.deepEqual(
+      lookups(r.log),
+      [sha(65), sha(64)].map((s) => `/repos/${REPO}/commits/${s}/pulls`),
+    )
+    assert.doesNotMatch(r.output, /No merged PR found/)
+  })
+
+  await scenario("a request that hangs is aborted and counts as a failed lookup", async () => {
+    const started = Date.now()
+    const r = await withPush(
+      { commits: [commit(66), commit(67)] },
+      { pulls: { [sha(67)]: [merged(820)] }, hang: [sha(66)] },
+      { V2_PORT_REQUEST_TIMEOUT_MS: "300" },
+    )
+    assert.equal(r.status, 0, r.output)
+    assert.deepEqual(r.prs, [820])
+    assert.match(r.output, /::warning::PR lookup for 66aaaaaaaaaa failed/)
+    assert.ok(Date.now() - started < 10_000, "an aborted request must not be retried at length")
   })
 
   await scenario("a long Retry-After fails that lookup at once instead of waiting", async () => {

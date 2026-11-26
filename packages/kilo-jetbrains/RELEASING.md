@@ -162,7 +162,7 @@ If the prepare workflow created the tag but failed before creating or updating t
 
 If publish validation says the tag points to the wrong SHA, stop and inspect manually. Do not move, delete, or recreate release tags casually.
 
-If publish failed after merge, rerun the failed `publish-jetbrains PR #<number>` run if the failure happened before Marketplace accepted the version. Marketplace may reject a duplicate version after a successful publish. If no publish run started, dispatch one from `main`: `gh workflow run publish-jetbrains.yml --ref main -f pr=<number> -f merge_commit=<merge commit SHA>`.
+If publish failed after merge, rerun the failed `publish-jetbrains PR #<number>` run if the failure happened before Marketplace accepted the version. Marketplace may reject a duplicate version after a successful publish. If no publish run started, dispatch one from `main`: `gh workflow run publish-jetbrains.yml --ref main -f pr=<number> -f merge_commit=<merge commit SHA>`. Pass `pr` as digits only, with no spaces or `#`; any other value is refused.
 
 If Marketplace publishing succeeded but GitHub Release upload failed, manually create or edit the GitHub Release for the existing tag. Use the reviewed release notes from `packages/kilo-jetbrains/CHANGELOG.md` in the merged release PR.
 
