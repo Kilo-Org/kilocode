@@ -280,6 +280,8 @@ export const LineTrimmedReplacer: Replacer = function* (content, find) {
     searchLines.pop()
   }
 
+  if (searchLines.every((line) => line.trim() === "")) return // kilocode_change - whitespace-only find trim-matches blank lines and yields ""
+
   for (let i = 0; i <= originalLines.length - searchLines.length; i++) {
     let matches = true
 
@@ -454,6 +456,7 @@ export const BlockAnchorReplacer: Replacer = function* (content, find) {
 export const WhitespaceNormalizedReplacer: Replacer = function* (content, find) {
   const normalizeWhitespace = (text: string) => text.replace(/\s+/g, " ").trim()
   const normalizedFind = normalizeWhitespace(find)
+  if (normalizedFind === "") return // kilocode_change - includes("") and RegExp("") match every line
 
   // Handle single line matches
   const lines = content.split("\n")
@@ -594,6 +597,8 @@ export const TrimmedBoundaryReplacer: Replacer = function* (content, find) {
     return
   }
 
+  if (trimmedFind === "") return // kilocode_change - trim of whitespace is ""; includes("") is always true
+
   // Try to find the trimmed version
   if (content.includes(trimmedFind)) {
     yield trimmedFind
@@ -730,6 +735,7 @@ export function replace(content: string, oldString: string, newString: string, r
     MultiOccurrenceReplacer,
   ]) {
     for (const search of replacer(content, oldString)) {
+      if (search === "") continue // kilocode_change - "" is found at every index; replaceAll("") inserts between characters
       const index = content.indexOf(search)
       if (index === -1) continue
       notFound = false
@@ -739,7 +745,7 @@ export function replace(content: string, oldString: string, newString: string, r
         )
       }
       if (replaceAll) {
-        return content.replaceAll(search, newString)
+        return content.split(search).join(newString) // kilocode_change - literal text; replaceAll treats $$ $& $` $' as patterns
       }
       const lastIndex = content.lastIndexOf(search)
       if (index !== lastIndex) continue
