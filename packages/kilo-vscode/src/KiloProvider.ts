@@ -123,6 +123,7 @@ import {
   handleLogout,
   handleSetOrganization,
   handleRefreshProfile,
+  sendProfile,
   type AuthContext,
 } from "./kilo-provider/handlers/auth"
 import {
@@ -929,16 +930,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     // Always attempt to fetch+push profile when connected.
     // Profile returns 401 when user isn't logged into Kilo Gateway — that's expected.
-    // Use fire-and-forget (no throwOnError) to match old getProfile() which returned null on error.
     if (this.connectionState === "connected" && this.client) {
       console.log("[Kilo New] KiloProvider: 👤 syncWebviewState fetching profile...")
-      const profileResult = await retry(() => this.client!.kilo.profile())
-      const profileData = profileResult.data ?? null
-      console.log("[Kilo New] KiloProvider: 👤 syncWebviewState profile:", profileData ? "received" : "null")
-      this.postMessage({
-        type: "profileData",
-        data: profileData,
-      })
+      const client = this.client
+      await sendProfile(
+        client,
+        (msg) => this.postMessage(msg),
+        () => retry(() => client.kilo.profile()),
+      )
 
       if (this.currentSession) {
         this.refreshSessionDetails(this.currentSession.id, this.getWorkspaceDirectory(this.currentSession.id))
@@ -2185,10 +2184,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           try {
             // Profile fetch is best-effort — returns 401 when user isn't logged into gateway.
             const sdkClient = this.client
-            if (sdkClient) {
-              const profileResult = await sdkClient.kilo.profile()
-              this.postMessage({ type: "profileData", data: profileResult.data ?? null })
-            }
+            if (sdkClient) await sendProfile(sdkClient, (msg) => this.postMessage(msg))
             await this.syncWebviewState("sse-connected")
             await this.flushPendingSessionRefresh("sse-connected")
             this.recoverPendingPrompts()
@@ -2213,8 +2209,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       })
 
       // Subscribe to profile change broadcast from other KiloProvider instances
-      this.unsubscribeProfileChange = this.connectionService.onProfileChanged((data) => {
-        this.postMessage({ type: "profileData", data })
+      this.unsubscribeProfileChange = this.connectionService.onProfileChanged((msg) => {
+        this.postMessage(msg)
       })
 
       // Subscribe to favorites change broadcast from other KiloProvider instances
@@ -5331,13 +5327,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       .catch((e: unknown) => console.warn("[Kilo New] KiloProvider: global.dispose() after org switch failed:", e))
 
     // Org switch succeeded — refresh profile and providers independently (best-effort)
-    try {
-      const profileResult = await this.client!.kilo.profile()
-      // Broadcast to all webviews (sidebar, profile tab, agent manager, etc.)
-      this.connectionService.notifyProfileChanged(profileResult.data ?? null)
-    } catch (error) {
-      console.error("[Kilo New] KiloProvider: Failed to refresh profile after org switch:", error)
-    }
+    // Broadcast to all webviews (sidebar, profile tab, agent manager, etc.)
+    await sendProfile(this.client, (msg) => this.connectionService.notifyProfileChanged(msg))
     try {
       await this.fetchAndSendProviders()
     } catch (error) {

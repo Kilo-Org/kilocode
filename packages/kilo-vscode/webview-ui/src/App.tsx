@@ -498,6 +498,7 @@ const AppContent: Component = () => {
             <Match when={currentView() === "profile"}>
               <ProfileView
                 profileData={server.profileData()}
+                profileStatus={server.profileStatus()}
                 providerUsage={server.providerUsage()}
                 providerUsageLoading={server.providerUsageLoading()}
                 providerUsageError={server.providerUsageError()}

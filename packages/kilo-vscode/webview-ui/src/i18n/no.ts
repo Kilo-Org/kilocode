@@ -660,6 +660,9 @@ export const dict = {
 
   "profile.title": "Profil",
   "profile.notLoggedIn": "Ikke pålogget",
+  "profile.expired": "Kilo-påloggingen din har utløpt eller blitt tilbakekalt. Logg på igjen for å fortsette.",
+  "profile.unavailable": "Kunne ikke laste inn Kilo-profilen din. Kilo er kanskje ikke tilgjengelig akkurat nå.",
+  "profile.stale": "Kunne ikke oppdatere profilen din. Viser de sist innlastede opplysningene.",
   "profile.action.login": "Logg inn med Kilo Code",
   "profile.balance.title": "Saldo",
   "profile.balance.refresh": "Oppdater saldo",

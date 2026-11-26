@@ -15,7 +15,7 @@ type SSEEventFilter = (event: SSEPayload, directory?: string) => boolean
 type NotificationDismissListener = (notificationId: string) => void
 type SessionAcknowledgedListener = (sessionID: string, eventID: string) => void
 type LanguageChangeListener = (locale: string) => void
-type ProfileChangeListener = (data: unknown) => void
+type ProfileChangeListener = (msg: unknown) => void
 type FavoritesChangeListener = (favorites: Array<{ providerID: string; modelID: string }>) => void
 type ModelSelectorExpandedListener = (value: boolean) => void
 type ClearPendingPromptsListener = () => void
@@ -596,11 +596,11 @@ export class KiloConnectionService {
   }
 
   /**
-   * Broadcast a profile change event to all subscribed KiloProvider instances.
+   * Broadcast a profile message (`profileData` or `profileStatus`) to all subscribed KiloProvider instances.
    */
-  notifyProfileChanged(data: unknown): void {
+  notifyProfileChanged(msg: unknown): void {
     for (const listener of this.profileChangeListeners) {
-      listener(data)
+      listener(msg)
     }
   }
 
