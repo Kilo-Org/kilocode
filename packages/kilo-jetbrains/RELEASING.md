@@ -113,7 +113,7 @@ The PR can change release metadata such as `packages/kilo-jetbrains/gradle.prope
 
 ## Merge and Publish
 
-When the release PR is merged, the `publish-jetbrains` workflow validates the existing tag and release PR markers:
+When the release PR is merged, the `publish-jetbrains` workflow dispatches a publish run of itself on `main` for that PR, titled `publish-jetbrains PR #<number>`. Publishing runs only from `main`. The publish run validates the existing tag and release PR markers:
 
 ```text
 jetbrains/v<version>
@@ -162,7 +162,7 @@ If the prepare workflow created the tag but failed before creating or updating t
 
 If publish validation says the tag points to the wrong SHA, stop and inspect manually. Do not move, delete, or recreate release tags casually.
 
-If publish failed after merge, rerun the failed `publish-jetbrains` workflow if the failure happened before Marketplace accepted the version. Marketplace may reject a duplicate version after a successful publish.
+If publish failed after merge, rerun the failed `publish-jetbrains PR #<number>` run if the failure happened before Marketplace accepted the version. Marketplace may reject a duplicate version after a successful publish. If no publish run started, dispatch one from `main`: `gh workflow run publish-jetbrains.yml --ref main -f pr=<number> -f merge_commit=<merge commit SHA>`.
 
 If Marketplace publishing succeeded but GitHub Release upload failed, manually create or edit the GitHub Release for the existing tag. Use the reviewed release notes from `packages/kilo-jetbrains/CHANGELOG.md` in the merged release PR.
 

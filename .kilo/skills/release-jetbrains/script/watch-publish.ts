@@ -28,7 +28,9 @@ const ver = values.version
 if (!pr) throw new Error("--pr is required")
 if (!ver) throw new Error("--version is required")
 
-const branch = `jetbrains/release/v${ver}`
+// The merged PR's own run only dispatches the publish run on main. That run
+// carries this title (`run-name` in publish-jetbrains.yml).
+const title = `publish-jetbrains PR #${pr}`
 const id = values["run-id"] ?? (values.merge ? await merge() : await find())
 const url = `https://github.com/${repo}/actions/runs/${id}`
 
@@ -70,21 +72,21 @@ async function merge() {
     throw err
   }
 
-  for (const _ of Array.from({ length: 120 })) {
-    const run = (await runs()).find((item) => item.headBranch === branch && !before.has(item.databaseId))
+  for (const _ of Array.from({ length: 150 })) {
+    const run = (await runs()).find((item) => item.displayTitle === title && !before.has(item.databaseId))
     if (run) return String(run.databaseId)
-    await Bun.sleep(1000)
+    await Bun.sleep(2000)
   }
-  throw new Error(`No new ${workflow} run appeared after merging PR ${pr}`)
+  throw new Error(`No new "${title}" run appeared after merging PR ${pr}. Check the PR's ${workflow} dispatch run.`)
 }
 
 async function find() {
-  for (const _ of Array.from({ length: 120 })) {
-    const run = (await runs()).find((item) => item.headBranch === branch)
+  for (const _ of Array.from({ length: 150 })) {
+    const run = (await runs()).find((item) => item.displayTitle === title)
     if (run) return String(run.databaseId)
-    await Bun.sleep(1000)
+    await Bun.sleep(2000)
   }
-  throw new Error(`No ${workflow} run found for ${branch}. Merge PR ${pr} first, or pass --merge to merge it automatically.`)
+  throw new Error(`No "${title}" run found. Merge PR ${pr} first, or pass --merge to merge it automatically.`)
 }
 
 async function merged() {
@@ -98,10 +100,10 @@ async function merged() {
 async function runs() {
   return await retry(
     async () =>
-      (await $`gh run list --repo ${repo} --workflow ${workflow} --event pull_request --json databaseId,createdAt,headBranch,status --limit 100`.json()) as {
+      (await $`gh run list --repo ${repo} --workflow ${workflow} --event workflow_dispatch --json databaseId,createdAt,displayTitle,status --limit 100`.json()) as {
         databaseId: number
         createdAt: string
-        headBranch: string
+        displayTitle: string
         status: string
       }[],
     "list workflow runs",
