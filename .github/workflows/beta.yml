@@ -19,6 +19,9 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
+    outputs:
+      has_update: ${{ steps.handoff.outputs.has_update }}
+      has_comments: ${{ steps.handoff.outputs.has_comments }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -48,6 +51,18 @@ jobs:
       - name: Merge and validate beta branch
         run: bun script/beta.ts --prs "$RUNNER_TEMP/beta-prs.json" --out "$RUNNER_TEMP/beta-out"
 
+      - name: Summarize beta handoff
+        id: handoff
+        if: always()
+        run: |
+          dir="$RUNNER_TEMP/beta-out"
+          update=false
+          comments=false
+          [ -f "$dir/beta.json" ] && update=true
+          jq -e 'type == "array" and length > 0' "$dir/comments.json" > /dev/null 2>&1 && comments=true
+          echo "has_update=$update" >> "$GITHUB_OUTPUT"
+          echo "has_comments=$comments" >> "$GITHUB_OUTPUT"
+
       - name: Upload beta handoff
         if: always()
         uses: actions/upload-artifact@v7
@@ -59,7 +74,7 @@ jobs:
 
   publish:
     needs: build
-    if: ${{ !cancelled() && (needs.build.result == 'success' || needs.build.result == 'failure') }}
+    if: ${{ !cancelled() && (needs.build.outputs.has_update == 'true' || needs.build.outputs.has_comments == 'true') }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     permissions:
       contents: write
@@ -89,12 +104,22 @@ jobs:
             echo "No beta update to publish"
             exit 0
           fi
+          if ! jq -se 'length == 1 and (.[0] | type == "object")' "$dir/beta.json" > /dev/null; then
+            echo "::error::beta.json must hold exactly one JSON object"
+            exit 1
+          fi
           sha="$(jq -er '.sha | strings | select(test("^[0-9a-f]{40}$"))' "$dir/beta.json")"
           base="$(jq -er '.base | strings | select(test("^[0-9a-f]{40}$"))' "$dir/beta.json")"
-          lease="$(jq -er '.lease | strings | select(test("^([0-9a-f]{40})?$"))' "$dir/beta.json")"
-          if ! git merge-base --is-ancestor "$base" origin/main; then
-            echo "::error::Base $base is not a main commit"
-            exit 1
+          seen="$(jq -er '.lease | strings | select(test("^([0-9a-f]{40})?$"))' "$dir/beta.json")"
+          main="$(git rev-parse origin/main)"
+          if [ "$base" != "$main" ]; then
+            echo "::warning::beta was built on $base but main is now $main; skipping the push, the next run rebuilds it"
+            exit 0
+          fi
+          lease="$(git ls-remote origin refs/heads/beta | cut -f1)"
+          if [ "$lease" != "$seen" ]; then
+            echo "::warning::beta moved from ${seen:-nothing} to ${lease:-nothing} since the build checked it; skipping the push"
+            exit 0
           fi
           if [ -f "$dir/beta.bundle" ]; then
             git bundle verify -q "$dir/beta.bundle"
@@ -131,17 +156,23 @@ jobs:
             exit 0
           fi
           reasons='["Fetch failed","Merge conflicts with dev branch","Merge failed","Failed to stage changes","Failed to commit changes"]'
-          open="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues?labels=beta&state=open&per_page=100" \
-            --jq '[.[] | select(.pull_request) | .number]' | jq -s 'add // []')"
-          if ! jq -e --argjson reasons "$reasons" --argjson open "$open" '
-            type == "array" and length <= 100 and all(.[];
+          if ! jq -se --argjson reasons "$reasons" '
+            length == 1 and (.[0] | type == "array" and length <= 100 and all(.[];
               type == "object" and (keys == ["number", "reason"])
-              and (.number | type == "number" and . == floor) and (.number as $n | any($open[]; . == $n))
-              and (.reason as $r | any($reasons[]; . == $r)))' "$file" > /dev/null; then
-            echo "::error::comments.json must list open beta pull requests with a known reason"
+              and (.number | type == "number" and . == floor and . > 0)
+              and (.reason as $r | any($reasons[]; . == $r))))' "$file" > /dev/null; then
+            echo "::error::comments.json must be one array of {number, reason} entries with known reasons"
             exit 1
           fi
-          jq -r '.[] | "\(.number)\t\(.reason)"' "$file" | while IFS=$'\t' read -r number reason; do
+          open="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues?labels=beta&state=open&per_page=100" \
+            --jq '[.[] | select(.pull_request) | .number]' | jq -s 'add // []')"
+          jq -sr --argjson open "$open" '.[0] | unique_by(.number) | .[]
+            | if (.number as $n | any($open[]; . == $n)) then "post\t\(.number)\t\(.reason)" else "skip\t\(.number)\t-" end' \
+            "$file" | while IFS=$'\t' read -r action number reason; do
+            if [ "$action" = skip ]; then
+              echo "Skipped PR #$number: no longer an open beta pull request"
+              continue
+            fi
             body="$(printf '⚠️ **Blocking Beta Release**\n\nThis PR cannot be merged into the beta branch due to: **%s**\n\nPlease resolve this issue to include this PR in the next beta release.' "$reason")"
             if gh api "repos/$GITHUB_REPOSITORY/issues/$number/comments" -f body="$body" > /dev/null; then
               echo "Posted comment on PR #$number"
