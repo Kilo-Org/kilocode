@@ -23,8 +23,13 @@ export interface GitSnapshot {
 export interface UntrackedFile {
   /** Relative path from repo root. */
   path: string
-  /** Raw file content. */
+  /** Raw file content. Empty when `link` is set. */
   content: Buffer
+  /**
+   * Symlink target exactly as stored on disk. Relative targets stay relative
+   * and are not resolved, so the link is recreated instead of followed.
+   */
+  link?: string
 }
 
 const MAX_FILE = 10 * 1024 * 1024 // 10 MB
@@ -94,7 +99,16 @@ export async function capture(cwd: string, log: (...args: unknown[]) => void, bi
   for (const rel of untrackedRaw) {
     const full = nodePath.resolve(cwd, rel)
     try {
-      const stat = await fs.stat(full)
+      const stat = await fs.lstat(full)
+      if (stat.isSymbolicLink()) {
+        const link = await fs.readlink(full)
+        untracked.push({ path: rel, content: Buffer.alloc(0), link })
+        continue
+      }
+      if (!stat.isFile()) {
+        log(`Skipping untracked path ${rel}: not a regular file`)
+        continue
+      }
       if (stat.size > MAX_FILE) {
         log(`Skipping untracked file ${rel}: ${(stat.size / 1024 / 1024).toFixed(1)} MB exceeds limit`)
         continue
@@ -144,9 +158,22 @@ export async function apply(
     const full = nodePath.resolve(target, file.path)
     try {
       await fs.mkdir(nodePath.dirname(full), { recursive: true })
+      if (file.link != null) {
+        const existing = await fs.lstat(full).catch((err: unknown) => {
+          if (err instanceof Error && "code" in err && err.code === "ENOENT") return undefined
+          throw err
+        })
+        // A setup script may have created this path. Replace a file or link; leave a directory so creation fails.
+        if (existing && !existing.isDirectory()) await fs.rm(full, { force: true })
+        await fs.symlink(file.link, full)
+        continue
+      }
       await fs.writeFile(full, file.content)
     } catch (err) {
       log(`Failed to write untracked file ${file.path}:`, err)
+      if (file.link == null) continue
+      const msg = err instanceof Error ? err.message : String(err)
+      return { ok: false, error: `Failed to write untracked file ${file.path}: ${msg}` }
     }
   }
 
