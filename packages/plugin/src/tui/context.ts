@@ -198,6 +198,9 @@ export interface SlotMap {
   readonly "prompt.footer.status": PromptFooterInput
   readonly "prompt.footer.file": PromptFooterInput
   readonly "session.composer.top": { readonly sessionID: string }
+  // kilocode_change start - permission-setup seam: provide a generic permission prompt slot
+  readonly "session.permission": { readonly request: PermissionRequest; readonly directory: string | undefined }
+  // kilocode_change end
   readonly "session.panel": PanelInput
   readonly "sidebar.content": { readonly sessionID: string }
   readonly "sidebar.footer": { readonly sessionID: string }

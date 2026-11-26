@@ -54,6 +54,11 @@ async function sessionApp(input: { config?: Config.Info; auto?: boolean }) {
     fetch: async (url, request) => {
       if (url.pathname === "/api/rpc/kilocode.auto-approve/get")
         return json({ output: { state: autoApprove ? "enabled" : "disabled" } })
+      // Project permission sets are off here: their load-failure toast would replace the auto-approve toast.
+      if (url.pathname === "/api/rpc/kilocode.permissions/list")
+        return json({
+          output: { enabled: false, projectID: "project", unidentified: false, decision: null, presets: [], applied: [] },
+        })
       if (url.pathname === "/api/rpc/kilocode.settings/target")
         return json({
           output: { scope: "global", path: `${directory}/kilo2.json`, revision: "rev", exists: true },

@@ -25,6 +25,7 @@ import KiloTerminalActivity from "../kilocode/terminal-activity" // kilocode_cha
 import KiloRemote from "../kilocode/remote" // kilocode_change(remote) - Kilo /remote command and header indicator
 import KiloPeriodic from "../kilocode/periodic" // kilocode_change(periodic) - Kilo /periodic command
 import KiloAutoApprove from "../kilocode/auto-approve" // kilocode_change(autoapprove) - Kilo /auto-approve toggle
+import KiloPermissions from "../kilocode/permissions" // kilocode_change(permission-setup) - Kilo /permissions command and project permission set offer
 
 export const builtins = [
   HomeFooter,
@@ -55,5 +56,6 @@ export const builtins = [
   KiloTerminalActivity, // kilocode_change(terminal-activity)
   KiloPeriodic, // kilocode_change(periodic) - Kilo /periodic command
   KiloAutoApprove, // kilocode_change(autoapprove) - Kilo /auto-approve toggle
+  KiloPermissions, // kilocode_change(permission-setup) - Kilo /permissions command and project permission set offer
   ...(process.env.OPENCODE_APP_DIR_NAME === "kilo2" ? [KiloRemote] : []), // kilocode_change(remote)
 ]

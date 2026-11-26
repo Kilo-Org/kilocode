@@ -32,6 +32,7 @@ import { SyncCommand } from "./sync/sync"
 import { RemoteCommand } from "./remote/remote"
 import { KiloServiceCommands } from "./service/service"
 import { KiloBrowserCommands } from "./browser/commands"
+import { PermissionsCommand } from "./permissions/permissions"
 
 import { ensurePluginRuntime } from "./index"
 
@@ -67,6 +68,11 @@ const KiloCommands = {
       // Kilo: `install` and `uninstall` manage the OS login unit that starts the background server.
       commands: { ...Commands.commands.service.commands, ...KiloServiceCommands },
     },
+    // Kilo: `debug permissions list|reset|check` are the testing tools for project permission sets.
+    debug: {
+      ...Commands.commands.debug,
+      commands: { ...Commands.commands.debug.commands, permissions: PermissionsCommand },
+    },
     auto: AutoCommand,
     // Kilo: the browser bridge hub, its native messaging host install, and the Chromium the bundled Playwright
     // backend drives.
@@ -99,6 +105,12 @@ const Handlers = Runtime.handlers(KiloCommands, {
     config: () => import("@opencode/cli/commands/handlers/debug/config"),
     "heap-dump": () => import("@opencode/cli/commands/handlers/debug/heap-dump"),
     paths: () => import("@opencode/cli/commands/handlers/debug/paths"),
+    // Kilo: project permission set testing tools.
+    permissions: {
+      list: () => import("./permissions/list"),
+      reset: () => import("./permissions/reset"),
+      check: () => import("./permissions/check"),
+    },
   },
   mcp: {
     list: () => import("@opencode/cli/commands/handlers/mcp/list"),
