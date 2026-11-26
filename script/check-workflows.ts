@@ -60,10 +60,10 @@ const active = new Set([
   "test-vscode.yml",
   "test.yml",
   "typecheck.yml",
+  "ui-browser-tests.yml",
   "validate-cli-smoke.yml",
   "v2-port-tracker.yml",
   "v2-upstream-release-notify.yml",
-  "visual-regression.yml",
   "watch-opencode-releases.yml",
 ])
 
