@@ -16,7 +16,7 @@ commits, or a merge queue push with several PRs, gives each PR one `track` job a
   the number skipped.
 - A failed lookup is logged and skipped. The job fails only when every lookup failed. Each request is aborted
   after 20 seconds, a rate limit is waited out for at most 30 seconds per wait, up to two waits per request,
-  and no lookup starts after six minutes.
+  and no lookup starts after five minutes.
 - An in-scope commit with no associated PR is tried by the `(#N)` or `Merge pull request #N` in its subject.
   The number counts only if that PR merged into `main` as a commit of the same push, so an upstream `(#N)` is
   ignored. If the whole push resolves nothing, the subjects of its other in-scope commits are tried too. A

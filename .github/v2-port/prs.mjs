@@ -106,7 +106,7 @@ export function dispatchPr(value) {
 // MAX_RETRY_AFTER_S per wait, and no new request starts after BUDGET_MS, so a
 // slow or throttled run ends with a report instead of a timeout.
 const MAX_RETRY_AFTER_S = 30
-const BUDGET_MS = 6 * 60_000
+const BUDGET_MS = 5 * 60_000
 // Test hook: V2_PORT_REQUEST_TIMEOUT_MS shortens the request timeout. The workflow never sets it.
 const REQUEST_TIMEOUT_MS = Number(process.env.V2_PORT_REQUEST_TIMEOUT_MS) || 20_000
 const LIMITS = { maxRetryAfter: MAX_RETRY_AFTER_S, timeoutMs: REQUEST_TIMEOUT_MS }

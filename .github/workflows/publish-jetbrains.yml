@@ -284,6 +284,20 @@ jobs:
           subject-digest: ${{ steps.sbom.outputs.digest }}
           sbom-path: ${{ steps.sbom.outputs.sidecar }}
 
+      # Marketplace publishing cannot be undone, so the tag must still name the
+      # validated and built commit right before it.
+      - name: Check the release tag
+        run: |
+          git fetch --force --no-tags origin "refs/tags/$TAG:refs/tags/$TAG"
+          actual="$(git rev-parse "$TAG^{commit}")"
+          if [[ "$actual" != "$COMMIT" ]]; then
+            echo "::error::$TAG points at $actual, not the validated commit $COMMIT. Nothing was published."
+            exit 1
+          fi
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+          COMMIT: ${{ steps.release.outputs.commit }}
+
       - name: Publish to JetBrains Marketplace
         working-directory: packages/kilo-jetbrains
         run: ./gradlew publishPlugin -Pproduction=true -Pkilo.channel="$CHANNEL"
@@ -300,11 +314,11 @@ jobs:
       - name: Upload to GitHub Release
         run: |
           tag="$TAG"
-          # The release must name the commit that was validated and built.
+          # Checked again: the tag can move while Marketplace publishes.
           git fetch --force --no-tags origin "refs/tags/$tag:refs/tags/$tag"
           actual="$(git rev-parse "$tag^{commit}")"
           if [[ "$actual" != "$COMMIT" ]]; then
-            echo "::error::$tag points at $actual, not the validated commit $COMMIT. Nothing was released."
+            echo "::error::$tag now points at $actual, not the validated commit $COMMIT. Marketplace may already have version $VERSION; no GitHub Release was created or updated."
             exit 1
           fi
           title="JetBrains $VERSION"
