@@ -386,6 +386,9 @@ jobs:
     concurrency:
       group: kilo-v2-publish-vscode
       cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -404,12 +407,10 @@ jobs:
       - name: Publish to VS Code Marketplace
         if: ${{ !inputs.dry_run }}
         working-directory: packages/kilo-vscode
-        env:
-          VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
         run: |
           set -euo pipefail
           for target in $VSIX_TARGETS; do
-            npx --no-install @vscode/vsce publish --pre-release --skip-duplicate --packagePath "out/kilo-vscode-$target.vsix"
+            npx --no-install @vscode/vsce publish --oidc --pre-release --skip-duplicate --packagePath "out/kilo-vscode-$target.vsix"
           done
 
       - name: Publish to Open VSX
