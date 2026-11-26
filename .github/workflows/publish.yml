@@ -217,12 +217,11 @@ jobs:
             uname: arm64
             package: "@kilocode/cli-darwin-arm64"
             mode: host
-          # Paused until Blacksmith offers an Intel macOS runner.
-          # - target: darwin-x64
-          #   runner: macos-15-intel
-          #   uname: x86_64
-          #   package: "@kilocode/cli-darwin-x64"
-          #   mode: host
+          - target: darwin-x64
+            runner: macos-15-intel
+            uname: x86_64
+            package: "@kilocode/cli-darwin-x64"
+            mode: host
           - target: linux-arm64
             runner: blacksmith-4vcpu-ubuntu-2404-arm
             uname: aarch64
