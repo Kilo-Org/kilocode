@@ -7,8 +7,9 @@ name: v2-port tracker
 # run blocks nothing and is recovered with `workflow_dispatch`.
 #
 # Security posture, in three parts:
-#   1. `pull_request_target` on a merged PR never checks out or executes PR code.
-#      The checkout is the base branch tip (history that already passed review).
+#   1. Runs on `push` to main: a merged PR lands as a push, and the checkout is
+#      the pushed main commit (history that already passed review). PR code
+#      never runs. `prs.mjs` maps each pushed commit to its merged PR.
 #   2. The agent step is steered by untrusted PR text, so it gets NO GitHub token
 #      and NO bash. The workflow pre-fetches pr.json + pr.diff, and the agent's
 #      only writes are scoped to v2-port-out/ via KILO_CONFIG_CONTENT. Every
@@ -19,8 +20,8 @@ name: v2-port tracker
 # See .github/v2-port/README.md.
 
 on:
-  pull_request_target:
-    types: [closed]
+  push:
+    branches: [main]
     paths:
       - "packages/opencode/**"
   pull_request:
@@ -40,12 +41,6 @@ on:
 
 permissions:
   contents: read
-  issues: write
-  pull-requests: write
-
-concurrency:
-  group: v2-port-${{ github.event.pull_request.number || inputs.pr_number }}
-  cancel-in-progress: false
 
 env:
   V2_PORT_MODEL: ${{ vars.V2_PORT_MODEL || 'kilo/anthropic/claude-sonnet-4.6' }}
@@ -70,13 +65,57 @@ jobs:
       - name: Run v2-port tests
         run: for f in .github/v2-port/*.test.mjs; do echo "--- $f"; node "$f"; done
 
-  track:
+  # One entry per merged PR: a push can carry several commits of one PR (rebase
+  # merge) or several PRs (merge queue), and each PR must get one issue.
+  prs:
     if: github.repository == 'Kilo-Org/kilocode' && github.event_name != 'pull_request'
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    timeout-minutes: 20
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      prs: ${{ steps.find.outputs.prs }}
     steps:
-      # Base branch tip, never the PR head ref: pull_request_target runs in the
-      # base repo's context and must not execute contributor code.
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Find the merged PRs
+        id: find
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: node .github/v2-port/prs.mjs
+
+  track:
+    needs: prs
+    if: needs.prs.outputs.prs != '[]'
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        pr: ${{ fromJSON(needs.prs.outputs.prs) }}
+    # Serializes runs for one PR (a push and a manual replay), so the marker
+    # dedup in issue.mjs always sees an issue filed by the other run.
+    concurrency:
+      group: v2-port-${{ matrix.pr }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      issues: write
+      # issue.mjs posts the back-link comment on the source PR.
+      pull-requests: write
+    steps:
+      # The pushed main commit, or the dispatched ref for a manual replay; never PR code.
       - name: Checkout
         uses: actions/checkout@v6
         with:
@@ -94,7 +133,7 @@ jobs:
         id: gate
         env:
           GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
+          PR_NUMBER: ${{ matrix.pr }}
         run: node .github/v2-port/gate.mjs
 
       - name: Install Kilo CLI
@@ -156,7 +195,7 @@ jobs:
         if: steps.gate.outputs.qualifies == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
+          PR_NUMBER: ${{ matrix.pr }}
           DRY_RUN: ${{ inputs.dry_run }}
         run: node .github/v2-port/issue.mjs
 
@@ -164,7 +203,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: v2-port-out
+          name: v2-port-out-${{ matrix.pr }}
           path: v2-port-out/
           retention-days: 14
           if-no-files-found: ignore
