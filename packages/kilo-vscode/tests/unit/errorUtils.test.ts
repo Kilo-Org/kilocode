@@ -6,6 +6,7 @@ import {
   parseProviderAuthError,
   isUnauthorizedPaidModelError,
   isUnauthorizedPromotionLimitError,
+  isSignedOutError,
 } from "../../webview-ui/src/utils/errorUtils"
 
 type AssistantError = AssistantMessage["error"]
@@ -163,5 +164,33 @@ describe("isUnauthorizedPromotionLimitError", () => {
 
   it("returns false for null input", () => {
     expect(isUnauthorizedPromotionLimitError(null)).toBe(false)
+  })
+})
+
+describe("isSignedOutError", () => {
+  // The body the Kilo Gateway answers a rejected credential with.
+  const body = JSON.stringify({
+    error: { code: "INVALID_TOKEN", message: "Your authentication token is invalid. Please sign in again." },
+    error_type: "authentication_required",
+  })
+  const error = (statusCode: number): AssistantError => ({
+    name: "APIError",
+    data: { message: "Unauthorized", statusCode, isRetryable: false, responseBody: body },
+  })
+
+  it("recognises the gateway's rejected-credential response", () => {
+    expect(isSignedOutError(parseAssistantError(error(401)))).toBe(true)
+  })
+
+  it("returns false for INVALID_TOKEN on a status other than 401", () => {
+    expect(isSignedOutError(parseAssistantError(error(400)))).toBe(false)
+  })
+
+  it("returns false for the sign-in prompts served to anonymous users", () => {
+    expect(isSignedOutError({ statusCode: 401, code: "PAID_MODEL_AUTH_REQUIRED" })).toBe(false)
+  })
+
+  it("returns false for null input", () => {
+    expect(isSignedOutError(null)).toBe(false)
   })
 })

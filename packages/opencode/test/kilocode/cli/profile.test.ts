@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import { InvalidTokenError } from "@kilocode/kilo-gateway"
 
 import { format, handle, payload } from "../../../src/kilocode/cli/cmd/profile"
 
@@ -70,7 +71,18 @@ describe("profile CLI formatting", () => {
     expect(logs.join("")).toBe("Name: User One\nEmail: one@example.com\nTeam: Personal\nBalance: $4.00\n")
   })
 
-  test("handles profile fetch errors without throwing", async () => {
+  test.each([
+    [
+      "rejected login",
+      () => new InvalidTokenError(),
+      "Your Kilo login has expired or was revoked. Run `kilo auth login` to sign in again.",
+    ],
+    [
+      "Kilo API failure",
+      () => new Error("Failed to fetch profile: 500"),
+      "Could not load your Kilo profile, try again later (Failed to fetch profile: 500)",
+    ],
+  ])("reports a %s without throwing", async (_, failure, expected) => {
     const errors: string[] = []
     const codes: number[] = []
 
@@ -80,12 +92,12 @@ describe("profile CLI formatting", () => {
       exit: (code) => codes.push(code),
       getAuth: async () => ({ type: "oauth", refresh: "refresh", access: "token", expires: 1 }),
       getProfile: async () => {
-        throw new Error("Invalid token")
+        throw failure()
       },
       getBalance: async () => ({ balance: 4 }),
     })
 
-    expect(errors).toEqual(["Invalid token"])
+    expect(errors).toEqual([expected])
     expect(codes).toEqual([1])
   })
 })
