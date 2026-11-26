@@ -3,6 +3,15 @@ import type { KilocodeProfile, Organization, KilocodeBalance } from "../types.js
 import { KILO_API_BASE, DEFAULT_MODEL, DEFAULT_FREE_MODEL } from "./constants.js"
 
 /**
+ * Thrown by fetchProfile when the Kilo API rejects the token (401/403)
+ */
+export class InvalidTokenError extends Error {
+  constructor() {
+    super("Invalid token")
+  }
+}
+
+/**
  * Fetch user profile from Kilo API
  */
 export async function fetchProfile(token: string): Promise<KilocodeProfile> {
@@ -15,7 +24,7 @@ export async function fetchProfile(token: string): Promise<KilocodeProfile> {
 
   if (!response.ok) {
     if (response.status === 401 || response.status === 403) {
-      throw new Error("Invalid token")
+      throw new InvalidTokenError()
     }
     throw new Error(`Failed to fetch profile: ${response.status}`)
   }

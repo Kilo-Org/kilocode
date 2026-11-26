@@ -651,6 +651,9 @@ export const dict = {
 
   "profile.title": "Profiel",
   "profile.notLoggedIn": "Niet ingelogd",
+  "profile.expired": "Je Kilo-aanmelding is verlopen of ingetrokken. Meld je opnieuw aan om door te gaan.",
+  "profile.unavailable": "Je Kilo-profiel kon niet worden geladen. Kilo is mogelijk tijdelijk onbereikbaar.",
+  "profile.stale": "Je profiel kon niet worden vernieuwd. De laatst geladen gegevens worden getoond.",
   "profile.action.login": "Inloggen met Kilo Code",
   "profile.balance.title": "Saldo",
   "profile.balance.refresh": "Saldo vernieuwen",

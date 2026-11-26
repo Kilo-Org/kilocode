@@ -76,7 +76,8 @@ Downloads all build artifacts and publishes to every distribution channel:
 
 #### VS Code Extension
 
-- Publishes platform-specific VSIX packages to the **VS Code Marketplace** via `vsce`.
+- Publishes platform-specific VSIX packages to the **VS Code Marketplace** via `vsce publish --oidc`. The `kilocode` publisher trusts `Kilo-Org/kilocode`'s `publish.yml` workflow with no GitHub Actions environment.
+- Publishes the same packages to **Open VSX** using `OVSX_TOKEN`.
 - Uploads all VSIX files to the **GitHub Release** as assets.
 
 #### Package Registries (stable releases only)
@@ -99,7 +100,7 @@ Downloads all build artifacts and publishes to every distribution channel:
 
 The workflow requires these GitHub token permissions:
 
-- `id-token: write` -- for npm provenance attestation
+- `id-token: write` -- for Marketplace Trusted Publishing and npm provenance attestation
 - `contents: write` -- for creating releases, pushing tags, and uploading assets
 - `packages: write` -- for publishing Docker images to GHCR
 
@@ -109,13 +110,13 @@ The following secrets must be configured in the repository:
 
 | Secret | Purpose |
 |---|---|
-| `KILO_API_KEY` | Kilo API key used during version computation |
-| `KILO_ORG_ID` | Kilo organization ID |
+| `KILO_API_KEY` | Kilo Gateway key for the pre-publish smoke test (`smoke-test.yml`) |
+| `KILO_ORG_ID` | Kilo organization ID for the pre-publish smoke test |
+| `BENCH_GITHUB_TOKEN` | Read access to `Kilo-Org/kilo-bench` for the pre-publish smoke test |
 | `KILO_MAINTAINER_APP_ID` | GitHub App ID for the kilo-maintainer bot (used for git commits) |
 | `KILO_MAINTAINER_APP_SECRET` | GitHub App secret for the kilo-maintainer bot |
 | `NPM_TOKEN` | npm authentication token for publishing packages |
-| `VSCE_TOKEN` | VS Code Marketplace personal access token |
-| `OVSX_TOKEN` | Open VSX Registry token (currently unused but configured) |
+| `OVSX_TOKEN` | Open VSX Registry publishing token |
 | `AUR_KEY` | SSH private key for pushing to the AUR |
 | `ANACONDA_API_KEY` | Anaconda.org API token for uploading the conda package |
 
