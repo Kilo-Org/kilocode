@@ -19,8 +19,6 @@ jobs:
         include:
           - label: ubuntu-24.04-8core-x64
             arch: X64
-          - label: ubuntu-24.04-8core-arm-x64
-            arch: ARM64
           - label: windows-11-arm64
             arch: ARM64
     runs-on: ${{ matrix.label }}
