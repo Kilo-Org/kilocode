@@ -422,14 +422,13 @@ class KiloBackendAppServiceTest {
         withTimeout(5_000) {
             svc.appState.first { it is KiloAppState.Ready && it.data.config.telemetry == true }
         }
-        mock.awaitSseConnection()
+        assertTrue(mock.awaitSseConnection())
         val gate = CountDownLatch(1)
         mock.telemetryGate = gate
-        val requests = mock.requestCount("/telemetry/level")
-        val save = async(start = CoroutineStart.UNDISPATCHED) { svc.setTelemetryLevel(false) }
+        val save = async { svc.setTelemetryLevel(false) }
 
         try {
-            assertTrue(mock.awaitRequestCount("/telemetry/level", requests + 1))
+            withTimeout(5_000) { mock.telemetryPosted.await() }
             mock.config = """{"model":"updated","experimental":{"openTelemetry":true}}"""
             mock.pushEvent("global.config.updated", """{"type":"global.config.updated"}""")
             withTimeout(5_000) {

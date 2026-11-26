@@ -28,7 +28,7 @@ permissions:
 jobs:
   sweep:
     if: github.repository == 'Kilo-Org/kilocode'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
