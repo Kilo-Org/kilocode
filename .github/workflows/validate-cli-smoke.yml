@@ -43,10 +43,10 @@ jobs:
           #   runner: macos-15-intel
           #   package: "@kilocode/cli-darwin-x64"
           - target: linux-x64
-            runner: ubuntu-24.04
+            runner: ${{ github.repository == 'Kilo-Org/kilocode' && 'blacksmith-4vcpu-ubuntu-2404' || 'ubuntu-24.04' }}
             package: "@kilocode/cli-linux-x64"
           - target: windows-x64
-            runner: windows-2025
+            runner: ${{ github.repository == 'Kilo-Org/kilocode' && 'blacksmith-4vcpu-windows-2025' || 'windows-2025' }}
             package: "@kilocode/cli-windows-x64"
     steps:
       - uses: actions/checkout@v6

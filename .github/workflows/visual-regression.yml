@@ -12,7 +12,7 @@ permissions:
 jobs:
   check-paths:
     name: Check changed paths
-    runs-on: ubuntu-latest # kilocode_change
+    runs-on: ${{ github.repository == 'Kilo-Org/kilocode' && 'blacksmith-2vcpu-ubuntu-2404' || 'ubuntu-latest' }} # kilocode_change
     outputs:
       matched: ${{ steps.filter.outputs.matched }}
       can_autocommit: ${{ steps.autocommit-check.outputs.can_autocommit }}
@@ -59,8 +59,7 @@ jobs:
     needs: check-paths
     if: needs.check-paths.outputs.matched == 'true'
     name: Visual Regression (kilo-ui) # kilocode_change
-    # kilocode_change: temporary GitHub-hosted runner while Blacksmith apt mirror connectivity is broken, see Blacksmith report for run 34574732611
-    runs-on: ubuntu-24.04 # kilocode_change
+    runs-on: ${{ github.repository == 'Kilo-Org/kilocode' && 'blacksmith-4vcpu-ubuntu-2404' || 'ubuntu-24.04' }} # kilocode_change
     timeout-minutes: 15
 
     steps:
@@ -228,8 +227,7 @@ jobs:
     needs: check-paths
     if: needs.check-paths.outputs.matched == 'true'
     name: Visual Regression (kilo-vscode webview) # kilocode_change
-    # kilocode_change: temporary GitHub-hosted runner while Blacksmith apt mirror connectivity is broken, see Blacksmith report for run 34574732611
-    runs-on: ubuntu-24.04 # kilocode_change
+    runs-on: ${{ github.repository == 'Kilo-Org/kilocode' && 'blacksmith-4vcpu-ubuntu-2404' || 'ubuntu-24.04' }} # kilocode_change
     timeout-minutes: 15
     env:
       NODE_OPTIONS: --max-old-space-size=4096

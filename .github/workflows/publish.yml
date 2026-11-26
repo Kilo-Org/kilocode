@@ -171,7 +171,7 @@ jobs:
     name: Attest CLI SBOM (${{ matrix.artifact }})
     needs: build-cli
     if: needs.build-cli.outputs.sbom-subjects != '' && fromJSON(needs.build-cli.outputs.sbom-subjects).include[0] != null
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     continue-on-error: ${{ vars.SBOM_ENFORCE != 'true' }}
     permissions:
       contents: read
@@ -216,23 +216,23 @@ jobs:
           #   package: "@kilocode/cli-darwin-x64"
           #   mode: host
           - target: linux-arm64
-            runner: ubuntu-24.04-arm
+            runner: blacksmith-4vcpu-ubuntu-2404-arm
             uname: aarch64
             package: "@kilocode/cli-linux-arm64"
             mode: host
           - target: linux-x64
-            runner: ubuntu-24.04
+            runner: blacksmith-4vcpu-ubuntu-2404
             uname: x86_64
             package: "@kilocode/cli-linux-x64"
             mode: host
           - target: alpine-arm64
-            runner: ubuntu-24.04-arm
+            runner: blacksmith-4vcpu-ubuntu-2404-arm
             uname: aarch64
             package: "@kilocode/cli-linux-arm64-musl"
             mode: alpine
             platform: linux/arm64
           - target: alpine-x64
-            runner: ubuntu-24.04
+            runner: blacksmith-4vcpu-ubuntu-2404
             uname: x86_64
             package: "@kilocode/cli-linux-x64-musl"
             mode: alpine
@@ -331,10 +331,10 @@ jobs:
       matrix:
         include:
           - arch: arm64
-            runner: windows-11-arm
+            runner: windows-11-arm # kilocode_change - Blacksmith has no native Windows ARM64 image.
             package: "@kilocode/cli-windows-arm64"
           - arch: x64
-            runner: windows-2025
+            runner: blacksmith-4vcpu-windows-2025 # kilocode_change
             package: "@kilocode/cli-windows-x64"
     steps:
       - uses: actions/download-artifact@v8
@@ -400,7 +400,7 @@ jobs:
   sign-cli-windows:
     name: Sign CLI (Windows EV)
     needs: build-cli
-    runs-on: windows-2025
+    runs-on: blacksmith-4vcpu-windows-2025
     if: github.repository == 'Kilo-Org/kilocode'
     timeout-minutes: 20
     steps:
@@ -515,7 +515,7 @@ jobs:
     needs:
       - build-cli
       - sign-cli-windows
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.repository == 'Kilo-Org/kilocode'
     timeout-minutes: 15
     steps:
@@ -626,7 +626,7 @@ jobs:
       - validate-cli-unix # kilocode_change
       - validate-cli-windows # kilocode_change
       - smoke-test
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-24.04 # kilocode_change - npm trusted publishing requires a GitHub-hosted runner.
     steps:
       - uses: actions/checkout@v6 # kilocode_change
         # kilocode_change start

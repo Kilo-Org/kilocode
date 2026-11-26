@@ -9,7 +9,7 @@ jobs:
   check:
     name: Check forbidden strings
     if: github.repository == 'Kilo-Org/kilocode'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v6 # kilocode_change
         with:
