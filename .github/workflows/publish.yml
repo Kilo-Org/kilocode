@@ -820,7 +820,7 @@ jobs:
   oidc-check:
     name: Check Marketplace trusted publishing
     if: inputs.oidc_check && github.repository == 'Kilo-Org/kilocode'
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     environment: release
     timeout-minutes: 5
     permissions:
