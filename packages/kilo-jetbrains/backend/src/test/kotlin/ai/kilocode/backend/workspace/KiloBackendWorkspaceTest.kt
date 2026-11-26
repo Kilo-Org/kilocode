@@ -14,14 +14,14 @@ import ai.kilocode.jetbrains.api.client.DefaultApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -51,12 +51,16 @@ class KiloBackendWorkspaceTest {
     @AfterTest
     fun tearDown() {
         runBlocking {
-            apps.forEach { it.dispose() }
-            apps.clear()
-            scope.cancel()
-            mock.close()
-            withTimeout(10_000) { scope.coroutineContext[Job]?.join() }
-            delete(root)
+            try {
+                // Ready does not wait for the startup probes. Keep their HTTP server alive
+                // until the scope finishes, including blocking reads already in flight.
+                withTimeout(10_000) { scope.coroutineContext.job.cancelAndJoin() }
+            } finally {
+                apps.forEach { it.dispose() }
+                apps.clear()
+                mock.close()
+                delete(root)
+            }
         }
     }
 
