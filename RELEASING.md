@@ -58,7 +58,7 @@ Downloads all build artifacts and publishes to every distribution channel:
 - Updates the Zed extension manifest (`extension.toml`) with the new version.
 - Rebuilds the TypeScript SDK (`packages/sdk/js`).
 - Commits the version bump, tags the commit, and pushes to the repo.
-- Promotes the draft GitHub Release to a published release.
+- Promotes the draft GitHub Release to a published release, after checking that the draft holds exactly the CLI archives, SBOM sidecars and checksum file the build recorded, with the Windows zips that `sign-cli-windows` signed.
 
 #### CLI (`@kilocode/cli`)
 

@@ -984,3 +984,51 @@ describe("artifact", () => {
     }
   })
 })
+
+describe("matrix command", () => {
+  test("lists attestable artifacts with their artifact and SBOM digests", async () => {
+    const dir = await scratch()
+    try {
+      const file = path.join(dir, Manifest.name("cli"))
+      await Manifest.write(file, {
+        version: "1.2.3",
+        product: "cli",
+        generated: "",
+        expected: 3,
+        entries: [
+          {
+            artifact: "kilo-linux-x64.tar.gz",
+            sha256: DIGEST,
+            sbom: "kilo-linux-x64.tar.gz.cdx.json",
+            sbomSha256: "b".repeat(64),
+          },
+          { artifact: "kilo-darwin-arm64.zip", sha256: DIGEST, sbom: "kilo-darwin-arm64.zip.cdx.json" },
+          { artifact: "kilo-windows-x64.zip", sha256: DIGEST, error: "no sidecar generated" },
+        ],
+      })
+      const proc = Bun.spawn(["bun", path.join(import.meta.dir, "sbom.ts"), "matrix", "--manifest", file], {
+        env: { PATH: process.env.PATH },
+        stdout: "pipe",
+      })
+      expect(await proc.exited).toBe(0)
+      expect(JSON.parse(await new Response(proc.stdout).text())).toEqual({
+        include: [
+          {
+            artifact: "kilo-darwin-arm64.zip",
+            digest: `sha256:${DIGEST}`,
+            sbom: "kilo-darwin-arm64.zip.cdx.json",
+            sbomSha256: "",
+          },
+          {
+            artifact: "kilo-linux-x64.tar.gz",
+            digest: `sha256:${DIGEST}`,
+            sbom: "kilo-linux-x64.tar.gz.cdx.json",
+            sbomSha256: "b".repeat(64),
+          },
+        ],
+      })
+    } finally {
+      await fs.promises.rm(dir, { recursive: true, force: true })
+    }
+  })
+})

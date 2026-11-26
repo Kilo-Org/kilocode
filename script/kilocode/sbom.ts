@@ -75,10 +75,18 @@ async function main() {
     const manifest = await Manifest.read(file)
     // Only artifacts that actually have a sidecar can be attested. Publishing a
     // matrix entry without one would fail the attestation step for a problem the
-    // evidence gate has already reported.
+    // evidence gate has already reported. Each entry carries the sidecar digest,
+    // which the attestation job checks before it signs the downloaded SBOM.
     const include = manifest.entries.flatMap((entry: Manifest.Entry) =>
       entry.sbom && !entry.error && !entry.distribution
-        ? [{ artifact: entry.artifact, digest: `sha256:${entry.sha256}`, sbom: entry.sbom }]
+        ? [
+            {
+              artifact: entry.artifact,
+              digest: `sha256:${entry.sha256}`,
+              sbom: entry.sbom,
+              sbomSha256: entry.sbomSha256 ?? "",
+            },
+          ]
         : [],
     )
     const value = JSON.stringify({ include })
