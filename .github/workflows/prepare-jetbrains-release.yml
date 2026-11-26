@@ -21,8 +21,7 @@ on:
         type: string
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 concurrency:
   group: prepare-jetbrains-release-${{ inputs.version }}
@@ -41,6 +40,8 @@ jobs:
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
+        with:
+          cache: false # job holds the maintainer app secrets
 
       - name: Setup Git Committer
         id: committer
@@ -48,6 +49,9 @@ jobs:
         with:
           kilo-maintainer-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
           kilo-maintainer-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
+          repositories: kilocode
+          permission-contents: write
+          permission-pull-requests: write
 
       - name: Create release tag and PR
         run: |

@@ -53,6 +53,8 @@ jobs:
 
       - name: Setup Bun for validation
         uses: ./.github/actions/setup-bun
+        with:
+          cache: false # validate's outputs choose what bundle signs
 
       # Checks the PR with the job token before any of its files are checked out.
       - name: Check the release PR
@@ -148,6 +150,8 @@ jobs:
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
+        with:
+          cache: false # job holds write scopes, id-token and signing secrets
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -160,6 +164,8 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-disabled: true # job signs with release secrets
 
       - name: Setup SBOM tooling
         uses: ./.github/actions/setup-sbom

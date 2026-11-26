@@ -294,12 +294,13 @@ if (!Script.preview) {
     "",
   ].join("\n")
 
-  const token = process.env.GITHUB_TOKEN
-  if (!token) {
+  // kilocode_change start - the clone authenticates through the setup-git-committer credential helper
+  if (!process.env.GITHUB_TOKEN) {
     console.error("GITHUB_TOKEN is required to update homebrew tap")
     process.exit(1)
   }
-  const tap = `https://x-access-token:${token}@github.com/Kilo-Org/homebrew-tap.git` // kilocode_change
+  const tap = "https://github.com/Kilo-Org/homebrew-tap.git"
+  // kilocode_change end
   await $`rm -rf ./dist/homebrew-tap`
   await $`git clone ${tap} ./dist/homebrew-tap`
   await Bun.file("./dist/homebrew-tap/kilo.rb").write(homebrewFormula) // kilocode_change

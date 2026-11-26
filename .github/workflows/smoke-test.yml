@@ -105,7 +105,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
         with:
-          enable-cache: true
+          enable-cache: false # called from the release workflow
 
       - name: Set up Python
         run: uv python install 3.13

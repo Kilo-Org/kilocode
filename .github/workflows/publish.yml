@@ -61,6 +61,10 @@ jobs:
           fetch-depth: 0
 
       - uses: ./.github/actions/setup-bun
+        # kilocode_change start - job holds write scopes, so skip the shared dependency cache
+        with:
+          cache: false
+        # kilocode_change end
 
       # kilocode_change start - install deps for version script workspace resolution
       - name: Install dependencies
@@ -94,6 +98,10 @@ jobs:
           persist-credentials: false # kilocode_change
 
       - uses: ./.github/actions/setup-bun
+        # kilocode_change start - job holds write scopes, so skip the shared dependency cache
+        with:
+          cache: false
+        # kilocode_change end
 
       - uses: ./.github/actions/setup-sbom # kilocode_change
 
@@ -635,6 +643,10 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0 # kilocode_change
 
       - uses: ./.github/actions/setup-bun
+        # kilocode_change start - job holds write scopes, so skip the shared dependency cache
+        with:
+          cache: false
+        # kilocode_change end
 
       - uses: ./.github/actions/setup-sbom # kilocode_change - VSIX sidecars scan the packaged archive
 
@@ -728,6 +740,10 @@ jobs:
         # kilocode_change end
 
       - uses: ./.github/actions/setup-bun
+        # kilocode_change start - job holds write scopes and secrets, so skip the shared dependency cache
+        with:
+          cache: false
+        # kilocode_change end
 
       - uses: ./.github/actions/setup-sbom # kilocode_change - npm and OCI sidecars scan the published bytes
 
@@ -760,6 +776,11 @@ jobs:
           # kilocode_change start
           kilo-maintainer-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
           kilo-maintainer-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
+          # The release script pushes to this repo and to Kilo-Org/homebrew-tap,
+          # and opens the JetBrains CLI pin bump PR.
+          repositories: kilocode,homebrew-tap
+          permission-contents: write
+          permission-pull-requests: write
           # kilocode_change end
 
       # kilocode_change start - download into /tmp and extract the tar.zst packed by build-cli
@@ -785,13 +806,7 @@ jobs:
           name: kilo-vscode
           path: packages/kilo-vscode/out
 
-      - name: Cache apt packages (AUR)
-        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0 # kilocode_change
-        with:
-          path: /var/cache/apt/archives
-          key: ${{ runner.os }}-apt-aur-${{ hashFiles('.github/workflows/publish.yml') }}
-          restore-keys: |
-            ${{ runner.os }}-apt-aur-
+      # kilocode_change - no apt cache: this job publishes with release secrets, so it restores nothing from the shared cache
 
       - name: Setup SSH for AUR
         # kilocode_change start

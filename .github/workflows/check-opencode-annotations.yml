@@ -27,6 +27,11 @@ on:
       - "!packages/kilo-jetbrains/**"
   workflow_dispatch:
 
+# kilocode_change start
+permissions:
+  contents: read
+# kilocode_change end
+
 jobs:
   check-annotations:
     name: Check kilocode_change annotations
