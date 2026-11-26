@@ -25,7 +25,8 @@ run-name: "${{ github.event_name == 'workflow_dispatch' && (inputs.oidc_check &&
 #
 # The three publish jobs run in the `release-v2` environment, which accepts only the `v2` branch. Each one also checks
 # the branch in its first step, before it publishes anything. The npm, VS Code Marketplace and Open VSX trusted
-# publishers are bound to this workflow file and the `release-v2` environment.
+# publishers must be bound to this workflow file and the `release-v2` environment; the binding is done after this
+# change merges.
 #
 # `gh workflow run kilo-v2-publish.yml --ref v2 -f oidc_check=true` only checks VS Code Marketplace trusted publishing
 # from the `release-v2` environment (the `oidc-check` job). It builds and publishes nothing.
@@ -471,8 +472,7 @@ jobs:
 
   # Checks the VS Code Marketplace trusted publishing policy from the `release-v2` environment without building or
   # publishing: it exchanges the job's OIDC token for a Marketplace credential and checks that the credential may
-  # publish as `kilocode`. It installs only vsce, without install scripts, at the version bun.lock resolves for
-  # `publish-vscode`.
+  # publish as `kilocode`. It runs only curl and jq from the runner image, no third-party packages.
   oidc-check:
     name: check Marketplace trusted publishing
     if: inputs.oidc_check && github.repository == 'Kilo-Org/kilocode'
@@ -489,16 +489,6 @@ jobs:
             echo "::error::Run the v2 publish workflow from v2 (got $GITHUB_REF). Nothing was published."
             exit 1
           fi
-
-      - name: Setup Node
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: "24"
-          package-manager-cache: false
-
-      # Keep the version equal to the `@vscode/vsce` entry in bun.lock.
-      - name: Install @vscode/vsce
-        run: npm install --global --ignore-scripts @vscode/vsce@4.1.0
 
       - name: Exchange OIDC token and verify publisher access
         run: |
@@ -542,4 +532,22 @@ jobs:
           echo "::add-mask::$credential"
           echo "credential received"
 
-          VSCE_PAT="$credential" vsce verify-pat kilocode
+          # The same request as `vsce verify-pat kilocode` (vsce 4.1.0): the publisher's role assignments answer 200
+          # when the credential holds any role on it (Creator, Owner, Contributor, Reader) and 403 otherwise.
+          roles="$RUNNER_TEMP/marketplace-roles.json"
+          status="$(curl --silent --show-error --output "$roles" --write-out '%{http_code}' --config - \
+            --header "Accept: application/json;api-version=3.2-preview.1" \
+            --header "User-Agent: vsce" \
+            "https://marketplace.visualstudio.com/_apis/securityroles/scopes/gallery.publisher/roleassignments/resources/kilocode" <<EOF
+          user = "OAuth:$credential"
+          EOF
+          )"
+          echo "Marketplace publisher role check: HTTP $status"
+          if [ "$status" != "200" ]; then
+            message="$(jq -j '.message // empty' "$roles" 2>/dev/null | tr '\r\n' '  ' | cut -c1-300 || true)"
+            rm -f "$roles"
+            echo "::error::The Marketplace credential has no role on publisher kilocode${message:+: $message}"
+            exit 1
+          fi
+          rm -f "$roles"
+          echo "The Marketplace credential may publish as kilocode"
