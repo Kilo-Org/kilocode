@@ -7,7 +7,7 @@ export type PendingSession = { id: string; title?: string } & (
   | { state: "working" }
 )
 
-const APP = "opencode"
+const APP = process.env.OPENCODE_PROGRAM_STATUS_APP || "opencode" // kilocode_change(herdr-agent-state) - host-supplied OSC app identity
 const ROOT = ""
 const encoder = new TextEncoder()
 const decoder = new TextDecoder()

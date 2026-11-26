@@ -205,4 +205,8 @@ export const dict = {
   // Session transcript export
   "session.export.success": "工作階段記錄已匯出為 Markdown。",
   "session.export.error": "無法匯出工作階段記錄",
+  // Herdr pane agent state reports.
+  "tui.herdr.waitingForPermission": "正在等待權限",
+  "tui.herdr.waitingForAnswer": "正在等待你的回答",
+  "tui.herdr.socketPathTooLong": "HERDR_SOCKET_PATH 過長，已停用 Herdr 狀態回報。",
 }

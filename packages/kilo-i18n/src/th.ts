@@ -219,4 +219,8 @@ export const dict = {
   // Session transcript export
   "session.export.success": "ส่งออกบันทึกเซสชันเป็น Markdown แล้ว",
   "session.export.error": "ส่งออกบันทึกเซสชันไม่สำเร็จ",
+  // Herdr pane agent state reports.
+  "tui.herdr.waitingForPermission": "กำลังรอการอนุญาต",
+  "tui.herdr.waitingForAnswer": "กำลังรอคำตอบของคุณ",
+  "tui.herdr.socketPathTooLong": "การรายงานสถานะไปยัง Herdr ถูกปิดอยู่ เนื่องจาก HERDR_SOCKET_PATH ยาวเกินไป",
 }

@@ -229,4 +229,8 @@ export const dict = {
   // Session transcript export
   "session.export.success": "Transcription de la session exportée au format Markdown.",
   "session.export.error": "Échec de l'exportation de la transcription de la session",
+  // Herdr pane agent state reports.
+  "tui.herdr.waitingForPermission": "En attente d'autorisation",
+  "tui.herdr.waitingForAnswer": "En attente de votre réponse",
+  "tui.herdr.socketPathTooLong": "L'envoi de l'état à Herdr est désactivé, car HERDR_SOCKET_PATH est trop long.",
 }

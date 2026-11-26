@@ -8,6 +8,12 @@ test.each([undefined, "0", "1"])("startup defaults preserve an explicit host set
   expect(env.OPENCODE_TUI_OVERLAP_STARTUP).toBe(setting ?? "1")
 })
 
+test.each([undefined, "custom"])("program status identifies the app as Kilo unless the host sets it (%s)", (setting) => {
+  const env: Record<string, string | undefined> = { OPENCODE_PROGRAM_STATUS_APP: setting }
+  translate(env)
+  expect(env.OPENCODE_PROGRAM_STATUS_APP).toBe(setting ?? "kilo")
+})
+
 test("KILO_ variables reach their OPENCODE_ name, and the Kilo name wins", () => {
   const env: Record<string, string | undefined> = {
     KILO_CLIENT: "kilo",

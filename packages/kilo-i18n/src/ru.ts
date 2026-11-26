@@ -227,4 +227,8 @@ export const dict = {
   // Session transcript export
   "session.export.success": "Запись сеанса экспортирована в формате Markdown.",
   "session.export.error": "Не удалось экспортировать запись сеанса",
+  // Herdr pane agent state reports.
+  "tui.herdr.waitingForPermission": "Ожидание разрешения",
+  "tui.herdr.waitingForAnswer": "Ожидание вашего ответа",
+  "tui.herdr.socketPathTooLong": "Отправка состояния в Herdr отключена: значение HERDR_SOCKET_PATH слишком длинное.",
 }

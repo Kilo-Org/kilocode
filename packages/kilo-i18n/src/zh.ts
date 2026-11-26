@@ -206,4 +206,8 @@ export const dict = {
   // Session transcript export
   "session.export.success": "会话记录已导出为 Markdown。",
   "session.export.error": "导出会话记录失败",
+  // Herdr pane agent state reports.
+  "tui.herdr.waitingForPermission": "正在等待权限",
+  "tui.herdr.waitingForAnswer": "正在等待你的回答",
+  "tui.herdr.socketPathTooLong": "HERDR_SOCKET_PATH 过长，已停用 Herdr 状态报告。",
 }

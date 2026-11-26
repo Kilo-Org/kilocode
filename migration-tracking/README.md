@@ -11,5 +11,6 @@ Kilo moves onto the upstream OpenCode v2 runtime on the integration branch `orig
 | Generated v1 inventory per feature | [`progress/`](progress/) (`bun script/upstream/progress.ts`; CI checks it) |
 | Known upstream failures at the current base | [`technical-notes/baseline/pinned-v2-baseline.md`](technical-notes/baseline/pinned-v2-baseline.md), reproduced by [`technical-notes/script/v2-baseline.ts`](technical-notes/script/v2-baseline.ts) |
 | What a v1 client changes to talk to v2 | [`technical-notes/v1-v2-client-breaking-changes.md`](technical-notes/v1-v2-client-breaking-changes.md) |
+| Herdr terminal state reporting | [`technical-notes/herdr-agent-state.md`](technical-notes/herdr-agent-state.md) |
 
 The previous plans, decision log, discovery reports, marker audits, test plans and technical notes were removed on 2026-10-28 ([#15294](https://github.com/Kilo-Org/kilocode/issues/15294)). They remain in history at commit `e39551c9b0` (`git show e39551c9b0:migration-tracking/<path>`).

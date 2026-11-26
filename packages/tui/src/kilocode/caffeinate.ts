@@ -4,19 +4,14 @@ import { CaffeinationController, type CaffeinationState } from "@kilocode/caffei
 import type { Plugin } from "@opencode/plugin/tui"
 import { createEffect, createRoot, createSignal, onCleanup } from "solid-js"
 import { errorMessage } from "../util/error"
+import { sessionWorking } from "./session-activity"
 
 /**
  * An agent works while a session runs or a queued prompt waits for it. Parked synthetic context stays pending without
  * execution, so it does not count as work.
  */
 export function busy(data: Plugin.Context["data"]) {
-  return data.session.list().some((session) => {
-    const id = session.id
-    return (
-      data.session.status(id) === "running" ||
-      data.session.pending.list(id).some((item) => item.type !== "synthetic")
-    )
-  })
+  return data.session.list().some((session) => sessionWorking(data, session.id))
 }
 
 /**

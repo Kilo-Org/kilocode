@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 167,
-    "markedLines": 3024,
+    "files": 168,
+    "markedLines": 3027,
     "unmarkedLines": 560,
     "deletedFiles": 0
   },
@@ -376,7 +376,7 @@
     },
     "packages/tui/src/plugin/builtins.ts": {
       "rung": 4,
-      "seam": "Register the Kilo built-in TUI plugins, including `KiloMarketplace` (`/marketplace`, partial U-E2-23), `KiloCopySession` (`/copy-session`), `KiloTerminalActivity` (OSC 777 session activity for terminals that set KILO_TERMINAL_ACTIVITY), `KiloPeriodic` (`/periodic`, local scheduled Flows), `KiloAutoApprove` (`/auto-approve` and Ctrl+Alt+A for the runtime auto-approve toggle) and `KiloRemote` (`/remote` and the remote-control header indicator, registered only by the kilo2 host identity). The TUI loads its built-in list in its own process, which server-side host/plugin registration cannot reach. Config-driven plugins load npm packages or local files, unavailable in compiled binaries. A generic registration API would require more shared lines for this single list. The behavior stays in tui/src/kilocode/; each plugin adds one import and one list entry."
+      "seam": "Register the Kilo built-in TUI plugins, including `KiloMarketplace` (`/marketplace`, partial U-E2-23), `KiloCopySession` (`/copy-session`), `KiloTerminalActivity` (OSC 777 session activity for terminals that set KILO_TERMINAL_ACTIVITY), `KiloHerdrAgentState` (Herdr pane agent state reporting when HERDR_ENV=1), `KiloPeriodic` (`/periodic`, local scheduled Flows), `KiloAutoApprove` (`/auto-approve` and Ctrl+Alt+A for the runtime auto-approve toggle) and `KiloRemote` (`/remote` and the remote-control header indicator, registered only by the kilo2 host identity). The TUI loads its built-in list in its own process, which server-side host/plugin registration cannot reach. Config-driven plugins load npm packages or local files, unavailable in compiled binaries. A generic registration API would require more shared lines for this single list. The behavior stays in tui/src/kilocode/; each plugin adds one import and one list entry."
     },
     "packages/tui/test/fixture/local.tsx": {
       "rung": 3,
@@ -681,6 +681,10 @@
     "packages/tui/src/context/location.tsx": {
       "rung": 3,
       "seam": "Expose the current location sync's terminal failure after retries to the early Home editor. Only a typed missing directory is a location-unavailable error for existing consumers."
+    },
+    "packages/tui/src/context/program-status.ts": {
+      "rung": 3,
+      "seam": "Read the OSC 7501 program-status app identity from OPENCODE_PROGRAM_STATUS_APP, keeping the upstream `opencode` default. The Kilo host sets it to `kilo` in packages/kilo-cli/src/env.ts so Herdr and other terminals identify Kilo. The identity is a module constant in the TUI process, which server plugins and host composition cannot reach."
     },
     "packages/tui/src/context/runtime.tsx": {
       "rung": 3,
