@@ -39,11 +39,11 @@ describe.skipIf(process.platform === "win32")("Linux sandbox toolchain setup", (
     await rm(root, { recursive: true, force: true })
   })
 
-  async function run(mirrors: string[], cached?: "valid" | "invalid") {
+  async function run(mirrors: string[], existing?: "valid" | "invalid") {
     const dir = await mkdtemp(path.join(root, "runner-"))
     const file = path.join(dir, `${name}.tar.xz`)
     const output = path.join(dir, "path")
-    if (cached) await Bun.write(file, cached === "valid" ? archive : tampered)
+    if (existing) await Bun.write(file, existing === "valid" ? archive : tampered)
     const requests: string[] = []
     const server = Bun.serve({
       hostname: "127.0.0.1",
@@ -85,7 +85,7 @@ describe.skipIf(process.platform === "win32")("Linux sandbox toolchain setup", (
         log: stdout + stderr,
         requests,
         extracted: await Bun.file(path.join(dir, name, "zig")).exists(),
-        cached: await Bun.file(file).exists(),
+        retained: await Bun.file(file).exists(),
         installed: (await Bun.file(output).exists()) && (await Bun.file(output).text()) === `${dir}/${name}\n`,
       }
     } finally {
@@ -101,14 +101,15 @@ describe.skipIf(process.platform === "win32")("Linux sandbox toolchain setup", (
     expect(result.installed).toBe(true)
   })
 
-  test("uses a verified cached archive without network access", async () => {
+  test("never reuses an archive already on disk, even a verified one", async () => {
     const result = await run(["missing"], "valid")
-    expect(result.code, result.log).toBe(0)
-    expect(result.requests).toEqual([])
-    expect(result.installed).toBe(true)
+    expect(result.code).not.toBe(0)
+    expect(result.requests).toEqual(["missing"])
+    expect(result.extracted).toBe(false)
+    expect(result.installed).toBe(false)
   })
 
-  test("replaces a corrupt cached archive", async () => {
+  test("replaces an archive already on disk with a verified download", async () => {
     const result = await run(["good"], "invalid")
     expect(result.code, result.log).toBe(0)
     expect(result.requests).toEqual(["good"])
@@ -120,7 +121,7 @@ describe.skipIf(process.platform === "win32")("Linux sandbox toolchain setup", (
     expect(result.code).not.toBe(0)
     expect(result.log).toContain("Could not obtain the verified Zig 0.14.0 archive")
     expect(result.extracted).toBe(false)
-    expect(result.cached).toBe(false)
+    expect(result.retained).toBe(false)
     expect(result.installed).toBe(false)
   })
 

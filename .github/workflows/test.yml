@@ -81,11 +81,11 @@ jobs:
         settings: ${{ fromJSON(needs.changes.outputs.settings) }} # kilocode_change
     runs-on: ${{ matrix.settings.host }}
     timeout-minutes: 45 # kilocode_change
-    # kilocode_change start - manual dispatches exist to validate real execution (soak runs,
-    # timing measurements); every turbo step in this job bypasses the cache on dispatch
-    # instead of replaying a same-commit hit and executing nothing.
+    # kilocode_change start - this job reports results with checks: write, so turbo never
+    # reads a cache: local:w executes every task and keeps turbo off the remote cache.
+    # (TURBO_FORCE is left unset: turbo 2.10 turns it into local:w,remote:w and writes remotely.)
     env:
-      TURBO_FORCE: ${{ github.event_name == 'workflow_dispatch' && 'true' || '' }}
+      TURBO_CACHE: local:w
     # kilocode_change end
     defaults:
       run:
@@ -164,7 +164,7 @@ jobs:
           git config --global user.name "kilo-maintainer[bot]"
         # kilocode_change end
 
-      # kilocode_change - no Turbo cache: this job holds checks: write, so it restores nothing from the shared cache
+      # kilocode_change - no Turbo cache restore: the job runs turbo with TURBO_CACHE=local:w (see env above)
 
       # kilocode_change start - test non-CLI packages separately from sharded CLI tests
       - name: Verify package test scheduling
@@ -265,6 +265,10 @@ jobs:
     if: needs.changes.outputs.general == 'true'
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
+    # Reports results with checks: write, so turbo never reads a cache: local:w executes every
+    # task and keeps turbo off the remote cache. TURBO_FORCE would re-enable remote writes.
+    env:
+      TURBO_CACHE: local:w
     defaults:
       run:
         shell: bash
@@ -288,7 +292,7 @@ jobs:
           git config --global user.email "kilo-maintainer[bot]@users.noreply.github.com"
           git config --global user.name "kilo-maintainer[bot]"
 
-      # kilocode_change - no Turbo cache: this job holds checks: write, so it restores nothing from the shared cache
+      # kilocode_change - no Turbo cache restore: the job runs turbo with TURBO_CACHE=local:w (see env above)
 
       - name: Check generated client
         if: runner.os == 'Linux'
