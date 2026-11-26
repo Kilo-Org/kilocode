@@ -9,19 +9,19 @@ inputs:
     description: "OpenCode GitHub App private key"
     required: true
   repositories:
-    description: "Repositories the token covers, comma or newline separated. Empty: every repository the app is installed on"
+    description: "Comma or newline-separated repository names the token may access; empty covers every repository of the installation"
     required: false
     default: ""
   permission-contents:
-    description: "Contents permission of the token. Leave every permission input empty for all of the app's permissions"
+    description: "Contents permission for the token (read or write); empty, with no other permission input set, inherits every app permission"
     required: false
     default: ""
   permission-pull-requests:
-    description: "Pull requests permission of the token"
+    description: "Pull requests permission for the token (read or write)"
     required: false
     default: ""
   permission-workflows:
-    description: "Workflows permission of the token"
+    description: "Workflows permission for the token (write)"
     required: false
     default: ""
 outputs:
@@ -42,9 +42,9 @@ runs:
         private-key: ${{ inputs.opencode-app-secret }}
         owner: ${{ github.repository_owner }}
         repositories: ${{ inputs.repositories }}
-        permission-contents: ${{ inputs.permission-contents }}
-        permission-pull-requests: ${{ inputs.permission-pull-requests }}
-        permission-workflows: ${{ inputs.permission-workflows }}
+        permission-contents: ${{ inputs['permission-contents'] }}
+        permission-pull-requests: ${{ inputs['permission-pull-requests'] }}
+        permission-workflows: ${{ inputs['permission-workflows'] }}
 
     - name: Configure git user
       run: |
@@ -56,9 +56,35 @@ runs:
     - name: Clear checkout auth
       run: |
         git config --local --unset-all http.https://github.com/.extraheader || true
+        keys="$(git config --local --name-only --get-regexp '^includeIf\.gitdir:' || true)"
+        for key in $keys; do
+          path="$(git config --local --get "$key" || true)"
+          case "$path" in
+            *git-credentials-*.config) git config --local --unset-all "$key" || true ;;
+          esac
+        done
       shell: bash
 
-    - name: Configure git remote
+    # Serve the token from a credential helper outside the workspace instead of writing it into the origin URL in
+    # .git/config.
+    - name: Configure git credentials
+      env:
+        TOKEN: ${{ steps.apptoken.outputs.token }}
+        REPO: ${{ github.repository }}
       run: |
-        git remote set-url origin https://x-access-token:${{ steps.apptoken.outputs.token }}@github.com/${{ github.repository }}
+        helper="${RUNNER_TEMP}/git-committer-credential-helper"
+        (
+          umask 077
+          cat > "$helper" <<EOF
+        #!/bin/sh
+        cat > /dev/null
+        test "\$1" = get || exit 0
+        echo username=x-access-token
+        echo password=${TOKEN}
+        EOF
+        )
+        chmod 700 "$helper"
+        git config --global --replace-all credential.https://github.com.helper ""
+        git config --global --add credential.https://github.com.helper "$helper"
+        git remote set-url origin "https://github.com/${REPO}"
       shell: bash

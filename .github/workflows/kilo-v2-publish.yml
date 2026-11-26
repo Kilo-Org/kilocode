@@ -24,7 +24,8 @@ run-name: "${{ github.event_name == 'workflow_dispatch' && (inputs.oidc_check &&
 # needs an existing package, so the client packages need one first publish with a local npm login.
 #
 # The three publish jobs run in the `release-v2` environment, which accepts only the `v2` branch. Each one also checks
-# the branch in its first step, before it publishes anything.
+# the branch in its first step, before it publishes anything. The npm, VS Code Marketplace and Open VSX trusted
+# publishers are bound to this workflow file and the `release-v2` environment.
 #
 # `gh workflow run kilo-v2-publish.yml --ref v2 -f oidc_check=true` only checks VS Code Marketplace trusted publishing
 # from the `release-v2` environment (the `oidc-check` job). It builds and publishes nothing.
@@ -470,13 +471,14 @@ jobs:
 
   # Checks the VS Code Marketplace trusted publishing policy from the `release-v2` environment without building or
   # publishing: it exchanges the job's OIDC token for a Marketplace credential and checks that the credential may
-  # publish as `kilocode`. It uses the lockfile's vsce, the same one `publish-vscode` runs.
+  # publish as `kilocode`. It installs only vsce, without install scripts, at the version bun.lock resolves for
+  # `publish-vscode`.
   oidc-check:
     name: check Marketplace trusted publishing
-    if: inputs.oidc_check
+    if: inputs.oidc_check && github.repository == 'Kilo-Org/kilocode'
     runs-on: blacksmith-4vcpu-ubuntu-2404
     environment: release-v2
-    timeout-minutes: 15
+    timeout-minutes: 5
     permissions:
       contents: read
       id-token: write
@@ -488,16 +490,17 @@ jobs:
             exit 1
           fi
 
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          persist-credentials: false
+          node-version: "24"
+          package-manager-cache: false
 
-      - name: Setup Bun and install dependencies
-        uses: ./.github/actions/setup-bun
+      # Keep the version equal to the `@vscode/vsce` entry in bun.lock.
+      - name: Install @vscode/vsce
+        run: npm install --global --ignore-scripts @vscode/vsce@4.1.0
 
       - name: Exchange OIDC token and verify publisher access
-        working-directory: packages/kilo-vscode
         run: |
           set -euo pipefail
           umask 077
@@ -539,4 +542,4 @@ jobs:
           echo "::add-mask::$credential"
           echo "credential received"
 
-          VSCE_PAT="$credential" npx --no-install @vscode/vsce verify-pat kilocode
+          VSCE_PAT="$credential" vsce verify-pat kilocode
