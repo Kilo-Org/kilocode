@@ -10,6 +10,11 @@ on:
       - "packages/kilo-docs/**"
   workflow_dispatch:
 
+# kilocode_change start
+permissions:
+  contents: read
+# kilocode_change end
+
 jobs:
   build:
     name: Build docs site
