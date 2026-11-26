@@ -416,12 +416,10 @@ jobs:
       - name: Publish to Open VSX
         if: ${{ !inputs.dry_run }}
         working-directory: packages/kilo-vscode
-        env:
-          OVSX_PAT: ${{ secrets.OVSX_TOKEN }}
         run: |
           set -euo pipefail
           for target in $VSIX_TARGETS; do
-            npx --no-install ovsx publish --pre-release --skip-duplicate --packagePath "out/kilo-vscode-$target.vsix"
+            npx --no-install ovsx publish --trusted-publishing --pre-release --skip-duplicate --packagePath "out/kilo-vscode-$target.vsix"
           done
 
       - name: Summary
