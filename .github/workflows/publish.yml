@@ -219,6 +219,7 @@ jobs:
             /script/kilocode/bun.json
             /script/kilocode/release.ts
             /script/kilocode/sbom/artifact.ts
+            /script/kilocode/sbom/policy.ts
 
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
@@ -260,19 +261,19 @@ jobs:
           verify build "$BUILD_SHA256" build-cli
           verify evidence "$EVIDENCE_SHA256" sbom-cli-windows
 
-      # Also records the attestation subjects: attest-cli attests exactly the archives this step
-      # checked, with the signed digests for the Windows zips.
+      # Uploads only to the draft with the release id the version job recorded. Also records the
+      # attestation subjects: attest-cli attests exactly the archives this step checked, with the
+      # signed digests for the Windows zips.
       - name: Verify and transfer CLI assets
         id: assets
         env:
           VERSION: ${{ needs.version.outputs.version }}
           RELEASE: ${{ needs.version.outputs.release }}
           SIGNED_ZIPS: ${{ needs.sign-cli-windows.outputs.zips-sha256 }}
+          SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }}
           GH_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
-        run: |
-          test "$(gh release view "v$VERSION" --json databaseId,isDraft --jq 'select(.isDraft) | .databaseId')" = "$RELEASE"
-          node script/kilocode/cli-assets.ts "$RUNNER_TEMP/archives" "$RUNNER_TEMP/build" "$RUNNER_TEMP/evidence" "$VERSION"
+        run: node script/kilocode/cli-assets.ts "$RUNNER_TEMP/archives" "$RUNNER_TEMP/build" "$RUNNER_TEMP/evidence" "$VERSION"
     outputs:
       subjects: ${{ steps.assets.outputs.subjects }}
 
@@ -1049,24 +1050,26 @@ jobs:
 
       # kilocode_change start - every release asset is on the draft before the release is published,
       # so the published release never changes. The VS Code packages and their evidence go first;
-      # upload-cli already put the CLI assets there. Reading and writing a draft needs push access.
+      # upload-cli already put the CLI assets there. Both steps address the release by the id the
+      # version job recorded. On a re-run after the release was published they upload nothing
+      # and check the published assets. Reading and writing a draft needs push access.
       - name: Upload VS Code packages to draft
         env:
           VERSION: ${{ needs.version.outputs.version }}
-          RELEASE: ${{ needs.version.outputs.release }}
+          KILO_RELEASE: ${{ needs.version.outputs.release }}
           GH_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ steps.committer.outputs.token }}
           VSIX_SHA256: ${{ needs.build-vscode.outputs.vsix-sha256 }}
-        run: |
-          test "$(gh release view "v$VERSION" --json databaseId,isDraft --jq 'select(.isDraft) | .databaseId')" = "$RELEASE"
-          bun script/kilocode/vsix-assets.ts packages/kilo-vscode/out "v$VERSION"
+        run: bun script/kilocode/vsix-assets.ts packages/kilo-vscode/out "v$VERSION"
 
       # Fails before anything is published unless the draft holds exactly the CLI assets of the
-      # checked evidence manifest and the VS Code packages build-vscode recorded. ./script/publish.ts
-      # adds the distribution evidence and checks the complete draft again before it publishes it.
-      - name: Verify draft release assets
+      # checked evidence manifest and the VS Code packages build-vscode recorded. Distribution
+      # evidence that a failed earlier run left on the draft is removed first. ./script/publish.ts
+      # uploads the distribution evidence and checks the complete draft again before it publishes it.
+      - name: Verify release assets
         env:
           VERSION: ${{ needs.version.outputs.version }}
+          KILO_RELEASE: ${{ needs.version.outputs.release }}
           GH_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ steps.committer.outputs.token }}
           CLI_MANIFEST_SHA256: ${{ needs.sbom-cli-windows.outputs.manifest-sha256 }}

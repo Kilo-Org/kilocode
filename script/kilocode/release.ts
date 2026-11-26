@@ -15,28 +15,39 @@
  * therefore threw away the other 18 and failed `build-cli` after the full build
  * (publish run 37520899871, v7.8.6: 8 of 26 assets landed).
  *
- * Uploading one asset per `gh` invocation makes each attempt independently
- * retryable, and `--clobber` deletes the ghost or half-written asset left by the
- * previous attempt, so "already exists" resolves itself instead of being fatal. A
- * file that exhausts its attempts is reported with every other failure at the end
- * rather than cancelling assets that would have succeeded.
+ * Uploading one asset per request makes each attempt independently retryable, and
+ * deleting an existing asset of that name first (what `--clobber` did) removes the
+ * ghost or half-written asset left by the previous attempt, so "already exists"
+ * resolves itself instead of being fatal. A file that exhausts its attempts is
+ * reported with every other failure at the end rather than cancelling assets that
+ * would have succeeded. Every request addresses the release by its database id.
  */
 
-import { execFile } from "node:child_process"
+import { execFile, spawn } from "node:child_process"
+import { once } from "node:events"
+import { createWriteStream } from "node:fs"
 import path from "node:path"
+import { pipeline } from "node:stream/promises"
 import { setTimeout } from "node:timers/promises"
 import { promisify } from "node:util"
 
 const exec = promisify(execFile)
 
-export type Asset = { name: string; state?: string }
+export type Asset = { id?: number; name: string; state?: string; digest?: string | null }
 
-/** Outcome of one `gh release upload` invocation. */
+export type Release = { id: number; draft: boolean; tag_name: string; upload_url: string }
+
+/** Outcome of one asset upload. */
 export type Result = { ok: boolean; message: string }
 
 export type Options = {
-  /** Release tag, e.g. `v7.8.6`. Draft releases are resolved by tag like `gh` does. */
+  /** Release tag, e.g. `v7.8.6`; the release must be the draft for it. */
   tag: string
+  /**
+   * Release database id. Requests address the release by id, never by tag: a draft
+   * has no tag yet, and two drafts can carry the same tag name.
+   */
+  release?: string
   files: string[]
   /** Attempts per file, not for the set as a whole. */
   attempts?: number
@@ -58,20 +69,71 @@ const ATTEMPTS = 4
 const CONCURRENCY = 3
 const DELAY = 5_000
 
-function pusher(tag: string) {
-  return async (file: string): Promise<Result> => {
-    return exec("gh", ["release", "upload", tag, file, "--clobber"], { windowsHide: true }).then(
-      () => ({ ok: true, message: "" }),
-      (err: Error) => ({ ok: false, message: err.message }),
-    )
-  }
+function repo() {
+  const value = process.env.GH_REPO
+  if (!value) throw new Error("GH_REPO is required to address the release")
+  return value
 }
 
-function lister(tag: string) {
-  return async (): Promise<Asset[]> => {
-    const res = await exec("gh", ["release", "view", tag, "--json", "assets"], { windowsHide: true })
-    const release: { assets?: Asset[] } = JSON.parse(res.stdout)
-    return release.assets ?? []
+async function api(args: string[]) {
+  const res = await exec("gh", ["api", ...args], { windowsHide: true, maxBuffer: 64 * 1024 * 1024 })
+  return res.stdout
+}
+
+/** The release with this database id. */
+export async function view(id: string): Promise<Release> {
+  return JSON.parse(await api([`repos/${repo()}/releases/${id}`]))
+}
+
+/** The release with this id, which must carry `tag`. */
+export async function release(id: string, tag: string) {
+  const found = await view(id)
+  if (found.tag_name !== tag) throw new Error(`Release ${id} is for ${found.tag_name}, not ${tag}`)
+  return found
+}
+
+export async function assets(id: string): Promise<Asset[]> {
+  const out = await api(["--paginate", "--jq", ".[]", `repos/${repo()}/releases/${id}/assets`])
+  return out
+    .split("\n")
+    .filter((line) => line.trim() !== "")
+    .map((line) => JSON.parse(line))
+}
+
+/** Writes the bytes of release asset `id` to `file`. */
+export async function download(id: number, file: string) {
+  const proc = spawn("gh", ["api", "-H", "Accept: application/octet-stream", `repos/${repo()}/releases/assets/${id}`], {
+    windowsHide: true,
+    stdio: ["ignore", "pipe", "inherit"],
+  })
+  const closed = once(proc, "close")
+  await pipeline(proc.stdout, createWriteStream(file))
+  const [code] = await closed
+  if (code !== 0) throw new Error(`gh api could not download release asset ${id} (exit ${code})`)
+}
+
+export async function remove(id: number) {
+  await api(["--method", "DELETE", `repos/${repo()}/releases/assets/${id}`])
+}
+
+/** Publishes the release with this id: it stops being a draft and its tag is created. */
+export async function undraft(id: string, fields: string[]) {
+  await api(["--method", "PATCH", `repos/${repo()}/releases/${id}`, "-F", "draft=false", ...fields])
+}
+
+/** `gh release upload --clobber`, addressed by release id: drop an asset of the same name, then upload. */
+function pusher(id: string, url: string) {
+  return async (file: string): Promise<Result> => {
+    const name = path.basename(file)
+    try {
+      const existing = (await assets(id)).find((item) => item.name === name)
+      if (existing?.id) await remove(existing.id)
+      const target = `${url.replace(/\{.*\}$/, "")}?name=${encodeURIComponent(name)}`
+      await api(["--method", "POST", "-H", "Content-Type: application/octet-stream", "--input", file, target])
+      return { ok: true, message: "" }
+    } catch (err) {
+      return { ok: false, message: err instanceof Error ? err.message : String(err) }
+    }
   }
 }
 
@@ -100,8 +162,16 @@ export async function upload(input: Options) {
   if (input.files.length === 0) return
   const attempts = input.attempts ?? ATTEMPTS
   const delay = input.delay ?? DELAY
-  const push = input.push ?? pusher(input.tag)
-  const list = input.list ?? lister(input.tag)
+  let push = input.push
+  if (!push) {
+    // Uploads go only to the draft with this id, checked once more right before the first upload.
+    if (!input.release) throw new Error("upload needs the release id")
+    const target = await release(input.release, input.tag)
+    if (!target.draft) throw new Error(`Release ${input.release} (${input.tag}) is published. Nothing was uploaded.`)
+    push = pusher(input.release, target.upload_url)
+  }
+  const id = input.release
+  const list = input.list ?? (() => assets(id!))
 
   const queue = [...input.files]
   const failures: { name: string; message: string }[] = []

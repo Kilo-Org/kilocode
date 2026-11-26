@@ -5,23 +5,26 @@ import { $ } from "bun"
 
 const output = [`version=${Script.version}`]
 
-if (!Script.preview) {
-  // kilocode_change start - create draft release; changelog generation and
-  // release notes are handled by publish.ts on the same runner that commits.
-  await $`gh release create v${Script.version} -d --title "v${Script.version}" --notes ""`
-  // kilocode_change end
-  const release = await $`gh release view v${Script.version} --json tagName,databaseId`.json()
-  output.push(`release=${release.databaseId}`)
-  output.push(`tag=${release.tagName}`)
-  // kilocode_change start - handle both beta and rc preview channels
-} else if (Script.channel === "beta" || Script.channel === "rc") {
-  await $`gh release create v${Script.version} -d --prerelease --title "v${Script.version}" --repo ${process.env.GH_REPO}`
-  const release =
-    await $`gh release view v${Script.version} --json tagName,databaseId --repo ${process.env.GH_REPO}`.json()
-  output.push(`release=${release.databaseId}`)
-  output.push(`tag=${release.tagName}`)
-  // kilocode_change end
+// kilocode_change start - create the draft release and record the id the create call returned;
+// later jobs address the release by that id (drafts have no tag yet, and two drafts can share a
+// tag name). Changelog generation and release notes are handled by publish.ts on the same runner
+// that commits.
+async function draft(prerelease: boolean) {
+  const tag = `v${Script.version}`
+  const fields = ["-f", `tag_name=${tag}`, "-f", `name=${tag}`, "-f", "body=", "-F", "draft=true"]
+  if (prerelease) fields.push("-F", "prerelease=true")
+  const release = await $`gh api --method POST repos/${process.env.GH_REPO}/releases ${fields}`.json()
+  output.push(`release=${release.id}`)
+  output.push(`tag=${release.tag_name}`)
 }
+
+if (!Script.preview) {
+  await draft(false)
+  // handle both beta and rc preview channels
+} else if (Script.channel === "beta" || Script.channel === "rc") {
+  await draft(true)
+}
+// kilocode_change end
 
 output.push(`repo=${process.env.GH_REPO}`)
 

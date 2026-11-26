@@ -5,6 +5,7 @@ import pin from "./bun.json" with { type: "json" }
 import { upload } from "./release.ts"
 import { digest } from "./sbom/artifact.ts"
 import type { Manifest } from "./sbom/manifest.ts"
+import { policy } from "./sbom/policy.ts"
 
 // The full build ships one archive per pinned runtime. Only trusted basenames
 // become filesystem paths or gh arguments, never paths supplied by the build.
@@ -54,7 +55,8 @@ async function manifest(dir: string, version: string) {
  *   every other build entry unchanged
  *
  * Returns the files to upload and the attestation subjects (each published archive that has a
- * sidecar, with the sidecar digest attest-cli checks).
+ * sidecar, with the sidecar digest attest-cli checks). With SBOM_ENFORCE every archive must have
+ * a sidecar and an attestation subject.
  */
 export async function assets(input: {
   archives: string
@@ -62,7 +64,9 @@ export async function assets(input: {
   evidence: string
   version: string
   zips: Map<string, string>
+  env?: Record<string, string | undefined>
 }) {
+  const { enforce } = policy(input.env)
   assert.deepEqual((await names(input.archives)).sort(), [...targets].sort(), "Unexpected CLI archive set")
   assert.deepEqual([...input.zips.keys()].sort(), [...windows].sort(), "Unexpected signed Windows zip set")
   const build = await manifest(input.build, input.version)
@@ -85,6 +89,7 @@ export async function assets(input: {
     assert.equal(await digest(file), entry.sha256, `${name}: digest mismatch`)
     lines.push(`${entry.sha256}  ${name}`)
     files.push(file)
+    if (enforce) assert(!entry.error && entry.sbom, `${name}: no SBOM evidence (${entry.error ?? "no sidecar"})`)
     // In advisory mode SBOM generation can record a failure instead of a sidecar.
     if (entry.error && entry.sbom === undefined) continue
     const sidecar = `${name}.cdx.json`
@@ -110,13 +115,14 @@ export async function assets(input: {
     `${lines.join("\n")}\n`,
     "Invalid CLI checksums",
   )
+  if (enforce) assert.equal(include.length, targets.length, "Not every CLI archive has an attestation subject")
   return { files, subjects: { include } }
 }
 
 if (import.meta.main) {
   const [archives, build, evidence, version] = process.argv.slice(2)
   const checked = await assets({ archives, build, evidence, version, zips: signed(process.env.SIGNED_ZIPS ?? "") })
-  await upload({ tag: `v${version}`, files: checked.files })
+  await upload({ tag: `v${version}`, release: process.env.RELEASE, files: checked.files })
   // Appended, never rewritten: the runner owns this file.
   if (process.env.GITHUB_OUTPUT)
     await appendFile(process.env.GITHUB_OUTPUT, `subjects=${JSON.stringify(checked.subjects)}\n`)

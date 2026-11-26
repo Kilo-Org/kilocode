@@ -57,23 +57,33 @@ The `publish.yml` workflow starts with `version`, which creates the draft releas
 
 ### 4. Publish (`publish`)
 
-Downloads all build artifacts and publishes to every distribution channel:
+Downloads all build artifacts and publishes to every distribution channel, in this order. Every request to the GitHub Release addresses it by the release id the `version` job recorded, never by tag.
+
+#### Release Assets on the Draft
+
+- Checks the downloaded CLI dist and VS Code packages against the digests their jobs recorded.
+- Uploads the VSIX files and their SBOM evidence to the draft GitHub Release.
+- Checks that the draft holds exactly the CLI assets of the checked evidence manifest and the VS Code files `build-vscode` recorded. Distribution evidence that a failed earlier run left on the draft is removed first; it is uploaded again later.
 
 #### Version Commit and Tagging
 
 - Updates the `version` field in all `package.json` files across the monorepo.
 - Updates the Zed extension manifest (`extension.toml`) with the new version.
 - Rebuilds the TypeScript SDK (`packages/sdk/js`).
-- Commits the version bump, tags the commit, and pushes to the repo.
-- Uploads the VSIX files and their SBOM evidence to the draft GitHub Release, then checks that the draft holds exactly the CLI assets of the checked evidence manifest and the VS Code files `build-vscode` recorded.
+- Commits the version bump, tags the commit, and pushes to the repo. If an earlier run already pushed them (tag `v<version>` on origin, pointing at a commit on `main` whose `packages/opencode/package.json` has that version), this is skipped; any other existing tag fails the run.
 
 #### CLI (`@kilocode/cli`)
 
-- Publishes platform-specific binary packages to **npm** (e.g. `@kilocode/cli-linux-x64`, `@kilocode/cli-darwin-arm64`, etc.).
-- Publishes the main `@kilocode/cli` package to **npm** with optional dependencies on the binary packages.
+- Packs the platform-specific binary packages (e.g. `@kilocode/cli-linux-x64`) and the main `@kilocode/cli` package, and describes each exact tarball.
 - Builds and pushes a multi-arch **Docker image** (`ghcr.io/kilo-org/kilocode`) to GitHub Container Registry (linux/amd64 + linux/arm64).
 - Builds and pushes the image's **OpenShell variant** (`ghcr.io/kilo-org/kilocode:<version>-openshell` and `:latest-openshell`) from the Dockerfile's `openshell` stage, for the same platforms.
-- Uploads the npm and container SBOM evidence to the draft, checks the complete draft again (every expected asset, each with its recorded digest, nothing else) and only then publishes the GitHub Release with its notes. No asset is uploaded after this, so the published release never changes. AUR and Homebrew, which download from the release, run after it.
+- Uploads the npm and container SBOM evidence to the draft, checks the complete draft again (every expected asset, each with its recorded digest, nothing else) and only then publishes the GitHub Release with its notes. No asset is uploaded after this, so the published release never changes.
+- Publishes the packed tarballs to **npm**: the platform packages, then `@kilocode/cli`. The installer and `kilo upgrade` take the version from npm and download the archives from the GitHub Release, so npm gets the version only once the release is public.
+
+#### Package Registries (stable releases only)
+
+- **AUR (Arch Linux)**: Clones `kilo-bin` from the AUR, updates the `PKGBUILD` with new version and SHA256 checksums, and pushes.
+- **Homebrew**: Clones `Kilo-Org/homebrew-tap`, updates the `kilo.rb` formula with new version, download URLs, and SHA256 checksums, and pushes.
 
 #### SDK (`@kilocode/sdk`)
 
@@ -88,14 +98,16 @@ Downloads all build artifacts and publishes to every distribution channel:
 - Publishes platform-specific VSIX packages to the **VS Code Marketplace** via `vsce publish --oidc`. The `publish` job runs in the `release` GitHub Actions environment, and the `kilocode` publisher trusts `Kilo-Org/kilocode`'s `publish.yml` workflow in that environment, so no Marketplace token is stored.
 - Publishes the same packages to **Open VSX** via `ovsx publish --trusted-publishing`, using GitHub Actions OIDC instead of a PAT.
 
-#### Package Registries (stable releases only)
-
-- **AUR (Arch Linux)**: Clones `kilo-bin` from the AUR, updates the `PKGBUILD` with new version and SHA256 checksums, and pushes.
-- **Homebrew**: Clones `Kilo-Org/homebrew-tap`, updates the `kilo.rb` formula with new version, download URLs, and SHA256 checksums, and pushes.
-
 #### Conda (stable releases and pre-releases)
 
 - **Conda (Anaconda.org)**: Uses [`rattler-build`](https://rattler.build) to repackage the released CLI archives (no compilation) into a `kilo-cli` conda package for `linux-64`, `linux-aarch64`, `osx-64`, `osx-arm64`, and `win-64`, all built from the single Linux publish runner (see the `Build conda package` step in `publish.yml` and the recipe in `packages/opencode/script/kilocode/conda-recipe/`). The built `.conda` files are then uploaded to Anaconda.org via the [`anaconda/actions/upload-package`](https://github.com/anaconda/actions) action, publishing under the `anaconda-cloud` org (same as ana-cli). Runs for both stable releases (`main` label, installed with `conda install -c anaconda-cloud kilo-cli`) and pre-releases (`rc` label, installed with `-c anaconda-cloud/label/rc`; the version is sanitized for conda, e.g. `0.0.0-rc-202609221200` → `0.0.0.rc.202609221200`).
+
+### Recovering from a Failed `publish` Job
+
+Re-run the failed `publish` job (**Re-run failed jobs**); the build jobs and their recorded digests are reused.
+
+- **Failed before the release was published** (for example the evidence upload or the second draft check): the GitHub Release is still a draft. The Docker images may already be pushed. The re-run skips the version commit and tag if they were pushed, removes leftover distribution evidence from the draft, packs and describes the npm packages again, rebuilds and pushes the images, uploads the evidence, checks the draft and publishes it. npm has nothing yet: packages are published only after the release.
+- **Failed after the release was published** (for example an npm publish): the re-run uploads nothing and does not touch the release. It checks the published assets (the CLI and VS Code assets against their recorded digests, the distribution evidence against its own manifest), skips the Docker builds, skips npm packages that are already published, and packs the others again; each tarball must have the digest the published evidence names, or the run stops before publishing it. AUR and Homebrew are updated again only if they changed.
 
 ## Prerequisites and Permissions
 

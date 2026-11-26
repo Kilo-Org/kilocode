@@ -85,7 +85,7 @@ async function fixture() {
   await write(evidence, final)
   const text = zips.join("\n")
   const verify = () => assets({ archives, build, evidence, version, zips: signed(text) })
-  return { root, archives, build, evidence, final, text, write, verify }
+  return { root, archives, build, evidence, built, final, text, write, verify }
 }
 
 test("hands the signed zips, the build archives and their evidence to the uploader", async () => {
@@ -173,6 +173,44 @@ test("refuses unsigned zips, changed build entries and a damaged set", async () 
     await rm(file)
     await Bun.write(file, "unsigned linux-x64")
     expect((await f.verify()).files.length).toBe(25)
+  } finally {
+    await rm(f.root, { recursive: true, force: true })
+  }
+})
+
+test("with SBOM_ENFORCE every archive needs a sidecar and an attestation subject", async () => {
+  const f = await fixture()
+  const run = (env: Record<string, string>) =>
+    assets({ archives: f.archives, build: f.build, evidence: f.evidence, version, zips: signed(f.text), env })
+  try {
+    // The fixture records darwin-arm64 with a failure instead of a sidecar.
+    expect((await run({})).files.length).toBe(25)
+    await assert.rejects(() => run({ SBOM_ENFORCE: "true" }), /kilo-darwin-arm64\.zip: no SBOM evidence/)
+
+    // Give darwin-arm64 a sidecar, so that only the Windows entry below can fail.
+    const darwin = "kilo-darwin-arm64.zip"
+    for (const dir of [f.build, f.evidence]) await Bun.write(path.join(dir, `${darwin}.cdx.json`), "{}")
+    for (const entries of [f.built, f.final]) {
+      const entry = entries.find((item) => item.artifact === darwin)!
+      delete entry.error
+      Object.assign(entry, {
+        sbom: `${darwin}.cdx.json`,
+        sbomSha256: await Artifact.digest(path.join(f.build, `${darwin}.cdx.json`)),
+      })
+    }
+    await f.write(f.build, f.built)
+    await f.write(f.evidence, f.final)
+    expect((await run({ SBOM_ENFORCE: "true" })).subjects.include.length).toBe(12)
+
+    // A Windows entry whose description failed after signing.
+    const windows = f.final.find((item) => item.artifact === "kilo-windows-x64.zip")!
+    delete windows.sbom
+    delete windows.sbomSha256
+    windows.error = "SBOM generation failed"
+    await rm(path.join(f.evidence, "kilo-windows-x64.zip.cdx.json"))
+    await f.write(f.evidence, f.final)
+    expect((await run({})).subjects.include.map((item) => item.artifact)).not.toContain("kilo-windows-x64.zip")
+    await assert.rejects(() => run({ SBOM_ENFORCE: "1" }), /kilo-windows-x64\.zip: no SBOM evidence/)
   } finally {
     await rm(f.root, { recursive: true, force: true })
   }

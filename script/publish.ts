@@ -4,6 +4,7 @@ import { Script } from "@opencode-ai/script"
 import { $ } from "bun"
 import { fileURLToPath } from "url"
 import { apply } from "./kilocode/changeset-version" // kilocode_change
+import { pushed } from "./kilocode/release-commit" // kilocode_change
 
 console.log("=== publishing ===\n")
 
@@ -53,29 +54,36 @@ if (Script.release) {
   // kilocode_change start - commit, tag, and push with rebase + retry to handle
   // concurrent merges to main. Rebase (instead of cherry-pick) handles
   // overlapping file changes cleanly, and the retry loop covers the narrow
-  // window between fetch and push where another commit could land.
-  await $`git commit -am "release: v${Script.version}"`
-  await $`git tag v${Script.version}`
-  const retries = 3
-  for (let i = 1; i <= retries; i++) {
-    await $`git fetch origin main`
-    const rebase = await $`git rebase origin/main`.nothrow()
-    if (rebase.exitCode !== 0) {
-      console.error(`rebase failed (attempt ${i}/${retries}), aborting rebase`)
-      await $`git rebase --abort`.nothrow()
-      if (i === retries)
-        throw new Error("failed to rebase release commit onto origin/main after " + retries + " attempts")
+  // window between fetch and push where another commit could land. A re-run
+  // after an earlier run pushed the release commit and tag continues without
+  // pushing again (pushed() fails unless the tag is this release's commit on main).
+  if (await pushed(Script.version)) {
+    console.log(`release commit and tag v${Script.version} are already on origin/main; not committing or pushing again`)
+  } else {
+    console.log(`committing, tagging and pushing release v${Script.version}`)
+    await $`git commit -am "release: v${Script.version}"`
+    await $`git tag v${Script.version}`
+    const retries = 3
+    for (let i = 1; i <= retries; i++) {
+      await $`git fetch origin main`
+      const rebase = await $`git rebase origin/main`.nothrow()
+      if (rebase.exitCode !== 0) {
+        console.error(`rebase failed (attempt ${i}/${retries}), aborting rebase`)
+        await $`git rebase --abort`.nothrow()
+        if (i === retries)
+          throw new Error("failed to rebase release commit onto origin/main after " + retries + " attempts")
+        await new Promise((r) => setTimeout(r, 3_000))
+        continue
+      }
+      const push = await $`git push origin HEAD:main --tags --no-verify --force-with-lease`.nothrow()
+      if (push.exitCode === 0) {
+        console.log("release commit pushed successfully")
+        break
+      }
+      console.warn(`push rejected (attempt ${i}/${retries}), retrying...`)
+      if (i === retries) throw new Error("failed to push release commit after " + retries + " attempts")
       await new Promise((r) => setTimeout(r, 3_000))
-      continue
     }
-    const push = await $`git push origin HEAD:main --tags --no-verify --force-with-lease`.nothrow()
-    if (push.exitCode === 0) {
-      console.log("release commit pushed successfully")
-      break
-    }
-    console.warn(`push rejected (attempt ${i}/${retries}), retrying...`)
-    if (i === retries) throw new Error("failed to push release commit after " + retries + " attempts")
-    await new Promise((r) => setTimeout(r, 3_000))
   }
   // kilocode_change end
 

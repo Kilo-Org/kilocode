@@ -2,7 +2,7 @@ import assert from "node:assert/strict"
 import { readdir } from "node:fs/promises"
 import path from "node:path"
 import { list } from "./draft-assets.ts"
-import { upload } from "./release.ts"
+import { release, upload } from "./release.ts"
 import { digest } from "./sbom/artifact.ts"
 
 /**
@@ -28,5 +28,9 @@ export async function assets(dir: string, text: string) {
 
 if (import.meta.main) {
   const [dir, tag] = process.argv.slice(2)
-  await upload({ tag, files: await assets(dir, process.env.VSIX_SHA256 ?? "") })
+  const id = process.env.KILO_RELEASE ?? ""
+  const files = await assets(dir, process.env.VSIX_SHA256 ?? "")
+  // A re-run after the release was published uploads nothing; the next step checks the published assets.
+  if (!(await release(id, tag)).draft) console.log(`Release ${tag} (${id}) is already published; nothing was uploaded.`)
+  else await upload({ tag, release: id, files })
 }
