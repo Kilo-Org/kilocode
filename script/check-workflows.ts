@@ -27,7 +27,6 @@ const DIR = path.join(ROOT, ".github", "workflows")
 
 // Workflows we have deliberately accepted into CI. Sort alphabetically.
 const active = new Set([
-  "auto-docs.yml",
   "beta.yml",
   "check-forbidden-strings.yml",
   "check-kilo-generated-artifacts.yml",
