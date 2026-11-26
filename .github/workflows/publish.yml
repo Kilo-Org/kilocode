@@ -38,14 +38,12 @@ on:
 concurrency: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.oidc_check && 'oidc-check' || inputs.version || inputs.bump }} # kilocode_change
 
 permissions:
-  id-token: write
-  contents: write
-  issues: write # kilocode_change - label automated JetBrains CLI pin bump PRs
-  packages: write
-  pull-requests: write # kilocode_change - create automated JetBrains CLI pin bump PRs
+  contents: read # kilocode_change
 
 jobs:
   version:
+    permissions: # kilocode_change
+      contents: write # kilocode_change - create the draft release
     runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.repository == 'Kilo-Org/kilocode' && !inputs.oidc_check # kilocode_change
     steps:
@@ -58,7 +56,7 @@ jobs:
             exit 1
           fi
       # kilocode_change end
-      - uses: actions/checkout@v6 # kilocode_change
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0 # kilocode_change
         with:
           fetch-depth: 0
 
@@ -89,10 +87,12 @@ jobs:
 
   build-cli:
     needs: version
+    permissions: # kilocode_change
+      contents: write # kilocode_change - upload CLI archives and SBOMs to the draft release
     runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.repository == 'Kilo-Org/kilocode'
     steps:
-      - uses: actions/checkout@v6 # kilocode_change
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0 # kilocode_change
         with:
           fetch-tags: true
 
@@ -146,7 +146,7 @@ jobs:
 
       - name: Upload CLI SBOM evidence
         if: needs.version.outputs.release != ''
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: kilo-cli-sboms
           path: |
@@ -170,7 +170,7 @@ jobs:
           find packages/opencode/dist -name '*.map' -delete
           tar --zstd -cf /tmp/kilo-cli.tar.zst -C packages/opencode/dist .
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           path: /tmp/kilo-cli.tar.zst
           archive: false
@@ -198,7 +198,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.build-cli.outputs.sbom-subjects) }}
     steps:
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: kilo-cli-sboms
           path: sboms
@@ -253,7 +253,7 @@ jobs:
             mode: alpine
             platform: linux/amd64
     steps:
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: kilo-cli-signed.tar.zst
           path: /tmp
@@ -352,7 +352,7 @@ jobs:
             runner: blacksmith-4vcpu-windows-2025 # kilocode_change
             package: "@kilocode/cli-windows-x64"
     steps:
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2 # kilocode_change
         with:
           name: kilo-cli-signed.tar.zst # kilocode_change
           path: ${{ runner.temp }}
@@ -414,12 +414,15 @@ jobs:
   # kilo-cli-signed.tar.zst; all downstream jobs use that.
   sign-cli-windows:
     name: Sign CLI (Windows EV)
+    permissions:
+      contents: write # Replace draft release assets with signed Windows zips.
+      id-token: write # Authenticate to Azure Key Vault.
     needs: build-cli
     runs-on: blacksmith-4vcpu-windows-2025
     if: github.repository == 'Kilo-Org/kilocode'
     timeout-minutes: 20
     steps:
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: kilo-cli.tar.zst
           path: ${{ runner.temp }}
@@ -445,7 +448,7 @@ jobs:
           "$env:USERPROFILE\.dotnet\tools" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Az login
-        uses: azure/login@v2
+        uses: azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2.3.1
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -493,7 +496,7 @@ jobs:
           # rmt remote-tape "host:path" and dies with "Cannot connect to D".
           tar --zstd --force-local -cf "$RUNNER_TEMP/kilo-windows-signed.tar.zst" ./@kilocode/cli-windows-*/bin/kilo.exe
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           path: ${{ runner.temp }}/kilo-windows-signed.tar.zst
           archive: false
@@ -537,13 +540,13 @@ jobs:
     if: github.repository == 'Kilo-Org/kilocode'
     timeout-minutes: 15
     steps:
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: kilo-cli.tar.zst
           path: /tmp
           skip-decompress: true
 
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: kilo-windows-signed.tar.zst
           path: /tmp
@@ -556,13 +559,18 @@ jobs:
           tar --zstd -xf /tmp/kilo-windows-signed.tar.zst -C dist
           tar --zstd -cf "$RUNNER_TEMP/kilo-cli-signed.tar.zst" -C dist .
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           path: ${{ runner.temp }}/kilo-cli-signed.tar.zst
           archive: false
   # kilocode_change end
 
   build-vscode:
+    # kilocode_change start - changesets reads commit and PR metadata for the VSIX changelog
+    permissions:
+      contents: read
+      pull-requests: read
+    # kilocode_change end
     needs:
       - build-cli
       - pack-signed-cli # kilocode_change
@@ -571,7 +579,7 @@ jobs:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.repository == 'Kilo-Org/kilocode'
     steps:
-      - uses: actions/checkout@v6 # kilocode_change
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0 # kilocode_change
 
       - uses: ./.github/actions/setup-bun
         # kilocode_change start - job holds write scopes, so skip the shared dependency cache
@@ -581,7 +589,7 @@ jobs:
 
       - uses: ./.github/actions/setup-sbom # kilocode_change - VSIX sidecars scan the packaged archive
 
-      - uses: actions/setup-node@v6 # kilocode_change
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0 # kilocode_change
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
@@ -591,7 +599,7 @@ jobs:
 
       # kilocode_change start - download into /tmp and extract the tar.zst packed by build-cli,
       # then apply changesets so the packaged VSIX ships the current changelog
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: kilo-cli-signed.tar.zst
           path: /tmp
@@ -618,7 +626,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
           SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }} # kilocode_change
 
-      - uses: actions/upload-artifact@v7 # kilocode_change
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 # kilocode_change
         with:
           name: kilo-vscode
           path: packages/kilo-vscode/out
@@ -628,6 +636,8 @@ jobs:
   # before publishing the release and package artifacts.
   smoke-test:
     name: Smoke Test (pre-publish gate)
+    permissions:
+      contents: write # The called workflow needs push access to download draft assets.
     needs:
       - version
       - build-cli
@@ -644,6 +654,12 @@ jobs:
   # kilocode_change end
 
   publish:
+    # kilocode_change start - release, tag and JetBrains PR writes use the maintainer App token
+    permissions:
+      contents: read
+      packages: write # Push to GHCR.
+      id-token: write # Trusted publishing to npm, VS Code Marketplace and Open VSX.
+    # kilocode_change end
     needs:
       - version
       - build-cli
@@ -652,10 +668,10 @@ jobs:
       - validate-cli-unix # kilocode_change
       - validate-cli-windows # kilocode_change
       - smoke-test
-    runs-on: ubuntu-24.04 # kilocode_change - npm trusted publishing requires a GitHub-hosted runner.
+    runs-on: ubuntu-24.04-8core-x64 # kilocode_change - GitHub-hosted publisher with static egress for the org IP allow list.
     environment: release # kilocode_change - VS Code Marketplace trusted publishing policy
     steps:
-      - uses: actions/checkout@v6 # kilocode_change
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0 # kilocode_change
         # kilocode_change start
         with:
           persist-credentials: false
@@ -670,19 +686,19 @@ jobs:
       - uses: ./.github/actions/setup-sbom # kilocode_change - npm and OCI sidecars scan the published bytes
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0 # kilocode_change
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0 # kilocode_change
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0 # kilocode_change
 
-      - uses: actions/setup-node@v6 # kilocode_change
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0 # kilocode_change
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
@@ -706,7 +722,7 @@ jobs:
           # kilocode_change end
 
       # kilocode_change start - download into /tmp and extract the tar.zst packed by build-cli
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: kilo-cli-signed.tar.zst
           path: /tmp
@@ -717,7 +733,7 @@ jobs:
           mkdir -p packages/opencode/dist
           tar --zstd -xf /tmp/kilo-cli-signed.tar.zst -C packages/opencode/dist
       # kilocode_change end
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2 # kilocode_change
         with:
           name: kilo-vscode
           path: packages/kilo-vscode/out
@@ -841,7 +857,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version: "24"
           package-manager-cache: false
