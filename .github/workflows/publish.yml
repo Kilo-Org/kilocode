@@ -130,14 +130,13 @@ jobs:
           KILO_PRE_RELEASE: ${{ inputs.pre_release }}
           SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }} # kilocode_change
 
-      # kilocode_change start - verify local release evidence, export attestation subjects and record the
-      # manifest digest that upload-cli and publish check.
+      # kilocode_change start - verify local release evidence and record the manifest digest that
+      # sbom-cli-windows, upload-cli and publish check.
       - name: Verify CLI SBOM evidence
         id: sbom
         if: needs.version.outputs.release != ''
         run: |
           bun run script/kilocode/sbom.ts verify --manifest "$MANIFEST" --dir packages/opencode/dist
-          bun run script/kilocode/sbom.ts matrix --manifest "$MANIFEST" --output subjects
           echo "manifest-sha256=$(shasum -a 256 "$MANIFEST" | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
         env:
           MANIFEST: packages/opencode/dist/cli-sbom-evidence.json
@@ -154,6 +153,7 @@ jobs:
             packages/opencode/dist/kilo-cli-SHA256SUMS
           if-no-files-found: error
 
+      # The release ships the Windows zips sign-cli-windows packages from the signed executables.
       - name: Stage CLI release archives
         if: needs.version.outputs.release != ''
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -162,6 +162,7 @@ jobs:
           path: |
             packages/opencode/dist/kilo-*.tar.gz
             packages/opencode/dist/kilo-*.zip
+            !packages/opencode/dist/kilo-windows-*.zip
           compression-level: 0
           if-no-files-found: error
       # kilocode_change end
@@ -194,14 +195,15 @@ jobs:
 
     outputs:
       version: ${{ needs.version.outputs.version }}
-      sbom-subjects: ${{ steps.sbom.outputs.subjects }} # kilocode_change
       cli-sha256: ${{ steps.pack.outputs.sha256 }} # kilocode_change
       manifest-sha256: ${{ steps.sbom.outputs.manifest-sha256 }} # kilocode_change
 
   # kilocode_change start
+  # Transfers the CLI release set once, after signing: the build-cli archives except the Windows
+  # zips, the signed zips from sign-cli-windows and the evidence sbom-cli-windows wrote for them.
   upload-cli:
     name: Upload CLI assets to draft
-    needs: [version, build-cli]
+    needs: [version, build-cli, sign-cli-windows, sbom-cli-windows]
     if: needs.version.outputs.release != ''
     permissions:
       contents: write
@@ -230,36 +232,57 @@ jobs:
 
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
+          name: kilo-cli-windows-zips
+          path: ${{ runner.temp }}/archives
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
           name: kilo-cli-sboms
-          path: ${{ runner.temp }}/sboms
+          path: ${{ runner.temp }}/build
 
-      - name: Verify CLI SBOM manifest
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: kilo-cli-evidence
+          path: ${{ runner.temp }}/evidence
+
+      - name: Verify CLI SBOM manifests
         env:
-          EXPECTED: ${{ needs.build-cli.outputs.manifest-sha256 }}
+          BUILD_SHA256: ${{ needs.build-cli.outputs.manifest-sha256 }}
+          EVIDENCE_SHA256: ${{ needs.sbom-cli-windows.outputs.manifest-sha256 }}
         run: |
-          actual="$(shasum -a 256 "$RUNNER_TEMP/sboms/cli-sbom-evidence.json" | cut -d ' ' -f 1)"
-          if [ -z "$EXPECTED" ] || [ "$actual" != "$EXPECTED" ]; then
-            echo "::error::cli-sbom-evidence.json has digest $actual; build-cli recorded ${EXPECTED:-none}. Nothing was uploaded."
-            exit 1
-          fi
+          verify() {
+            actual="$(shasum -a 256 "$RUNNER_TEMP/$1/cli-sbom-evidence.json" | cut -d ' ' -f 1)"
+            if [ -z "$2" ] || [ "$actual" != "$2" ]; then
+              echo "::error::$1/cli-sbom-evidence.json has digest $actual; $3 recorded ${2:-none}. Nothing was uploaded."
+              exit 1
+            fi
+          }
+          verify build "$BUILD_SHA256" build-cli
+          verify evidence "$EVIDENCE_SHA256" sbom-cli-windows
 
+      # Also records the attestation subjects: attest-cli attests exactly the archives this step
+      # checked, with the signed digests for the Windows zips.
       - name: Verify and transfer CLI assets
+        id: assets
         env:
           VERSION: ${{ needs.version.outputs.version }}
           RELEASE: ${{ needs.version.outputs.release }}
+          SIGNED_ZIPS: ${{ needs.sign-cli-windows.outputs.zips-sha256 }}
           GH_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
         run: |
           test "$(gh release view "v$VERSION" --json databaseId,isDraft --jq 'select(.isDraft) | .databaseId')" = "$RELEASE"
-          node script/kilocode/cli-assets.ts "$RUNNER_TEMP/archives" "$RUNNER_TEMP/sboms" "$VERSION"
+          node script/kilocode/cli-assets.ts "$RUNNER_TEMP/archives" "$RUNNER_TEMP/build" "$RUNNER_TEMP/evidence" "$VERSION"
+    outputs:
+      subjects: ${{ steps.assets.outputs.subjects }}
 
   # Bind each published CLI archive to its SBOM with a
   # signed attestation. Runs off the small sidecar artifact rather than the ~1 GB
   # CLI build artifact, since attestation needs the digest, not the bytes.
   attest-cli:
     name: Attest CLI SBOM (${{ matrix.artifact }})
-    needs: [build-cli, upload-cli]
-    if: needs.build-cli.outputs.sbom-subjects != '' && fromJSON(needs.build-cli.outputs.sbom-subjects).include[0] != null
+    needs: upload-cli
+    if: needs.upload-cli.outputs.subjects != '' && fromJSON(needs.upload-cli.outputs.subjects).include[0] != null
     runs-on: blacksmith-2vcpu-ubuntu-2404
     continue-on-error: ${{ vars.SBOM_ENFORCE != 'true' }}
     permissions:
@@ -269,11 +292,11 @@ jobs:
       artifact-metadata: write
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.build-cli.outputs.sbom-subjects) }}
+      matrix: ${{ fromJSON(needs.upload-cli.outputs.subjects) }}
     steps:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: kilo-cli-sboms
+          name: kilo-cli-evidence
           path: sboms
 
       - name: Verify SBOM
@@ -283,7 +306,7 @@ jobs:
         run: |
           actual="$(shasum -a 256 "$SBOM" | cut -d ' ' -f 1)"
           if [ -z "$EXPECTED" ] || [ "$actual" != "$EXPECTED" ]; then
-            echo "::error::$SBOM has digest $actual; the build manifest recorded ${EXPECTED:-none}. Nothing was attested."
+            echo "::error::$SBOM has digest $actual; upload-cli recorded ${EXPECTED:-none}. Nothing was attested."
             exit 1
           fi
 
@@ -520,11 +543,11 @@ jobs:
   sign-cli-windows:
     name: Sign CLI (Windows EV)
     permissions:
-      contents: write # Replace draft release assets with signed Windows zips.
+      contents: read
       id-token: write # Authenticate to Azure Key Vault.
-    needs: [build-cli, upload-cli]
+    needs: [version, build-cli]
     runs-on: blacksmith-4vcpu-windows-2025
-    if: github.repository == 'Kilo-Org/kilocode'
+    if: github.repository == 'Kilo-Org/kilocode' && needs.version.outputs.release != ''
     timeout-minutes: 20
     steps:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -626,9 +649,9 @@ jobs:
           path: ${{ runner.temp }}/kilo-windows-signed.tar.zst
           archive: false
 
-      # Package the signed zips, record one sorted `<sha256>  <zip>` line per zip and give the
-      # checksum file their digests. Every other byte of the checksum file stays as built.
-      # publish compares the draft with these digests before it un-drafts the release.
+      # Package the signed zips the release ships and record one sorted `<sha256>  <zip>` line per
+      # zip. sbom-cli-windows describes these zips, upload-cli uploads them and attest-cli attests
+      # them; each checks the zips against this list.
       - name: Package signed Windows release zips
         id: zips
         shell: pwsh
@@ -642,47 +665,83 @@ jobs:
           if ($digests.Count -eq 0) { throw "No signed Windows binaries to package" }
           $names = [string[]]$digests.Keys
           [Array]::Sort($names, [StringComparer]::Ordinal)
-          $sums = Join-Path $PWD "dist" "kilo-cli-SHA256SUMS"
-          $lines = [IO.File]::ReadAllText($sums).Split("`n")
-          foreach ($name in $names) {
-            $count = @($lines | Where-Object { $_.EndsWith("  $name") }).Count
-            if ($count -ne 1) { throw "$name is listed $count times in kilo-cli-SHA256SUMS" }
-          }
-          $lines = foreach ($line in $lines) {
-            if ($line -cmatch '^[0-9a-f]{64}  (.+)$' -and $digests.ContainsKey($Matches[1])) { "$($digests[$Matches[1]])  $($Matches[1])" } else { $line }
-          }
-          [IO.File]::WriteAllText($sums, ($lines -join "`n"))
           $list = foreach ($name in $names) { "$($digests[$name])  $name" }
           # LF only: the runner keeps a CR inside a multiline value.
           $output = @("sha256<<KILO_SIGNED_ZIPS") + $list + @("KILO_SIGNED_ZIPS")
           [IO.File]::AppendAllText($env:GITHUB_OUTPUT, ($output -join "`n") + "`n")
 
-      # upload-cli already uploaded unsigned Windows zips and the checksum file to the draft
-      # release; replace them so release assets match what npm/VSIX ship.
-      # One asset per invocation with retries, for the same reason upload-cli uploads
-      # that way: a dropped connection can commit the asset anyway, and the retry
-      # inside gh then dies on "ReleaseAsset.name already exists". --clobber clears
-      # that asset at the start of the next attempt.
-      - name: Re-upload signed Windows release zips
-        shell: pwsh
-        run: |
-          $files = @(Get-ChildItem "kilo-windows-*.zip" | ForEach-Object { $_.Name }) + @(Join-Path "dist" "kilo-cli-SHA256SUMS")
-          foreach ($file in $files) {
-            foreach ($attempt in 1..4) {
-              gh release upload "v$env:VERSION" $file --clobber
-              if ($LASTEXITCODE -eq 0) { break }
-              if ($attempt -eq 4) { throw "Could not upload $file after 4 attempts" }
-              Write-Host "upload: $file failed (attempt $attempt/4), retrying in 10s"
-              Start-Sleep -Seconds 10
-            }
-          }
-        env:
-          VERSION: ${{ needs.build-cli.outputs.version }}
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: kilo-cli-windows-zips
+          path: kilo-windows-*.zip
+          compression-level: 0
+          if-no-files-found: error
     outputs:
       sha256: ${{ steps.signed.outputs.sha256 }}
       zips-sha256: ${{ steps.zips.outputs.sha256 }}
+
+  # The signed zips are not the zips build-cli described, so their SBOM sidecars, manifest
+  # entries and checksum lines are generated again from the signed bytes. Every other evidence
+  # file stays as build-cli wrote it. upload-cli publishes the result.
+  sbom-cli-windows:
+    name: Describe signed Windows CLI
+    needs: [version, build-cli, sign-cli-windows]
+    permissions:
+      contents: read
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      # Feeds the evidence that upload-cli publishes and attest-cli signs, so restore nothing
+      # from the shared dependency cache.
+      - uses: ./.github/actions/setup-bun
+        with:
+          cache: false
+
+      - uses: ./.github/actions/setup-sbom
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: kilo-cli-sboms
+          path: ${{ runner.temp }}/evidence
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: kilo-cli-windows-zips
+          path: ${{ runner.temp }}/windows
+
+      - name: Verify CLI SBOM manifest
+        env:
+          EXPECTED: ${{ needs.build-cli.outputs.manifest-sha256 }}
+        run: |
+          actual="$(shasum -a 256 "$RUNNER_TEMP/evidence/cli-sbom-evidence.json" | cut -d ' ' -f 1)"
+          if [ -z "$EXPECTED" ] || [ "$actual" != "$EXPECTED" ]; then
+            echo "::error::cli-sbom-evidence.json has digest $actual; build-cli recorded ${EXPECTED:-none}"
+            exit 1
+          fi
+
+      # Checks each zip against the digest sign-cli-windows recorded before it describes it.
+      - name: Describe signed Windows zips
+        id: sbom
+        env:
+          KILO_VERSION: ${{ needs.version.outputs.version }}
+          KILO_RELEASE: ${{ needs.version.outputs.release }}
+          KILO_PRE_RELEASE: ${{ inputs.pre_release }}
+          SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }}
+          SIGNED_ZIPS: ${{ needs.sign-cli-windows.outputs.zips-sha256 }}
+        run: |
+          bun packages/opencode/script/kilocode/signed-evidence.ts "$RUNNER_TEMP/evidence" "$RUNNER_TEMP/windows"
+          echo "manifest-sha256=$(shasum -a 256 "$RUNNER_TEMP/evidence/cli-sbom-evidence.json" | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: kilo-cli-evidence
+          path: ${{ runner.temp }}/evidence
+          if-no-files-found: error
+    outputs:
+      manifest-sha256: ${{ steps.sbom.outputs.manifest-sha256 }}
 
   # Overlay the signed Windows exes onto the original Linux-produced dist
   # tarball so POSIX mode bits on the Unix binaries (kilo, bwrap) stay intact.
@@ -845,7 +904,7 @@ jobs:
     needs:
       - version
       - build-cli
-      - sign-cli-windows
+      - upload-cli
     if: github.repository == 'Kilo-Org/kilocode'
     uses: ./.github/workflows/smoke-test.yml
     with:
@@ -869,6 +928,7 @@ jobs:
       - build-cli
       - upload-cli # kilocode_change
       - sign-cli-windows # kilocode_change
+      - sbom-cli-windows # kilocode_change
       - build-vscode
       - pack-signed-cli # kilocode_change
       - validate-cli-unix # kilocode_change
@@ -987,21 +1047,31 @@ jobs:
           fi
       # kilocode_change end
 
-      # kilocode_change start - ./script/publish.ts un-drafts the release, so the draft must hold
-      # exactly the checked CLI assets first: the manifest's archives and sidecars, the zips
-      # sign-cli-windows signed and the checksum file it rewrote. Reading a draft needs push access.
+      # kilocode_change start - every release asset is on the draft before the release is published,
+      # so the published release never changes. The VS Code packages and their evidence go first;
+      # upload-cli already put the CLI assets there. Reading and writing a draft needs push access.
+      - name: Upload VS Code packages to draft
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+          RELEASE: ${{ needs.version.outputs.release }}
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ steps.committer.outputs.token }}
+          VSIX_SHA256: ${{ needs.build-vscode.outputs.vsix-sha256 }}
+        run: |
+          test "$(gh release view "v$VERSION" --json databaseId,isDraft --jq 'select(.isDraft) | .databaseId')" = "$RELEASE"
+          bun script/kilocode/vsix-assets.ts packages/kilo-vscode/out "v$VERSION"
+
+      # Fails before anything is published unless the draft holds exactly the CLI assets of the
+      # checked evidence manifest and the VS Code packages build-vscode recorded. ./script/publish.ts
+      # adds the distribution evidence and checks the complete draft again before it publishes it.
       - name: Verify draft release assets
         env:
           VERSION: ${{ needs.version.outputs.version }}
           GH_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ steps.committer.outputs.token }}
-          SIGNED_ZIPS: ${{ needs.sign-cli-windows.outputs.zips-sha256 }}
-        run: |
-          draft="$RUNNER_TEMP/draft-assets"
-          rm -rf "$draft"
-          gh release download "v$VERSION" --dir "$draft"
-          bun script/kilocode/draft-assets.ts "$draft" packages/opencode/dist
-          rm -rf "$draft"
+          CLI_MANIFEST_SHA256: ${{ needs.sbom-cli-windows.outputs.manifest-sha256 }}
+          VSIX_SHA256: ${{ needs.build-vscode.outputs.vsix-sha256 }}
+        run: bun script/kilocode/draft-assets.ts "v$VERSION"
       # kilocode_change end
 
       # kilocode_change - no apt cache: this job publishes with release secrets, so it restores nothing from the shared cache
@@ -1031,6 +1101,8 @@ jobs:
           GITHUB_TOKEN: ${{ steps.committer.outputs.token }}
           NPM_CONFIG_PROVENANCE: true
           SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }} # kilocode_change
+          CLI_MANIFEST_SHA256: ${{ needs.sbom-cli-windows.outputs.manifest-sha256 }} # kilocode_change
+          VSIX_SHA256: ${{ needs.build-vscode.outputs.vsix-sha256 }} # kilocode_change
 
       # kilocode_change start - repackage the already-built release archives as a
       # conda package via rattler-build (no compilation; see

@@ -4,8 +4,6 @@ import { join } from "node:path"
 import { existsSync } from "node:fs"
 import { Script } from "@opencode-ai/script"
 import { Manifest, Policy } from "../../../script/kilocode/sbom/index"
-import { upload } from "../../../script/kilocode/release"
-import { CHECKSUMS } from "./sbom"
 
 const prerelease = process.env.KILO_PRE_RELEASE === "true"
 
@@ -42,9 +40,10 @@ for (const target of targets) {
 console.log(`\nFound ${vsixFiles.length} VSIX files`)
 
 // CRA evidence is checked before the first irreversible Marketplace upload, not
-// after. Marketplace and Open VSX still receive only the VSIX; the sidecars are
-// published to the GitHub release, which is Kilo's SBOM record.
-const evidence = await verifyEvidence()
+// after. Marketplace and Open VSX still receive only the VSIX; the publish job
+// put the VSIX files and their sidecars on the draft GitHub release, which is
+// Kilo's SBOM record, before this script runs.
+await verifyEvidence()
 
 const flag = prerelease ? ["--pre-release"] : []
 
@@ -74,30 +73,18 @@ for (const target of targets) {
   console.log(`  ✅ Published ${target} to Open VSX`)
 }
 
-if (Script.release) {
-  console.log(`\n📤 Uploading VSIX files to GitHub release v${Script.version}...`)
-  await upload({ tag: `v${Script.version}`, files: [...vsixFiles, ...evidence] })
-  console.log(`  ✅ Uploaded all VSIX files and SBOM evidence to GitHub release`)
-}
-
 console.log("\n✨ All targets published successfully!")
 
 async function verifyEvidence() {
   const file = join(outDir, Manifest.name("vscode"))
   if (!existsSync(file)) {
     Policy.block({ label: "vscode evidence", issues: [`${file} is missing, so no SBOM evidence was produced`] })
-    return []
+    return
   }
   const manifest = await Manifest.read(file)
   const report = await Manifest.verify({ manifest, dir: outDir })
   await Policy.summary({ product: "vscode", expected: manifest.expected, ok: report.ok, missing: report.missing })
   Policy.block({ label: `vscode evidence for ${manifest.version}`, issues: report.issues })
-
-  return [
-    file,
-    join(outDir, CHECKSUMS),
-    ...manifest.entries.flatMap((entry) => (entry.sbom ? [join(outDir, entry.sbom)] : [])),
-  ].filter((item) => existsSync(item))
 }
 
 async function retry<T>(fn: () => Promise<T>, opts: { attempts: number; delay: number; label: string }): Promise<T> {

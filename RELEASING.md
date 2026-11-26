@@ -37,8 +37,15 @@ The `publish.yml` workflow starts with `version`, which creates the draft releas
   - macOS: x64, arm64, plus baseline variants
   - Windows: x64 (plus baseline variant), arm64
 - Patches ELF interpreters on Linux binaries for broad compatibility.
-- Creates platform archives (`.tar.gz` for Linux, `.zip` for macOS/Windows) and uploads them to the draft GitHub Release.
+- Creates platform archives (`.tar.gz` for Linux, `.zip` for macOS/Windows) with SBOM sidecars, an evidence manifest and a checksum file.
 - Uploads the `dist/` directory as a workflow artifact (`kilo-cli`) for subsequent jobs.
+
+### Sign, describe and upload the CLI (`sign-cli-windows`, `sbom-cli-windows`, `upload-cli`, `attest-cli`)
+
+- `sign-cli-windows` EV-signs the Windows executables and packages the Windows zips the release ships from them, recording their digests.
+- `sbom-cli-windows` describes the signed zips again: new SBOM sidecars, manifest entries and checksum lines. Every other evidence file stays as `build-cli` wrote it.
+- `upload-cli` checks every archive and evidence file against the digests recorded by the job that produced it, then uploads them to the draft GitHub Release.
+- `attest-cli` attests each archive's SBOM under the digest of the uploaded bytes (the signed digest for the Windows zips).
 
 ### 3. Build VS Code Extension (`build-vscode`)
 
@@ -58,7 +65,7 @@ Downloads all build artifacts and publishes to every distribution channel:
 - Updates the Zed extension manifest (`extension.toml`) with the new version.
 - Rebuilds the TypeScript SDK (`packages/sdk/js`).
 - Commits the version bump, tags the commit, and pushes to the repo.
-- Promotes the draft GitHub Release to a published release, after checking that the draft holds exactly the CLI archives, SBOM sidecars and checksum file the build recorded, with the Windows zips that `sign-cli-windows` signed.
+- Uploads the VSIX files and their SBOM evidence to the draft GitHub Release, then checks that the draft holds exactly the CLI assets of the checked evidence manifest and the VS Code files `build-vscode` recorded.
 
 #### CLI (`@kilocode/cli`)
 
@@ -66,6 +73,7 @@ Downloads all build artifacts and publishes to every distribution channel:
 - Publishes the main `@kilocode/cli` package to **npm** with optional dependencies on the binary packages.
 - Builds and pushes a multi-arch **Docker image** (`ghcr.io/kilo-org/kilocode`) to GitHub Container Registry (linux/amd64 + linux/arm64).
 - Builds and pushes the image's **OpenShell variant** (`ghcr.io/kilo-org/kilocode:<version>-openshell` and `:latest-openshell`) from the Dockerfile's `openshell` stage, for the same platforms.
+- Uploads the npm and container SBOM evidence to the draft, checks the complete draft again (every expected asset, each with its recorded digest, nothing else) and only then publishes the GitHub Release with its notes. No asset is uploaded after this, so the published release never changes. AUR and Homebrew, which download from the release, run after it.
 
 #### SDK (`@kilocode/sdk`)
 
@@ -79,7 +87,6 @@ Downloads all build artifacts and publishes to every distribution channel:
 
 - Publishes platform-specific VSIX packages to the **VS Code Marketplace** via `vsce publish --oidc`. The `publish` job runs in the `release` GitHub Actions environment, and the `kilocode` publisher trusts `Kilo-Org/kilocode`'s `publish.yml` workflow in that environment, so no Marketplace token is stored.
 - Publishes the same packages to **Open VSX** via `ovsx publish --trusted-publishing`, using GitHub Actions OIDC instead of a PAT.
-- Uploads all VSIX files to the **GitHub Release** as assets.
 
 #### Package Registries (stable releases only)
 

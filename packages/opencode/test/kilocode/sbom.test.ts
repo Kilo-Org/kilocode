@@ -260,3 +260,84 @@ describe("evidence", () => {
     }
   })
 })
+
+describe("signed", () => {
+  test("describes the signed Windows zips and keeps every other build entry", async () => {
+    const dir = await scratch()
+    try {
+      const evidence = path.join(dir, "evidence")
+      const zips = path.join(dir, "windows")
+      await fs.promises.mkdir(evidence)
+      await fs.promises.mkdir(zips)
+      await Bun.write(path.join(evidence, "kilo-linux-x64.tar.gz"), "linux")
+      await Bun.write(path.join(evidence, "kilo-windows-x64.zip"), "unsigned")
+      const built = await Sbom.evidence({ dir: evidence, release, expected: 2 })
+      await fs.promises.rm(path.join(evidence, "kilo-linux-x64.tar.gz"))
+      await fs.promises.rm(path.join(evidence, "kilo-windows-x64.zip"))
+      await Bun.write(path.join(zips, "kilo-windows-x64.zip"), "signed")
+      const sha = new Bun.CryptoHasher("sha256").update("signed").digest("hex")
+
+      const result = await Sbom.signed({
+        dir: evidence,
+        zips,
+        digests: new Map([["kilo-windows-x64.zip", sha]]),
+        release,
+      })
+      const windows = result.manifest.entries.find((entry) => entry.artifact === "kilo-windows-x64.zip")!
+      expect(windows.sha256).toBe(sha)
+      const bom = await Bun.file(path.join(evidence, windows.sbom!)).json()
+      expect(await validate(bom)).toEqual([])
+      expect(bom.metadata.component.hashes[0].content).toBe(sha)
+      const sidecar = await Bun.file(path.join(evidence, windows.sbom!)).arrayBuffer()
+      expect(windows.sbomSha256).toBe(new Bun.CryptoHasher("sha256").update(sidecar).digest("hex"))
+      expect(result.manifest.entries.find((entry) => entry.artifact === "kilo-linux-x64.tar.gz")).toEqual(
+        built.manifest.entries.find((entry) => entry.artifact === "kilo-linux-x64.tar.gz"),
+      )
+      expect(await Sbom.digests(evidence).then((digest) => digest("kilo-windows-x64.zip"))).toBe(sha)
+      const sums = await Bun.file(path.join(evidence, Sbom.CHECKSUMS)).text()
+      expect(sums).toContain(`${sha}  kilo-windows-x64.zip\n`)
+      expect(sums).toContain(`${windows.sbomSha256}  kilo-windows-x64.zip.cdx.json\n`)
+      expect((await fs.promises.readdir(evidence)).sort()).toEqual(
+        [
+          Sbom.CHECKSUMS,
+          "cli-sbom-evidence.json",
+          "kilo-linux-x64.tar.gz.cdx.json",
+          "kilo-windows-x64.zip.cdx.json",
+        ].sort(),
+      )
+      expect(await fs.promises.readdir(zips)).toEqual(["kilo-windows-x64.zip"])
+    } finally {
+      await fs.promises.rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("refuses a zip that is not the one sign-cli-windows recorded", async () => {
+    const dir = await scratch()
+    try {
+      const evidence = path.join(dir, "evidence")
+      const zips = path.join(dir, "windows")
+      await fs.promises.mkdir(evidence)
+      await fs.promises.mkdir(zips)
+      await Bun.write(path.join(evidence, "kilo-windows-x64.zip"), "unsigned")
+      await Sbom.evidence({ dir: evidence, release, expected: 1 })
+      await fs.promises.rm(path.join(evidence, "kilo-windows-x64.zip"))
+      await Bun.write(path.join(zips, "kilo-windows-x64.zip"), "unsigned")
+      const run = (digests: Map<string, string>) => Sbom.signed({ dir: evidence, zips, digests, release })
+
+      await expect(run(new Map([["kilo-windows-x64.zip", "a".repeat(64)]]))).rejects.toThrow(
+        /kilo-windows-x64\.zip has digest [0-9a-f]{64}; sign-cli-windows recorded a{64}/,
+      )
+      await expect(run(new Map([["kilo-windows-arm64.zip", "a".repeat(64)]]))).rejects.toThrow(/Windows zips/)
+      await Bun.write(path.join(zips, "kilo-windows-arm64.zip"), "extra")
+      await expect(run(new Map([["kilo-windows-x64.zip", "a".repeat(64)]]))).rejects.toThrow(/Windows zips/)
+    } finally {
+      await fs.promises.rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("installs the cross-platform packages the build installs", async () => {
+    const build = await Bun.file(path.join(import.meta.dir, "../../script/build.ts")).text()
+    const names = [...build.matchAll(/bun install --os="\*" --cpu="\*" (\S+)@\$\{/g)].map((match) => match[1])
+    expect(names).toEqual(Sbom.CROSS_PLATFORM)
+  })
+})

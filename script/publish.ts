@@ -79,14 +79,8 @@ if (Script.release) {
   }
   // kilocode_change end
 
-  // kilocode_change start - publish channel-aware GitHub release notes
-  const { publishNotes } = await import("./kilocode/release-notes")
-  await publishNotes({
-    version: Script.version,
-    prerelease: Script.preview,
-    repo: process.env.GH_REPO,
-    temp: process.env.RUNNER_TEMP,
-  })
+  // kilocode_change start - packages/opencode/script/publish.ts publishes the GitHub release with its
+  // notes once every release asset is on the draft
   // kilocode_change end
 }
 
