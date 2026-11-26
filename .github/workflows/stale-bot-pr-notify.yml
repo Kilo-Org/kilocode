@@ -45,7 +45,7 @@ jobs:
           # Must match the "Main branch protection" ruleset's required status
           # checks, so a failing non-required check (CodeQL, etc.) is never
           # reported as blocking a PR that can actually still merge.
-          REQUIRED_CHECKS: '["test (linux)","typecheck","unit (linux)","Visual Regression (kilo-ui)","Visual Regression (kilo-vscode webview)"]'
+          REQUIRED_CHECKS: '["test (linux)","typecheck","unit (linux)"]'
         run: |
           # 500 is generous headroom above this repo's current ~150 open PRs.
           # gh pr list sorts newest-first by default, so a too-low --limit
