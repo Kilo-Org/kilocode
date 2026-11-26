@@ -321,9 +321,6 @@ jobs:
     if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/v2')
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 45
-    concurrency:
-      group: kilo-v2-package-vscode
-      cancel-in-progress: false
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
