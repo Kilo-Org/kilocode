@@ -5,6 +5,7 @@ import type { ReviewComposer } from "../diff-viewer/review-annotations"
 import type { PRComment } from "./pr/pr-types"
 import type { PRDiffSnapshot, PRTarget } from "../../src/shared/pr-comment-actions"
 import { DiffPanel } from "./DiffPanel"
+import { retainReviewedFiles } from "../diff-viewer/diff-state"
 import { diffDataKey } from "./worktree-diffs"
 
 const CACHE_SIZE = 16
@@ -99,13 +100,19 @@ export const DiffPanelCache: Component<Props> = (props) => {
   return (
     <For each={entries()}>
       {(entry) => {
+        const composer = props.composer(entry.cacheKey)
+        const diffs = createMemo<WorktreeFileDiff[]>((previous) => {
+          const files = new Set(props.comments(entry.key).map((comment) => comment.file))
+          if (composer.draft) files.add(composer.draft.file)
+          return retainReviewedFiles(previous, props.data()[diffDataKey(props.project(), entry.key)] ?? [], files)
+        }, [])
         const active = createMemo(
           () => props.active() && `${props.project() ?? "single"}\0${props.current()}` === entry.cacheKey,
         )
         return (
           <div class="am-diff-panel-cache" classList={{ "am-diff-panel-cache-active": active() }} inert={!active()}>
             <DiffPanel
-              diffs={props.data()[diffDataKey(props.project(), entry.key)] ?? []}
+              diffs={diffs()}
               loading={props.loading(entry.key)}
               active={active()}
               loadingFiles={props.loadingFiles(entry.key)}
@@ -132,7 +139,7 @@ export const DiffPanelCache: Component<Props> = (props) => {
               prError={props.prError?.(entry.ctx)}
               focusedComment={active() ? props.focusedComment?.(entry.key) : undefined}
               onCommentsChange={(comments) => props.setComments(entry.key, comments)}
-              composer={props.composer(entry.cacheKey)}
+              composer={composer}
               onSendClick={props.onSendClick}
               onClose={props.onClose}
               onExpand={props.onExpand}

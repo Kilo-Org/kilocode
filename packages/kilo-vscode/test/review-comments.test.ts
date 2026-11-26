@@ -112,6 +112,13 @@ describe("sanitizeReviewComments", () => {
     expect(result).toEqual([c])
   })
 
+  it("keeps absolute gutter lines when a session diff contains only the changed hunk", () => {
+    const d = { ...diff("a.ts", "old\n", "new\n"), patch: "@@ -60 +80 @@\n-old\n+new\n" }
+    const kept = comment({ file: d.file, line: 80 })
+    const outside = comment({ file: d.file, line: 81 })
+    expect(sanitizeReviewComments([kept, outside], [d])).toEqual([kept])
+  })
+
   it("returns all when all comments are valid", () => {
     const comments = [
       comment({ file: "a.ts", line: 1 }),

@@ -1,4 +1,5 @@
 import type { AnnotationSide, DiffLineAnnotation } from "@pierre/diffs"
+import { createSignal } from "solid-js"
 import type { ReviewCommentEntry, WorktreeFileDiff } from "../src/types/messages/agent-manager"
 import { extractLines, formatReviewCommentsMarkdown, type ReviewComment } from "./review-comments"
 
@@ -71,7 +72,16 @@ export interface ReviewComposer {
 }
 
 export function createReviewComposer(): ReviewComposer {
-  return { draft: null, edit: null }
+  const [draft, setDraft] = createSignal<AnnotationMeta | null>(null)
+  return {
+    get draft() {
+      return draft()
+    },
+    set draft(value) {
+      setDraft(value)
+    },
+    edit: null,
+  }
 }
 
 export function clearReviewComposer(composer: ReviewComposer): void {
