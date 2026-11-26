@@ -125,6 +125,7 @@ jobs:
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0 # kilocode_change
         with:
           node-version: "24"
+          package-manager-cache: false # kilocode_change - job holds checks: write
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
@@ -302,6 +303,7 @@ jobs:
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0 # kilocode_change
         with:
           node-version: "26.4.0"
+          package-manager-cache: false # kilocode_change - job holds checks: write
 
       - name: Verify Node build
         if: ${{ !cancelled() }}
@@ -357,9 +359,14 @@ jobs:
         with:
           # Playwright 1.59 hangs while extracting Chromium with Node 24.16.
           node-version: "24.15"
+          package-manager-cache: false # kilocode_change - job holds checks: write
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
+        # kilocode_change start - job holds checks: write, so skip the shared caches
+        with:
+          cache: false
+        # kilocode_change end
 
       - name: Read Playwright version
         id: playwright-version
@@ -367,12 +374,7 @@ jobs:
           version=$(node -e 'console.log(require("./package.json").workspaces.catalog["@playwright/test"])')
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
-      - name: Cache Playwright browsers
-        id: playwright-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0 # kilocode_change
-        with:
-          path: ${{ github.workspace }}/.playwright-browsers
-          key: ${{ runner.os }}-${{ runner.arch }}-playwright-${{ steps.playwright-version.outputs.version }}-chromium
+      # kilocode_change - no Playwright browser cache: the job holds checks: write, so it installs the browsers
 
       - name: Install Playwright system dependencies
         if: runner.os == 'Linux'
@@ -380,7 +382,6 @@ jobs:
         run: bunx playwright install-deps chromium
 
       - name: Install Playwright browsers
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
         working-directory: packages/app
         run: bunx playwright install chromium
 

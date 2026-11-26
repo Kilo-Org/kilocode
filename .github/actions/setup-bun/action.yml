@@ -12,9 +12,11 @@ inputs:
   # kilocode_change start - jobs with write scopes or secrets skip the shared caches
   # Jobs with write scopes, secrets, or outputs that feed a publish or signing job must pass
   # cache: false so they never restore an entry another job saved. Read-only CI
-  # jobs keep the default.
+  # jobs keep the default. `save` restores nothing and saves the fresh install when its key
+  # is missing. On v2 the shared dependency cache is saved by check.yml `check` (push to v2,
+  # Linux) and kilo-v2.yml `macos` (push to v2, `cache: save`); Windows never uses it.
   cache:
-    description: "Restore and save the Bun dependency and executable caches; pass false in jobs with write scopes, secrets, or outputs that feed a publish or signing job"
+    description: "true: restore and save the Bun dependency and executable caches; save: restore nothing, save a fresh dependency install when its key is missing; false: neither. Pass false in jobs with write scopes, secrets, or outputs that feed a publish or signing job"
     required: false
     default: "true"
   # kilocode_change end
@@ -41,7 +43,7 @@ runs:
       uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0 # kilocode_change
       with:
         node-version: "24"
-        package-manager-cache: ${{ inputs.cache != 'false' }} # kilocode_change
+        package-manager-cache: ${{ inputs.cache == 'true' }} # kilocode_change
 
     - name: Get baseline download URL
       id: bun-url
@@ -65,10 +67,10 @@ runs:
         bun-version: ${{ !steps.bun-url.outputs.url && inputs.bun-version || '' }}
         bun-version-file: ${{ !steps.bun-url.outputs.url && !inputs.bun-version && 'package.json' || '' }}
         bun-download-url: ${{ steps.bun-url.outputs.url }}
-        no-cache: ${{ inputs.cache == 'false' }} # kilocode_change
+        no-cache: ${{ inputs.cache != 'true' }} # kilocode_change
 
     - name: Get cache directory
-      if: inputs.cache != 'false' # kilocode_change
+      if: inputs.cache == 'true' || inputs.cache == 'save' # kilocode_change
       id: cache
       shell: bash
       run: |
@@ -79,10 +81,11 @@ runs:
     # extracting the same packages itself, so Windows installs skip the cache.
     - name: Restore Bun dependencies
       id: bun-cache
-      if: runner.os != 'Windows' && inputs.cache != 'false' # kilocode_change
+      if: runner.os != 'Windows' && (inputs.cache == 'true' || inputs.cache == 'save') # kilocode_change
       uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0 # kilocode_change
       with:
         path: ${{ steps.cache.outputs.dir }}
+        lookup-only: ${{ inputs.cache != 'true' }} # kilocode_change - `save` only checks whether the key exists
         key: ${{ runner.os }}-${{ runner.arch }}-bun-${{ steps.cache.outputs.version }}-${{ hashFiles('bun.lock', 'patches/**') }}
         # Each dev merge changes beta's bun.lock. Beta falls back to the newest cache for the same Bun version
         # (Bun's cache stores every package version separately) instead of installing everything from npm.
@@ -110,7 +113,7 @@ runs:
       shell: bash
 
     - name: Save Bun dependencies
-      if: runner.os != 'Windows' && inputs.cache != 'false' && steps.bun-cache.outputs.cache-hit != 'true' && github.event_name != 'pull_request' && github.event_name != 'pull_request_target' # kilocode_change
+      if: runner.os != 'Windows' && (inputs.cache == 'true' || inputs.cache == 'save') && steps.bun-cache.outputs.cache-hit != 'true' && github.event_name != 'pull_request' && github.event_name != 'pull_request_target' # kilocode_change
       uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0 # kilocode_change
       with:
         path: ${{ steps.cache.outputs.dir }}
