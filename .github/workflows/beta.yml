@@ -16,25 +16,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6 # kilocode_change
         with:
-          persist-credentials: false # kilocode_change
+          persist-credentials: true # kilocode_change - script/beta.ts fetches and pushes with the job token
           fetch-depth: 0
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
 
-      - name: Setup Git Committer
-        id: committer
-        uses: ./.github/actions/setup-git-committer
-        with:
-          # kilocode_change start
-          kilo-maintainer-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
-          kilo-maintainer-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
-          repositories: kilocode
-          permission-contents: write
-          permission-pull-requests: write
-          # kilocode_change end
+      # kilocode_change start - commit, push and comment with the job token, not the maintainer app
+      - name: Configure git user
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898283+github-actions[bot]@users.noreply.github.com"
+      # kilocode_change end
 
       - name: Sync beta branch
         env:
-          GH_TOKEN: ${{ steps.committer.outputs.token }}
+          GH_TOKEN: ${{ github.token }} # kilocode_change
         run: bun script/beta.ts
