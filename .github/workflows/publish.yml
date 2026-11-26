@@ -130,13 +130,15 @@ jobs:
           KILO_PRE_RELEASE: ${{ inputs.pre_release }}
           SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }} # kilocode_change
 
-      # kilocode_change start - verify local release evidence and export attestation subjects.
+      # kilocode_change start - verify local release evidence, export attestation subjects and record the
+      # manifest digest that upload-cli and publish check.
       - name: Verify CLI SBOM evidence
         id: sbom
         if: needs.version.outputs.release != ''
         run: |
           bun run script/kilocode/sbom.ts verify --manifest "$MANIFEST" --dir packages/opencode/dist
           bun run script/kilocode/sbom.ts matrix --manifest "$MANIFEST" --output subjects
+          echo "manifest-sha256=$(shasum -a 256 "$MANIFEST" | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
         env:
           MANIFEST: packages/opencode/dist/cli-sbom-evidence.json
           SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }}
@@ -173,13 +175,16 @@ jobs:
       # With `archive: false` the `name:` input is ignored; the artifact is named after the
       # file (kilo-cli.tar.zst). zstd + GNU tar are preinstalled on both github-hosted and
       # blacksmith ubuntu-2404. See actions/upload-artifact#36, actions/toolkit#1533.
+      # Any job of the run can replace an artifact, so the consumers check this digest, which only this job sets.
       - name: Pack CLI dist into tar.zst
+        id: pack
         run: |
           find packages/opencode/dist -name '*.map' -delete
           # Signing, validation and VSIX packaging only need the package directories.
           # Keep the small evidence manifest for the stable package-manager checksums.
           tar --zstd --exclude='./kilo-*.tar.gz' --exclude='./kilo-*.zip' --exclude='./kilo-*.cdx.json' \
             -cf /tmp/kilo-cli.tar.zst -C packages/opencode/dist .
+          echo "sha256=$(shasum -a 256 /tmp/kilo-cli.tar.zst | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -190,6 +195,8 @@ jobs:
     outputs:
       version: ${{ needs.version.outputs.version }}
       sbom-subjects: ${{ steps.sbom.outputs.subjects }} # kilocode_change
+      cli-sha256: ${{ steps.pack.outputs.sha256 }} # kilocode_change
+      manifest-sha256: ${{ steps.sbom.outputs.manifest-sha256 }} # kilocode_change
 
   # kilocode_change start
   upload-cli:
@@ -199,8 +206,6 @@ jobs:
     permissions:
       contents: write
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    outputs:
-      manifest-sha256: ${{ steps.transfer.outputs.sha256 }}
     steps:
       # Only trusted transfer code from the workflow commit. No dependency install.
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -228,8 +233,17 @@ jobs:
           name: kilo-cli-sboms
           path: ${{ runner.temp }}/sboms
 
+      - name: Verify CLI SBOM manifest
+        env:
+          EXPECTED: ${{ needs.build-cli.outputs.manifest-sha256 }}
+        run: |
+          actual="$(shasum -a 256 "$RUNNER_TEMP/sboms/cli-sbom-evidence.json" | cut -d ' ' -f 1)"
+          if [ -z "$EXPECTED" ] || [ "$actual" != "$EXPECTED" ]; then
+            echo "::error::cli-sbom-evidence.json has digest $actual; build-cli recorded ${EXPECTED:-none}. Nothing was uploaded."
+            exit 1
+          fi
+
       - name: Verify and transfer CLI assets
-        id: transfer
         env:
           VERSION: ${{ needs.version.outputs.version }}
           RELEASE: ${{ needs.version.outputs.release }}
@@ -238,8 +252,6 @@ jobs:
         run: |
           test "$(gh release view "v$VERSION" --json databaseId,isDraft --jq 'select(.isDraft) | .databaseId')" = "$RELEASE"
           node script/kilocode/cli-assets.ts "$RUNNER_TEMP/archives" "$RUNNER_TEMP/sboms" "$VERSION"
-          sum=$(sha256sum "$RUNNER_TEMP/sboms/cli-sbom-evidence.json")
-          echo "sha256=${sum%% *}" >> "$GITHUB_OUTPUT"
 
   # Bind each published CLI archive to its SBOM with a
   # signed attestation. Runs off the small sidecar artifact rather than the ~1 GB
@@ -319,6 +331,16 @@ jobs:
           name: kilo-cli-signed.tar.zst
           path: /tmp
           skip-decompress: true
+
+      - name: Verify CLI dist
+        env:
+          EXPECTED: ${{ needs.pack-signed-cli.outputs.sha256 }}
+        run: |
+          actual="$(shasum -a 256 /tmp/kilo-cli-signed.tar.zst | cut -d ' ' -f 1)"
+          if [ -z "$EXPECTED" ] || [ "$actual" != "$EXPECTED" ]; then
+            echo "::error::kilo-cli-signed.tar.zst has digest $actual; pack-signed-cli recorded ${EXPECTED:-none}"
+            exit 1
+          fi
 
       - name: Unpack CLI dist
         run: |
@@ -419,6 +441,17 @@ jobs:
           path: ${{ runner.temp }}
           skip-decompress: true
 
+      - name: Verify CLI dist
+        shell: pwsh
+        env:
+          EXPECTED: ${{ needs.pack-signed-cli.outputs.sha256 }}
+        run: |
+          $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $env:RUNNER_TEMP 'kilo-cli-signed.tar.zst')).Hash.ToLowerInvariant()
+          if (-not $env:EXPECTED -or $actual -cne $env:EXPECTED) {
+            Write-Output "::error::kilo-cli-signed.tar.zst has digest $actual; pack-signed-cli recorded $env:EXPECTED"
+            exit 1
+          }
+
       - name: Install zstd
         shell: pwsh
         run: |
@@ -489,6 +522,17 @@ jobs:
           path: ${{ runner.temp }}
           skip-decompress: true
 
+      - name: Verify CLI dist
+        shell: pwsh
+        env:
+          EXPECTED: ${{ needs.build-cli.outputs.cli-sha256 }}
+        run: |
+          $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $env:RUNNER_TEMP 'kilo-cli.tar.zst')).Hash.ToLowerInvariant()
+          if (-not $env:EXPECTED -or $actual -cne $env:EXPECTED) {
+            Write-Output "::error::kilo-cli.tar.zst has digest $actual; build-cli recorded $env:EXPECTED"
+            exit 1
+          }
+
       - name: Install zstd
         shell: pwsh
         run: |
@@ -557,6 +601,14 @@ jobs:
           # rmt remote-tape "host:path" and dies with "Cannot connect to D".
           tar --zstd --force-local -cf "$RUNNER_TEMP/kilo-windows-signed.tar.zst" ./@kilocode/cli-windows-*/bin/kilo.exe
 
+      # pack-signed-cli checks this digest before it merges the overlay.
+      - name: Record signed Windows binaries digest
+        id: signed
+        shell: pwsh
+        run: |
+          $sha = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $env:RUNNER_TEMP 'kilo-windows-signed.tar.zst')).Hash.ToLowerInvariant()
+          "sha256=$sha" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           path: ${{ runner.temp }}/kilo-windows-signed.tar.zst
@@ -589,6 +641,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+    outputs:
+      sha256: ${{ steps.signed.outputs.sha256 }}
 
   # Overlay the signed Windows exes onto the original Linux-produced dist
   # tarball so POSIX mode bits on the Unix binaries (kilo, bwrap) stay intact.
@@ -600,6 +654,8 @@ jobs:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.repository == 'Kilo-Org/kilocode'
     timeout-minutes: 15
+    outputs:
+      sha256: ${{ steps.pack.outputs.sha256 }}
     steps:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -613,12 +669,29 @@ jobs:
           path: /tmp
           skip-decompress: true
 
+      - name: Verify CLI dist and signed Windows binaries
+        env:
+          CLI_SHA256: ${{ needs.build-cli.outputs.cli-sha256 }}
+          SIGNED_SHA256: ${{ needs.sign-cli-windows.outputs.sha256 }}
+        run: |
+          verify() {
+            actual="$(shasum -a 256 "/tmp/$1" | cut -d ' ' -f 1)"
+            if [ -z "$2" ] || [ "$actual" != "$2" ]; then
+              echo "::error::$1 has digest $actual; $3 recorded ${2:-none}"
+              exit 1
+            fi
+          }
+          verify kilo-cli.tar.zst "$CLI_SHA256" build-cli
+          verify kilo-windows-signed.tar.zst "$SIGNED_SHA256" sign-cli-windows
+
       - name: Merge signed binaries and repack
+        id: pack
         run: |
           mkdir -p dist
           tar --zstd -xf /tmp/kilo-cli.tar.zst -C dist
           tar --zstd -xf /tmp/kilo-windows-signed.tar.zst -C dist
           tar --zstd -cf "$RUNNER_TEMP/kilo-cli-signed.tar.zst" -C dist .
+          echo "sha256=$(shasum -a 256 "$RUNNER_TEMP/kilo-cli-signed.tar.zst" | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -654,6 +727,7 @@ jobs:
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false # kilocode_change
 
       - name: Install @vscode/vsce
         run: bun install -g @vscode/vsce@4.1.1 # kilocode_change
@@ -665,6 +739,16 @@ jobs:
           name: kilo-cli-signed.tar.zst
           path: /tmp
           skip-decompress: true
+
+      - name: Verify CLI dist
+        env:
+          EXPECTED: ${{ needs.pack-signed-cli.outputs.sha256 }}
+        run: |
+          actual="$(shasum -a 256 /tmp/kilo-cli-signed.tar.zst | cut -d ' ' -f 1)"
+          if [ -z "$EXPECTED" ] || [ "$actual" != "$EXPECTED" ]; then
+            echo "::error::kilo-cli-signed.tar.zst has digest $actual; pack-signed-cli recorded ${EXPECTED:-none}"
+            exit 1
+          fi
 
       - name: Unpack CLI dist
         run: |
@@ -687,10 +771,28 @@ jobs:
           GH_REPO: ${{ github.repository }}
           SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }} # kilocode_change
 
+      # kilocode_change start - one `<sha256>  <file>` line per file in out/ (VSIXs, SBOM sidecars, manifest,
+      # checksums), sorted by file name. publish compares its download with the whole list.
+      - name: Record VSIX digests
+        id: vsix
+        working-directory: packages/kilo-vscode/out
+        run: |
+          set -euo pipefail
+          {
+            echo "sha256<<KILO_VSIX_SHA256"
+            shasum -a 256 -- * | LC_ALL=C sort -k 2
+            echo "KILO_VSIX_SHA256"
+          } >> "$GITHUB_OUTPUT"
+      # kilocode_change end
+
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 # kilocode_change
         with:
           name: kilo-vscode
           path: packages/kilo-vscode/out
+    # kilocode_change start
+    outputs:
+      vsix-sha256: ${{ steps.vsix.outputs.sha256 }}
+    # kilocode_change end
 
   # kilocode_change start
   # Run smoke tests against CLI assets uploaded to the draft GitHub release
@@ -756,9 +858,17 @@ jobs:
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0 # kilocode_change
+        # kilocode_change start - job holds release secrets, so restore nothing from the shared cache
+        with:
+          cache-image: false
+        # kilocode_change end
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0 # kilocode_change
+        # kilocode_change start - job holds release secrets, so restore nothing from the shared cache
+        with:
+          cache-binary: false
+        # kilocode_change end
 
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0 # kilocode_change
         with:
@@ -790,6 +900,16 @@ jobs:
           path: /tmp
           skip-decompress: true
 
+      - name: Verify CLI dist
+        env:
+          EXPECTED: ${{ needs.pack-signed-cli.outputs.sha256 }}
+        run: |
+          actual="$(shasum -a 256 /tmp/kilo-cli-signed.tar.zst | cut -d ' ' -f 1)"
+          if [ -z "$EXPECTED" ] || [ "$actual" != "$EXPECTED" ]; then
+            echo "::error::kilo-cli-signed.tar.zst has digest $actual; pack-signed-cli recorded ${EXPECTED:-none}. Nothing was published."
+            exit 1
+          fi
+
       - name: Unpack CLI dist
         run: |
           mkdir -p packages/opencode/dist
@@ -797,7 +917,7 @@ jobs:
 
       - name: Verify package recipe manifest
         env:
-          EXPECTED: ${{ needs.upload-cli.outputs.manifest-sha256 }}
+          EXPECTED: ${{ needs.build-cli.outputs.manifest-sha256 }}
         run: |
           printf '%s  packages/opencode/dist/cli-sbom-evidence.json\n' "$EXPECTED" | sha256sum -c -
       # kilocode_change end
@@ -805,6 +925,20 @@ jobs:
         with:
           name: kilo-vscode
           path: packages/kilo-vscode/out
+
+      # kilocode_change start
+      - name: Verify VSIX packages
+        working-directory: packages/kilo-vscode/out
+        env:
+          EXPECTED: ${{ needs.build-vscode.outputs.vsix-sha256 }}
+        run: |
+          actual="$(shasum -a 256 -- * | LC_ALL=C sort -k 2)"
+          if [ -z "$EXPECTED" ] || [ "$actual" != "$EXPECTED" ]; then
+            echo "::error::The downloaded VS Code packages do not match the digests build-vscode recorded. Nothing was published."
+            printf 'expected:\n%s\nactual:\n%s\n' "$EXPECTED" "$actual"
+            exit 1
+          fi
+      # kilocode_change end
 
       # kilocode_change - no apt cache: this job publishes with release secrets, so it restores nothing from the shared cache
 
@@ -912,7 +1046,8 @@ jobs:
   # kilocode_change start - check VS Code Marketplace trusted publishing without
   # building or publishing anything. Exchanges the GitHub OIDC token for a
   # Marketplace credential exactly as `vsce publish --oidc` does, then checks
-  # that the credential is accepted for the kilocode publisher.
+  # that the credential may publish as kilocode. Runs only curl and jq from the
+  # runner image, no third-party packages.
   oidc-check:
     name: Check Marketplace trusted publishing
     if: inputs.oidc_check && github.repository == 'Kilo-Org/kilocode'
@@ -923,14 +1058,6 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
-        with:
-          node-version: "24"
-          package-manager-cache: false
-
-      - name: Install @vscode/vsce
-        run: npm install --global @vscode/vsce@4.1.1
-
       - name: Exchange OIDC token and verify publisher access
         run: |
           set -euo pipefail
@@ -973,5 +1100,23 @@ jobs:
           echo "::add-mask::$credential"
           echo "credential received"
 
-          VSCE_PAT="$credential" vsce verify-pat kilocode
+          # The same request as `vsce verify-pat kilocode` (vsce 4.1.0): the publisher's role assignments answer 200
+          # when the credential holds any role on it (Creator, Owner, Contributor, Reader) and 403 otherwise.
+          roles="$RUNNER_TEMP/marketplace-roles.json"
+          status="$(curl --silent --show-error --output "$roles" --write-out '%{http_code}' --config - \
+            --header "Accept: application/json;api-version=3.2-preview.1" \
+            --header "User-Agent: vsce" \
+            "https://marketplace.visualstudio.com/_apis/securityroles/scopes/gallery.publisher/roleassignments/resources/kilocode" <<EOF
+          user = "OAuth:$credential"
+          EOF
+          )"
+          echo "Marketplace publisher role check: HTTP $status"
+          if [ "$status" != "200" ]; then
+            message="$(jq -j '.message // empty' "$roles" 2>/dev/null | tr '\r\n' '  ' | cut -c1-300 || true)"
+            rm -f "$roles"
+            echo "::error::The Marketplace credential has no role on publisher kilocode${message:+: $message}"
+            exit 1
+          fi
+          rm -f "$roles"
+          echo "The Marketplace credential may publish as kilocode"
   # kilocode_change end
