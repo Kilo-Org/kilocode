@@ -249,6 +249,7 @@ for (const hasPersonalAccount of [true, false])
             authenticated: true,
             organizationID: "first",
             server: gateway.server,
+            method: "oauth",
           })
         },
         { data, database: path.join(data, "kilo2-v2.db"), awaitActivation: false },
@@ -288,7 +289,7 @@ test("a device sign-in starts on the team of the Kilo v1 login beside the kilo2 
             (status) => status.authenticated,
             "the Gateway uses the new login",
           ),
-        ).toEqual({ authenticated: true, organizationID: "first", server: gateway.server })
+        ).toEqual({ authenticated: true, organizationID: "first", server: gateway.server, method: "oauth" })
       },
       { data: path.join(root, "kilo2") },
     )()

@@ -29,6 +29,7 @@
     "test/fixtures/marketplace-render.tsx",
     "test/fixtures/permission-dock-render.tsx",
     "test/fixtures/pr-panel-file-target.tsx",
+    "test/fixtures/profile-status-render.tsx",
     "test/fixtures/prompt-rail-render.tsx",
     "test/fixtures/prompt-toolbar-flicker.tsx",
     "test/fixtures/revert-banner-render.tsx",

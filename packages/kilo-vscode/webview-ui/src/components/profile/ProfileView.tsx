@@ -32,6 +32,7 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
   const language = useLanguage()
   const [target, setTarget] = createSignal<string | null>(null)
   const profileData = () => props.profile.data()
+  const profileStatus = () => props.profile.status()
 
   const personal = createMemo(() => profileData()?.profile.hasPersonalAccount !== false)
 
@@ -41,9 +42,10 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
     props.profile.requestUsage()
   })
 
-  // Reset pending target whenever profileData changes (success or failure both load a fresh profile)
+  // Reset pending target whenever profileData or profileStatus changes (success or failure both load a fresh profile)
   createEffect(() => {
     profileData() // track
+    profileStatus() // track
     setTarget(null)
   })
 
@@ -87,6 +89,12 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
 
   const handleRefresh = () => {
     props.profile.refresh()
+  }
+
+  const notice = () => {
+    if (profileStatus() === "expired") return language.t("profile.expired")
+    if (profileStatus() === "unavailable") return language.t("profile.unavailable")
+    return language.t("profile.notLoggedIn")
   }
 
   const handleDashboard = () => {
@@ -170,11 +178,20 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
                         margin: "0 0 8px 0",
                       }}
                     >
-                      {language.t("profile.notLoggedIn")}
+                      {notice()}
                     </p>
-                    <Button variant="primary" onClick={handleLogin}>
-                      {language.t("profile.action.login")}
-                    </Button>
+                    <Show
+                      when={profileStatus() === "unavailable"}
+                      fallback={
+                        <Button variant="primary" onClick={handleLogin}>
+                          {language.t("profile.action.login")}
+                        </Button>
+                      }
+                    >
+                      <Button variant="secondary" onClick={handleRefresh}>
+                        {language.t("common.retry")}
+                      </Button>
+                    </Show>
                   </>
                 }
               >
@@ -193,6 +210,17 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
         >
           {(data) => (
             <div style={{ display: "flex", "flex-direction": "column", gap: "12px" }}>
+              <Show when={profileStatus() === "unavailable"}>
+                <p
+                  style={{
+                    "font-size": "var(--kilo-font-size-12)",
+                    color: "var(--vscode-descriptionForeground)",
+                    margin: "0",
+                  }}
+                >
+                  {language.t("profile.stale")}
+                </p>
+              </Show>
               {/* User header */}
               <Card>
                 <p

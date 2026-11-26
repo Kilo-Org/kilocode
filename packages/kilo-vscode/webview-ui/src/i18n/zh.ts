@@ -677,6 +677,9 @@ export const dict = {
 
   "profile.title": "个人资料",
   "profile.notLoggedIn": "未登录",
+  "profile.expired": "你的 Kilo 登录已过期或已被撤销。请重新登录以继续。",
+  "profile.unavailable": "无法加载你的 Kilo 个人资料。Kilo 目前可能无法访问。",
+  "profile.stale": "无法刷新你的个人资料。正在显示上次加载的信息。",
   "profile.action.login": "使用 Kilo Code 登录",
   "profile.balance.title": "余额",
   "profile.balance.refresh": "刷新余额",

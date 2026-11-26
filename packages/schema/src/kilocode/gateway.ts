@@ -30,6 +30,8 @@ export const AuthStatus = Schema.Struct({
   organizationID: OrganizationID,
   server: Schema.String,
   identity: Schema.optional(Schema.String),
+  /** Credential method when the active token comes from a stored credential (`oauth`, `key`, or `external`). */
+  method: optional(Schema.Literals(["oauth", "key", "external"])),
 })
 
 export type AuthStatus = typeof AuthStatus.Type
