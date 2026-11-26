@@ -27,7 +27,7 @@ jobs:
           matched=false
           while IFS= read -r file; do
             case "$file" in
-              packages/kilo-ui/*|packages/ui/*|packages/util/*|packages/sdk/js/*|packages/kilo-vscode/webview-ui/*|packages/kilo-vscode/.storybook/*|packages/kilo-vscode/tests/visual-regression*|packages/kilo-vscode/tests/permission-dock-dropdown*|packages/kilo-vscode/tests/accessibility*|packages/kilo-docs/public/img/screenshot-tests/*|.github/actions/setup-bun/*|.github/workflows/visual-regression.yml)
+              packages/kilo-ui/*|packages/ui/*|packages/util/*|packages/sdk/js/*|packages/kilo-vscode/webview-ui/*|packages/kilo-vscode/.storybook/*|packages/kilo-vscode/tests/visual-regression*|packages/kilo-vscode/tests/permission-dock-dropdown*|packages/kilo-vscode/tests/accessibility*|packages/kilo-docs/public/img/screenshot-tests/*|.github/actions/setup-bun/*|.github/workflows/visual-regression.yml|.github/workflows/visual-regression-baselines.yml|script/kilocode/visual-baselines*)
                 matched=true
                 break
                 ;;
@@ -198,6 +198,12 @@ jobs:
               mkdir -p "$out/files/$(dirname -- "$file")"
               cp -- "$file" "$out/files/$file"
             done
+          count="$(find "$out/files" -type f | wc -l)"
+          bytes="$(du -sb "$out/files" | cut -f1)"
+          if [ "$count" -gt 500 ] || [ "$bytes" -gt $((100 * 1024 * 1024)) ]; then
+            echo "::error::${count} changed baselines (${bytes} bytes) exceed the automatic commit limit of 500 files or 100 MiB. Check for a change that affects every story, or update the baselines in smaller pull requests."
+            exit 1
+          fi
           git diff --cached --no-renames --name-only --diff-filter=D -z -- "$DIR" |
             jq -Rs --argjson pr "$PR" --arg sha "$HEAD_SHA" --arg repo "$HEAD_REPO" --arg ref "$HEAD_REF" \
               '{pr: $pr, head_sha: $sha, head_repo: $repo, head_ref: $ref, deleted: (split("\u0000") | map(select(length > 0)))}' \
@@ -409,6 +415,12 @@ jobs:
               mkdir -p "$out/files/$(dirname -- "$file")"
               cp -- "$file" "$out/files/$file"
             done
+          count="$(find "$out/files" -type f | wc -l)"
+          bytes="$(du -sb "$out/files" | cut -f1)"
+          if [ "$count" -gt 500 ] || [ "$bytes" -gt $((100 * 1024 * 1024)) ]; then
+            echo "::error::${count} changed baselines (${bytes} bytes) exceed the automatic commit limit of 500 files or 100 MiB. Check for a change that affects every story, or update the baselines in smaller pull requests."
+            exit 1
+          fi
           git diff --cached --no-renames --name-only --diff-filter=D -z -- "$DIR" |
             jq -Rs --argjson pr "$PR" --arg sha "$HEAD_SHA" --arg repo "$HEAD_REPO" --arg ref "$HEAD_REF" \
               '{pr: $pr, head_sha: $sha, head_repo: $repo, head_ref: $ref, deleted: (split("\u0000") | map(select(length > 0)))}' \

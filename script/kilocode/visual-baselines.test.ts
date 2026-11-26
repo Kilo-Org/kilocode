@@ -13,7 +13,9 @@ const expected: Expected = {
 }
 const ui = DIRS["kilo-ui"]
 const vscode = DIRS["kilo-vscode"]
-const image = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3])
+const signature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
+const ihdr = [0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52, 0, 0, 0, 2, 0, 0, 0, 2, 8, 6, 0, 0, 0]
+const image = Buffer.from([...signature, ...ihdr])
 
 const dirs: string[] = []
 afterEach(() => {
@@ -118,6 +120,15 @@ describe("validate and apply", () => {
     const other = temp()
     artifact(other, "kilo-ui", { [`${ui}button/fake.png`]: "#!/bin/sh\n" })
     await expect(validate(other, expected)).rejects.toThrow("not a PNG image")
+
+    const header = temp()
+    artifact(header, "kilo-ui", { [`${ui}button/signature.png`]: Buffer.from([...signature, 1, 2, 3, 4, 5, 6, 7, 8]) })
+    await expect(validate(header, expected)).rejects.toThrow("not a PNG image")
+
+    const chunk = temp()
+    const wrong = Buffer.from([...signature, 0, 0, 0, 13, 0x74, 0x45, 0x58, 0x74, 0, 0])
+    artifact(chunk, "kilo-ui", { [`${ui}button/text-chunk.png`]: wrong })
+    await expect(validate(chunk, expected)).rejects.toThrow("not a PNG image")
   })
 
   test("refuses .. in a deleted path", async () => {

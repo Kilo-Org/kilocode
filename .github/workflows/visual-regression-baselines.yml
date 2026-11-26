@@ -27,13 +27,15 @@ jobs:
   commit:
     name: Commit baselines
     # A run that uploads baselines fails on purpose. A fork pull request has another
-    # head repository and no pull_requests entry, so it starts no runner.
+    # head repository and no pull_requests entry, so it starts no runner. Baselines
+    # never go to the default branch.
     if: >-
       github.event.workflow_run.event == 'pull_request' &&
       github.event.workflow_run.conclusion == 'failure' &&
       github.event.workflow_run.head_repository.full_name == github.repository &&
       github.event.workflow_run.pull_requests[0].head.repo.id == github.event.repository.id &&
-      github.event.workflow_run.pull_requests[0].base.repo.id == github.event.repository.id
+      github.event.workflow_run.pull_requests[0].base.repo.id == github.event.repository.id &&
+      github.event.workflow_run.head_branch != github.event.repository.default_branch
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -79,6 +81,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           persist-credentials: false
+          filter: blob:none
           sparse-checkout: |
             .github/actions
             script/kilocode
@@ -89,13 +92,15 @@ jobs:
         with:
           install: false
 
+      # Without LFS: nothing here needs the existing images, and the pull request's
+      # LFS settings are never read before .lfsconfig is compared below.
       - name: Checkout tested head commit
         if: steps.found.outputs.found == 'true'
         uses: actions/checkout@v6
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           path: pr-head
-          lfs: true
+          lfs: false
           persist-credentials: false
 
       - name: Apply baselines
@@ -119,6 +124,8 @@ jobs:
               exit 1
             fi
           fi
+          # The clean filter stores the new images as LFS pointers on `git add`.
+          git -C pr-head lfs install --local
           bun script/kilocode/visual-baselines.ts "$RUNNER_TEMP/visual-regression-baselines" pr-head | tee -a "$GITHUB_STEP_SUMMARY"
           git -C pr-head add --all -- "$BASELINES"
           if git -C pr-head diff --cached --quiet; then
@@ -128,16 +135,36 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Setup Git Committer
+      # Baselines go only to a branch that no ruleset or branch protection covers.
+      - name: Check target branch
         if: steps.apply.outputs.changed == 'true'
+        id: target
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          branch="$(jq -rn --arg ref "$HEAD_REF" '$ref | @uri')"
+          rules="$(gh api "repos/${GITHUB_REPOSITORY}/rules/branches/${branch}" --jq 'length')"
+          protected="$(gh api "repos/${GITHUB_REPOSITORY}/branches/${branch}" --jq '.protected')"
+          if [ "$rules" = "0" ] && [ "$protected" = "false" ]; then
+            echo "allowed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "allowed=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::${HEAD_REF} is covered by a ruleset or branch protection; baselines are not pushed to it."
+          fi
+
+      - name: Setup Git Committer
+        if: steps.target.outputs.allowed == 'true'
         id: committer
         uses: ./.github/actions/setup-git-committer
         with:
           kilo-maintainer-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
           kilo-maintainer-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
 
       - name: Commit baselines
-        if: steps.apply.outputs.changed == 'true'
+        if: steps.target.outputs.allowed == 'true'
         env:
           TOKEN: ${{ steps.committer.outputs.token }}
         run: |
@@ -146,14 +173,14 @@ jobs:
           git -C pr-head commit --no-verify -m "chore: update visual regression baselines"
 
       - name: Check push paths
-        if: steps.apply.outputs.changed == 'true'
+        if: steps.target.outputs.allowed == 'true'
         uses: ./.github/actions/check-push-paths
         with:
           base: ${{ github.event.workflow_run.head_sha }}
           working-directory: pr-head
 
       - name: Push baselines
-        if: steps.apply.outputs.changed == 'true'
+        if: steps.target.outputs.allowed == 'true'
         working-directory: pr-head
         run: |
           set -euo pipefail
@@ -162,5 +189,7 @@ jobs:
             echo "::notice::${HEAD_REF} moved past the tested commit; its new run makes the baselines again."
             exit 0
           fi
+          # With the branch tip as a remote-tracking ref, git lfs push uploads only the new commit's images.
+          git fetch --no-tags --depth=1 origin "+refs/heads/${HEAD_REF}:refs/remotes/origin/${HEAD_REF}"
           git lfs push origin HEAD
           git push --no-verify origin "HEAD:refs/heads/${HEAD_REF}"

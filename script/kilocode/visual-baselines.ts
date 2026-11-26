@@ -33,7 +33,8 @@ export type Plan = { write: { from: string; to: string }[]; remove: string[] }
 type Meta = { pr?: unknown; head_sha?: unknown; head_repo?: unknown; head_ref?: unknown; deleted?: unknown }
 
 const SEGMENT = /^[A-Za-z0-9_-][A-Za-z0-9._-]*$/
-const PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
+// PNG signature, then the first chunk: length 13, type IHDR.
+const PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52]
 
 // A repo-relative PNG path under `prefix` whose every segment is a plain name.
 export function allowed(file: string, prefix: string) {

@@ -24,10 +24,9 @@ runs:
           exit 1
         }
         # Files of every commit, plus the files a merge commit changed against all of its parents.
-        blocked="$(
-          git -c core.quotePath=false log --no-renames --diff-merges=dense-combined --format= --name-only "${BASE}..HEAD" |
-            grep -E '^"?\.github/(workflows|actions)/' | sort -u || true
-        )"
+        # A failing git log fails the step here; only the filter below may match nothing.
+        files="$(git -c core.quotePath=false log --no-renames --diff-merges=dense-combined --format= --name-only "${BASE}..HEAD")"
+        blocked="$(printf '%s\n' "$files" | grep -E '^"?\.github/(workflows|actions)/' | sort -u || true)"
         if [ -n "$blocked" ]; then
           echo "::error::The commits to push change workflow or composite action files. These change only through a reviewed pull request."
           printf '%s\n' "$blocked"

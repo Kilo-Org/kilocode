@@ -8,6 +8,14 @@ inputs:
   kilo-maintainer-app-secret:
     description: "Kilo Maintainer GitHub App private key"
     required: true
+  repositories:
+    description: "Repositories the token is limited to (comma or newline separated); empty keeps every installed repository"
+    required: false
+    default: ""
+  permission-contents:
+    description: "Contents permission of the token (read or write); empty keeps every installation permission"
+    required: false
+    default: ""
   # kilocode_change end
 outputs:
   token:
@@ -26,6 +34,8 @@ runs:
         # kilocode_change start
         app-id: ${{ inputs['kilo-maintainer-app-id'] }}
         private-key: ${{ inputs['kilo-maintainer-app-secret'] }}
+        repositories: ${{ inputs.repositories }}
+        permission-contents: ${{ inputs['permission-contents'] }}
         # kilocode_change end
         owner: ${{ github.repository_owner }}
 
