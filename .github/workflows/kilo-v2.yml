@@ -16,6 +16,10 @@ concurrency:
 permissions:
   contents: read
 
+# Push and manual runs restore no cache: `install:alpha` installs the `build` artifact of a push run. Pull request
+# runs keep the caches; what they save stays in the pull request's own cache scope. `macos` saves the macOS Bun
+# dependency cache on push (`cache: save`, a fresh install); check.yml `check` saves the Linux one.
+
 jobs:
   workflows:
     name: workflow allowlist
@@ -29,6 +33,7 @@ jobs:
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: package.json
+          no-cache: ${{ github.event_name != 'pull_request' }}
 
       - name: Check workflow allowlist
         run: bun script/check-workflows.ts
@@ -53,8 +58,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      # Push and manual runs build from a clean state (see the note at the top).
       - name: Setup Bun and install dependencies
         uses: ./.github/actions/setup-bun
+        with:
+          cache: ${{ github.event_name == 'pull_request' }}
 
       # Linux targets compile the bundled Bubblewrap sandbox helper with Zig.
       - name: Setup Zig for Linux sandbox helpers
@@ -109,6 +117,8 @@ jobs:
 
       - name: Setup Bun and install dependencies
         uses: ./.github/actions/setup-bun
+        with:
+          cache: ${{ github.event_name == 'pull_request' && 'true' || 'save' }}
 
       # macOS ships Bash 3.2, but some upstream shell fixtures use process substitution and function
       # compound syntax that need Bash 5, which the Linux runners have. Install it and use it for the
@@ -157,6 +167,7 @@ jobs:
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: package.json
+          no-cache: ${{ github.event_name != 'pull_request' }}
 
       - name: Check kilocode_change markers in shared upstream files
         run: bun script/check-opencode-annotations.ts
@@ -192,6 +203,7 @@ jobs:
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: package.json
+          no-cache: ${{ github.event_name != 'pull_request' }}
 
       - name: Check generated map files in the PR
         if: github.event_name == 'pull_request'
@@ -245,6 +257,7 @@ jobs:
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: package.json
+          no-cache: true # job holds write scopes and the maintainer app secrets
 
       # A PR created with the workflow GITHUB_TOKEN does not start its own checks. When the Kilo maintainer
       # app secrets are present, this step makes the bot PR an app-authored PR so the `progress` guard runs
@@ -388,6 +401,7 @@ jobs:
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: package.json
+          no-cache: true # job holds pull-requests: write
 
       - name: Compare the progress map with the base branch
         env:
@@ -439,6 +453,7 @@ jobs:
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: package.json
+          no-cache: ${{ github.event_name != 'pull_request' }}
 
       - name: Install
         run: bun install --frozen-lockfile
@@ -465,6 +480,8 @@ jobs:
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
+        with:
+          cache: ${{ github.event_name == 'pull_request' }}
 
       - name: Test Kilo metric gates
         working-directory: script/kilocode/metrics
