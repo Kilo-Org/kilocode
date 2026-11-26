@@ -34,6 +34,41 @@ export function failureText(failure: Failure, t: Translate): string {
   return t(failure.key, failure.params)
 }
 
+const KILO_ERROR_CODES = {
+  PAID_MODEL_AUTH_REQUIRED: "PAID_MODEL_AUTH_REQUIRED",
+  PROMOTION_MODEL_LIMIT_REACHED: "PROMOTION_MODEL_LIMIT_REACHED",
+  INVALID_TOKEN: "INVALID_TOKEN",
+} as const
+
+interface ParsedSessionError {
+  readonly status?: number
+  readonly code?: string
+}
+
+/** Extracts the HTTP status and structured error code from a `SessionStructuredError`. */
+function parseSessionError(error: unknown): ParsedSessionError | undefined {
+  if (!isRecord(error)) return undefined
+  const status = typeof error.status === "number" ? error.status : undefined
+  const body = isRecord(error.response) && typeof error.response.body === "string" ? error.response.body : undefined
+  if (status === undefined && body === undefined) return undefined
+  const parsed = body ? parse(body) : undefined
+  const code = isRecord(parsed)
+    ? ((isRecord(parsed.error) ? text(parsed.error.code) : undefined) ?? text(parsed.code))
+    : undefined
+  return { status, code }
+}
+
+/**
+ * The Kilo Gateway rejected the stored credential: the user was signed out
+ * and has to sign in again before any request can succeed.
+ */
+export function isSignedOutError(error: unknown): boolean {
+  const parsed = parseSessionError(error)
+  if (!parsed) return false
+  // INVALID_TOKEN is a generic name, so it only counts on the 401 the gateway sends with it.
+  return parsed.status === 401 && parsed.code === KILO_ERROR_CODES.INVALID_TOKEN
+}
+
 /** The best message an unknown error value carries, before any rewriting. */
 export function message(error: unknown): string {
   if (error === undefined || error === null) return "unknown error"

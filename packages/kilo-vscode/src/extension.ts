@@ -513,7 +513,7 @@ export function activate(context: ExtensionContext) {
       await commands.executeCommand("kilo-code.v2.chat.focus")
       await view.post({ type: "command", name: "history" })
     }),
-    commands.registerCommand("kilo-code.v2.profile", () => profilePanel.open()),
+    commands.registerCommand("kilo-code.v2.profile", (opts?: { login?: boolean }) => profilePanel.open(opts)),
     commands.registerCommand("kilo-code.v2.marketplace", () => marketplacePanel.open()),
     commands.registerCommand("kilo-code.v2.openSubagent", (target?: SubagentPanelTarget) => {
       if (target?.sessionID) subagents.open(target)

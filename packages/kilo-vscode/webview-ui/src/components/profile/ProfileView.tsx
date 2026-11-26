@@ -156,7 +156,7 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
         }}
       >
         <Show
-          when={profileData()}
+          when={props.profile.auth().status === "idle" ? profileData() : undefined}
           fallback={
             <div style={{ display: "flex", "flex-direction": "column", gap: "12px" }}>
               <Show

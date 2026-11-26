@@ -9,6 +9,7 @@ const decodeJson = Schema.decodeUnknownOption(JsonValue)
 export const CODES = {
   PAID_MODEL_AUTH_REQUIRED: "PAID_MODEL_AUTH_REQUIRED",
   PROMOTION_MODEL_LIMIT_REACHED: "PROMOTION_MODEL_LIMIT_REACHED",
+  INVALID_TOKEN: "INVALID_TOKEN",
   USAGE_LIMIT_EXCEEDED: "usage_limit_exceeded",
   INSUFFICIENT_CREDITS: "insufficient_credits",
   TOP_UP_IN_PROGRESS: "top_up_in_progress",
@@ -20,6 +21,15 @@ export const CODES = {
   BYOK_KEY_REQUIRED: "byok_key_required",
   BYOK_ERROR: "byok_error",
 } as const
+
+export const ACTION_CODES = {
+  PAID_MODEL_AUTH_REQUIRED: CODES.PAID_MODEL_AUTH_REQUIRED,
+  PROMOTION_MODEL_LIMIT_REACHED: CODES.PROMOTION_MODEL_LIMIT_REACHED,
+  /** The gateway rejected the stored credential: the user was signed out and has to sign in again. */
+  INVALID_TOKEN: CODES.INVALID_TOKEN,
+} as const
+
+export type ActionCode = (typeof ACTION_CODES)[keyof typeof ACTION_CODES]
 
 export interface ParsedError {
   readonly code: string | number
@@ -41,6 +51,50 @@ export function catalogMessage(failure: KiloModels.Failure) {
   return `Failed to load the Kilo model catalog (${reason}). Check your connection and credentials.`
 }
 
+export function actionCode(rawBody: string | unknown, status?: number): ActionCode | undefined {
+  const unwrapped = unwrapEnvelope(rawBody)
+  if (!unwrapped) return undefined
+  const nestedError = isRecord(unwrapped.error) ? unwrapped.error : undefined
+  const raw = asString(nestedError?.code) ?? asString(unwrapped.code) ?? asString(unwrapped.error_type)
+  return raw ? resolveActionCode(raw, status) : undefined
+}
+
+function resolveActionCode(code: string, status?: number): ActionCode | undefined {
+  if (code === CODES.PAID_MODEL_AUTH_REQUIRED || code === "paid_model_auth_required")
+    return ACTION_CODES.PAID_MODEL_AUTH_REQUIRED
+  if (code === CODES.PROMOTION_MODEL_LIMIT_REACHED || code === "promotion_limit_reached")
+    return ACTION_CODES.PROMOTION_MODEL_LIMIT_REACHED
+  // INVALID_TOKEN is a generic name, so it only counts on the 401 the gateway sends with it.
+  if (code === CODES.INVALID_TOKEN) return status === 401 ? ACTION_CODES.INVALID_TOKEN : undefined
+  return undefined
+}
+
+export function isSignedOut(rawBody: string | unknown, status?: number): boolean {
+  return actionCode(rawBody, status) === ACTION_CODES.INVALID_TOKEN
+}
+
+export function actionTitle(code: ActionCode): string {
+  if (code === ACTION_CODES.PAID_MODEL_AUTH_REQUIRED) return "You need to sign in to use this model"
+  if (code === ACTION_CODES.PROMOTION_MODEL_LIMIT_REACHED) return "You need to sign up to keep going"
+  return "You've been signed out of Kilo"
+}
+
+export function actionDescription(code: ActionCode): string {
+  if (code === ACTION_CODES.PAID_MODEL_AUTH_REQUIRED) {
+    return "Sign in or create an account to access over 500 models, use credits at cost, or bring your own key."
+  }
+  if (code === ACTION_CODES.PROMOTION_MODEL_LIMIT_REACHED) {
+    return "Sign up for free to continue and explore 500 other models. Takes 2 minutes, no credit card required. Or come back later."
+  }
+  return "Your Kilo session is no longer valid. Sign in again, then resend your message."
+}
+
+export function actionLine(rawBody: string | unknown, status?: number): string | undefined {
+  const code = actionCode(rawBody, status)
+  if (!code) return undefined
+  return `${actionTitle(code)}. Run \`kilo auth login\` to connect to Kilo Gateway.`
+}
+
 // Parses both Kilo Gateway error envelopes (from `apps/web/src/app/api/openrouter/[...path]/route.ts` and
 // `lib/ai-gateway/llm-proxy-helpers.ts`) plus mid-stream SSE error frames (from v1 `provider/error.ts`):
 // 1. Nested `{ error: { code, message, title, balance, buyCreditsUrl }, error_type }`
@@ -48,6 +102,34 @@ export function catalogMessage(failure: KiloModels.Failure) {
 // 3. Responses API terminal frame `{ type: "response.failed", response: { error: { code, message } } }`
 // 4. Bare `{ code, message }`
 export function parse(rawBody: string | unknown, status?: number): ParsedError | undefined {
+  const unwrapped = unwrapEnvelope(rawBody)
+  if (!unwrapped) return undefined
+
+  const nestedError = isRecord(unwrapped.error) ? unwrapped.error : undefined
+  const rawCode =
+    asCode(nestedError?.code) ?? asString(unwrapped.error_type) ?? asCode(unwrapped.code) ?? asString(nestedError?.type)
+  const rawMessage =
+    asString(nestedError?.message) ??
+    asString(unwrapped.message) ??
+    (typeof unwrapped.error === "string" ? unwrapped.error : undefined)
+
+  if (!rawCode && !rawMessage) return undefined
+
+  const normalizedCode = rawCode ?? (status === 402 ? CODES.USAGE_LIMIT_EXCEEDED : "api_error")
+  const code = String(normalizedCode)
+  const message = formatMessage(code, rawMessage, nestedError, unwrapped, status)
+  if (!message) return undefined
+
+  return {
+    code: normalizedCode,
+    type: asString(nestedError?.type) ?? code,
+    message,
+    retryable: !JSON.stringify(unwrapped).includes("FreeUsageLimitError") && retryOverride(code, status),
+    details: nestedError ?? unwrapped,
+  }
+}
+
+function unwrapEnvelope(rawBody: string | unknown): Record<string, unknown> | undefined {
   const decoded = typeof rawBody === "string" ? Option.getOrUndefined(decodeJson(rawBody)) : rawBody
   if (!isRecord(decoded)) return undefined
   // A serialized message is a wrapper only when it does not replace a structured outer error.
@@ -62,33 +144,9 @@ export function parse(rawBody: string | unknown, status?: number): ParsedError |
   const value = isRecord(inner) ? inner : decoded
 
   // Unwrap `response.failed` terminal SSE frame (`/responses`).
-  const unwrapped =
-    value.type === "response.failed" && isRecord(value.response) && isRecord(value.response.error)
-      ? { error: value.response.error, error_type: value.error_type }
-      : value
-
-  const nestedError = isRecord(unwrapped.error) ? unwrapped.error : undefined
-  const rawCode =
-    asCode(nestedError?.code) ?? asString(unwrapped.error_type) ?? asCode(unwrapped.code) ?? asString(nestedError?.type)
-  const rawMessage =
-    asString(nestedError?.message) ??
-    asString(unwrapped.message) ??
-    (typeof unwrapped.error === "string" ? unwrapped.error : undefined)
-
-  if (!rawCode && !rawMessage) return undefined
-
-  const normalizedCode = rawCode ?? (status === 402 ? CODES.USAGE_LIMIT_EXCEEDED : "api_error")
-  const code = String(normalizedCode)
-  const message = formatMessage(code, rawMessage, nestedError, unwrapped)
-  if (!message) return undefined
-
-  return {
-    code: normalizedCode,
-    type: asString(nestedError?.type) ?? code,
-    message,
-    retryable: !JSON.stringify(value).includes("FreeUsageLimitError") && retryOverride(code),
-    details: nestedError ?? unwrapped,
-  }
+  return value.type === "response.failed" && isRecord(value.response) && isRecord(value.response.error)
+    ? { error: value.response.error, error_type: value.error_type }
+    : value
 }
 
 export function toError(parsed: ParsedError) {
@@ -136,39 +194,41 @@ function formatMessage(
   rawMessage: string | undefined,
   nestedError: Record<string, unknown> | undefined,
   root: Record<string, unknown>,
+  status?: number,
 ): string | undefined {
-  if (code === CODES.PAID_MODEL_AUTH_REQUIRED || code === "paid_model_auth_required") {
-    return "You need to sign in to use this model. Sign in or create an account to access over 500 models, use credits at cost, or bring your own key."
-  }
-  if (code === CODES.PROMOTION_MODEL_LIMIT_REACHED || code === "promotion_limit_reached") {
-    return "You need to sign up to keep going. Sign up for free to continue and explore 500 other models. Takes 2 minutes, no credit card required. Or come back later."
-  }
+  const action = resolveActionCode(code, status)
+  if (action) return `${actionTitle(action)}. ${actionDescription(action)}`
   if (code === "402" || code === CODES.USAGE_LIMIT_EXCEEDED || code === CODES.INSUFFICIENT_CREDITS) {
-    const title = asString(nestedError?.title) ?? asString(root.title)
-    const metadata = isRecord(nestedError?.metadata) ? nestedError.metadata : undefined
-    const buyUrl =
-      asString(nestedError?.buyCreditsUrl) ?? asString(root.buyCreditsUrl) ?? asString(metadata?.buyCreditsUrl)
-    const balance = nestedError?.balance ?? root.balance
-    const base = rawMessage ?? title ?? "Insufficient Kilo Gateway credits."
-    const parts = [
-      title && rawMessage && !rawMessage.startsWith(title) ? `${title}: ${rawMessage}` : base,
-      typeof balance === "number" ? `(Balance: $${balance.toFixed(2)})` : undefined,
-      buyUrl ? `Buy credits at ${buyUrl}` : undefined,
-    ].filter(Boolean)
-    return parts.join(" ")
+    return formatCreditsMessage(rawMessage, nestedError, root)
   }
   if (code === CODES.RATE_LIMIT_EXCEEDED) return rawMessage ?? "Provider rate limit exceeded. Please try again shortly."
   if (code === "server_error" || code === "server_is_overloaded") return rawMessage ?? "Server error."
   return rawMessage
 }
 
-function retryOverride(code: string): boolean | undefined {
+function formatCreditsMessage(
+  rawMessage: string | undefined,
+  nestedError: Record<string, unknown> | undefined,
+  root: Record<string, unknown>,
+) {
+  const title = asString(nestedError?.title) ?? asString(root.title)
+  const metadata = isRecord(nestedError?.metadata) ? nestedError.metadata : undefined
+  const buyUrl =
+    asString(nestedError?.buyCreditsUrl) ?? asString(root.buyCreditsUrl) ?? asString(metadata?.buyCreditsUrl)
+  const balance = nestedError?.balance ?? root.balance
+  const base = rawMessage ?? title ?? "Insufficient Kilo Gateway credits."
+  const parts = [
+    title && rawMessage && !rawMessage.startsWith(title) ? `${title}: ${rawMessage}` : base,
+    typeof balance === "number" ? `(Balance: $${balance.toFixed(2)})` : undefined,
+    buyUrl ? `Buy credits at ${buyUrl}` : undefined,
+  ].filter(Boolean)
+  return parts.join(" ")
+}
+
+function retryOverride(code: string, status?: number): boolean | undefined {
   if (code === CODES.TOP_UP_IN_PROGRESS) return true
+  if (resolveActionCode(code, status)) return false
   if (
-    code === CODES.PAID_MODEL_AUTH_REQUIRED ||
-    code === "paid_model_auth_required" ||
-    code === CODES.PROMOTION_MODEL_LIMIT_REACHED ||
-    code === "promotion_limit_reached" ||
     code === CODES.USAGE_LIMIT_EXCEEDED ||
     code === CODES.INSUFFICIENT_CREDITS ||
     code === CODES.MODEL_NOT_ALLOWED ||
