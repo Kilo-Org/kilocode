@@ -3,6 +3,7 @@
 
 import { $ } from "bun"
 import { appendFileSync } from "node:fs"
+import { join } from "node:path"
 import semver from "semver"
 import { parseArgs } from "util"
 
@@ -12,6 +13,7 @@ const { values } = parseArgs({
   options: {
     pr: { type: "string" },
     merge: { type: "string" },
+    dir: { type: "string", default: "." },
     dry: { type: "boolean", default: false },
     help: { type: "boolean", short: "h", default: false },
   },
@@ -19,8 +21,10 @@ const { values } = parseArgs({
 
 if (values.help) {
   console.log(`
-Usage: bun script/jetbrains-release-validate.ts --pr <number> --merge <sha> [--dry]
+Usage: bun script/jetbrains-release-validate.ts --pr <number> --merge <sha> [--dir <path>] [--dry]
 --merge is the commit checked out for this release; it must equal the release PR merge commit.
+--dir is the checkout of that commit (default: the current directory). It is only read through git
+and file reads, so CI runs this script from a trusted checkout and points --dir at the release tree.
 
 Validates a merged JetBrains release PR and the pre-created immutable release tag.
 The PR must target main, and its merge commit and the tag commit must both be on origin/main.
@@ -28,6 +32,8 @@ This helper never creates, moves, deletes, or pushes tags.
 `)
   process.exit(0)
 }
+
+const dir = values.dir
 
 const pr = String(values.pr ?? process.env.PR_NUMBER ?? "").trim()
 if (!/^[1-9]\d*$/.test(pr))
@@ -61,7 +67,7 @@ if (expected.toLowerCase() !== data.mergeCommit.oid.toLowerCase()) {
   )
 }
 
-const head = (await $`git rev-parse HEAD`.text()).trim()
+const head = (await $`git -C ${dir} rev-parse HEAD`.text()).trim()
 if (head.toLowerCase() !== data.mergeCommit.oid.toLowerCase()) {
   throw new Error(`Checked out ${head}, which is not merge commit ${data.mergeCommit.oid} of release PR ${pr}`)
 }
@@ -82,13 +88,13 @@ if (tag !== `jetbrains/v${ver}`) throw new Error(`Tag ${tag} does not match vers
 if (!/^jetbrains\/v\d+\.\d+\.\d+(-rc\.\d+)?$/.test(tag)) throw new Error(`Invalid JetBrains tag: ${tag}`)
 if (!/^[0-9a-f]{40}$/i.test(commit)) throw new Error(`Invalid JetBrains commit: ${commit}`)
 
-await $`git fetch origin --tags`
-await $`git fetch origin +refs/heads/main:refs/remotes/origin/main`
+await $`git -C ${dir} fetch origin --tags`
+await $`git -C ${dir} fetch origin +refs/heads/main:refs/remotes/origin/main`
 await onMain(data.mergeCommit.oid, `Merge commit of release PR ${pr}`)
-const existing = await $`git rev-parse -q --verify ${`refs/tags/${tag}`}`.nothrow()
+const existing = await $`git -C ${dir} rev-parse -q --verify ${`refs/tags/${tag}`}`.nothrow()
 if (existing.exitCode !== 0) throw new Error(`${tag} does not exist`)
 
-const sha = (await $`git rev-list -n 1 ${tag}`.text()).trim()
+const sha = (await $`git -C ${dir} rev-list -n 1 ${tag}`.text()).trim()
 if (sha !== commit) throw new Error(`${tag} points at ${sha}, expected ${commit}`)
 await onMain(sha, `${tag} commit`)
 
@@ -99,7 +105,7 @@ if (!(await pinned())) {
   throw new Error("packages/kilo-jetbrains/gradle.properties has kilo.cli.pinned=false; JetBrains releases require kilo.cli.pinned=true")
 }
 
-const changelog = await Bun.file("packages/kilo-jetbrains/CHANGELOG.md").text()
+const changelog = await Bun.file(join(dir, "packages/kilo-jetbrains/CHANGELOG.md")).text()
 if (!changelog.includes(`## [${ver}]`)) throw new Error(`CHANGELOG.md is missing section for ${ver}`)
 
 const marketplace = kind === "rc" ? "eap" : "default"
@@ -131,7 +137,7 @@ function marker(body: string, key: string) {
 }
 
 async function onMain(sha: string, what: string) {
-  const res = await $`git merge-base --is-ancestor ${sha} refs/remotes/origin/main`.nothrow().quiet()
+  const res = await $`git -C ${dir} merge-base --is-ancestor ${sha} refs/remotes/origin/main`.nothrow().quiet()
   if (res.exitCode !== 0) throw new Error(`${what} ${sha} is not on main`)
 }
 
@@ -142,7 +148,7 @@ function need(body: string, key: string) {
 }
 
 async function props() {
-  const text = await Bun.file("packages/kilo-jetbrains/gradle.properties").text()
+  const text = await Bun.file(join(dir, "packages/kilo-jetbrains/gradle.properties")).text()
   const line = text.split(/\r?\n/).find((item) => item.startsWith("kilo.jetbrains.version="))
   const value = line?.split("=", 2)[1]?.trim()
   if (!value) throw new Error("packages/kilo-jetbrains/gradle.properties is missing kilo.jetbrains.version")
@@ -150,7 +156,7 @@ async function props() {
 }
 
 async function pinned() {
-  const text = await Bun.file("packages/kilo-jetbrains/gradle.properties").text()
+  const text = await Bun.file(join(dir, "packages/kilo-jetbrains/gradle.properties")).text()
   const value = text.split(/\r?\n/).flatMap((line) => {
     const [key, raw] = line.split("=", 2)
     if (key.trim() !== "kilo.cli.pinned") return []

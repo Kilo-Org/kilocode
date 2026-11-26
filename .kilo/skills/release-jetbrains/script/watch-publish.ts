@@ -23,13 +23,15 @@ if (values.help) {
   process.exit(0)
 }
 
-const pr = values.pr
+const pr = values.pr?.trim()
 const ver = values.version
 if (!pr) throw new Error("--pr is required")
+if (!/^[1-9]\d*$/.test(pr)) throw new Error(`--pr must be a positive integer, got ${values.pr}`)
 if (!ver) throw new Error("--version is required")
 
-// The merged PR's own run only dispatches the publish run on main. That run
-// carries this title (`run-name` in publish-jetbrains.yml).
+// The merged PR's own run only dispatches the publish run on main, passing the
+// PR number from the event. That run carries this title (`run-name` in
+// publish-jetbrains.yml).
 const title = `publish-jetbrains PR #${pr}`
 const id = values["run-id"] ?? (values.merge ? await merge() : await find())
 const url = `https://github.com/${repo}/actions/runs/${id}`

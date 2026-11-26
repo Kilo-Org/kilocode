@@ -23,10 +23,9 @@ on:
         required: true
         type: string
 
-# The release watcher finds the publish run of a PR by this title. fromJSON
-# drops surrounding spaces from a hand-typed number; anything that is not a
-# number fails the run before it starts.
-run-name: "${{ github.event_name == 'workflow_dispatch' && format('publish-jetbrains PR #{0}', fromJSON(inputs.pr)) || github.event.pull_request.title }}"
+# The release watcher finds the publish run of a PR by this title. The dispatch
+# job passes the PR number from the event, so the title is canonical.
+run-name: "${{ github.event_name == 'workflow_dispatch' && format('publish-jetbrains PR #{0}', inputs.pr) || github.event.pull_request.title }}"
 
 permissions: {}
 
@@ -66,7 +65,7 @@ jobs:
       github.ref == 'refs/heads/main'
     runs-on: blacksmith-8vcpu-ubuntu-2404
     concurrency:
-      group: publish-jetbrains-pr-${{ fromJSON(inputs.pr) }}
+      group: publish-jetbrains-pr-${{ inputs.pr }}
       cancel-in-progress: false
     permissions:
       actions: write
@@ -95,6 +94,27 @@ jobs:
       - name: Setup Bun for validation
         uses: ./.github/actions/setup-bun
 
+      # Checks the PR with the job token before any of its files are checked out.
+      - name: Check the release PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_INPUT: ${{ inputs.pr }}
+          MERGE_COMMIT: ${{ inputs.merge_commit }}
+        run: |
+          pr="$(printf '%s' "$PR_INPUT" | tr -d '[:space:]')"
+          if ! [[ "$pr" =~ ^[1-9][0-9]*$ && "$MERGE_COMMIT" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            echo "::error::pr must be a positive integer and merge_commit a full commit SHA."
+            exit 1
+          fi
+          if ! gh api "repos/$REPO/pulls/$pr" | jq -e --arg repo "$REPO" --arg merge "$MERGE_COMMIT" '
+            .merged == true and .base.ref == "main" and .head.repo.full_name == $repo
+            and any(.labels[]; .name == "jetbrains-release")
+            and (.merge_commit_sha | ascii_downcase) == ($merge | ascii_downcase)' > /dev/null; then
+            echo "::error::PR #$pr is not a merged jetbrains-release PR from this repository into main with merge commit $MERGE_COMMIT."
+            exit 1
+          fi
+
       - name: Checkout merged release PR for validation
         uses: actions/checkout@v6
         with:
@@ -103,12 +123,13 @@ jobs:
           persist-credentials: false
           ref: ${{ inputs.merge_commit }}
 
+      # Runs from the trusted checkout: release/ is only read through git and
+      # file reads, so nothing in it (bunfig.toml, scripts) is executed.
       # Requires a merged, labeled release PR into main whose merge commit and
-      # tag commit are both on main. Only that tag is built and signed below.
+      # tag commit are both on main. Only that commit is built and signed below.
       - name: Validate release PR and tag
         id: release
-        working-directory: release
-        run: bun ../script/jetbrains-release-validate.ts --pr "$PR_NUMBER" --merge "$MERGE_COMMIT"
+        run: bun script/jetbrains-release-validate.ts --dir release --pr "$PR_NUMBER" --merge "$MERGE_COMMIT"
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -120,11 +141,13 @@ jobs:
           cp release/packages/kilo-jetbrains/CHANGELOG.md "$RUNNER_TEMP/jetbrains-CHANGELOG.md"
           cp release/packages/kilo-jetbrains/gradle.properties "$RUNNER_TEMP/jetbrains-gradle.properties"
 
-      - name: Checkout release tag
+      # The validated commit, not the tag name: a tag moved after validation
+      # is not picked up. The tag name is only used to name the release.
+      - name: Checkout release commit
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: ${{ steps.release.outputs.tag }}
+          ref: ${{ steps.release.outputs.commit }}
           persist-credentials: false
 
       - name: Restore reviewed release metadata
