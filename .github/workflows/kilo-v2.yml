@@ -19,7 +19,7 @@ permissions:
 jobs:
   workflows:
     name: workflow allowlist
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 5
     steps:
       - name: Checkout repository
@@ -44,7 +44,7 @@ jobs:
       matrix:
         include:
           - target: linux-x64
-            host: ubuntu-24.04
+            host: blacksmith-4vcpu-ubuntu-2404
           - target: darwin-arm64
             host: blacksmith-6vcpu-macos-15
     runs-on: ${{ matrix.host }}
@@ -142,7 +142,7 @@ jobs:
 
   shared:
     name: shared upstream patches
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 10
     steps:
       - name: Checkout repository
@@ -174,7 +174,7 @@ jobs:
   # `progress-commit` regenerates the map on v2 and opens or updates the bot PR.
   progress:
     name: migration progress map
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 10
     steps:
       - name: Checkout repository
@@ -221,7 +221,7 @@ jobs:
     name: migration progress map commit
     if: github.event_name == 'push' && github.ref == 'refs/heads/v2'
     needs: progress
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 10
     concurrency:
       group: kilo-v2-progress-map
@@ -359,7 +359,7 @@ jobs:
     # Same-repository feature pull requests only: a fork PR gets a read-only token and cannot comment,
     # and the map bot PR's own body already carries the delta.
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref != 'progress-map-update'
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 10
     permissions:
       contents: read
@@ -412,7 +412,7 @@ jobs:
 
   upstream-tooling:
     name: upstream sync tooling tests
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 10
     defaults:
       run:
@@ -445,7 +445,7 @@ jobs:
 
   kilo-packages:
     name: kilo packages
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
     steps:
       - name: Checkout repository
@@ -559,7 +559,7 @@ jobs:
       - upstream-tooling
       - kilo-packages
     if: always()
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 5
     steps:
       - name: Verify the Kilo v2 jobs passed

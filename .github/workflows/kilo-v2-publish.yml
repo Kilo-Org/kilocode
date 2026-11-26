@@ -154,9 +154,9 @@ jobs:
       matrix:
         include:
           - target: linux-x64
-            host: ubuntu-24.04
+            host: blacksmith-4vcpu-ubuntu-2404
           - target: linux-arm64
-            host: ubuntu-24.04-arm
+            host: blacksmith-4vcpu-ubuntu-2404-arm
           - target: darwin-arm64
             host: blacksmith-6vcpu-macos-15
           # Intel smoke test is paused until Blacksmith offers an Intel macOS runner.
@@ -189,7 +189,7 @@ jobs:
   smoke-windows:
     name: smoke (windows-x64)
     needs: build
-    runs-on: windows-2025
+    runs-on: blacksmith-4vcpu-windows-2025
     timeout-minutes: 15
     steps:
       - name: Download CLI artifact
@@ -319,7 +319,7 @@ jobs:
     name: package VS Code extension
     needs: build
     if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/v2')
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 45
     concurrency:
       group: kilo-v2-package-vscode
