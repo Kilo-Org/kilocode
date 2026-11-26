@@ -45,19 +45,38 @@ concurrency:
   group: smoke-test
   cancel-in-progress: false
 
-permissions:
-  contents: write # needed to read draft release assets when called from publish.yml
+permissions: {}
 
 jobs:
   smoke-test:
     name: Smoke Test
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 30
+    # Draft releases are visible only to tokens with push access, so reading
+    # the CLI archive from publish.yml's draft release needs contents: write.
+    permissions:
+      contents: write
     env:
       # kilo-bench's capture helper requires a Go toolchain >= 1.26. The runner
       # image pins GOTOOLCHAIN=local, so allow Go to fetch the required toolchain.
       GOTOOLCHAIN: auto
     steps:
+      - name: Validate secrets
+        env:
+          KILO_API_KEY_SET: ${{ secrets.KILO_API_KEY != '' }}
+          KILO_ORG_ID_SET: ${{ secrets.KILO_ORG_ID != '' }}
+          BENCH_GITHUB_TOKEN_SET: ${{ secrets.BENCH_GITHUB_TOKEN != '' }}
+        run: |
+          missing=0
+          for name in KILO_API_KEY KILO_ORG_ID BENCH_GITHUB_TOKEN; do
+            flag="${name}_SET"
+            if [[ "${!flag}" != "true" ]]; then
+              echo "::error::${name} secret is not set."
+              missing=1
+            fi
+          done
+          exit "$missing"
+
       - name: Checkout kilo-bench
         uses: actions/checkout@v6 # kilocode_change
         with:
@@ -81,15 +100,6 @@ jobs:
 
       - name: Install dependencies
         run: uv sync --no-dev
-
-      - name: Validate API key
-        env:
-          KILO_API_KEY_SET: ${{ secrets.KILO_API_KEY != '' }}
-        run: |
-          if [[ "$KILO_API_KEY_SET" != "true" ]]; then
-            echo "::error::KILO_API_KEY secret is not set."
-            exit 1
-          fi
 
       - name: Download CLI archive
         id: cli
