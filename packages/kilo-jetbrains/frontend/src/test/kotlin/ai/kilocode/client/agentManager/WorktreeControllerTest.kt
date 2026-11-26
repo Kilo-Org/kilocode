@@ -646,10 +646,13 @@ class WorktreeControllerTest : BasePlatformTestCase() {
 
     fun `test cancelled creation clears progress without losing the draft`() {
         val prompt = PendingPrompt("retry after cancellation", "plan", "kilo", "gpt-5", "high")
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeCreate = { gate.await() }
         rpc.createResult = { throw CancellationException("cancelled") }
         val controller = controller()
         ApplicationManager.getApplication().invokeAndWait { controller.create("cancelled", "main", prompt = prompt) }
         val temp = controller.model.getElementAt(0)
+        gate.complete(Unit)
         flush()
 
         assertTrue(controller.model.isEmpty)
