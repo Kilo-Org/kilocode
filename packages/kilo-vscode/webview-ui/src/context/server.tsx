@@ -9,6 +9,7 @@ import type {
   ConnectionState,
   ServerInfo,
   ProfileData,
+  ProfileStatusMessage,
   ProviderUsageData,
   DeviceAuthState,
   ExtensionMessage,
@@ -23,6 +24,7 @@ interface ServerContextValue {
   errorDetails: Accessor<string | undefined>
   isConnected: Accessor<boolean>
   profileData: Accessor<ProfileData | null>
+  profileStatus: Accessor<ProfileStatusMessage["status"] | undefined>
   providerUsage: Accessor<ProviderUsageData | undefined>
   providerUsageLoading: Accessor<boolean>
   providerUsageError: Accessor<string | undefined>
@@ -68,6 +70,7 @@ export const ServerProvider: ParentComponent = (props) => {
   const [errorMessage, setErrorMessage] = createSignal<string | undefined>()
   const [errorDetails, setErrorDetails] = createSignal<string | undefined>()
   const [profileData, setProfileData] = createSignal<ProfileData | null>(null)
+  const [profileStatus, setProfileStatus] = createSignal<ProfileStatusMessage["status"]>()
   const [providerUsage, setProviderUsage] = createSignal<ProviderUsageData>()
   const [providerUsageLoading, setProviderUsageLoading] = createSignal(false)
   const [providerUsageError, setProviderUsageError] = createSignal<string>()
@@ -110,8 +113,19 @@ export const ServerProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "requestProviderUsage" })
   }
 
+  // A profile read (or its absence) clears the status; a status keeps the shown profile.
+  const profile = (message: ExtensionMessage) => {
+    if (message.type === "profileData") {
+      console.log("[Kilo New] Profile data:", message.data ? "received" : "null")
+      setProfileData(message.data)
+      setProfileStatus(undefined)
+    }
+    if (message.type === "profileStatus") setProfileStatus(message.status)
+  }
+
   onMount(() => {
     const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
+      profile(message)
       switch (message.type) {
         case "ready":
           console.log("[Kilo New] Server ready:", message.serverInfo)
@@ -156,11 +170,6 @@ export const ServerProvider: ParentComponent = (props) => {
           console.error("[Kilo New] Server error:", message.message)
           setErrorMessage(message.message)
           setErrorDetails(message.message)
-          break
-
-        case "profileData":
-          console.log("[Kilo New] Profile data:", message.data ? "received" : "null")
-          setProfileData(message.data)
           break
 
         case "deviceAuthStarted":
@@ -250,6 +259,7 @@ export const ServerProvider: ParentComponent = (props) => {
     errorDetails,
     isConnected: () => connectionState() === "connected",
     profileData,
+    profileStatus,
     providerUsage,
     providerUsageLoading,
     providerUsageError,

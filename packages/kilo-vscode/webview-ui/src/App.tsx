@@ -299,22 +299,11 @@ const AppContent: Component = () => {
     ["showOpenTabs", "showOpenTabs"],
   ])
 
-  const views = new Map<string, ViewType>([
-    ["historyButtonClicked", "history"],
-    ["profileButtonClicked", "profile"],
-    ["settingsButtonClicked", "settings"],
-  ])
-
   const handleViewAction = (action: string) => {
     const event = events.get(action)
     if (event) {
       setCurrentView("newTask")
       window.dispatchEvent(new CustomEvent(event))
-      return
-    }
-    const view = views.get(action)
-    if (view) {
-      setCurrentView(view)
       return
     }
     switch (action) {
@@ -332,11 +321,14 @@ const AppContent: Component = () => {
         tabs?.closeAll()
         setCurrentView("newTask")
         break
-      case "startLogin":
-        setMigration(false)
+      case "historyButtonClicked":
+        setCurrentView("history")
+        break
+      case "profileButtonClicked":
         setCurrentView("profile")
-        vscode.postMessage({ type: "refreshProfile" })
-        server.startLogin()
+        break
+      case "settingsButtonClicked":
+        setCurrentView("settings")
         break
       case "cycleAgentMode":
         if (document.hasFocus()) cycleAgent(1)
@@ -409,7 +401,13 @@ const AppContent: Component = () => {
         console.log("[Kilo New] App: 🧭 navigate:", message.view, message.tab ? `tab=${message.tab}` : "")
         if (message.tab) setSettingsTab(message.tab)
         if (message.subtab) setSettingsSubtab(message.subtab)
-        if (message.focus) setSettingsFocus((prev) => ({ token: (prev?.token ?? 0) + 1, value: message.focus! }))
+        if (message.view === "profile" && message.focus === "login") {
+          setMigration(false)
+          vscode.postMessage({ type: "refreshProfile" })
+          server.startLogin()
+        } else if (message.focus) {
+          setSettingsFocus((prev) => ({ token: (prev?.token ?? 0) + 1, value: message.focus! }))
+        }
         setAgentManagerProjectId(message.projectId)
         setCurrentView(message.view as ViewType)
         vscode.postMessage({ type: "settingsTabChanged", tab: message.tab })
@@ -505,6 +503,7 @@ const AppContent: Component = () => {
             <Match when={currentView() === "profile"}>
               <ProfileView
                 profileData={server.profileData()}
+                profileStatus={server.profileStatus()}
                 providerUsage={server.providerUsage()}
                 providerUsageLoading={server.providerUsageLoading()}
                 providerUsageError={server.providerUsageError()}

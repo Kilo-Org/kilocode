@@ -27,13 +27,11 @@ const DIR = path.join(ROOT, ".github", "workflows")
 
 // Workflows we have deliberately accepted into CI. Sort alphabetically.
 const active = new Set([
-  "auto-docs.yml",
   "beta.yml",
   "check-forbidden-strings.yml",
   "check-kilo-generated-artifacts.yml",
   "check-md-table-padding.yml",
   "check-opencode-annotations.yml",
-  "check-org-member.yml",
   "codeql-kotlin.yml",
   "codeql.yml",
   "community-label.yml",
@@ -45,7 +43,6 @@ const active = new Set([
   "docs-build.yml",
   "docs-check-links.yml",
   "docs-sync.yml",
-  "generate.yml",
   "kilo-auto-close.yml",
   "nix-eval.yml",
   "nix-hashes.yml",
@@ -63,10 +60,10 @@ const active = new Set([
   "test-vscode.yml",
   "test.yml",
   "typecheck.yml",
+  "ui-browser-tests.yml",
   "validate-cli-smoke.yml",
   "v2-port-tracker.yml",
   "v2-upstream-release-notify.yml",
-  "visual-regression.yml",
   "watch-opencode-releases.yml",
 ])
 

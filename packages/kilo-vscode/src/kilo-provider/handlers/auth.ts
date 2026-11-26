@@ -52,7 +52,7 @@ export async function handleLogin(ctx: AuthContext, attempt: number, getAttempt:
       type: "deviceAuthStarted",
       code,
       verificationUrl: auth.url,
-      expiresIn: 900, // 15 minutes default
+      expiresIn: 600, // the Kilo backend expires device codes after 10 minutes
     })
 
     // Step 2: Wait for callback (blocks until polling completes)
@@ -240,6 +240,33 @@ export async function handleRefreshProfile(ctx: AuthContext): Promise<void> {
   if (!ctx.client) return
 
   console.log("[Kilo New] KiloProvider: 🔄 Refreshing profile...")
-  const result = await ctx.client.kilo.profile().catch(() => ({ data: null }))
-  ctx.postMessage({ type: "profileData", data: result.data ?? null })
+  await sendProfile(ctx.client, (msg) => ctx.postMessage(msg))
+}
+
+/**
+ * Read the profile and post what the read means. The backend answers 401 when
+ * nobody is signed in or Kilo rejected the stored login, and 400 when the read
+ * could not complete. A stored OAuth login turns a 401 into "expired"; a read
+ * that could not complete posts "unavailable" and leaves the shown account alone.
+ */
+export async function sendProfile(
+  client: KiloClient,
+  post: (msg: unknown) => void,
+  read = () => client.kilo.profile(),
+): Promise<void> {
+  const result = await read().catch((error: unknown) => {
+    console.error("[Kilo New] KiloProvider: Profile read failed:", error)
+    return undefined
+  })
+  if (result?.data) {
+    post({ type: "profileData", data: result.data })
+    return
+  }
+  if (result?.response?.status !== 401) {
+    post({ type: "profileStatus", status: "unavailable" })
+    return
+  }
+  post({ type: "profileData", data: null })
+  const auth = await client.kilo.authStatus().catch(() => undefined)
+  if (auth?.data?.type === "oauth") post({ type: "profileStatus", status: "expired" })
 }

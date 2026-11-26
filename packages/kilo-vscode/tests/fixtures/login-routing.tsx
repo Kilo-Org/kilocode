@@ -108,7 +108,12 @@ const Harness = () => {
         <ErrorDisplay error={err()} onLogin={server.goToLogin} />
       </section>
       <section data-testid="profile">
-        <ProfileView profileData={server.profileData()} deviceAuth={server.deviceAuth()} onLogin={server.startLogin} />
+        <ProfileView
+          profileData={server.profileData()}
+          profileStatus={server.profileStatus()}
+          deviceAuth={server.deviceAuth()}
+          onLogin={server.startLogin}
+        />
       </section>
     </div>
   )
@@ -232,12 +237,14 @@ try {
   assert.equal(profileText.includes("ABCD-1234"), true, "ProfileView must show DeviceAuthCard with code during login")
   assert.equal(profileText.includes("Stale User"), false, "Stale profile must not hide DeviceAuthCard")
 
-  // Cancelling login returns to idle and reflects cleared profileData.
+  // Cancelling login returns to idle and reflects the expired profile state from refreshProfile.
   await push({ type: "deviceAuthCancelled" })
   await push({ type: "profileData", data: null })
+  await push({ type: "profileStatus", status: "expired" })
   assert.equal(ctx.deviceAuth().status, "idle")
   const afterCancel = root.querySelector('[data-testid="profile"]')?.textContent ?? ""
   assert.equal(afterCancel.includes("ABCD-1234"), false)
+  assert.equal(afterCancel.includes("expired or was revoked"), true)
 } finally {
   dispose()
   root.remove()

@@ -254,6 +254,9 @@ class SessionController(
     private var lastProfile: ProfileDto? = null
     private var target: OrganizationTarget? = null
     private var loginRetry: PromptDto? = null
+
+    /** A rejected login whose account is still held; cleared once that account reads signed out. */
+    private var stale = false
     private var followup: Followup? = null
     private var agentTime: Double? = null
     private var prefModel: String? = null
@@ -1509,7 +1512,8 @@ class SessionController(
                     if (state.status == KiloAppStatusDto.READY) seenReady = true
                     model.app = state
                     model.version = app.version
-                    if (model.state is SessionState.LoginRequired && state.profile != null) {
+                    if (state.profile == null) stale = false
+                    if (model.state is SessionState.LoginRequired && state.profile != null && !stale) {
                         resumeAfterLogin()
                     }
                     syncModelSelection()
@@ -2632,14 +2636,23 @@ class SessionController(
         partType = null
         tool = null
         val err = event.error
-        if (isPaidModelAuthRequired(err)) {
+        val signedOut = isSignedOut(err)
+        if (signedOut || isPaidModelAuthRequired(err)) {
             loginRetry = retryPrompt()
             if (reveal) showSession()
             capture("Account Overlay Shown", sessionProps(event.sessionID) + mapOf(
                 "surface" to "session",
-                "reason" to "paid_model_auth",
+                "reason" to loginReason(signedOut),
             ))
-            model.setState(SessionState.LoginRequired(KiloBundle.message("session.login.required.description")))
+            if (signedOut) {
+                // The account still held looks signed in, so User Profile would offer no login and
+                // the next app update would resend into the same rejection. Re-read it, and hold
+                // the resume until it has cleared.
+                stale = model.app.profile != null
+                app.refreshProfileAsync()
+            }
+            val key = if (signedOut) "session.login.signedOut.description" else "session.login.required.description"
+            model.setState(SessionState.LoginRequired(KiloBundle.message(key), signedOut))
             return
         }
         if (err != null && err.aborted) {
@@ -3357,12 +3370,12 @@ class SessionController(
 
     fun dismissLoginRequired() {
         assertEdt()
-        val active = model.state is SessionState.LoginRequired
+        val current = model.state as? SessionState.LoginRequired
         loginRetry = null
-        if (active) {
+        if (current != null) {
             capture("Account Overlay Dismissed", sessionProps() + mapOf(
                 "surface" to "session",
-                "reason" to "paid_model_auth",
+                "reason" to loginReason(current.signedOut),
             ))
             updateModel { model.setState(SessionState.Idle) }
         }

@@ -109,8 +109,9 @@ The following secrets must be configured in the repository:
 
 | Secret | Purpose |
 |---|---|
-| `KILO_API_KEY` | Kilo API key used during version computation |
-| `KILO_ORG_ID` | Kilo organization ID |
+| `KILO_API_KEY` | Kilo Gateway key for the pre-publish smoke test (`smoke-test.yml`) |
+| `KILO_ORG_ID` | Kilo organization ID for the pre-publish smoke test |
+| `BENCH_GITHUB_TOKEN` | Read access to `Kilo-Org/kilo-bench` for the pre-publish smoke test |
 | `KILO_MAINTAINER_APP_ID` | GitHub App ID for the kilo-maintainer bot (used for git commits) |
 | `KILO_MAINTAINER_APP_SECRET` | GitHub App secret for the kilo-maintainer bot |
 | `NPM_TOKEN` | npm authentication token for publishing packages |

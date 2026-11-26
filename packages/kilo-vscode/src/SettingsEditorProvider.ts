@@ -108,17 +108,6 @@ export class SettingsEditorProvider implements vscode.Disposable {
     })
   }
 
-  /** Open (or reveal) the Profile panel and start the Kilo sign-in flow there. */
-  openProfileLogin(): void {
-    this.openPanel("profile")
-    const provider = this.providers.get("profile")
-    if (!provider) return
-    void provider.waitForReady().then(() => {
-      if (this.providers.get("profile") !== provider) return
-      provider.postMessage({ type: "action", action: "startLogin" })
-    })
-  }
-
   /** Re-wire a deserialized panel after extension restart. */
   deserializePanel(panel: vscode.WebviewPanel): void {
     const view = SettingsEditorProvider.viewFromType(panel.viewType)

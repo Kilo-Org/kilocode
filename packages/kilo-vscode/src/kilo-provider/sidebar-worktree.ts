@@ -62,7 +62,7 @@ export async function handleSidebarWorktreeMessage(message: Msg, ctx: Ctx) {
   }
 
   if (message.type === "openProfilePanel") {
-    await ctx.openProfile(message.login === true)
+    await ctx.openProfile(message.login)
     return true
   }
 

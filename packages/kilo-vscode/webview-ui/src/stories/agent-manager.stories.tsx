@@ -394,6 +394,7 @@ const chatServer = {
   errorDetails: () => undefined,
   isConnected: () => true,
   profileData: () => null,
+  profileStatus: () => undefined,
   providerUsage: () => undefined,
   providerUsageLoading: () => false,
   providerUsageError: () => undefined,
