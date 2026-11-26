@@ -26,6 +26,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
+import java.net.URLDecoder
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CountDownLatch
@@ -607,15 +608,24 @@ class KiloBackendWorkspaceTest {
     }
 
     @Test
-    fun `workspace creates session in its directory`() = runBlocking {
+    fun `workspace creates session in its directory`() {
         mock.sessionCreate = """{"id":"ses_new","slug":"n","projectID":"p","directory":"${project}","title":"New","version":"1","time":{"created":1,"updated":1}}"""
-        val app = setup()
-        val ws = ready(app)
-        loaded(ws)
-
-        val session = ws.createSession()
-        assertEquals("ses_new", session.id)
-        assertEquals(project.toString(), session.directory)
+        val port = mock.start()
+        val http = KiloBackendHttpClients.api(mock.password)
+        val api = DefaultApi(basePath = "http://127.0.0.1:$port", client = http)
+        val events = MutableSharedFlow<SseEvent>()
+        val sessions = KiloBackendSessionManager(scope, log)
+        try {
+            sessions.start(api, http, port, events)
+            val ws = KiloBackendWorkspace(project.toString(), scope, api, http, port, events, sessions, log)
+            val session = ws.createSession()
+            assertEquals("/session?directory=$project", URLDecoder.decode(mock.paths.single(), Charsets.UTF_8))
+            assertEquals("ses_new", session.id)
+            assertEquals(project.toString(), session.directory)
+        } finally {
+            sessions.stop()
+            KiloBackendHttpClients.shutdown(http)
+        }
     }
 
     // ------ Concurrency tests ------
