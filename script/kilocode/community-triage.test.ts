@@ -1,4 +1,7 @@
-import { describe, expect, test } from "bun:test"
+import { afterEach, describe, expect, test } from "bun:test"
+import { mkdtempSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import {
   areas,
   classify,
@@ -21,6 +24,8 @@ import {
   clip,
   digest,
   parts,
+  onevent,
+  sweepIssues,
   DAY,
   label,
   type Event,
@@ -514,17 +519,116 @@ describe("known", () => {
   })
 })
 
-describe("the label job uses public data only", () => {
-  // community-label.yml runs on fork PRs and issues without an org credential.
-  // The private member check belongs to the sweep.
-  test("onevent reads no member token", async () => {
-    const source = await Bun.file(new URL("./community-triage.ts", import.meta.url)).text()
-    const start = source.indexOf("async function onevent()")
-    const body = source.slice(start, source.indexOf("\n}\n", start))
-    expect(start).toBeGreaterThan(-1)
-    expect(body).not.toContain("MEMBER_TOKEN")
-    expect(body).not.toContain("needMember")
-    expect(body).not.toMatch(/\bmaintainer\(/)
+// A stub of the GitHub API on global fetch. Records every request, answers the
+// label list with the script's own labels (so nothing is created), org
+// membership from `members`, the open issue list from `issues`, and 200/204
+// for label writes.
+function github(options: { members?: string[]; issues?: unknown[] } = {}) {
+  const calls: { method: string; path: string; body?: string }[] = []
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = new URL(String(input))
+    const method = init?.method ?? "GET"
+    calls.push({ method, path: url.pathname + url.search, body: init?.body ? String(init.body) : undefined })
+    const member = url.pathname.match(/^\/orgs\/[^/]+\/members\/(.+)$/)
+    if (member) return new Response(null, { status: options.members?.includes(member[1]) ? 204 : 404 })
+    if (method === "GET" && url.pathname.endsWith("/labels")) return Response.json(labels)
+    if (method === "GET" && url.pathname.endsWith("/issues")) return Response.json(options.issues ?? [])
+    if (method === "DELETE") return new Response(null, { status: 204 })
+    return Response.json({})
+  }) as typeof fetch
+  return calls
+}
+
+const realFetch = globalThis.fetch
+const env = { ...process.env }
+const temps: string[] = []
+afterEach(() => {
+  globalThis.fetch = realFetch
+  for (const key of ["GITHUB_EVENT_PATH", "MEMBER_TOKEN"]) {
+    if (env[key] === undefined) delete process.env[key]
+    else process.env[key] = env[key]
+  }
+  for (const dir of temps.splice(0)) rmSync(dir, { recursive: true, force: true })
+})
+
+async function event(data: unknown) {
+  const dir = mkdtempSync(join(tmpdir(), "community-triage-"))
+  temps.push(dir)
+  const file = join(dir, "event.json")
+  await Bun.write(file, JSON.stringify(data))
+  process.env.GITHUB_EVENT_PATH = file
+}
+
+const issue = (login: string, assoc: string) => ({
+  action: "opened",
+  issue: {
+    number: 5,
+    title: "Crash on start",
+    body: "",
+    author_association: assoc,
+    labels: [],
+    user: { login, type: "User" },
+  },
+})
+
+describe("onevent", () => {
+  test("labels a contributor as community without asking for org membership", async () => {
+    // Even with a member token in the environment, the label job must not use it.
+    process.env.MEMBER_TOKEN = "member-token"
+    await event(issue("private-dev-a", "CONTRIBUTOR"))
+    const calls = github({ members: ["private-dev-a"] })
+    await onevent()
+    expect(calls.some((call) => call.path.startsWith("/orgs/"))).toBe(false)
+    const added = calls.find((call) => call.method === "POST" && call.path.endsWith("/issues/5/labels"))
+    expect(JSON.parse(added!.body!).labels).toEqual([label.community, label.triage])
+  })
+
+  test("adds no community label for a MEMBER author", async () => {
+    await event(issue("public-dev-a", "MEMBER"))
+    const calls = github()
+    await onevent()
+    expect(calls.some((call) => call.path.startsWith("/orgs/"))).toBe(false)
+    expect(calls.some((call) => call.method === "POST" && call.path.endsWith("/issues/5/labels"))).toBe(false)
+  })
+})
+
+describe("sweepIssues", () => {
+  const open = (number: number, login: string, tags: string[], extra: Record<string, unknown> = {}) => ({
+    number,
+    user: { login, type: "User" },
+    author_association: "CONTRIBUTOR",
+    labels: tags.map((name) => ({ name })),
+    ...extra,
+  })
+
+  test("removes community labels from open issues by private org members only", async () => {
+    process.env.MEMBER_TOKEN = "member-token"
+    const calls = github({
+      members: ["private-dev-b"],
+      issues: [
+        open(1, "private-dev-b", [label.community, label.triage, label.first, "area:cli"]),
+        open(2, "outsider-b", [label.community, label.triage]),
+        open(3, "private-dev-b", [label.community], { pull_request: {} }),
+        open(4, "helper[bot]", [label.community]),
+      ],
+    })
+    await sweepIssues()
+    const deleted = calls.filter((call) => call.method === "DELETE").map((call) => call.path)
+    expect(deleted.sort()).toEqual(
+      [label.community, label.first, label.triage]
+        .map((name) => `/repos/Kilo-Org/kilocode/issues/1/labels/${encodeURIComponent(name)}`)
+        .sort(),
+    )
+    const lookups = calls.filter((call) => call.path.startsWith("/orgs/")).map((call) => call.path)
+    expect(lookups).toEqual(["/orgs/Kilo-Org/members/private-dev-b", "/orgs/Kilo-Org/members/outsider-b"])
+    expect(calls[0].path).toBe("/repos/Kilo-Org/kilocode/issues?state=open&labels=community&per_page=100&page=1")
+  })
+
+  test("fails without the member token", async () => {
+    delete process.env.MEMBER_TOKEN
+    const calls = github()
+    await expect(sweepIssues()).rejects.toThrow("COMMUNITY_TRIAGE_MEMBER_TOKEN is not set")
+    expect(calls).toEqual([])
   })
 })
 

@@ -513,8 +513,8 @@ async function files(num: number) {
 
 // Public data only: this job runs on fork PRs and issues and holds no org
 // credential. A private org member is labeled as community here, and the
-// next sweep removes the labels from their PR.
-async function onevent() {
+// next sweep removes the labels from their open PR or issue.
+export async function onevent() {
   const event = await Bun.file(process.env.GITHUB_EVENT_PATH!).json()
   const pr = event.pull_request
   const item = pr ?? event.issue
@@ -544,6 +544,38 @@ async function onevent() {
   console.log(`#${item.number} ${community ? "community" : "maintainer"}: adding [${next.join(", ")}]`)
   await ensure()
   await add(item.number, next)
+}
+
+type Issue = {
+  number: number
+  user: { login: string; type: string } | null
+  author_association: string
+  labels: { name: string }[]
+  pull_request?: unknown
+}
+
+// Open issues labeled community whose author is a maintainer after all, such
+// as a private org member labeled by the label job. Same cleanup as for PRs.
+export async function sweepIssues() {
+  needMember(process.env.MEMBER_TOKEN)
+  // Read every page first: removing the label shifts later pages.
+  const issues: Issue[] = []
+  for (let page = 1; page <= 10; page++) {
+    const list: Issue[] = await (
+      await api(`/repos/${repo}/issues?state=open&labels=${label.community}&per_page=100&page=${page}`)
+    ).json()
+    issues.push(...list)
+    if (list.length < 100) break
+  }
+  for (const issue of issues) {
+    const login = issue.user?.login
+    // The issues API lists PRs too. The PR pass handles them.
+    if (issue.pull_request || !login || issue.user?.type === "Bot" || bots(login)) continue
+    if (!(await maintainer(login, issue.author_association))) continue
+    const wrong = cleanup(issue.labels.map((l) => l.name))
+    console.log(`#${issue.number} maintainer issue, removing [${wrong}]`)
+    await drop(issue.number, wrong)
+  }
 }
 
 type Actor = { login: string; __typename: string } | null
@@ -706,6 +738,8 @@ async function sweep() {
     await drop(pr.number, plan.remove)
     rows.push(row)
   }
+
+  await sweepIssues()
 
   const out = process.env.GITHUB_STEP_SUMMARY
   if (out) await Bun.write(out, digest(rows, "md", repo, now, Infinity) + "\n")
