@@ -356,7 +356,7 @@ Structure the description so reviewers can skim:
 - **What to test**: explicit, scenario-level test steps for each non-trivial
   change. Don't list tests; list *user-visible behaviour* so a tester who
   doesn't read the diff can exercise it.
-- **CI guards to watch**: typecheck, knip, annotation check, visual regression.
+- **CI guards to watch**: typecheck, knip, annotation check, UI browser tests.
 - **Follow-ups**: any `TODO:` you left in code, as a bullet list with links.
 
 ## User-approval checkpoints
