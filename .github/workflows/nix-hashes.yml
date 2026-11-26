@@ -128,6 +128,8 @@ jobs:
           # kilocode_change start
           kilo-maintainer-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
           kilo-maintainer-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
+          repositories: kilocode
+          permission-contents: write
           # kilocode_change end
 
       - name: Pull latest changes

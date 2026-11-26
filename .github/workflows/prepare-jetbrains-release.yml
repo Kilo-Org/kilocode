@@ -48,6 +48,9 @@ jobs:
         with:
           kilo-maintainer-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
           kilo-maintainer-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
+          repositories: kilocode
+          permission-contents: write
+          permission-pull-requests: write
 
       - name: Create release tag and PR
         run: |

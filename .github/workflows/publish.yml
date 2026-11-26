@@ -682,6 +682,11 @@ jobs:
           # kilocode_change start
           kilo-maintainer-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
           kilo-maintainer-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
+          # The release script pushes to this repo and to Kilo-Org/homebrew-tap,
+          # and opens the JetBrains CLI pin bump PR.
+          repositories: kilocode,homebrew-tap
+          permission-contents: write
+          permission-pull-requests: write
           # kilocode_change end
 
       # kilocode_change start - download into /tmp and extract the tar.zst packed by build-cli
