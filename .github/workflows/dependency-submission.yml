@@ -49,7 +49,7 @@ env:
 jobs:
   changes:
     if: github.repository == 'Kilo-Org/kilocode'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 5
     outputs:
       bun: ${{ github.event_name != 'push' && 'true' || steps.filter.outputs.bun }}
@@ -79,7 +79,7 @@ jobs:
   bun:
     needs: changes
     if: needs.changes.outputs.bun == 'true'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 10
     concurrency:
       group: dependency-submission-bun
@@ -107,7 +107,7 @@ jobs:
   gradle:
     needs: changes
     if: needs.changes.outputs.gradle == 'true'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 30
     concurrency:
       group: dependency-submission-gradle

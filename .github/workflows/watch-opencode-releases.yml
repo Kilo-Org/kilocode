@@ -28,7 +28,7 @@ permissions:
 jobs:
   check-release:
     if: vars.OPENCODE_WATCH_ENABLED != 'false' && (github.event_name == 'workflow_dispatch' || github.repository == 'Kilo-Org/kilocode') # kilocode_change
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.repository == 'Kilo-Org/kilocode' && 'blacksmith-2vcpu-ubuntu-2404' || 'ubuntu-latest' }} # kilocode_change
     timeout-minutes: 5
     steps:
       - id: fetch
