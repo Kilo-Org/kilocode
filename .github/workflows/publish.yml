@@ -1,5 +1,5 @@
 name: publish
-run-name: "${{ format('{0} {1}', inputs.pre_release && 'pre-release' || 'release', inputs.bump) }}"
+run-name: "${{ inputs.oidc_check && 'trusted publishing check' || format('{0} {1}', inputs.pre_release && 'pre-release' || 'release', inputs.bump) }}" # kilocode_change
 
 on:
   # push:
@@ -28,9 +28,14 @@ on:
         required: false
         type: boolean
         default: true
+      oidc_check:
+        description: "Only check trusted publishing (no build, no publish)"
+        required: false
+        type: boolean
+        default: false
       # kilocode_change end
 
-concurrency: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.version || inputs.bump }}
+concurrency: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.oidc_check && 'oidc-check' || inputs.version || inputs.bump }} # kilocode_change
 
 permissions:
   id-token: write
@@ -42,8 +47,17 @@ permissions:
 jobs:
   version:
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    if: github.repository == 'Kilo-Org/kilocode'
+    if: github.repository == 'Kilo-Org/kilocode' && !inputs.oidc_check # kilocode_change
     steps:
+      # kilocode_change start - stop before the draft release and tag are created
+      # when the workflow is dispatched from a branch other than main
+      - name: Require main
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Run the publish workflow from main (got $GITHUB_REF). Nothing was created."
+            exit 1
+          fi
+      # kilocode_change end
       - uses: actions/checkout@v6 # kilocode_change
         with:
           fetch-depth: 0
@@ -627,6 +641,7 @@ jobs:
       - validate-cli-windows # kilocode_change
       - smoke-test
     runs-on: ubuntu-24.04 # kilocode_change - npm trusted publishing requires a GitHub-hosted runner.
+    environment: release # kilocode_change - VS Code Marketplace trusted publishing policy
     steps:
       - uses: actions/checkout@v6 # kilocode_change
         # kilocode_change start
@@ -796,3 +811,70 @@ jobs:
           labels: ${{ inputs.pre_release && 'rc' || 'main' }}
           force: "true"
       # kilocode_change end
+
+  # kilocode_change start - check VS Code Marketplace trusted publishing without
+  # building or publishing anything. Exchanges the GitHub OIDC token for a
+  # Marketplace credential exactly as `vsce publish --oidc` does, then checks
+  # that the credential is accepted for the kilocode publisher.
+  oidc-check:
+    name: Check Marketplace trusted publishing
+    if: inputs.oidc_check && github.repository == 'Kilo-Org/kilocode'
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    environment: release
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Install @vscode/vsce
+        run: npm install --global @vscode/vsce@4.1.1
+
+      - name: Exchange OIDC token and verify publisher access
+        run: |
+          set -euo pipefail
+          umask 077
+          # Tokens go to curl through --config on stdin, never on its command line.
+          oidc="$(curl --fail --silent --show-error --get --config - \
+            --header "Accept: application/json" \
+            --data-urlencode "audience=marketplace.visualstudio.com" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL" <<EOF | jq -r '.value // empty'
+          header = "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN"
+          EOF
+          )"
+          if [ -z "$oidc" ]; then
+            echo "::error::GitHub returned no OIDC token"
+            exit 1
+          fi
+          echo "::add-mask::$oidc"
+          echo "OIDC token received"
+
+          body="$RUNNER_TEMP/marketplace-token.json"
+          status="$(curl --silent --show-error --output "$body" --write-out '%{http_code}' \
+            --request POST --config - \
+            --header "Accept: application/json" \
+            --header "Content-Type: application/json" \
+            --header "User-Agent: vsce" \
+            --data '{"publisherName":"kilocode"}' \
+            "https://marketplace.visualstudio.com/_apis/gallery/token?api-version=7.2-preview.1" <<EOF
+          header = "Authorization: FederatedToken $oidc"
+          EOF
+          )"
+          echo "Marketplace token exchange: HTTP $status"
+          credential="$(jq -r '.credential // empty' "$body" 2>/dev/null || true)"
+          if [ "$status" != "200" ] || [ -z "$credential" ]; then
+            message="$(jq -j '.message // empty' "$body" 2>/dev/null | tr '\r\n' '  ' | cut -c1-300 || true)"
+            rm -f "$body"
+            echo "::error::Marketplace returned no credential${message:+: $message}"
+            exit 1
+          fi
+          rm -f "$body"
+          echo "::add-mask::$credential"
+          echo "credential received"
+
+          VSCE_PAT="$credential" vsce verify-pat kilocode
+  # kilocode_change end
