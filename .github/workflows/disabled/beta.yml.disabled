@@ -1,3 +1,6 @@
+# kilocode_change start - disabled: origin has no beta or dev branch, so the sync cannot succeed.
+# Re-enabling it puts pull request code on main's cache scope; privileged jobs must stop restoring caches first.
+# kilocode_change end
 name: beta
 
 on:
@@ -96,13 +99,15 @@ jobs:
           path: ${{ runner.temp }}/beta-out
 
       - name: Push beta branch
-        if: needs.build.result == 'success' && steps.handoff.outcome == 'success'
+        if: needs.build.result == 'success' && needs.build.outputs.has_update == 'true'
+        env:
+          HANDOFF: ${{ steps.handoff.outcome }}
         run: |
           set -euo pipefail
           dir="$RUNNER_TEMP/beta-out"
-          if [ ! -f "$dir/beta.json" ]; then
-            echo "No beta update to publish"
-            exit 0
+          if [ "$HANDOFF" != "success" ] || [ ! -f "$dir/beta.json" ]; then
+            echo "::error::The build reported a beta update but its handoff could not be downloaded"
+            exit 1
           fi
           if ! jq -se 'length == 1 and (.[0] | type == "object")' "$dir/beta.json" > /dev/null; then
             echo "::error::beta.json must hold exactly one JSON object"

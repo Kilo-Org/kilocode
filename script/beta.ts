@@ -4,7 +4,7 @@ import { $ } from "bun"
 import fs from "fs/promises"
 // kilocode_change start - this script runs pull request code, so it never writes to
 // GitHub: it reads the PR list from a file and leaves the push and the PR comments
-// to the trusted publish job in .github/workflows/beta.yml
+// to the trusted publish job in .github/workflows/disabled/beta.yml.disabled
 import path from "path"
 import { parseArgs } from "util"
 
