@@ -288,6 +288,7 @@ export const RunCommand = effectCmd({
     const { KiloRunDrain } = yield* Effect.promise(() => import("@/kilocode/cli/run-drain"))
     const { KiloHeadless } = yield* Effect.promise(() => import("@/kilocode/permission/headless"))
     const { KiloRun, KiloRunDaemon } = yield* Effect.promise(() => import("@/kilocode/cli/cmd/run"))
+    const { kiloErrorLine } = yield* Effect.promise(() => import("@/kilocode/kilo-errors"))
     // kilocode_change end
     const agentSvc = yield* Agent.Service
     const flags = yield* RuntimeFlags.Service
@@ -915,6 +916,7 @@ export const RunCommand = effectCmd({
               if ("data" in props.error && props.error.data && "message" in props.error.data) {
                 err = String(props.error.data.message)
               }
+              err = kiloErrorLine(props.error) ?? err // kilocode_change - tell signed-out users how to sign in
               error = error ? error + EOL + err : err
               // kilocode_change start - stderr first so --format json still surfaces the diagnostic
               UI.error(err)

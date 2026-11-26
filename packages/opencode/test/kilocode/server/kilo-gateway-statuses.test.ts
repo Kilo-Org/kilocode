@@ -164,6 +164,40 @@ describe("Kilo gateway HttpApi statuses", () => {
     )
   }
 
+  for (const item of [
+    { name: "success", info: true, run: () => Response.json({ email: "test@example.com" }), status: 200 },
+    { name: "missing credential", info: false, run: () => Response.json({}), status: 401 },
+    { name: "token rejected with 401", info: true, run: () => new Response(null, { status: 401 }), status: 401 },
+    { name: "token rejected with 403", info: true, run: () => new Response(null, { status: 403 }), status: 401 },
+    { name: "Kilo API error", info: true, run: () => new Response(null, { status: 500 }), status: 400 },
+    { name: "network error", info: true, run: () => Promise.reject(new TypeError("network error")), status: 400 },
+  ]) {
+    it.live(`maps profile ${item.name} to ${item.status}`, () =>
+      Effect.gen(function* () {
+        const previous = state.info
+        yield* Effect.acquireRelease(
+          Effect.sync(() => {
+            state.info = item.info
+              ? new Auth.Oauth({ type: "oauth", access: "test-token", refresh: "", expires: 0 })
+              : undefined
+          }),
+          () =>
+            Effect.sync(() => {
+              state.info = previous
+            }),
+        )
+        yield* stub((url) => {
+          if (new URL(url).pathname === "/api/profile") return item.run()
+          return Response.json({})
+        })
+
+        const response = yield* HttpClient.get(KiloGatewayPaths.profile)
+
+        expect(response.status).toBe(item.status)
+      }),
+    )
+  }
+
   it.live("reports locally stored API authentication without a Gateway request", () =>
     Effect.gen(function* () {
       yield* stub(() => Promise.reject(new Error("unexpected Gateway request")))

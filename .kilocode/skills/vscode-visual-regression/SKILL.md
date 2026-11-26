@@ -11,7 +11,7 @@ The VS Code extension uses **Storybook + Playwright** for visual regression test
 
 1. **Storybook stories** define UI scenarios using SolidJS components with mock contexts
 2. **Playwright** auto-discovers all stories, renders each in headless Chromium, and compares screenshots against baseline PNGs using `toHaveScreenshot()`
-3. **Baselines** are Linux-only Chromium PNGs stored in `tests/visual-regression.spec.ts-snapshots/` (tracked via Git LFS)
+3. **Baselines** are Linux Chromium PNGs stored in `packages/kilo-docs/public/img/screenshot-tests/kilo-vscode/visual-regression/` (tracked via Git LFS)
 
 The test runner at `tests/visual-regression.spec.ts` is fully automatic — it fetches ALL stories from the Storybook index and creates one Playwright test per story. You do NOT write Playwright test code. You only write stories.
 
@@ -201,9 +201,7 @@ Only skip stories as a last resort. Prefer making the story deterministic (e.g.,
 
 ## Step 5: Generate baseline images
 
-Baselines are generated on **Linux CI only** (font rendering differs on macOS). The CI workflow at `.github/workflows/visual-regression.yml` auto-runs `bun run test:visual:update` and commits new baselines to the PR branch.
-
-**You do NOT need to generate baseline PNGs locally.** Just write the story, push, and CI handles the rest.
+The v1 pipeline does not compare, update, or commit screenshot baselines. When changing a screenshot intentionally, run `bunx playwright install --with-deps chromium` and `bun run test:visual:update --grep '<story name>'` from `packages/kilo-vscode/` on Linux. Review the changed PNGs before committing them.
 
 To preview stories locally:
 
@@ -215,10 +213,10 @@ bun run storybook
 
 # Reference: snapshot directory structure
 
-Snapshots live at `packages/kilo-vscode/tests/visual-regression.spec.ts-snapshots/`:
+Snapshots live at `packages/kilo-docs/public/img/screenshot-tests/kilo-vscode/visual-regression/`:
 
 ```
-tests/visual-regression.spec.ts-snapshots/
+visual-regression/
   {title-slug}/
     {variant-slug}-chromium-linux.png
 ```
@@ -244,21 +242,6 @@ Key settings in `packages/kilo-vscode/playwright.config.ts`:
 - Browser: **Chromium only**
 - Storybook: built and served statically on port **6007**
 - Animations: forced off via `reducedMotion: "reduce"` + injected CSS
-
-# Reference: CI pipeline
-
-The `visual-regression.yml` workflow triggers on PRs when these paths change:
-
-- `packages/kilo-ui/**`
-- `packages/ui/**`
-- `packages/util/**`
-- `packages/sdk/js/**`
-- `packages/kilo-vscode/webview-ui/**`
-- `packages/kilo-vscode/.storybook/**`
-- `packages/kilo-vscode/tests/visual-regression*`
-- `.github/workflows/visual-regression.yml`
-
-CI auto-commits new baselines via Git LFS and fails if screenshots changed, requiring developer review.
 
 # Reference: import paths
 
@@ -323,5 +306,5 @@ This ensures tool cards like `bash` render with their VS Code-specific expanded/
 4. Wrap in `<StoryProviders>` with appropriate props
 5. If testing multiple widths, create separate exports with the `-200` suffix convention
 6. If the component has animated states, prefer a static variant or add to the SKIP set
-7. Push to PR — CI generates baseline PNGs automatically
-8. Review the auto-committed baseline images in the PR diff
+7. Generate the relevant baseline on Linux and review the image diff
+8. Include the intended screenshot changes in the PR

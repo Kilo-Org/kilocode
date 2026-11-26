@@ -1,5 +1,5 @@
 import { describe, expect, spyOn, test } from "bun:test"
-import { defaultOrganizationId, fetchDefaultModel } from "../../src/api/profile.js"
+import { InvalidTokenError, defaultOrganizationId, fetchDefaultModel, fetchProfile } from "../../src/api/profile.js"
 import { DEFAULT_FREE_MODEL, DEFAULT_MODEL, KILO_API_BASE } from "../../src/api/constants.js"
 import type { KilocodeProfile } from "../../src/types.js"
 
@@ -46,6 +46,30 @@ describe("fetchDefaultModel", () => {
     )
     try {
       expect(await fetchDefaultModel()).toBe("public/free")
+    } finally {
+      fetch.mockRestore()
+    }
+  })
+})
+
+describe("fetchProfile", () => {
+  test.each([401, 403])("throws InvalidTokenError when the token is rejected with %d", async (status) => {
+    const fetch = spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status }))
+    try {
+      const err = await fetchProfile("token").catch((err) => err)
+      expect(err).toBeInstanceOf(InvalidTokenError)
+      expect(err.message).toBe("Invalid token")
+    } finally {
+      fetch.mockRestore()
+    }
+  })
+
+  test("throws a plain error for other failures", async () => {
+    const fetch = spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 500 }))
+    try {
+      const err = await fetchProfile("token").catch((err) => err)
+      expect(err).not.toBeInstanceOf(InvalidTokenError)
+      expect(err.message).toBe("Failed to fetch profile: 500")
     } finally {
       fetch.mockRestore()
     }

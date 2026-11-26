@@ -8,12 +8,14 @@ import { Button } from "@kilocode/kilo-ui/button"
 import type { AssistantMessage } from "@kilocode/sdk/v2"
 import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
+import { useVSCode } from "../../context/vscode"
 import {
   unwrapError,
   parseAssistantError,
   parseProviderAuthError,
   isUnauthorizedPaidModelError,
   isUnauthorizedPromotionLimitError,
+  isSignedOutError,
 } from "../../utils/errorUtils"
 import ProviderConnectDialog from "../settings/ProviderConnectDialog"
 
@@ -26,6 +28,7 @@ export const ErrorDisplay: Component<ErrorDisplayProps> = (props) => {
   const { t } = useLanguage()
   const dialog = useDialog()
   const provider = useProvider()
+  const vscode = useVSCode()
   const parsed = createMemo(() => parseAssistantError(props.error))
   const auth = createMemo(() => parseProviderAuthError(props.error))
   const authProvider = createMemo(() => {
@@ -46,6 +49,8 @@ export const ErrorDisplay: Component<ErrorDisplayProps> = (props) => {
       (provider.authMethods()[err.providerID] ?? []).some((method) => method.type === "oauth")
     )
   })
+
+  const kilo = () => provider.providers().kilo?.name ?? "Kilo Gateway"
 
   const errorText = createMemo(() => {
     const msg = props.error.data?.message
@@ -101,6 +106,18 @@ export const ErrorDisplay: Component<ErrorDisplayProps> = (props) => {
           <p data-slot="auth-prompt-description">{t("error.promotionLimit.description")}</p>
           <Button variant="primary" onClick={() => props.onLogin?.()}>
             {t("error.promotionLimit.action")}
+          </Button>
+        </div>
+      </Match>
+      <Match when={isSignedOutError(parsed())}>
+        <div data-component="auth-prompt">
+          <div data-slot="auth-prompt-header">
+            <span data-slot="auth-prompt-icon">↻</span>
+            <span data-slot="auth-prompt-title">{t("error.providerAuth.title", { provider: kilo() })}</span>
+          </div>
+          <p data-slot="auth-prompt-description">{t("error.providerAuth.description", { provider: kilo() })}</p>
+          <Button variant="primary" onClick={() => vscode.postMessage({ type: "openProfilePanel", login: true })}>
+            {t("common.signIn")}
           </Button>
         </div>
       </Match>
