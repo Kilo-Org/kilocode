@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest # kilocode_change
     outputs:
       matched: ${{ steps.filter.outputs.matched }}
-      can_autocommit: ${{ steps.autocommit-check.outputs.can_autocommit }}
+      same_repo: ${{ steps.repo-check.outputs.same_repo }}
     steps:
       - uses: actions/checkout@v6
       - name: Check changed files
@@ -35,24 +35,17 @@ jobs:
           done < <(gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls/${PR}/files" --jq '.[].filename')
           echo "matched=$matched" >> "$GITHUB_OUTPUT"
           echo "matched=$matched"
-      - name: Check if PR is from a fork
-        id: fork-check
-        run: |
-          if [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]; then
-            echo "is_fork=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "is_fork=false" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Check baseline auto-commit permissions
-        id: autocommit-check
+      # A pull request from a branch of this repository gets its new baselines
+      # committed by visual-regression-baselines.yml; this workflow holds no credential.
+      - name: Check if PR is from this repository
+        id: repo-check
         env:
-          MAINTAINER_APP_ID: ${{ secrets.KILO_MAINTAINER_APP_ID }}
-          MAINTAINER_APP_SECRET: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
         run: |
-          if [ "${{ steps.fork-check.outputs.is_fork }}" != "true" ] && [ -n "$MAINTAINER_APP_ID" ] && [ -n "$MAINTAINER_APP_SECRET" ]; then
-            echo "can_autocommit=true" >> "$GITHUB_OUTPUT"
+          if [ "$HEAD_REPO" = "$GITHUB_REPOSITORY" ]; then
+            echo "same_repo=true" >> "$GITHUB_OUTPUT"
           else
-            echo "can_autocommit=false" >> "$GITHUB_OUTPUT"
+            echo "same_repo=false" >> "$GITHUB_OUTPUT"
           fi
 
   visual-regression:
@@ -64,23 +57,16 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - name: Checkout (internal)
-        if: needs.check-paths.outputs.can_autocommit == 'true'
+      - name: Checkout
         uses: actions/checkout@v6
         with:
           lfs: true
-          # Use github.token for LFS access. The maintainer app is used only for generated commits.
-          token: ${{ github.token }}
-          ref: ${{ github.head_ref }}
-
-      - name: Checkout (read-only)
-        if: needs.check-paths.outputs.can_autocommit != 'true'
-        uses: actions/checkout@v6
-        with:
-          lfs: true
+          persist-credentials: false
+          # A same-repository PR tests its head commit, the commit its new baselines are made for.
+          ref: ${{ needs.check-paths.outputs.same_repo == 'true' && github.event.pull_request.head.sha || '' }}
 
       - name: Check if HEAD is a baseline update commit
-        if: needs.check-paths.outputs.can_autocommit == 'true'
+        if: needs.check-paths.outputs.same_repo == 'true'
         id: check-baseline-commit
         run: |
           COMMIT_MSG=$(git log -1 --format=%s)
@@ -156,7 +142,7 @@ jobs:
         working-directory: packages/kilo-ui
 
       - name: Check for baseline changes (read-only PRs)
-        if: needs.check-paths.outputs.can_autocommit != 'true'
+        if: needs.check-paths.outputs.same_repo != 'true'
         run: |
           git add packages/kilo-docs/public/img/screenshot-tests/kilo-ui/
           if git diff --cached --quiet; then
@@ -170,7 +156,7 @@ jobs:
           fi
 
       - name: Fail if baselines still changing after auto-update
-        if: needs.check-paths.outputs.can_autocommit == 'true' && steps.check-baseline-commit.outputs.is_baseline_update == 'true'
+        if: needs.check-paths.outputs.same_repo == 'true' && steps.check-baseline-commit.outputs.is_baseline_update == 'true'
         run: |
           git add packages/kilo-docs/public/img/screenshot-tests/kilo-ui/
           if git diff --cached --quiet; then
@@ -184,7 +170,7 @@ jobs:
           fi
 
       - name: Check for baseline updates
-        if: needs.check-paths.outputs.can_autocommit == 'true' && steps.check-baseline-commit.outputs.is_baseline_update != 'true'
+        if: needs.check-paths.outputs.same_repo == 'true' && steps.check-baseline-commit.outputs.is_baseline_update != 'true'
         id: baseline-changes
         run: |
           git add packages/kilo-docs/public/img/screenshot-tests/kilo-ui/
@@ -194,26 +180,43 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Setup Git Committer
+      - name: Stage new baselines for the commit workflow
         if: steps.baseline-changes.outputs.changed == 'true'
-        uses: ./.github/actions/setup-git-committer
-        with:
-          kilo-maintainer-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
-          kilo-maintainer-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
-
-      - name: Commit and push new baselines (if any)
-        if: steps.baseline-changes.outputs.changed == 'true'
-        id: commit-baselines
+        env:
+          DIR: packages/kilo-docs/public/img/screenshot-tests/kilo-ui/
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_REF: ${{ github.head_ref }}
         run: |
-          git commit -m "chore: update visual regression baselines"
-          git lfs push --all origin
-          git push --no-verify origin "HEAD:${GITHUB_HEAD_REF}"
-          echo "changed=true" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          out="$RUNNER_TEMP/visual-regression-baselines"
+          rm -rf "$out"
+          mkdir -p "$out/files"
+          git diff --cached --no-renames --name-only --diff-filter=AM -z -- "$DIR" |
+            while IFS= read -r -d '' file; do
+              mkdir -p "$out/files/$(dirname -- "$file")"
+              cp -- "$file" "$out/files/$file"
+            done
+          git diff --cached --no-renames --name-only --diff-filter=D -z -- "$DIR" |
+            jq -Rs --argjson pr "$PR" --arg sha "$HEAD_SHA" --arg repo "$HEAD_REPO" --arg ref "$HEAD_REF" \
+              '{pr: $pr, head_sha: $sha, head_repo: $repo, head_ref: $ref, deleted: (split("\u0000") | map(select(length > 0)))}' \
+              > "$out/meta.json"
+          git diff --cached --stat
+
+      - name: Upload new baselines
+        if: steps.baseline-changes.outputs.changed == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: visual-regression-baselines-kilo-ui
+          path: ${{ runner.temp }}/visual-regression-baselines/
+          if-no-files-found: error
+          retention-days: 3
 
       - name: Fail if baselines changed
-        if: needs.check-paths.outputs.can_autocommit == 'true' && steps.commit-baselines.outputs.changed == 'true'
+        if: steps.baseline-changes.outputs.changed == 'true'
         run: |
-          echo "::error::Visual regression baselines changed. New baselines have been committed to the branch. Please pull and review."
+          echo "::error::Visual regression baselines changed. The Visual Regression Baselines workflow commits the new baselines to this branch. Please pull and review."
           exit 1
 
       - name: Upload test results on failure
@@ -235,23 +238,16 @@ jobs:
       NODE_OPTIONS: --max-old-space-size=4096
 
     steps:
-      - name: Checkout (internal)
-        if: needs.check-paths.outputs.can_autocommit == 'true'
+      - name: Checkout
         uses: actions/checkout@v6
         with:
           lfs: true
-          # Use github.token for LFS access. The maintainer app is used only for generated commits.
-          token: ${{ github.token }}
-          ref: ${{ github.head_ref }}
-
-      - name: Checkout (read-only)
-        if: needs.check-paths.outputs.can_autocommit != 'true'
-        uses: actions/checkout@v6
-        with:
-          lfs: true
+          persist-credentials: false
+          # A same-repository PR tests its head commit, the commit its new baselines are made for.
+          ref: ${{ needs.check-paths.outputs.same_repo == 'true' && github.event.pull_request.head.sha || '' }}
 
       - name: Check if HEAD is a baseline update commit
-        if: needs.check-paths.outputs.can_autocommit == 'true'
+        if: needs.check-paths.outputs.same_repo == 'true'
         id: check-baseline-commit-vscode
         run: |
           COMMIT_MSG=$(git log -1 --format=%s)
@@ -357,7 +353,7 @@ jobs:
         working-directory: packages/kilo-vscode
 
       - name: Check for baseline changes (read-only PRs)
-        if: needs.check-paths.outputs.can_autocommit != 'true'
+        if: needs.check-paths.outputs.same_repo != 'true'
         run: |
           git add packages/kilo-docs/public/img/screenshot-tests/kilo-vscode/
           if git diff --cached --quiet; then
@@ -371,7 +367,7 @@ jobs:
           fi
 
       - name: Fail if baselines still changing after auto-update
-        if: needs.check-paths.outputs.can_autocommit == 'true' && steps.check-baseline-commit-vscode.outputs.is_baseline_update == 'true'
+        if: needs.check-paths.outputs.same_repo == 'true' && steps.check-baseline-commit-vscode.outputs.is_baseline_update == 'true'
         run: |
           git add packages/kilo-docs/public/img/screenshot-tests/kilo-vscode/
           if git diff --cached --quiet; then
@@ -385,7 +381,7 @@ jobs:
           fi
 
       - name: Check for baseline updates
-        if: needs.check-paths.outputs.can_autocommit == 'true' && steps.check-baseline-commit-vscode.outputs.is_baseline_update != 'true'
+        if: needs.check-paths.outputs.same_repo == 'true' && steps.check-baseline-commit-vscode.outputs.is_baseline_update != 'true'
         id: baseline-changes-vscode
         run: |
           git add packages/kilo-docs/public/img/screenshot-tests/kilo-vscode/
@@ -395,26 +391,43 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Setup Git Committer
+      - name: Stage new baselines for the commit workflow
         if: steps.baseline-changes-vscode.outputs.changed == 'true'
-        uses: ./.github/actions/setup-git-committer
-        with:
-          kilo-maintainer-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
-          kilo-maintainer-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
-
-      - name: Commit and push new baselines (if any)
-        if: steps.baseline-changes-vscode.outputs.changed == 'true'
-        id: commit-baselines-vscode
+        env:
+          DIR: packages/kilo-docs/public/img/screenshot-tests/kilo-vscode/
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_REF: ${{ github.head_ref }}
         run: |
-          git commit -m "chore: update kilo-vscode visual regression baselines"
-          git lfs push --all origin
-          git push --no-verify origin "HEAD:${GITHUB_HEAD_REF}"
-          echo "changed=true" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          out="$RUNNER_TEMP/visual-regression-baselines"
+          rm -rf "$out"
+          mkdir -p "$out/files"
+          git diff --cached --no-renames --name-only --diff-filter=AM -z -- "$DIR" |
+            while IFS= read -r -d '' file; do
+              mkdir -p "$out/files/$(dirname -- "$file")"
+              cp -- "$file" "$out/files/$file"
+            done
+          git diff --cached --no-renames --name-only --diff-filter=D -z -- "$DIR" |
+            jq -Rs --argjson pr "$PR" --arg sha "$HEAD_SHA" --arg repo "$HEAD_REPO" --arg ref "$HEAD_REF" \
+              '{pr: $pr, head_sha: $sha, head_repo: $repo, head_ref: $ref, deleted: (split("\u0000") | map(select(length > 0)))}' \
+              > "$out/meta.json"
+          git diff --cached --stat
+
+      - name: Upload new baselines
+        if: steps.baseline-changes-vscode.outputs.changed == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: visual-regression-baselines-kilo-vscode
+          path: ${{ runner.temp }}/visual-regression-baselines/
+          if-no-files-found: error
+          retention-days: 3
 
       - name: Fail if baselines changed
-        if: needs.check-paths.outputs.can_autocommit == 'true' && steps.commit-baselines-vscode.outputs.changed == 'true'
+        if: steps.baseline-changes-vscode.outputs.changed == 'true'
         run: |
-          echo "::error::Visual regression baselines changed. New baselines have been committed to the branch. Please pull and review."
+          echo "::error::Visual regression baselines changed. The Visual Regression Baselines workflow commits the new baselines to this branch. Please pull and review."
           exit 1
 
       - name: Upload test results on failure

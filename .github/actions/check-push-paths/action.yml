@@ -1,0 +1,36 @@
+# kilocode_change - new file
+name: "Check push paths"
+description: "Fail when the commits about to be pushed change workflow or composite action files"
+inputs:
+  base:
+    description: "Commit the target branch points at; every commit after it up to HEAD is checked"
+    required: true
+  working-directory:
+    description: "Repository to check"
+    required: false
+    default: "."
+runs:
+  using: "composite"
+  steps:
+    - name: Check push paths
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        BASE: ${{ inputs.base }}
+      run: |
+        set -euo pipefail
+        git rev-parse --verify --quiet "${BASE}^{commit}" > /dev/null || {
+          echo "::error::Push base ${BASE} is not a commit in this repository."
+          exit 1
+        }
+        # Files of every commit, plus the files a merge commit changed against all of its parents.
+        blocked="$(
+          git -c core.quotePath=false log --no-renames --diff-merges=dense-combined --format= --name-only "${BASE}..HEAD" |
+            grep -E '^"?\.github/(workflows|actions)/' | sort -u || true
+        )"
+        if [ -n "$blocked" ]; then
+          echo "::error::The commits to push change workflow or composite action files. These change only through a reviewed pull request."
+          printf '%s\n' "$blocked"
+          exit 1
+        fi
+        echo "No workflow or composite action file changes in ${BASE}..HEAD."

@@ -201,7 +201,7 @@ Only skip stories as a last resort. Prefer making the story deterministic (e.g.,
 
 ## Step 5: Generate baseline images
 
-Baselines are generated on **Linux CI only** (font rendering differs on macOS). The CI workflow at `.github/workflows/visual-regression.yml` auto-runs `bun run test:visual:update` and commits new baselines to the PR branch.
+Baselines are generated on **Linux CI only** (font rendering differs on macOS). The CI workflow at `.github/workflows/visual-regression.yml` auto-runs `bun run test:visual:update` and uploads new baselines; `.github/workflows/visual-regression-baselines.yml` then commits them to the PR branch. This works for PRs from branches of this repository only. A fork PR fails with the changed screenshots listed, and a Kilo developer updates them.
 
 **You do NOT need to generate baseline PNGs locally.** Just write the story, push, and CI handles the rest.
 
@@ -258,7 +258,7 @@ The `visual-regression.yml` workflow triggers on PRs when these paths change:
 - `packages/kilo-vscode/tests/visual-regression*`
 - `.github/workflows/visual-regression.yml`
 
-CI auto-commits new baselines via Git LFS and fails if screenshots changed, requiring developer review.
+The PR run holds no credential. When screenshots changed, it uploads the new baselines as an artifact and fails. `visual-regression-baselines.yml` then commits them via Git LFS to the branch of a same-repository PR, which starts a new run for developer review.
 
 # Reference: import paths
 

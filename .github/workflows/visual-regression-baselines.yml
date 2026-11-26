@@ -1,0 +1,166 @@
+# kilocode_change - new file
+name: Visual Regression Baselines
+
+# Commits the screenshot baselines that a "Visual Regression Tests" run made for a
+# pull request from a branch of this repository. That run executes pull request
+# code, so it holds no credential: it uploads the new images as artifacts and
+# fails. This workflow runs from the default branch and runs no pull request code.
+# It accepts only PNG files under the baseline directories, commits them on top of
+# the tested head commit and pushes them to the pull request branch.
+
+on:
+  workflow_run:
+    workflows: [Visual Regression Tests]
+    types: [completed]
+
+permissions: {}
+
+concurrency:
+  group: visual-regression-baselines-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  commit:
+    name: Commit baselines
+    # A run that uploads baselines fails on purpose. A fork pull request has another
+    # head repository and no pull_requests entry, so it starts no runner.
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.pull_requests[0].head.repo.id == github.event.repository.id &&
+      github.event.workflow_run.pull_requests[0].base.repo.id == github.event.repository.id
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: read
+    env:
+      HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+      HEAD_REF: ${{ github.event.workflow_run.head_branch }}
+      BASELINES: packages/kilo-docs/public/img/screenshot-tests/
+
+    steps:
+      # Artifacts go outside the workspace, which the default-branch checkout clears.
+      # A pattern that matches one artifact extracts it straight into `path`, and a
+      # pattern that matches none downloads nothing.
+      - name: Download kilo-ui baselines
+        uses: actions/download-artifact@v8
+        with:
+          pattern: visual-regression-baselines-kilo-ui
+          path: ${{ runner.temp }}/visual-regression-baselines/kilo-ui
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - name: Download kilo-vscode baselines
+        uses: actions/download-artifact@v8
+        with:
+          pattern: visual-regression-baselines-kilo-vscode
+          path: ${{ runner.temp }}/visual-regression-baselines/kilo-vscode
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - name: Check for baselines
+        id: found
+        run: |
+          if [ -n "$(find "$RUNNER_TEMP/visual-regression-baselines" -mindepth 2 -print -quit 2>/dev/null)" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "The run uploaded no baselines."
+          fi
+
+      - name: Checkout default branch
+        if: steps.found.outputs.found == 'true'
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .github/actions
+            script/kilocode
+
+      - name: Setup Bun
+        if: steps.found.outputs.found == 'true'
+        uses: ./.github/actions/setup-bun
+        with:
+          install: false
+
+      - name: Checkout tested head commit
+        if: steps.found.outputs.found == 'true'
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          path: pr-head
+          lfs: true
+          persist-credentials: false
+
+      - name: Apply baselines
+        if: steps.found.outputs.found == 'true'
+        id: apply
+        env:
+          VR_SHA: ${{ github.event.workflow_run.head_sha }}
+          VR_REF: ${{ github.event.workflow_run.head_branch }}
+          VR_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
+          VR_PRS: ${{ toJSON(github.event.workflow_run.pull_requests) }}
+        run: |
+          set -euo pipefail
+          if [ "$(git -C pr-head rev-parse HEAD)" != "$HEAD_SHA" ]; then
+            echo "::error::The checkout is not the tested head commit."
+            exit 1
+          fi
+          # Git LFS reads its endpoint from .lfsconfig, so only the default branch's copy is accepted.
+          if [ -e .lfsconfig ] || [ -e pr-head/.lfsconfig ]; then
+            if ! cmp -s .lfsconfig pr-head/.lfsconfig; then
+              echo "::error::The pull request changes .lfsconfig; baselines are not committed."
+              exit 1
+            fi
+          fi
+          bun script/kilocode/visual-baselines.ts "$RUNNER_TEMP/visual-regression-baselines" pr-head | tee -a "$GITHUB_STEP_SUMMARY"
+          git -C pr-head add --all -- "$BASELINES"
+          if git -C pr-head diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "The baselines already match the branch."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Git Committer
+        if: steps.apply.outputs.changed == 'true'
+        id: committer
+        uses: ./.github/actions/setup-git-committer
+        with:
+          kilo-maintainer-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
+          kilo-maintainer-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
+
+      - name: Commit baselines
+        if: steps.apply.outputs.changed == 'true'
+        env:
+          TOKEN: ${{ steps.committer.outputs.token }}
+        run: |
+          set -euo pipefail
+          git -C pr-head remote set-url origin "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}"
+          git -C pr-head commit --no-verify -m "chore: update visual regression baselines"
+
+      - name: Check push paths
+        if: steps.apply.outputs.changed == 'true'
+        uses: ./.github/actions/check-push-paths
+        with:
+          base: ${{ github.event.workflow_run.head_sha }}
+          working-directory: pr-head
+
+      - name: Push baselines
+        if: steps.apply.outputs.changed == 'true'
+        working-directory: pr-head
+        run: |
+          set -euo pipefail
+          tip="$(git ls-remote origin "refs/heads/${HEAD_REF}" | awk -v ref="refs/heads/${HEAD_REF}" '$2 == ref { print $1 }')"
+          if [ "$tip" != "$HEAD_SHA" ]; then
+            echo "::notice::${HEAD_REF} moved past the tested commit; its new run makes the baselines again."
+            exit 0
+          fi
+          git lfs push origin HEAD
+          git push --no-verify origin "HEAD:refs/heads/${HEAD_REF}"
