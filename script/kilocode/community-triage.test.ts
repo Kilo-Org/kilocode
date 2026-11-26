@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test"
+import { afterEach, describe, expect, spyOn, test } from "bun:test"
 import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -629,6 +629,23 @@ describe("sweepIssues", () => {
     const calls = github()
     await expect(sweepIssues()).rejects.toThrow("COMMUNITY_TRIAGE_MEMBER_TOKEN is not set")
     expect(calls).toEqual([])
+  })
+
+  test("stops after ten full pages and warns that issues remain", async () => {
+    process.env.MEMBER_TOKEN = "member-token"
+    const full = Array.from({ length: 100 }, (_, i) => open(1000 + i, "helper[bot]", [label.community]))
+    const calls = github({ issues: full })
+    const logs: string[] = []
+    const log = spyOn(console, "log").mockImplementation((...args: unknown[]) => void logs.push(args.join(" ")))
+    try {
+      await sweepIssues()
+    } finally {
+      log.mockRestore()
+    }
+    expect(calls.filter((call) => call.path.includes("/issues?"))).toHaveLength(10)
+    expect(
+      logs.some((line) => line.startsWith("::warning title=Issue sweep stopped::read 1000 open community issues")),
+    ).toBe(true)
   })
 })
 

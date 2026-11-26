@@ -554,18 +554,27 @@ type Issue = {
   pull_request?: unknown
 }
 
+const ISSUE_PAGES = 10
+
 // Open issues labeled community whose author is a maintainer after all, such
 // as a private org member labeled by the label job. Same cleanup as for PRs.
 export async function sweepIssues() {
   needMember(process.env.MEMBER_TOKEN)
   // Read every page first: removing the label shifts later pages.
   const issues: Issue[] = []
-  for (let page = 1; page <= 10; page++) {
+  for (let page = 1; ; page++) {
     const list: Issue[] = await (
       await api(`/repos/${repo}/issues?state=open&labels=${label.community}&per_page=100&page=${page}`)
     ).json()
     issues.push(...list)
     if (list.length < 100) break
+    if (page === ISSUE_PAGES) {
+      warn(
+        "Issue sweep stopped",
+        `read ${ISSUE_PAGES * 100} open community issues, the limit; the rest were not checked`,
+      )
+      break
+    }
   }
   for (const issue of issues) {
     const login = issue.user?.login
@@ -739,8 +748,6 @@ async function sweep() {
     rows.push(row)
   }
 
-  await sweepIssues()
-
   const out = process.env.GITHUB_STEP_SUMMARY
   if (out) await Bun.write(out, digest(rows, "md", repo, now, Infinity) + "\n")
   const payload = process.env.SLACK_PAYLOAD
@@ -761,6 +768,12 @@ async function sweep() {
     }
   }
   console.log(digest(rows, "md", repo, now, Infinity))
+  // Last, so a failure here cannot cost the digest or the Slack post.
+  try {
+    await sweepIssues()
+  } catch (err) {
+    warn("Issue sweep failed", err)
+  }
 }
 
 if (import.meta.main) {
