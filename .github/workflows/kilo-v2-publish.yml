@@ -174,9 +174,8 @@ jobs:
             host: blacksmith-4vcpu-ubuntu-2404-arm
           - target: darwin-arm64
             host: blacksmith-6vcpu-macos-15
-          # Intel smoke test is paused until Blacksmith offers an Intel macOS runner.
-          # - target: darwin-x64
-          #   host: macos-15-intel
+          - target: darwin-x64
+            host: macos-15-intel
     runs-on: ${{ matrix.host }}
     timeout-minutes: 15
     steps:
