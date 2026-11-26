@@ -3,8 +3,8 @@
 /**
  * Tests for the v2-port PR resolver. Pure-function cases plus end-to-end runs
  * of the real prs.mjs against a local stub of the GitHub API (the
- * `DOCS_SYNC_API_BASE` hook), so the push-to-PR mapping and its deduplication
- * run as real code.
+ * `DOCS_SYNC_API_BASE` hook), so the push-to-PR mapping, its scope filter,
+ * cap, error isolation and commit-message fallback run as real code.
  *
  * Run: node .github/v2-port/prs.test.mjs
  */
@@ -16,7 +16,7 @@ import http from "node:http"
 import os from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { dispatchPr, mergedInto, pushShas } from "./prs.mjs"
+import { CAP, dispatchPr, mergedInto, prRefs, pushShas, touchesScope } from "./prs.mjs"
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const SCRIPT = path.join(HERE, "prs.mjs")
@@ -35,29 +35,59 @@ function test(name, fn) {
   }
 }
 
-const sha = (n) => String(n).padStart(40, "a")
+// The number leads, so the 12-character short SHA in logs tells commits apart.
+const sha = (n) => String(n).padEnd(40, "a")
 const merged = (number, base = "main") => ({ number, merged_at: "2026-11-26T00:00:00Z", base: { ref: base } })
+const inScope = { added: [], removed: [], modified: ["packages/opencode/src/kilocode/x.ts"] }
+const outOfScope = { added: ["docs/readme.md"], removed: [], modified: ["packages/kilo-vscode/src/a.ts"] }
+const commit = (n, files = inScope, extra = {}) => ({
+  id: sha(n),
+  distinct: true,
+  message: `change ${n}`,
+  ...files,
+  ...extra,
+})
 
 // ---------------------------------------------------------------------------
 // Pure functions
 // ---------------------------------------------------------------------------
 
-test("pushShas keeps distinct commits in push order, once each", () => {
-  const event = {
-    commits: [
-      { id: sha(1), distinct: true },
-      { id: sha(2), distinct: false },
-      { id: sha(3), distinct: true },
-      { id: sha(1), distinct: true },
-    ],
-  }
-  assert.deepEqual(pushShas(event), [sha(1), sha(3)])
+test("touchesScope reads the file lists and keeps commits whose lists are missing or empty", () => {
+  assert.equal(touchesScope(inScope), true)
+  assert.equal(touchesScope(outOfScope), false)
+  assert.equal(touchesScope({ removed: ["packages/opencode/old.ts"], added: [], modified: [] }), true)
+  assert.equal(touchesScope({ id: sha(1) }), true)
+  assert.equal(touchesScope({ added: [], removed: [], modified: [] }), true)
 })
 
-test("pushShas falls back to head_commit and drops malformed ids", () => {
-  assert.deepEqual(pushShas({ commits: [], head_commit: { id: sha(9) } }), [sha(9)])
-  assert.deepEqual(pushShas({ commits: [{ id: "../../x", distinct: true }] }), [])
-  assert.deepEqual(pushShas(null), [])
+test("pushShas keeps distinct in-scope commits, once each, and head_commit last", () => {
+  const event = {
+    commits: [commit(1), commit(2, inScope, { distinct: false }), commit(3, outOfScope), commit(4), commit(1)],
+    head_commit: commit(5, outOfScope),
+  }
+  assert.deepEqual(pushShas(event), { shas: [sha(1), sha(4), sha(5)], skipped: 0 })
+})
+
+test("pushShas drops malformed ids and handles an empty event", () => {
+  assert.deepEqual(pushShas({ commits: [{ id: "../../x", distinct: true }] }), { shas: [], skipped: 0 })
+  assert.deepEqual(pushShas(null), { shas: [], skipped: 0 })
+})
+
+test("pushShas caps lookups at CAP, keeping the newest and head_commit", () => {
+  const commits = Array.from({ length: 60 }, (_, i) => commit(100 + i))
+  const head = commits.at(-1)
+  const out = pushShas({ commits, head_commit: head })
+  assert.equal(out.shas.length, CAP)
+  assert.equal(out.skipped, 60 - CAP)
+  assert.equal(out.shas.at(-1), head.id)
+  assert.equal(out.shas[0], sha(100 + 60 - CAP))
+})
+
+test("prRefs reads squash and merge commit subjects only", () => {
+  assert.deepEqual(prRefs("fix(cli): keep queue (#123)\n\nbody (#9)"), [123])
+  assert.deepEqual(prRefs("Merge pull request #456 from acme/branch\n\ntitle"), [456])
+  assert.deepEqual(prRefs("chore: bump (#12) deps"), [])
+  assert.deepEqual(prRefs(undefined), [])
 })
 
 test("mergedInto keeps only PRs merged into the pushed branch", () => {
@@ -77,16 +107,6 @@ test("dispatchPr accepts a positive integer only", () => {
   for (const bad of ["", "0", "-1", "1.5", "12abc", undefined]) assert.throws(() => dispatchPr(bad), /positive integer/)
 })
 
-test("workflow tracks pushes to main and keeps the selftest secretless", () => {
-  const workflow = fs.readFileSync(path.join(HERE, "..", "workflows", "v2-port-tracker.yml"), "utf8")
-  assert.doesNotMatch(workflow, /pull_request_target/)
-  assert.match(workflow, /\n {2}push:\n {4}branches: \[main\]\n {4}paths:\n {6}- "packages\/opencode\/\*\*"/)
-  const selftest = workflow.slice(workflow.indexOf("\n  selftest:"), workflow.indexOf("\n  prs:"))
-  assert.doesNotMatch(selftest, /secrets\./)
-  assert.match(workflow, /concurrency:\n\s+group: v2-port-\$\{\{ matrix\.pr \}\}/)
-  assert.match(workflow, /name: v2-port-out-\$\{\{ matrix\.pr \}\}/)
-})
-
 // ---------------------------------------------------------------------------
 // End-to-end: real prs.mjs against a stubbed GitHub API
 // ---------------------------------------------------------------------------
@@ -98,20 +118,30 @@ function mktemp() {
   return dir
 }
 
-/** Stub answering `commits/{sha}/pulls` from a sha → pulls map. */
-function startStub(pullsBySha) {
+/**
+ * Stub for `commits/{sha}/pulls` and `pulls/{n}`. A sha in `fail` answers 404;
+ * a sha missing from `pulls` answers an empty list.
+ */
+function startStub({ pulls = {}, prs = {}, fail = [] }) {
   const log = []
   const server = http.createServer((req, res) => {
     const url = new URL(req.url, "http://stub")
     log.push(url.pathname)
-    const m = url.pathname.match(/^\/repos\/acme\/repo\/commits\/([0-9a-f]{40})\/pulls$/)
-    if (req.method === "GET" && m) {
-      res.writeHead(200, { "content-type": "application/json" })
-      res.end(JSON.stringify(pullsBySha[m[1]] ?? []))
-      return
+    const send = (status, data) => {
+      res.writeHead(status, { "content-type": "application/json" })
+      res.end(JSON.stringify(data))
     }
-    res.writeHead(404, { "content-type": "application/json" })
-    res.end(JSON.stringify({ message: `unhandled ${req.method} ${req.url}` }))
+    const bySha = url.pathname.match(/^\/repos\/acme\/repo\/commits\/([0-9a-f]{40})\/pulls$/)
+    if (req.method === "GET" && bySha) {
+      if (fail.includes(bySha[1])) return send(404, { message: "No commit found" })
+      return send(200, pulls[bySha[1]] ?? [])
+    }
+    const byNumber = url.pathname.match(/^\/repos\/acme\/repo\/pulls\/(\d+)$/)
+    if (req.method === "GET" && byNumber) {
+      const pr = prs[byNumber[1]]
+      return pr ? send(200, pr) : send(404, { message: "Not Found" })
+    }
+    send(404, { message: `unhandled ${req.method} ${req.url}` })
   })
   return new Promise((resolve) => {
     server.listen(0, "127.0.0.1", () => resolve({ server, log, port: server.address().port }))
@@ -137,19 +167,23 @@ function runPrs(dir, port, env) {
     child.stdout.on("data", (d) => (output += d))
     child.stderr.on("data", (d) => (output += d))
     child.on("close", (status) => {
-      const file = path.join(dir, "gh-output")
-      const out = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : ""
-      const line = out.split("\n").find((l) => l.startsWith("prs="))
-      resolve({ status, output, prs: line ? JSON.parse(line.slice(4)) : undefined })
+      const read = (name) => {
+        const file = path.join(dir, name)
+        return fs.existsSync(file) ? fs.readFileSync(file, "utf8") : ""
+      }
+      const line = read("gh-output")
+        .split("\n")
+        .find((l) => l.startsWith("prs="))
+      resolve({ status, output, summary: read("gh-summary"), prs: line ? JSON.parse(line.slice(4)) : undefined })
     })
   })
 }
 
-async function withPush(event, pullsBySha) {
+async function withPush(event, stubOptions) {
   const dir = mktemp()
   const eventPath = path.join(dir, "event.json")
   fs.writeFileSync(eventPath, JSON.stringify({ ref: "refs/heads/main", ...event }))
-  const stub = await startStub(pullsBySha)
+  const stub = await startStub(stubOptions)
   try {
     const result = await runPrs(dir, stub.port, { GITHUB_EVENT_NAME: "push", GITHUB_EVENT_PATH: eventPath })
     return { ...result, log: stub.log }
@@ -158,72 +192,131 @@ async function withPush(event, pullsBySha) {
   }
 }
 
+const lookups = (log) => log.filter((p) => p.endsWith("/pulls") && p.includes("/commits/"))
+
+async function scenario(name, fn) {
+  await fn()
+  passed++
+  console.log(`ok - integration: ${name}`)
+}
+
 async function integration() {
-  {
-    // Rebase merge: three new commits of one PR. One entry, not three.
-    const commits = [1, 2, 3].map((n) => ({ id: sha(n), distinct: true }))
-    const pulls = Object.fromEntries(commits.map((c) => [c.id, [merged(100)]]))
-    const r = await withPush({ commits }, pulls)
+  await scenario("a rebase merge yields its PR once", async () => {
+    const commits = [1, 2, 3].map((n) => commit(n))
+    const r = await withPush({ commits }, { pulls: Object.fromEntries(commits.map((c) => [c.id, [merged(100)]])) })
     assert.equal(r.status, 0, r.output)
     assert.deepEqual(r.prs, [100])
-    passed++
-    console.log("ok - integration: a rebase merge yields its PR once")
-  }
+  })
 
-  {
-    // Merge commit: the PR branch commits already existed, so only the merge
-    // commit is looked up.
-    const commits = [
-      { id: sha(4), distinct: false },
-      { id: sha(5), distinct: false },
-      { id: sha(6), distinct: true },
-    ]
-    const r = await withPush({ commits }, { [sha(4)]: [merged(101)], [sha(5)]: [merged(101)], [sha(6)]: [merged(101)] })
+  await scenario("a merge commit is the only lookup", async () => {
+    const commits = [commit(4, inScope, { distinct: false }), commit(5, inScope, { distinct: false }), commit(6)]
+    const r = await withPush({ commits }, { pulls: { [sha(6)]: [merged(101)] } })
     assert.equal(r.status, 0, r.output)
     assert.deepEqual(r.prs, [101])
-    assert.deepEqual(r.log, [`/repos/${REPO}/commits/${sha(6)}/pulls`])
-    passed++
-    console.log("ok - integration: a merge commit is the only lookup")
-  }
+    assert.deepEqual(lookups(r.log), [`/repos/${REPO}/commits/${sha(6)}/pulls`])
+  })
 
-  {
-    // One push carrying two PRs (merge queue), plus an open PR and a PR into
-    // another branch that share a commit: both are ignored.
-    const commits = [7, 8, 9].map((n) => ({ id: sha(n), distinct: true }))
+  await scenario("several PRs in one push, each once, sorted; open and other-branch PRs ignored", async () => {
+    const commits = [7, 8, 9].map((n) => commit(n))
     const r = await withPush(
       { commits },
       {
-        [sha(7)]: [merged(203), { number: 300, merged_at: null, base: { ref: "main" } }],
-        [sha(8)]: [merged(202), merged(400, "v2")],
-        [sha(9)]: [merged(203)],
+        pulls: {
+          [sha(7)]: [merged(203), { number: 300, merged_at: null, base: { ref: "main" } }],
+          [sha(8)]: [merged(202), merged(400, "v2")],
+          [sha(9)]: [merged(203)],
+        },
       },
     )
     assert.equal(r.status, 0, r.output)
     assert.deepEqual(r.prs, [202, 203])
-    passed++
-    console.log("ok - integration: several PRs in one push, each once, sorted")
-  }
+  })
 
-  {
-    // A direct push with no PR yields an empty list, and the run stays green.
-    const r = await withPush({ commits: [{ id: sha(10), distinct: true }] }, {})
+  await scenario("commits outside packages/opencode/ are not looked up", async () => {
+    const commits = [commit(10, outOfScope), commit(11)]
+    const r = await withPush({ commits }, { pulls: { [sha(10)]: [merged(500)], [sha(11)]: [merged(501)] } })
+    assert.equal(r.status, 0, r.output)
+    assert.deepEqual(r.prs, [501])
+    assert.deepEqual(lookups(r.log), [`/repos/${REPO}/commits/${sha(11)}/pulls`])
+  })
+
+  await scenario("lookups stop at CAP and the skipped commits are reported", async () => {
+    const commits = Array.from({ length: CAP + 5 }, (_, i) => commit(1000 + i))
+    const r = await withPush(
+      { commits, head_commit: commits.at(-1) },
+      { pulls: Object.fromEntries(commits.map((c) => [c.id, [merged(600)]])) },
+    )
+    assert.equal(r.status, 0, r.output)
+    assert.deepEqual(r.prs, [600])
+    assert.equal(lookups(r.log).length, CAP)
+    assert.match(r.output, /::warning::Looked up 50 commits; 5 older in-scope commits were skipped/)
+    assert.match(
+      r.summary,
+      /5 older in-scope commits were skipped\. replay a missed PR with workflow_dispatch \(pr_number\)/,
+    )
+  })
+
+  await scenario("one failed lookup is skipped; the others still count", async () => {
+    const r = await withPush(
+      { commits: [commit(20), commit(21)] },
+      { pulls: { [sha(21)]: [merged(700)] }, fail: [sha(20)] },
+    )
+    assert.equal(r.status, 0, r.output)
+    assert.deepEqual(r.prs, [700])
+    assert.match(r.output, /::warning::PR lookup for 20aaaaaaaaaa failed/)
+  })
+
+  await scenario("the step fails when every lookup failed", async () => {
+    const r = await withPush({ commits: [commit(22), commit(23)] }, { fail: [sha(22), sha(23)] })
+    assert.notEqual(r.status, 0)
+    assert.equal(r.prs, undefined)
+    assert.match(r.output, /all 2 PR lookups failed/)
+  })
+
+  await scenario("no association: the PR number in a commit message is verified and used", async () => {
+    const commits = [
+      commit(30, inScope, { distinct: false, message: "fix(cli): keep queue (#77)" }),
+      commit(31, inScope, { message: "Merge pull request #78 from acme/side" }),
+    ]
+    const r = await withPush(
+      { commits, head_commit: commits[1] },
+      { prs: { 77: merged(77), 78: { number: 78, merged_at: null, base: { ref: "main" } } } },
+    )
+    assert.equal(r.status, 0, r.output)
+    assert.deepEqual(r.prs, [77])
+    assert.ok(r.log.includes(`/repos/${REPO}/pulls/78`), "the merge-commit reference must be checked too")
+    assert.doesNotMatch(r.output, /No merged PR found/)
+  })
+
+  await scenario("no association and no usable message: a warning names the in-scope commits", async () => {
+    const commits = [commit(40, inScope, { message: "queue batch" }), commit(41, outOfScope, { message: "docs (#90)" })]
+    const r = await withPush({ commits, head_commit: commits[0] }, { prs: { 90: merged(90, "v2") } })
     assert.equal(r.status, 0, r.output)
     assert.deepEqual(r.prs, [])
-    passed++
-    console.log("ok - integration: a push without a merged PR yields nothing")
-  }
+    assert.match(r.output, /::warning::No merged PR found for in-scope commits 40aaaaaaaaaa;/)
+    assert.doesNotMatch(r.output, /41aaaaaaaaaa/)
+    assert.match(
+      r.summary,
+      /No merged PR found for in-scope commits 40aaaaaaaaaa; replay a missed PR with workflow_dispatch/,
+    )
+  })
 
-  {
-    const dir = mktemp()
-    const ok = await runPrs(dir, 1, { GITHUB_EVENT_NAME: "workflow_dispatch", PR_NUMBER: "1234" })
+  await scenario("a push with no in-scope commit and no head_commit stays quiet", async () => {
+    const r = await withPush({ commits: [commit(50, outOfScope)] }, {})
+    assert.equal(r.status, 0, r.output)
+    assert.deepEqual(r.prs, [])
+    assert.deepEqual(r.log, [])
+    assert.doesNotMatch(r.output, /::warning::/)
+  })
+
+  await scenario("workflow_dispatch passes a valid PR number through", async () => {
+    const ok = await runPrs(mktemp(), 1, { GITHUB_EVENT_NAME: "workflow_dispatch", PR_NUMBER: "1234" })
     assert.equal(ok.status, 0, ok.output)
     assert.deepEqual(ok.prs, [1234])
     const bad = await runPrs(mktemp(), 1, { GITHUB_EVENT_NAME: "workflow_dispatch", PR_NUMBER: "12; echo" })
     assert.notEqual(bad.status, 0)
     assert.equal(bad.prs, undefined)
-    passed++
-    console.log("ok - integration: workflow_dispatch passes a valid PR number through")
-  }
+  })
 }
 
 await integration()

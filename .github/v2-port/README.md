@@ -7,10 +7,18 @@ the automated form of the `pr-track-v1` skill.
 ## What triggers a run
 
 `.github/workflows/v2-port-tracker.yml` runs on every push to `main` that touches `packages/opencode/**`. A
-merged PR lands as such a push. `prs.mjs` maps each commit the push introduced to the merged PR behind it
+merged PR lands as such a push. `prs.mjs` maps each commit the push introduced that touches
+`packages/opencode/` (plus the head commit) to the merged PR behind it
 (`GET /repos/{repo}/commits/{sha}/pulls`) and deduplicates the numbers, so a rebase merge with several
-commits, or a merge queue push with several PRs, gives each PR one `track` job and one issue. `gate.mjs` then
-decides whether each PR actually qualifies:
+commits, or a merge queue push with several PRs, gives each PR one `track` job and one issue:
+
+- At most 50 commits are looked up, newest first. A warning and the run summary give the number skipped.
+- A failed lookup is logged and skipped. The job fails only when every lookup failed.
+- When in-scope commits resolve no PR, the `(#N)` or `Merge pull request #N` in their subjects is tried and
+  checked against the PR (merged into `main`). If that finds nothing, a warning names the commits.
+- In each of these cases, replay a missed PR with `workflow_dispatch` (`pr_number`) from `main`.
+
+`gate.mjs` then decides whether each PR actually qualifies:
 
 | Outcome | Condition |
 |---|---|

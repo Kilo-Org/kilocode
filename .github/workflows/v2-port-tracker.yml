@@ -68,9 +68,10 @@ jobs:
   # One entry per merged PR: a push can carry several commits of one PR (rebase
   # merge) or several PRs (merge queue), and each PR must get one issue.
   prs:
-    if: github.repository == 'Kilo-Org/kilocode' && github.event_name != 'pull_request'
+    if: github.repository == 'Kilo-Org/kilocode' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    timeout-minutes: 5
+    # prs.mjs makes at most 50 commit lookups plus at most 50 PR reads.
+    timeout-minutes: 10
     permissions:
       contents: read
       pull-requests: read
@@ -81,6 +82,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           persist-credentials: false
+          sparse-checkout: .github
 
       - name: Setup Node
         uses: actions/setup-node@v6
@@ -97,7 +99,7 @@ jobs:
 
   track:
     needs: prs
-    if: needs.prs.outputs.prs != '[]'
+    if: github.ref == 'refs/heads/main' && needs.prs.outputs.prs != '[]'
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 20
     strategy:
