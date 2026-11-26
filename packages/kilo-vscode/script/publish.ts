@@ -58,7 +58,7 @@ if (!existsSync(ovsx)) {
 for (const target of targets) {
   const vsixPath = join(outDir, `kilo-vscode-${target}.vsix`)
   console.log(`\n🚀 Publishing ${target} to VS Code Marketplace${prerelease ? " (pre-release)" : ""}...`)
-  await retry(() => $`vsce publish ${flag} --skip-duplicate --packagePath ${vsixPath}`, {
+  await retry(() => $`vsce publish --oidc ${flag} --skip-duplicate --packagePath ${vsixPath}`, {
     attempts: 3,
     delay: 30_000,
     label: `vsce publish ${target}`,
