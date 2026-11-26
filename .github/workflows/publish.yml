@@ -49,6 +49,15 @@ jobs:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.repository == 'Kilo-Org/kilocode' && !inputs.oidc_check # kilocode_change
     steps:
+      # kilocode_change start - stop before the draft release and tag are created
+      # when the workflow is dispatched from a branch other than main
+      - name: Require main
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Run the publish workflow from main (got $GITHUB_REF). Nothing was created."
+            exit 1
+          fi
+      # kilocode_change end
       - uses: actions/checkout@v6 # kilocode_change
         with:
           fetch-depth: 0
@@ -825,11 +834,15 @@ jobs:
       - name: Exchange OIDC token and verify publisher access
         run: |
           set -euo pipefail
-          oidc="$(curl --fail --silent --show-error --get \
+          umask 077
+          # Tokens go to curl through --config on stdin, never on its command line.
+          oidc="$(curl --fail --silent --show-error --get --config - \
             --header "Accept: application/json" \
-            --header "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
             --data-urlencode "audience=marketplace.visualstudio.com" \
-            "$ACTIONS_ID_TOKEN_REQUEST_URL" | jq -r '.value // empty')"
+            "$ACTIONS_ID_TOKEN_REQUEST_URL" <<EOF | jq -r '.value // empty'
+          header = "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN"
+          EOF
+          )"
           if [ -z "$oidc" ]; then
             echo "::error::GitHub returned no OIDC token"
             exit 1
@@ -839,17 +852,19 @@ jobs:
 
           body="$RUNNER_TEMP/marketplace-token.json"
           status="$(curl --silent --show-error --output "$body" --write-out '%{http_code}' \
-            --request POST \
+            --request POST --config - \
             --header "Accept: application/json" \
-            --header "Authorization: FederatedToken $oidc" \
             --header "Content-Type: application/json" \
             --header "User-Agent: vsce" \
             --data '{"publisherName":"kilocode"}' \
-            "https://marketplace.visualstudio.com/_apis/gallery/token?api-version=7.2-preview.1")"
+            "https://marketplace.visualstudio.com/_apis/gallery/token?api-version=7.2-preview.1" <<EOF
+          header = "Authorization: FederatedToken $oidc"
+          EOF
+          )"
           echo "Marketplace token exchange: HTTP $status"
           credential="$(jq -r '.credential // empty' "$body" 2>/dev/null || true)"
           if [ "$status" != "200" ] || [ -z "$credential" ]; then
-            message="$(jq -r '.message // empty' "$body" 2>/dev/null || true)"
+            message="$(jq -j '.message // empty' "$body" 2>/dev/null | tr '\r\n' '  ' | cut -c1-300 || true)"
             rm -f "$body"
             echo "::error::Marketplace returned no credential${message:+: $message}"
             exit 1

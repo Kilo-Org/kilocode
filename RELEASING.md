@@ -6,7 +6,7 @@ Kilo Code uses a fully automated CI pipeline triggered via GitHub Actions `workf
 
 1. Go to the [`publish` workflow](https://github.com/Kilo-Org/kilocode/actions/workflows/publish.yml) in GitHub Actions.
 2. Click **"Run workflow"**.
-3. Select the `main` branch. The `publish` job runs in the `release` environment, which only accepts `main`.
+3. Select the `main` branch. On any other branch the `version` job fails in its first step, before it creates the draft release, and the `publish` job runs in the `release` environment, which only accepts `main`.
 4. Fill in the inputs:
    - **`bump`** (choice): `patch`, `minor`, or `major`. Determines how the version number is incremented.
    - **`version`** (string, optional): Override the version explicitly instead of using `bump`. Leave empty to use the bump-based calculation.
@@ -19,7 +19,7 @@ Kilo Code uses a fully automated CI pipeline triggered via GitHub Actions `workf
 
 ## What Happens During a Release
 
-The `publish.yml` workflow runs four jobs sequentially:
+The `publish.yml` workflow starts with `version`, which creates the draft release before the build and publish jobs run. The main jobs are:
 
 ### 1. Version (`version`)
 
@@ -122,11 +122,13 @@ The following secrets must be configured in the repository. The VS Code Marketpl
 
 ### Concurrency
 
-The workflow uses concurrency control (`workflow-ref-bump/version`) to prevent parallel releases from conflicting.
-A trusted publishing check (`oidc_check`) uses its own concurrency group, so it never queues with or cancels a release.
+The workflow's concurrency group is `<workflow>-<ref>-<version or bump>`, so a second run for the same branch and version or bump waits for the first instead of running in parallel (a newer waiting run replaces an older one).
+A trusted publishing check (`oidc_check`) uses `<workflow>-<ref>-oidc-check`, so it never queues behind or cancels a release.
 
 ### Checking Marketplace Trusted Publishing
 
 The VS Code Marketplace publisher `kilocode` has a trusted publishing policy for the `Kilo-Org/kilocode` repository, the `publish.yml` workflow, and the `release` environment. If you rename the workflow file or the environment, update the policy in the Marketplace publisher management page first.
 
 To check the policy without building or publishing anything, run the `publish` workflow on `main` with **`oidc_check`** enabled. Only the `oidc-check` job runs: it exchanges the GitHub OIDC token for a short-lived Marketplace credential, the same way `vsce publish --oidc` does, and runs `vsce verify-pat kilocode` with that credential. All other jobs are skipped.
+
+A green check proves that the trust policy matches this repository, workflow, and environment, and that the Marketplace accepts the credential for `kilocode`. It does not prove upload rights, because `verify-pat` passes for any role on the publisher. The first real release proves the upload.
