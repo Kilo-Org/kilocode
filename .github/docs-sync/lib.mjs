@@ -34,7 +34,9 @@ export function repo() {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
-export async function api(path, { method = "GET", body, auth } = {}) {
+// `maxRetryAfter` (seconds) is the longest rate-limit wait the caller accepts;
+// a longer Retry-After fails the call at once. The default waits any length.
+export async function api(path, { method = "GET", body, auth, maxRetryAfter = Infinity } = {}) {
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     let res
     try {
@@ -61,8 +63,8 @@ export async function api(path, { method = "GET", body, auth } = {}) {
 
     if (res.status === 403) {
       const text = await res.text()
-      if (text.includes("rate limit") && attempt < MAX_RETRIES) {
-        const retryAfter = Number(res.headers.get("retry-after")) || 30
+      const retryAfter = Number(res.headers.get("retry-after")) || 30
+      if (text.includes("rate limit") && attempt < MAX_RETRIES && retryAfter <= maxRetryAfter) {
         console.warn(`rate limited, retrying in ${retryAfter}s`)
         await sleep(retryAfter * 1000)
         continue

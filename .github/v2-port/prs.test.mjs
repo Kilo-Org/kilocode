@@ -119,21 +119,24 @@ function mktemp() {
 }
 
 /**
- * Stub for `commits/{sha}/pulls` and `pulls/{n}`. A sha in `fail` answers 404;
- * a sha missing from `pulls` answers an empty list.
+ * Stub for `commits/{sha}/pulls` and `pulls/{n}`. A sha in `fail` answers 404,
+ * a sha in `limited` answers a rate limit with a one-hour Retry-After, and a
+ * sha missing from `pulls` answers an empty list.
  */
-function startStub({ pulls = {}, prs = {}, fail = [] }) {
+function startStub({ pulls = {}, prs = {}, fail = [], limited = [] }) {
   const log = []
   const server = http.createServer((req, res) => {
     const url = new URL(req.url, "http://stub")
     log.push(url.pathname)
-    const send = (status, data) => {
-      res.writeHead(status, { "content-type": "application/json" })
+    const send = (status, data, headers = {}) => {
+      res.writeHead(status, { "content-type": "application/json", ...headers })
       res.end(JSON.stringify(data))
     }
     const bySha = url.pathname.match(/^\/repos\/acme\/repo\/commits\/([0-9a-f]{40})\/pulls$/)
     if (req.method === "GET" && bySha) {
       if (fail.includes(bySha[1])) return send(404, { message: "No commit found" })
+      if (limited.includes(bySha[1]))
+        return send(403, { message: "API rate limit exceeded" }, { "retry-after": "3600" })
       return send(200, pulls[bySha[1]] ?? [])
     }
     const byNumber = url.pathname.match(/^\/repos\/acme\/repo\/pulls\/(\d+)$/)
@@ -179,13 +182,13 @@ function runPrs(dir, port, env) {
   })
 }
 
-async function withPush(event, stubOptions) {
+async function withPush(event, stubOptions, env = {}) {
   const dir = mktemp()
   const eventPath = path.join(dir, "event.json")
   fs.writeFileSync(eventPath, JSON.stringify({ ref: "refs/heads/main", ...event }))
   const stub = await startStub(stubOptions)
   try {
-    const result = await runPrs(dir, stub.port, { GITHUB_EVENT_NAME: "push", GITHUB_EVENT_PATH: eventPath })
+    const result = await runPrs(dir, stub.port, { GITHUB_EVENT_NAME: "push", GITHUB_EVENT_PATH: eventPath, ...env })
     return { ...result, log: stub.log }
   } finally {
     await new Promise((r) => stub.server.close(r))
@@ -299,6 +302,47 @@ async function integration() {
       r.summary,
       /No merged PR found for in-scope commits 40aaaaaaaaaa; replay a missed PR with workflow_dispatch/,
     )
+  })
+
+  await scenario("one PR by association, another only by its subject, a third by neither", async () => {
+    const commits = [
+      commit(60),
+      commit(61, inScope, { message: "feat(cli): add flag (#801)" }),
+      commit(62, inScope, { message: "tidy up" }),
+    ]
+    const r = await withPush(
+      { commits, head_commit: commits[2] },
+      { pulls: { [sha(60)]: [merged(800)] }, prs: { 801: merged(801) } },
+    )
+    assert.equal(r.status, 0, r.output)
+    assert.deepEqual(r.prs, [800, 801])
+    assert.match(r.output, /::warning::No merged PR found for in-scope commits 62aaaaaaaaaa;/)
+    assert.doesNotMatch(r.output, /in-scope commits [^;]*6[01]aaaaaaaaaa/)
+  })
+
+  await scenario("a long Retry-After fails that lookup at once instead of waiting", async () => {
+    const started = Date.now()
+    const r = await withPush(
+      { commits: [commit(70), commit(71)] },
+      { pulls: { [sha(71)]: [merged(900)] }, limited: [sha(70)] },
+    )
+    assert.equal(r.status, 0, r.output)
+    assert.deepEqual(r.prs, [900])
+    assert.match(r.output, /::warning::PR lookup for 70aaaaaaaaaa failed: .*-> 403/)
+    assert.ok(Date.now() - started < 10_000, "must not sleep the one-hour Retry-After")
+  })
+
+  await scenario("past the time budget no lookup starts and the run says so", async () => {
+    const r = await withPush(
+      { commits: [commit(72), commit(73)] },
+      { pulls: { [sha(72)]: [merged(901)] } },
+      { V2_PORT_BUDGET_MS: "0" },
+    )
+    assert.equal(r.status, 0, r.output)
+    assert.deepEqual(r.prs, [])
+    assert.deepEqual(lookups(r.log), [])
+    assert.match(r.output, /::warning::Stopped at the time budget after 0 of 2 commit lookups/)
+    assert.match(r.summary, /Stopped at the time budget after 0 of 2 commit lookups\. replay a missed PR/)
   })
 
   await scenario("a push with no in-scope commit and no head_commit stays quiet", async () => {

@@ -70,7 +70,8 @@ jobs:
   prs:
     if: github.repository == 'Kilo-Org/kilocode' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    # prs.mjs makes at most 50 commit lookups plus at most 50 PR reads.
+    # prs.mjs makes at most 50 commit lookups plus 50 PR reads, starts none
+    # after six minutes, and waits at most 30 seconds on a rate limit.
     timeout-minutes: 10
     permissions:
       contents: read
