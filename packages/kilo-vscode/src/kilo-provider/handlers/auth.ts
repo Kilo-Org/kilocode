@@ -52,7 +52,7 @@ export async function handleLogin(ctx: AuthContext, attempt: number, getAttempt:
       type: "deviceAuthStarted",
       code,
       verificationUrl: auth.url,
-      expiresIn: 900, // 15 minutes default
+      expiresIn: 600, // the Kilo backend expires device codes after 10 minutes
     })
 
     // Step 2: Wait for callback (blocks until polling completes)
