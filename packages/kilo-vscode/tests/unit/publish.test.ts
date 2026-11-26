@@ -7,7 +7,7 @@ const source = project.createSourceFile(
   await Bun.file(`${import.meta.dir}/../../script/publish.ts`).text(),
 )
 
-test.each(["vsce publish", "${ovsx} publish"])("%s retries the same package and skips duplicates", (command) => {
+test.each(["vsce publish --oidc", "${ovsx} publish"])("%s retries the same package and skips duplicates", (command) => {
   const retry = source
     .getDescendantsOfKind(SyntaxKind.CallExpression)
     .find(
@@ -35,11 +35,4 @@ test.each(["vsce publish", "${ovsx} publish"])("%s retries the same package and 
       ?.getLiteralValue()
   expect(value("attempts")).toBe(3)
   expect(value("delay")).toBe(30_000)
-})
-
-test("vsce publish authenticates with trusted publishing", () => {
-  const shell = source
-    .getDescendantsOfKind(SyntaxKind.TaggedTemplateExpression)
-    .find((tagged) => tagged.getTemplate().getText().includes("vsce publish"))
-  expect(shell?.getTemplate().getText()).toContain("vsce publish --oidc ")
 })

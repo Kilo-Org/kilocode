@@ -77,8 +77,8 @@ Downloads all build artifacts and publishes to every distribution channel:
 
 #### VS Code Extension
 
-- Publishes platform-specific VSIX packages to the **VS Code Marketplace** via `vsce publish --oidc` (trusted publishing). No Marketplace token is stored: the `publish` job runs in the `release` environment, and the Marketplace trusts the GitHub OIDC token of `publish.yml` in that environment for the `kilocode` publisher.
-- Publishes the same VSIX packages to **Open VSX** with the `OVSX_TOKEN` secret.
+- Publishes platform-specific VSIX packages to the **VS Code Marketplace** via `vsce publish --oidc`. The `publish` job runs in the `release` GitHub Actions environment, and the `kilocode` publisher trusts `Kilo-Org/kilocode`'s `publish.yml` workflow in that environment, so no Marketplace token is stored.
+- Publishes the same packages to **Open VSX** using `OVSX_TOKEN`.
 - Uploads all VSIX files to the **GitHub Release** as assets.
 
 #### Package Registries (stable releases only)
@@ -101,7 +101,7 @@ Downloads all build artifacts and publishes to every distribution channel:
 
 The workflow requires these GitHub token permissions:
 
-- `id-token: write` -- for npm provenance attestation and VS Code Marketplace trusted publishing
+- `id-token: write` -- for Marketplace Trusted Publishing and npm provenance attestation
 - `contents: write` -- for creating releases, pushing tags, and uploading assets
 - `packages: write` -- for publishing Docker images to GHCR
 
@@ -111,12 +111,13 @@ The following secrets must be configured in the repository. The VS Code Marketpl
 
 | Secret | Purpose |
 |---|---|
-| `KILO_API_KEY` | Kilo API key used during version computation |
-| `KILO_ORG_ID` | Kilo organization ID |
+| `KILO_API_KEY` | Kilo Gateway key for the pre-publish smoke test (`smoke-test.yml`) |
+| `KILO_ORG_ID` | Kilo organization ID for the pre-publish smoke test |
+| `BENCH_GITHUB_TOKEN` | Read access to `Kilo-Org/kilo-bench` for the pre-publish smoke test |
 | `KILO_MAINTAINER_APP_ID` | GitHub App ID for the kilo-maintainer bot (used for git commits) |
 | `KILO_MAINTAINER_APP_SECRET` | GitHub App secret for the kilo-maintainer bot |
 | `NPM_TOKEN` | npm authentication token for publishing packages |
-| `OVSX_TOKEN` | Open VSX Registry token |
+| `OVSX_TOKEN` | Open VSX Registry publishing token |
 | `AUR_KEY` | SSH private key for pushing to the AUR |
 | `ANACONDA_API_KEY` | Anaconda.org API token for uploading the conda package |
 

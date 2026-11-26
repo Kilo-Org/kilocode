@@ -689,6 +689,9 @@ export const dict = {
 
   "profile.title": "โปรไฟล์",
   "profile.notLoggedIn": "ยังไม่ได้เข้าสู่ระบบ",
+  "profile.expired": "การเข้าสู่ระบบ Kilo ของคุณหมดอายุหรือถูกเพิกถอน โปรดเข้าสู่ระบบอีกครั้งเพื่อดำเนินการต่อ",
+  "profile.unavailable": "ไม่สามารถโหลดโปรไฟล์ Kilo ของคุณได้ ขณะนี้อาจไม่สามารถเชื่อมต่อ Kilo ได้",
+  "profile.stale": "ไม่สามารถรีเฟรชโปรไฟล์ของคุณได้ กำลังแสดงข้อมูลที่โหลดล่าสุด",
   "profile.action.login": "เข้าสู่ระบบด้วย Kilo Code",
   "profile.balance.title": "ยอดคงเหลือ",
   "profile.balance.refresh": "รีเฟรชยอดคงเหลือ",

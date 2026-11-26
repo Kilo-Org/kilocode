@@ -613,6 +613,9 @@ export const dict = {
 
   "profile.title": "پروفایل",
   "profile.notLoggedIn": "وارد نشده‌اید",
+  "profile.expired": "ورود شما به Kilo منقضی یا لغو شده است. برای ادامه دوباره وارد شوید.",
+  "profile.unavailable": "بارگیری نمایه Kilo شما ممکن نشد. ممکن است Kilo در حال حاضر در دسترس نباشد.",
+  "profile.stale": "به‌روزرسانی نمایه شما ممکن نشد. آخرین اطلاعات بارگیری‌شده نمایش داده می‌شود.",
   "profile.action.login": "ورود با Kilo Code",
   "profile.balance.title": "موجودی",
   "profile.balance.refresh": "بازخوانی موجودی",

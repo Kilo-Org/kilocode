@@ -67,10 +67,6 @@ jobs:
       # kilocode_change start - install deps for version script workspace resolution
       - name: Install dependencies
         run: bun install
-
-      - name: Install Kilo
-        if: inputs.bump || inputs.version
-        run: bun i -g @kilocode/cli
       # kilocode_change end
 
       - id: version
@@ -82,8 +78,6 @@ jobs:
           KILO_BUMP: ${{ inputs.bump }}
           KILO_VERSION: ${{ inputs.version }}
           KILO_PRE_RELEASE: ${{ inputs.pre_release }}
-          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
-          KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
     outputs:
       version: ${{ steps.version.outputs.version }}
       release: ${{ steps.version.outputs.release }}
@@ -185,7 +179,7 @@ jobs:
     name: Attest CLI SBOM (${{ matrix.artifact }})
     needs: build-cli
     if: needs.build-cli.outputs.sbom-subjects != '' && fromJSON(needs.build-cli.outputs.sbom-subjects).include[0] != null
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     continue-on-error: ${{ vars.SBOM_ENFORCE != 'true' }}
     permissions:
       contents: read
@@ -219,33 +213,34 @@ jobs:
       matrix:
         include:
           - target: darwin-arm64
-            runner: macos-15
+            runner: blacksmith-6vcpu-macos-15
             uname: arm64
             package: "@kilocode/cli-darwin-arm64"
             mode: host
-          - target: darwin-x64
-            runner: macos-15-intel
-            uname: x86_64
-            package: "@kilocode/cli-darwin-x64"
-            mode: host
+          # Paused until Blacksmith offers an Intel macOS runner.
+          # - target: darwin-x64
+          #   runner: macos-15-intel
+          #   uname: x86_64
+          #   package: "@kilocode/cli-darwin-x64"
+          #   mode: host
           - target: linux-arm64
-            runner: ubuntu-24.04-arm
+            runner: blacksmith-4vcpu-ubuntu-2404-arm
             uname: aarch64
             package: "@kilocode/cli-linux-arm64"
             mode: host
           - target: linux-x64
-            runner: ubuntu-24.04
+            runner: blacksmith-4vcpu-ubuntu-2404
             uname: x86_64
             package: "@kilocode/cli-linux-x64"
             mode: host
           - target: alpine-arm64
-            runner: ubuntu-24.04-arm
+            runner: blacksmith-4vcpu-ubuntu-2404-arm
             uname: aarch64
             package: "@kilocode/cli-linux-arm64-musl"
             mode: alpine
             platform: linux/arm64
           - target: alpine-x64
-            runner: ubuntu-24.04
+            runner: blacksmith-4vcpu-ubuntu-2404
             uname: x86_64
             package: "@kilocode/cli-linux-x64-musl"
             mode: alpine
@@ -344,10 +339,10 @@ jobs:
       matrix:
         include:
           - arch: arm64
-            runner: windows-11-arm
+            runner: windows-11-arm # kilocode_change - Blacksmith has no native Windows ARM64 image.
             package: "@kilocode/cli-windows-arm64"
           - arch: x64
-            runner: windows-2025
+            runner: blacksmith-4vcpu-windows-2025 # kilocode_change
             package: "@kilocode/cli-windows-x64"
     steps:
       - uses: actions/download-artifact@v8
@@ -413,7 +408,7 @@ jobs:
   sign-cli-windows:
     name: Sign CLI (Windows EV)
     needs: build-cli
-    runs-on: windows-2025
+    runs-on: blacksmith-4vcpu-windows-2025
     if: github.repository == 'Kilo-Org/kilocode'
     timeout-minutes: 20
     steps:
@@ -451,6 +446,9 @@ jobs:
 
       - name: Sign Windows binaries with EV certificate
         shell: bash
+        env:
+          AZURE_KEY_VAULT_URI: ${{ secrets.AZURE_KEY_VAULT_URI }}
+          AZURE_CERT_NAME: ${{ secrets.AZURE_CERT_NAME }}
         run: |
           # AzureSignTool requires an explicit auth option (-kva/-kvi/-kvm; there is no
           # DefaultAzureCredential fallback). Mint a Key Vault token from the azure/login
@@ -458,8 +456,8 @@ jobs:
           token="$(az account get-access-token --resource https://vault.azure.net --query accessToken -o tsv)"
           for exe in dist/@kilocode/cli-windows-*/bin/kilo.exe; do
             AzureSignTool sign -v \
-              -kvu "${{ secrets.AZURE_KEY_VAULT_URI }}" \
-              -kvc "${{ secrets.AZURE_CERT_NAME }}" \
+              -kvu "$AZURE_KEY_VAULT_URI" \
+              -kvc "$AZURE_CERT_NAME" \
               -kva "$token" \
               -tr http://timestamp.digicert.com \
               -d "Kilo CLI" \
@@ -528,7 +526,7 @@ jobs:
     needs:
       - build-cli
       - sign-cli-windows
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.repository == 'Kilo-Org/kilocode'
     timeout-minutes: 15
     steps:
@@ -627,7 +625,10 @@ jobs:
     uses: ./.github/workflows/smoke-test.yml
     with:
       cli_version: ${{ needs.version.outputs.version }}
-    secrets: inherit
+    secrets:
+      KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
+      KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
+      BENCH_GITHUB_TOKEN: ${{ secrets.BENCH_GITHUB_TOKEN }}
   # kilocode_change end
 
   publish:
@@ -639,7 +640,7 @@ jobs:
       - validate-cli-unix # kilocode_change
       - validate-cli-windows # kilocode_change
       - smoke-test
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-24.04 # kilocode_change - npm trusted publishing requires a GitHub-hosted runner.
     environment: release # kilocode_change - VS Code Marketplace trusted publishing policy
     steps:
       - uses: actions/checkout@v6 # kilocode_change
@@ -709,11 +710,15 @@ jobs:
             ${{ runner.os }}-apt-aur-
 
       - name: Setup SSH for AUR
+        # kilocode_change start
+        env:
+          AUR_KEY: ${{ secrets.AUR_KEY }}
+        # kilocode_change end
         run: |
           sudo apt-get update
           sudo apt-get install -y pacman-package-manager
           mkdir -p ~/.ssh
-          echo "${{ secrets.AUR_KEY }}" > ~/.ssh/id_rsa
+          (umask 077 && printf '%s\n' "$AUR_KEY" > ~/.ssh/id_rsa) # kilocode_change
           chmod 600 ~/.ssh/id_rsa
           git config --global user.email "kilo-maintainer[bot]@users.noreply.github.com"
           git config --global user.name "kilo-maintainer[bot]"
@@ -728,7 +733,6 @@ jobs:
           AUR_KEY: ${{ secrets.AUR_KEY }}
           GITHUB_TOKEN: ${{ steps.committer.outputs.token }}
           NPM_CONFIG_PROVENANCE: true
-          # kilocode_change - the VS Code Marketplace publish uses trusted publishing from the release environment, so no VSCE_PAT
           OPENVSX_TOKEN: ${{ secrets.OVSX_TOKEN }}
           SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }} # kilocode_change
 

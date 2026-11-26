@@ -52,7 +52,7 @@
   <!-- packages/opencode/src/kilocode/provider/error.ts -->
 - <https://docs.github.com/en/actions/how-tos/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services>
   <!-- packages/opencode/src/cli/cmd/github.handler.ts -->
-- <https://docs.mistral.ai/studio-api/conversations/reasoning>
+- <https://docs.mistral.ai/inference/conversations/reasoning>
   <!-- packages/opencode/src/provider/transform.ts -->
 - <https://docs.venice.ai/overview/guides/reasoning-models#reasoning-effort>
   <!-- packages/opencode/src/provider/transform.ts -->

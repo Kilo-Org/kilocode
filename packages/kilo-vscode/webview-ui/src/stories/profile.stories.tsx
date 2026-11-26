@@ -94,11 +94,18 @@ const directUsage: ProviderUsageData = {
 }
 
 const noop = () => {}
-const render = (profileData: ProfileData | null, providerUsage: ProviderUsageData, height: number, error?: string) => (
+const render = (
+  profileData: ProfileData | null,
+  providerUsage: ProviderUsageData,
+  height: number,
+  error?: string,
+  status?: "expired" | "unavailable",
+) => (
   <StoryProviders noPadding>
     <div style={{ width: "420px", height: `${height}px` }}>
       <ProfileView
         profileData={profileData}
+        profileStatus={status}
         providerUsage={providerUsage}
         providerUsageError={error}
         deviceAuth={idleAuth}
@@ -130,6 +137,21 @@ export const ScrollableUsage: Story = {
 export const NotLoggedIn: Story = {
   name: "ProfileView — not logged in",
   render: () => render(null, directUsage, 620),
+}
+
+export const LoginExpired: Story = {
+  name: "ProfileView — login expired",
+  render: () => render(null, directUsage, 620, undefined, "expired"),
+}
+
+export const ProfileUnavailable: Story = {
+  name: "ProfileView — profile unavailable",
+  render: () => render(null, directUsage, 620, undefined, "unavailable"),
+}
+
+export const ProfileStale: Story = {
+  name: "ProfileView — refresh failed, last profile shown",
+  render: () => render(personalProfile, usage, 900, undefined, "unavailable"),
 }
 
 export const OrganizationContext: Story = {

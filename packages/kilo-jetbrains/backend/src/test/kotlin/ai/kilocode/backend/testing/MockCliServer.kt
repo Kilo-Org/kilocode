@@ -2,6 +2,7 @@ package ai.kilocode.backend.testing
 
 import java.io.BufferedWriter
 import java.io.OutputStreamWriter
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -80,6 +81,7 @@ class MockCliServer : AutoCloseable {
     @Volatile var lastAuthDeletePath: String? = null
     @Volatile var lastConfigPatchBody: String? = null
     @Volatile var lastTelemetryLevelBody: String? = null
+    val telemetryPosted = CompletableDeferred<Unit>()
     @Volatile var telemetryGate: CountDownLatch? = null
     @Volatile var telemetryStatus = 200
     @Volatile var telemetryAllowed = true
@@ -550,6 +552,7 @@ class MockCliServer : AutoCloseable {
                 }
                 bare == "/telemetry/level" && method == "POST" -> {
                     lastTelemetryLevelBody = body
+                    telemetryPosted.complete(Unit)
                     telemetryGate?.await()
                     val enabled = JSON.parseToJsonElement(body).jsonObject.getValue("enabled")
                     config = mergeConfig(config, """{"experimental":{"openTelemetry":$enabled}}""")
