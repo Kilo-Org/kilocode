@@ -44,6 +44,21 @@ test("accepts the draft that holds exactly the checked assets", async () => {
   }
 })
 
+test("accepts the signed digest list with CRLF line ends", async () => {
+  const f = await fixture()
+  try {
+    expect(await check({ draft: f.draft, dist: f.dist, signed: `${f.zips}\r\n` })).toEqual([])
+    expect(await check({ draft: f.draft, dist: f.dist, signed: `${f.zips}\r` })).toEqual([])
+    const two = `${"a".repeat(64)}  kilo-windows-arm64.zip\r\n${"b".repeat(64)}  kilo-windows-x64.zip\r\n`
+    expect([...signed(two)]).toEqual([
+      ["kilo-windows-arm64.zip", "a".repeat(64)],
+      ["kilo-windows-x64.zip", "b".repeat(64)],
+    ])
+  } finally {
+    await rm(f.root, { recursive: true, force: true })
+  }
+})
+
 test("refuses replaced, extra, missing, unsigned and stale assets", async () => {
   const f = await fixture()
   const run = () => check({ draft: f.draft, dist: f.dist, signed: f.zips })

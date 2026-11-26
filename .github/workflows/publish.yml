@@ -612,13 +612,14 @@ jobs:
           # rmt remote-tape "host:path" and dies with "Cannot connect to D".
           tar --zstd --force-local -cf "$RUNNER_TEMP/kilo-windows-signed.tar.zst" ./@kilocode/cli-windows-*/bin/kilo.exe
 
-      # pack-signed-cli checks this digest before it merges the overlay.
+      # pack-signed-cli checks this digest before it merges the overlay. Out-File would end the line
+      # with CRLF on Windows, so outputs are written with LF only.
       - name: Record signed Windows binaries digest
         id: signed
         shell: pwsh
         run: |
           $sha = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $env:RUNNER_TEMP 'kilo-windows-signed.tar.zst')).Hash.ToLowerInvariant()
-          "sha256=$sha" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          [IO.File]::AppendAllText($env:GITHUB_OUTPUT, "sha256=$sha`n")
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -652,7 +653,9 @@ jobs:
           }
           [IO.File]::WriteAllText($sums, ($lines -join "`n"))
           $list = foreach ($name in $names) { "$($digests[$name])  $name" }
-          @("sha256<<KILO_SIGNED_ZIPS") + $list + @("KILO_SIGNED_ZIPS") | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          # LF only: the runner keeps a CR inside a multiline value.
+          $output = @("sha256<<KILO_SIGNED_ZIPS") + $list + @("KILO_SIGNED_ZIPS")
+          [IO.File]::AppendAllText($env:GITHUB_OUTPUT, ($output -join "`n") + "`n")
 
       # upload-cli already uploaded unsigned Windows zips and the checksum file to the draft
       # release; replace them so release assets match what npm/VSIX ship.
@@ -1077,7 +1080,7 @@ jobs:
           for platform in "${!archives[@]}"; do
             archive="${archives[$platform]}"
             case "$archive" in
-              kilo-windows-*) want="$(awk -v name="$archive" '$2 == name { print $1 }' <<< "$SIGNED_ZIPS")" ;;
+              kilo-windows-*) want="$(printf '%s\n' "$SIGNED_ZIPS" | tr -d '\r' | awk -v name="$archive" '$2 == name { print $1 }')" ;;
               *) want="$(jq -r --arg name "$archive" '.entries[] | select(.artifact == $name) | .sha256' "$manifest")" ;;
             esac
             if ! [[ "$want" =~ ^[0-9a-f]{64}$ ]]; then

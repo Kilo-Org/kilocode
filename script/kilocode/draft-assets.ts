@@ -12,10 +12,10 @@ import type { Manifest } from "./sbom/manifest.ts"
 const MANIFEST = "cli-sbom-evidence.json"
 const SUMS = "kilo-cli-SHA256SUMS"
 
-/** Parses the `<sha256>  <zip>` lines sign-cli-windows records for the zips it uploads. */
+/** Parses the `<sha256>  <zip>` lines sign-cli-windows records for the zips it uploads (LF or CRLF). */
 export function signed(text: string) {
   const zips = new Map<string, string>()
-  for (const line of text.split("\n").filter((item) => item.trim() !== "")) {
+  for (const line of text.split(/\r\n|\n|\r/).filter((item) => item.trim() !== "")) {
     const match = /^([0-9a-f]{64}) {2}(kilo-windows-[a-z0-9-]+\.zip)$/.exec(line)
     if (!match) throw new Error(`Invalid signed zip digest line: ${JSON.stringify(line)}`)
     if (zips.has(match[2])) throw new Error(`${match[2]} is listed twice in the signed zip digests`)
