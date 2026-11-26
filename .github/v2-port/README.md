@@ -6,8 +6,24 @@ the automated form of the `pr-track-v1` skill.
 
 ## What triggers a run
 
-`.github/workflows/v2-port-tracker.yml` runs after a PR merges into a base branch, when the PR touches
-`packages/opencode/**`. `gate.mjs` then decides whether the PR actually qualifies:
+`.github/workflows/v2-port-tracker.yml` runs on every push to `main` that touches `packages/opencode/**`. A
+merged PR lands as such a push. `prs.mjs` maps each commit the push introduced that touches
+`packages/opencode/` (plus the head commit) to the merged PR behind it
+(`GET /repos/{repo}/commits/{sha}/pulls`) and deduplicates the numbers, so a rebase merge with several
+commits, or a merge queue push with several PRs, gives each PR one `track` job and one issue:
+
+- The head commit is looked up first, then at most 49 more, newest first. A warning and the run summary give
+  the number skipped.
+- A failed lookup is logged and skipped. The job fails only when every lookup failed. Each request is aborted
+  after 20 seconds, a rate limit is waited out for at most 30 seconds per wait, up to two waits per request,
+  and no lookup starts after six minutes.
+- An in-scope commit with no associated PR is tried by the `(#N)` or `Merge pull request #N` in its subject.
+  The number counts only if that PR merged into `main` as a commit of the same push, so an upstream `(#N)` is
+  ignored. If the whole push resolves nothing, the subjects of its other in-scope commits are tried too. A
+  warning names every in-scope commit that still resolves to no PR.
+- In each of these cases, replay a missed PR with `workflow_dispatch` (`pr_number`) from `main`.
+
+`gate.mjs` then decides whether each PR actually qualifies:
 
 | Outcome | Condition |
 |---|---|
@@ -21,6 +37,7 @@ The gate is deterministic and costs nothing, so most merged PRs never reach the 
 
 | File | Role |
 |---|---|
+| `prs.mjs` | Maps a push to its merged PRs (or takes the `pr_number` input) and deduplicates them. `prs.test.mjs` covers it. |
 | `gate.mjs` | Qualification + writes `v2-port-out/pr.json` and `pr.diff`. `gate.test.mjs` covers it. |
 | `prompt.md` | The agent's instructions. Loads the vendored `.kilo/skills/pr-track-v1/SKILL.md` and applies the CI-only deltas. |
 | `issue.mjs` | Draft validation, dedup, label ensure, issue create, assignee resolution, PR back-link. `issue.test.mjs` covers it. |
@@ -34,7 +51,7 @@ CI share one source of truth. CI-only differences (author assignment, no `gh`, n
 The agent is steered by untrusted PR text — titles, bodies, diffs, and review comments from any
 contributor. So:
 
-- The workflow runs on `pull_request_target` and checks out the **base branch tip**, never the PR head ref.
+- The workflow runs on `push` to `main` and checks out the pushed `main` commit, never the PR head ref.
   No contributor code is ever executed, and checkout uses `persist-credentials: false` so the workflow
   token is not written into the agent's workspace.
 - The agent step receives **no `GH_TOKEN`**. `KILO_CONFIG_CONTENT` denies `bash`, `webfetch`, `websearch`,
@@ -103,15 +120,16 @@ body, and the PR back-link is upserted rather than duplicated.
 | API error mid-way | Red run; re-run dedups and upserts |
 
 Artifacts (`pr.json`, `pr.diff`, the generated draft, and `draft-log-*.txt`) are uploaded on every run
-for 14 days.
+for 14 days, one `v2-port-out-<N>` artifact per PR.
 
 ## Tests
 
 ```bash
+node .github/v2-port/prs.test.mjs
 node .github/v2-port/gate.test.mjs
 node .github/v2-port/issue.test.mjs
 ```
 
-`issue.test.mjs` drives the real `issue.mjs` against a local stub of the GitHub API via the
-`DOCS_SYNC_API_BASE` hook, so dedup, assignee resolution, and comment idempotency are exercised as real
-code. The same two commands run in the workflow's `selftest` job.
+`prs.test.mjs` and `issue.test.mjs` drive the real scripts against a local stub of the GitHub API via the
+`DOCS_SYNC_API_BASE` hook, so push-to-PR mapping, dedup, assignee resolution, and comment idempotency are
+exercised as real code. The workflow's `selftest` job runs every `*.test.mjs` in this directory.
