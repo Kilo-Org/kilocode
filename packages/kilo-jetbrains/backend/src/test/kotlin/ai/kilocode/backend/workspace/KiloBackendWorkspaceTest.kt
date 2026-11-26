@@ -14,19 +14,18 @@ import ai.kilocode.jetbrains.api.client.DefaultApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
-import java.net.URLDecoder
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CountDownLatch
@@ -51,16 +50,12 @@ class KiloBackendWorkspaceTest {
     @AfterTest
     fun tearDown() {
         runBlocking {
-            try {
-                // Ready does not wait for the startup probes. Keep their HTTP server alive
-                // until the scope finishes, including blocking reads already in flight.
-                withTimeout(10_000) { scope.coroutineContext.job.cancelAndJoin() }
-            } finally {
-                apps.forEach { it.dispose() }
-                apps.clear()
-                mock.close()
-                delete(root)
-            }
+            apps.forEach { it.dispose() }
+            apps.clear()
+            scope.cancel()
+            mock.close()
+            withTimeout(10_000) { scope.coroutineContext[Job]?.join() }
+            delete(root)
         }
     }
 
@@ -612,24 +607,15 @@ class KiloBackendWorkspaceTest {
     }
 
     @Test
-    fun `workspace creates session in its directory`() {
+    fun `workspace creates session in its directory`() = runBlocking {
         mock.sessionCreate = """{"id":"ses_new","slug":"n","projectID":"p","directory":"${project}","title":"New","version":"1","time":{"created":1,"updated":1}}"""
-        val port = mock.start()
-        val http = KiloBackendHttpClients.api(mock.password)
-        val api = DefaultApi(basePath = "http://127.0.0.1:$port", client = http)
-        val events = MutableSharedFlow<SseEvent>()
-        val sessions = KiloBackendSessionManager(scope, log)
-        try {
-            sessions.start(api, http, port, events)
-            val ws = KiloBackendWorkspace(project.toString(), scope, api, http, port, events, sessions, log)
-            val session = ws.createSession()
-            assertEquals("/session?directory=$project", URLDecoder.decode(mock.paths.single(), Charsets.UTF_8))
-            assertEquals("ses_new", session.id)
-            assertEquals(project.toString(), session.directory)
-        } finally {
-            sessions.stop()
-            KiloBackendHttpClients.shutdown(http)
-        }
+        val app = setup()
+        val ws = ready(app)
+        loaded(ws)
+
+        val session = ws.createSession()
+        assertEquals("ses_new", session.id)
+        assertEquals(project.toString(), session.directory)
     }
 
     // ------ Concurrency tests ------

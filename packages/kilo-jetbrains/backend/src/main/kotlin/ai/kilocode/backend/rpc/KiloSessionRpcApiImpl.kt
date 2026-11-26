@@ -36,8 +36,6 @@ import com.intellij.openapi.components.service
 import ai.kilocode.log.KiloLog
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -516,10 +514,11 @@ class KiloSessionRpcApiImpl internal constructor(
             if (permissions.isNotEmpty() || questions.isNotEmpty()) {
                 log.info("${ChatLogSummary.sid(id)} route=rpc-events replay permissions=${permissions.size} questions=${questions.size}")
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            // A CLI restart may cancel the hosted attachment read without cancelling this RPC.
-            // Keep the live subscription in that case; propagate cancellation of the collector itself.
-            currentCoroutineContext().ensureActive()
+            // App not ready yet or HTTP failure — the live flow will still deliver events once the
+            // connection is up, and recoverPending in the frontend covers the startup case.
             log.debug { "${ChatLogSummary.sid(id)} route=rpc-events replay skipped: ${e.message}" }
         }
     }
