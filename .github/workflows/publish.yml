@@ -85,6 +85,8 @@ jobs:
 
   build-cli:
     needs: version
+    permissions: # kilocode_change
+      contents: write # kilocode_change - upload CLI archives and SBOMs to the draft release
     runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.repository == 'Kilo-Org/kilocode'
     steps:
