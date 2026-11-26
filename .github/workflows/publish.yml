@@ -1100,7 +1100,7 @@ jobs:
           echo "::add-mask::$credential"
           echo "credential received"
 
-          # The same request as `vsce verify-pat kilocode` (vsce 4.1.0): the publisher's role assignments answer 200
+          # The same request as `vsce verify-pat kilocode` (vsce 4.1.x): the publisher's role assignments answer 200
           # when the credential holds any role on it (Creator, Owner, Contributor, Reader) and 403 otherwise.
           roles="$RUNNER_TEMP/marketplace-roles.json"
           status="$(curl --silent --show-error --output "$roles" --write-out '%{http_code}' --config - \
