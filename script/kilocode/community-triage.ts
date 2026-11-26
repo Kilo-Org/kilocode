@@ -1,7 +1,7 @@
 // Triage automation for community (non-maintainer) pull requests and issues.
 //
 //   label  Runs on PR/issue events (community-label.yml). Adds `community`,
-//          `needs-triage` and `area:*` labels.
+//          `needs-triage` and `area:*` labels. Uses public data only.
 //   sweep  Runs twice a week (community-sweep.yml). Derives each community PR's
 //          state, syncs status labels, closes stale ones and writes the digest.
 //
@@ -395,7 +395,7 @@ const trusted = new Set(["OWNER", "MEMBER", "COLLABORATOR"])
 
 // Logins that count as maintainers although they are not in the org: bot and
 // agent accounts, and people outside the org. The file is shared with other
-// tools. Org members are found with the member token, not listed here.
+// tools. Org members are found by the sweep with the member token, not listed here.
 export function parse(data: unknown) {
   const list = (data as { logins?: unknown } | null)?.logins
   const valid = (item: unknown) => typeof item === "string" && /^[a-z\d](?:[a-z\d-]{0,37}[a-z\d])?$/i.test(item)
@@ -410,6 +410,13 @@ const listed = () =>
     .json()
     .then(parse))
 const cache = new Map<string, boolean>()
+
+// Maintainer by public data: what GitHub shows on the item, or the shared list.
+// The label job decides with this alone. GitHub shows private org members as
+// plain contributors here, so the sweep corrects them later.
+export function known(login: string, assoc: string, list: Set<string>) {
+  return trusted.has(assoc) || list.has(login.toLowerCase())
+}
 
 async function api(path: string, init?: RequestInit & { token?: string; ok?: number[] }) {
   const res = await fetch(`https://api.github.com${path}`, {
@@ -426,7 +433,8 @@ async function api(path: string, init?: RequestInit & { token?: string; ok?: num
 }
 
 // Without MEMBER_TOKEN every private org member looks like a community author.
-// Fail the run, so a missing secret is seen at once and does not label team PRs.
+// Fail the sweep, so a missing secret is seen at once and team PRs keep no
+// community labels.
 export function needMember(value: string | undefined) {
   if (!value)
     throw new Error(
@@ -434,10 +442,10 @@ export function needMember(value: string | undefined) {
     )
 }
 
-// GITHUB_TOKEN cannot see private org members, so they show up as plain
-// contributors. MEMBER_TOKEN (read:org) fixes that.
+// Sweep only. GITHUB_TOKEN cannot see private org members, so they show up as
+// plain contributors. MEMBER_TOKEN (read:org) fixes that.
 async function maintainer(login: string, assoc: string) {
-  if (trusted.has(assoc) || (await listed()).has(login.toLowerCase())) return true
+  if (known(login, assoc, await listed())) return true
   const key = login.toLowerCase()
   const hit = cache.get(key)
   if (hit !== undefined) return hit
@@ -503,8 +511,10 @@ async function files(num: number) {
   }
 }
 
+// Public data only: this job runs on fork PRs and issues and holds no org
+// credential. A private org member is labeled as community here, and the
+// next sweep removes the labels from their PR.
 async function onevent() {
-  needMember(process.env.MEMBER_TOKEN)
   const event = await Bun.file(process.env.GITHUB_EVENT_PATH!).json()
   const pr = event.pull_request
   const item = pr ?? event.issue
@@ -513,7 +523,7 @@ async function onevent() {
 
   // A reopened PR may already be triaged. The sweep decides its status.
   const fresh = event.action === "opened"
-  const community = !(await maintainer(login, item.author_association))
+  const community = !known(login, item.author_association, await listed())
   const tags = new Set<string>()
   if (community) tags.add(label.community)
   if (community && fresh) tags.add(label.triage)

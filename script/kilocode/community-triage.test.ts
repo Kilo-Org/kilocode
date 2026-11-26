@@ -6,6 +6,7 @@ import {
   easy,
   hasPriority,
   kind,
+  known,
   needMember,
   parse,
   labels,
@@ -492,6 +493,38 @@ describe("needMember", () => {
 
   test("accepts a token", () => {
     expect(() => needMember("token")).not.toThrow()
+  })
+})
+
+describe("known", () => {
+  const list = new Set(["kilo-maintainer", "someone-outside"])
+
+  test("trusts OWNER, MEMBER and COLLABORATOR", () => {
+    for (const assoc of ["OWNER", "MEMBER", "COLLABORATOR"]) expect(known("anyone", assoc, list)).toBe(true)
+  })
+
+  test("trusts listed logins in any case", () => {
+    expect(known("Someone-Outside", "CONTRIBUTOR", list)).toBe(true)
+    expect(known("kilo-maintainer", "NONE", list)).toBe(true)
+  })
+
+  test("treats everyone else as community", () => {
+    for (const assoc of ["CONTRIBUTOR", "FIRST_TIME_CONTRIBUTOR", "FIRST_TIMER", "NONE", "MANNEQUIN"])
+      expect(known("stranger", assoc, list)).toBe(false)
+  })
+})
+
+describe("the label job uses public data only", () => {
+  // community-label.yml runs on fork PRs and issues without an org credential.
+  // The private member check belongs to the sweep.
+  test("onevent reads no member token", async () => {
+    const source = await Bun.file(new URL("./community-triage.ts", import.meta.url)).text()
+    const start = source.indexOf("async function onevent()")
+    const body = source.slice(start, source.indexOf("\n}\n", start))
+    expect(start).toBeGreaterThan(-1)
+    expect(body).not.toContain("MEMBER_TOKEN")
+    expect(body).not.toContain("needMember")
+    expect(body).not.toMatch(/\bmaintainer\(/)
   })
 })
 

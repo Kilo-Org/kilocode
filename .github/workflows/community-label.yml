@@ -6,7 +6,9 @@ name: Community label
 #
 # pull_request_target runs with write access, even for fork PRs. That is safe
 # here because the job only checks out the base branch and never runs code from
-# the PR. It reads PR metadata (title, author, file names) as data.
+# the PR. It reads PR metadata (title, author, file names) as data, and it uses
+# only the job token. Private org members look like community authors here;
+# community-sweep.yml corrects their PRs on its next run.
 
 on:
   pull_request_target:
@@ -41,6 +43,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-          # Lets the job see private org members. See the docs.
-          MEMBER_TOKEN: ${{ secrets.COMMUNITY_TRIAGE_MEMBER_TOKEN }}
         run: bun run script/kilocode/community-triage.ts label
