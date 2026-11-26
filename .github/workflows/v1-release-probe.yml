@@ -2,8 +2,9 @@
 name: V1 release runner probe
 
 on:
-  push:
-    branches: [v1-release-readiness]
+  pull_request:
+    branches: [main]
+    paths: [.github/workflows/v1-release-probe.yml]
 
 permissions:
   contents: read
@@ -15,18 +16,26 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        label: [ubuntu-24.04, windows-11-arm]
+        label: [ubuntu-24.04, windows-11-arm, ubuntu-slim]
     runs-on: ${{ matrix.label }}
     timeout-minutes: 5
     steps:
+      - name: Verify GitHub-hosted runner assignment
+        shell: bash
+        env:
+          HOSTING: ${{ runner.environment }}
+        run: |
+          echo "Runner: $HOSTING ($RUNNER_OS/$RUNNER_ARCH)"
+          test "$HOSTING" = github-hosted
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
           fetch-depth: 1
-      - name: Read release PR metadata
+      - name: Read this PR's changed files
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
-          gh api "repos/$GITHUB_REPOSITORY/pulls/16572/files" --jq 'length'
+          gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/files" --jq 'length'
