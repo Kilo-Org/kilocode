@@ -294,6 +294,8 @@ export interface ConfigureAgentManagerSetupScriptMessage {
 
 export interface OpenProfilePanelRequest {
   type: "openProfilePanel"
+  /** Start the device login once the Profile panel is open. */
+  login?: boolean
 }
 
 export interface OpenConfigFileRequest {
