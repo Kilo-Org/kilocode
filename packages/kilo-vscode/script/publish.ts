@@ -66,14 +66,11 @@ for (const target of targets) {
   console.log(`  ✅ Published ${target} to VS Code Marketplace`)
 
   console.log(`\n📤 Publishing ${target} to Open VSX${prerelease ? " (pre-release)" : ""}...`)
-  await retry(
-    () => $`${ovsx} publish ${flag} --skip-duplicate --pat ${process.env.OPENVSX_TOKEN} --packagePath ${vsixPath}`,
-    {
-      attempts: 3,
-      delay: 30_000,
-      label: `ovsx publish ${target}`,
-    },
-  )
+  await retry(() => $`${ovsx} publish --trusted-publishing ${flag} --skip-duplicate --packagePath ${vsixPath}`, {
+    attempts: 3,
+    delay: 30_000,
+    label: `ovsx publish ${target}`,
+  })
   console.log(`  ✅ Published ${target} to Open VSX`)
 }
 
