@@ -71,11 +71,14 @@ runs:
       shell: bash
 
     # kilocode_change start - serve the token from a credential helper outside the
-    # workspace instead of writing it into the origin URL in .git/config
+    # workspace, registered only for the repositories the token covers, instead of
+    # writing it into the origin URL in .git/config
     - name: Configure git credentials
       env:
         TOKEN: ${{ steps.apptoken.outputs.token }}
+        OWNER: ${{ github.repository_owner }}
         REPO: ${{ github.repository }}
+        REPOSITORIES: ${{ inputs.repositories }}
       run: |
         helper="${RUNNER_TEMP}/git-committer-credential-helper"
         (
@@ -89,8 +92,19 @@ runs:
         EOF
         )
         chmod 700 "$helper"
-        git config --global --replace-all credential.https://github.com.helper ""
-        git config --global --add credential.https://github.com.helper "$helper"
+        # Git matches the credential URL path by whole segments, so the bare and
+        # .git forms of a repository URL need separate entries.
+        urls=()
+        for name in $(printf '%s' "$REPOSITORIES" | tr ',' ' '); do
+          urls+=("https://github.com/${OWNER}/${name}" "https://github.com/${OWNER}/${name}.git")
+        done
+        if [ "${#urls[@]}" -eq 0 ]; then
+          urls=("https://github.com/${OWNER}/")
+        fi
+        for url in "${urls[@]}"; do
+          git config --global --replace-all "credential.${url}.helper" ""
+          git config --global --add "credential.${url}.helper" "$helper"
+        done
         git remote set-url origin "https://github.com/${REPO}"
       shell: bash
     # kilocode_change end
