@@ -113,7 +113,7 @@ The PR can change release metadata such as `packages/kilo-jetbrains/gradle.prope
 
 ## Merge and Publish
 
-When the release PR is merged, the `publish-jetbrains` workflow dispatches a publish run of itself on `main` for that PR, titled `publish-jetbrains PR #<number>`. Publishing runs only from `main`. The publish run validates the existing tag and release PR markers:
+When the release PR is merged, the `publish-jetbrains` workflow dispatches a publish run of itself on `main` for that PR, titled `publish-jetbrains PR #<number>`. Publishing runs only from `main`, and so does `publish-jetbrains-bundled`. The publish run validates with the scripts on `main` that the PR targets `main`, that its merge commit and the tag commit are both on `main`, and the existing tag and release PR markers:
 
 ```text
 jetbrains/v<version>

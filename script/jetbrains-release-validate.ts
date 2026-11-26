@@ -23,18 +23,21 @@ Usage: bun script/jetbrains-release-validate.ts --pr <number> --merge <sha> [--d
 --merge is the commit checked out for this release; it must equal the release PR merge commit.
 
 Validates a merged JetBrains release PR and the pre-created immutable release tag.
+The PR must target main, and its merge commit and the tag commit must both be on origin/main.
 This helper never creates, moves, deletes, or pushes tags.
 `)
   process.exit(0)
 }
 
-const pr = values.pr ?? process.env.PR_NUMBER
-if (!pr) throw new Error("--pr is required")
+const pr = String(values.pr ?? process.env.PR_NUMBER ?? "").trim()
+if (!/^[1-9]\d*$/.test(pr))
+  throw new Error(`--pr must be a positive integer, got ${values.pr ?? process.env.PR_NUMBER}`)
 const expected = values.merge ?? process.env.MERGE_COMMIT
 if (!expected) throw new Error("--merge is required")
 if (!/^[0-9a-f]{40}$/i.test(expected)) throw new Error(`Invalid expected merge commit: ${expected}`)
 
 type Pull = {
+  baseRefName: string
   body: string
   headRefName: string
   isCrossRepository: boolean
@@ -45,10 +48,11 @@ type Pull = {
 }
 
 const data: Pull =
-  await $`gh pr view ${pr} --repo ${repo} --json body,headRefName,isCrossRepository,labels,mergedAt,mergeCommit,state`.json()
+  await $`gh pr view ${pr} --repo ${repo} --json baseRefName,body,headRefName,isCrossRepository,labels,mergedAt,mergeCommit,state`.json()
 const labels = new Set(data.labels.map((item) => item.name))
 if (!labels.has("jetbrains-release")) throw new Error("PR is missing jetbrains-release label")
 if (data.isCrossRepository) throw new Error("JetBrains release PR must come from this repository")
+if (data.baseRefName !== "main") throw new Error(`JetBrains release PR must target main, not ${data.baseRefName}`)
 if (data.state !== "MERGED" || !data.mergedAt) throw new Error("JetBrains release PR must be merged")
 if (!data.mergeCommit?.oid) throw new Error("PR has no merge commit")
 if (expected.toLowerCase() !== data.mergeCommit.oid.toLowerCase()) {
@@ -79,11 +83,14 @@ if (!/^jetbrains\/v\d+\.\d+\.\d+(-rc\.\d+)?$/.test(tag)) throw new Error(`Invali
 if (!/^[0-9a-f]{40}$/i.test(commit)) throw new Error(`Invalid JetBrains commit: ${commit}`)
 
 await $`git fetch origin --tags`
+await $`git fetch origin +refs/heads/main:refs/remotes/origin/main`
+await onMain(data.mergeCommit.oid, `Merge commit of release PR ${pr}`)
 const existing = await $`git rev-parse -q --verify ${`refs/tags/${tag}`}`.nothrow()
 if (existing.exitCode !== 0) throw new Error(`${tag} does not exist`)
 
 const sha = (await $`git rev-list -n 1 ${tag}`.text()).trim()
 if (sha !== commit) throw new Error(`${tag} points at ${sha}, expected ${commit}`)
+await onMain(sha, `${tag} commit`)
 
 const prop = await props()
 if (prop !== ver)
@@ -98,6 +105,7 @@ if (!changelog.includes(`## [${ver}]`)) throw new Error(`CHANGELOG.md is missing
 const marketplace = kind === "rc" ? "eap" : "default"
 const cli = kind === "rc" ? "rc" : "latest"
 const output = {
+  pr,
   version: ver,
   kind,
   tag,
@@ -120,6 +128,11 @@ if (process.env.GITHUB_OUTPUT && !values.dry) {
 function marker(body: string, key: string) {
   const line = body.split(/\r?\n/).find((item) => item.startsWith(`${key}:`))
   return line?.slice(key.length + 1).trim()
+}
+
+async function onMain(sha: string, what: string) {
+  const res = await $`git merge-base --is-ancestor ${sha} refs/remotes/origin/main`.nothrow().quiet()
+  if (res.exitCode !== 0) throw new Error(`${what} ${sha} is not on main`)
 }
 
 function need(body: string, key: string) {

@@ -25,7 +25,7 @@ env:
 
 jobs:
   validate:
-    if: github.repository == 'Kilo-Org/kilocode'
+    if: github.repository == 'Kilo-Org/kilocode' && github.ref == 'refs/heads/main'
     runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: read
@@ -37,6 +37,13 @@ jobs:
       channel: ${{ steps.release.outputs.marketplace_channel }}
       merge: ${{ steps.release.outputs.merge }}
     steps:
+      - name: Require main
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Run publish-jetbrains-bundled from main (got $GITHUB_REF). Nothing was built."
+            exit 1
+          fi
+
       - name: Checkout trusted validation scripts
         uses: actions/checkout@v6
         with:
@@ -66,7 +73,7 @@ jobs:
 
   bundle:
     needs: validate
-    if: github.repository == 'Kilo-Org/kilocode'
+    if: github.repository == 'Kilo-Org/kilocode' && github.ref == 'refs/heads/main'
     runs-on: blacksmith-8vcpu-ubuntu-2404
     permissions:
       actions: read
@@ -78,6 +85,13 @@ jobs:
       version: ${{ needs.validate.outputs.version }}
       kind: ${{ needs.validate.outputs.kind }}
     steps:
+      - name: Require main
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Run publish-jetbrains-bundled from main (got $GITHUB_REF). Nothing was built."
+            exit 1
+          fi
+
       - name: Checkout merged release PR metadata
         uses: actions/checkout@v6
         with:

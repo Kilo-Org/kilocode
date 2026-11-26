@@ -23,8 +23,10 @@ on:
         required: true
         type: string
 
-# The release watcher finds the publish run of a PR by this title.
-run-name: "${{ github.event_name == 'workflow_dispatch' && format('publish-jetbrains PR #{0}', inputs.pr) || github.event.pull_request.title }}"
+# The release watcher finds the publish run of a PR by this title. fromJSON
+# drops surrounding spaces from a hand-typed number; anything that is not a
+# number fails the run before it starts.
+run-name: "${{ github.event_name == 'workflow_dispatch' && format('publish-jetbrains PR #{0}', fromJSON(inputs.pr)) || github.event.pull_request.title }}"
 
 permissions: {}
 
@@ -64,7 +66,7 @@ jobs:
       github.ref == 'refs/heads/main'
     runs-on: blacksmith-8vcpu-ubuntu-2404
     concurrency:
-      group: publish-jetbrains-pr-${{ inputs.pr }}
+      group: publish-jetbrains-pr-${{ fromJSON(inputs.pr) }}
       cancel-in-progress: false
     permissions:
       actions: write
@@ -83,19 +85,30 @@ jobs:
             exit 1
           fi
 
-      - name: Checkout merged release PR
+      # Validation runs from main, never from the commit named in the inputs.
+      - name: Checkout trusted validation scripts
         uses: actions/checkout@v6
         with:
-          fetch-depth: 0
-          ref: ${{ inputs.merge_commit }}
+          ref: ${{ github.sha }}
           persist-credentials: false
 
       - name: Setup Bun for validation
         uses: ./.github/actions/setup-bun
 
+      - name: Checkout merged release PR for validation
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          path: release
+          persist-credentials: false
+          ref: ${{ inputs.merge_commit }}
+
+      # Requires a merged, labeled release PR into main whose merge commit and
+      # tag commit are both on main. Only that tag is built and signed below.
       - name: Validate release PR and tag
         id: release
-        run: bun script/jetbrains-release-validate.ts --pr "$PR_NUMBER" --merge "$MERGE_COMMIT"
+        working-directory: release
+        run: bun ../script/jetbrains-release-validate.ts --pr "$PR_NUMBER" --merge "$MERGE_COMMIT"
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -104,8 +117,8 @@ jobs:
 
       - name: Save reviewed release metadata
         run: |
-          cp packages/kilo-jetbrains/CHANGELOG.md "$RUNNER_TEMP/jetbrains-CHANGELOG.md"
-          cp packages/kilo-jetbrains/gradle.properties "$RUNNER_TEMP/jetbrains-gradle.properties"
+          cp release/packages/kilo-jetbrains/CHANGELOG.md "$RUNNER_TEMP/jetbrains-CHANGELOG.md"
+          cp release/packages/kilo-jetbrains/gradle.properties "$RUNNER_TEMP/jetbrains-gradle.properties"
 
       - name: Checkout release tag
         uses: actions/checkout@v6
@@ -294,7 +307,7 @@ jobs:
             -f merge_commit="$MERGE_COMMIT"
         env:
           GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ inputs.pr }}
+          PR_NUMBER: ${{ steps.release.outputs.pr }}
           MERGE_COMMIT: ${{ steps.release.outputs.merge }}
 
       - name: Upload workflow artifact
