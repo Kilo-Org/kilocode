@@ -225,12 +225,11 @@ jobs:
             uname: arm64
             package: "@kilocode/cli-darwin-arm64"
             mode: host
-          # Paused until Blacksmith offers an Intel macOS runner.
-          # - target: darwin-x64
-          #   runner: macos-15-intel
-          #   uname: x86_64
-          #   package: "@kilocode/cli-darwin-x64"
-          #   mode: host
+          - target: darwin-x64
+            runner: macos-15-intel
+            uname: x86_64
+            package: "@kilocode/cli-darwin-x64"
+            mode: host
           - target: linux-arm64
             runner: blacksmith-4vcpu-ubuntu-2404-arm
             uname: aarch64
@@ -637,6 +636,7 @@ jobs:
     uses: ./.github/workflows/smoke-test.yml
     with:
       cli_version: ${{ needs.version.outputs.version }}
+      waive_bench: ${{ inputs.pre_release && needs.version.outputs.version == '7.8.34' }}
     secrets:
       KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
       KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
@@ -748,7 +748,6 @@ jobs:
           AUR_KEY: ${{ secrets.AUR_KEY }}
           GITHUB_TOKEN: ${{ steps.committer.outputs.token }}
           NPM_CONFIG_PROVENANCE: true
-          OPENVSX_TOKEN: ${{ secrets.OVSX_TOKEN }}
           SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }} # kilocode_change
 
       # kilocode_change start - repackage the already-built release archives as a

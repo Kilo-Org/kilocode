@@ -37,12 +37,10 @@ jobs:
             runner: blacksmith-4vcpu-ubuntu-2404
           - system: aarch64-linux
             runner: blacksmith-4vcpu-ubuntu-2404-arm
-          # kilocode_change start - paused until Blacksmith offers an Intel macOS runner.
-          # - system: x86_64-darwin
-          #   runner: macos-15-intel
+          - system: x86_64-darwin
+            runner: macos-15-intel
           - system: aarch64-darwin
-            runner: blacksmith-6vcpu-macos-latest
-          # kilocode_change end
+            runner: blacksmith-6vcpu-macos-latest # kilocode_change
     runs-on: ${{ matrix.runner }}
 
     # kilocode_change start
@@ -150,7 +148,7 @@ jobs:
 
           [ -f "$HASH_FILE" ] || echo '{"nodeModules":{}}' > "$HASH_FILE"
 
-          for SYSTEM in x86_64-linux aarch64-linux aarch64-darwin; do # kilocode_change
+          for SYSTEM in x86_64-linux aarch64-linux x86_64-darwin aarch64-darwin; do
             FILE="hashes/hash-${SYSTEM}/hash.txt"
             if [ -f "$FILE" ]; then
               HASH="$(tr -d '[:space:]' < "$FILE")"
