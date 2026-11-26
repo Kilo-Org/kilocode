@@ -31,7 +31,7 @@ on:
         required: false
         type: string
       waive_bench:
-        description: "Record the one-time bench exception for the 7.8.34 prerelease."
+        description: "Skip the bench tests and record the prerelease exception."
         type: boolean
         default: false
     secrets:
@@ -57,7 +57,7 @@ jobs:
     if: inputs.waive_bench
     runs-on: ubuntu-latest
     steps:
-      - run: echo 'The kilo-bench end-to-end tests were waived for prerelease 7.8.34 because the release runner cannot access the bench repo.' >> "$GITHUB_STEP_SUMMARY"
+      - run: echo 'The kilo-bench end-to-end tests are paused for prereleases until the release runner can access the bench repo.' >> "$GITHUB_STEP_SUMMARY"
 
   smoke-test:
     name: Smoke Test

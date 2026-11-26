@@ -22,8 +22,12 @@
  * rather than cancelling assets that would have succeeded.
  */
 
-import { $ } from "bun"
+import { execFile } from "node:child_process"
 import path from "node:path"
+import { setTimeout } from "node:timers/promises"
+import { promisify } from "node:util"
+
+const exec = promisify(execFile)
 
 export type Asset = { name: string; state?: string }
 
@@ -56,19 +60,18 @@ const DELAY = 5_000
 
 function pusher(tag: string) {
   return async (file: string): Promise<Result> => {
-    const res = await $`gh release upload ${tag} ${file} --clobber`.nothrow().quiet()
-    return {
-      ok: res.exitCode === 0,
-      message: `${res.stderr.toString()}\n${res.stdout.toString()}`.trim() || `exit code ${res.exitCode}`,
-    }
+    return exec("gh", ["release", "upload", tag, file, "--clobber"], { windowsHide: true }).then(
+      () => ({ ok: true, message: "" }),
+      (err: Error) => ({ ok: false, message: err.message }),
+    )
   }
 }
 
 function lister(tag: string) {
   return async (): Promise<Asset[]> => {
-    const res = await $`gh release view ${tag} --json assets`.nothrow().quiet()
-    if (res.exitCode !== 0) throw new Error(res.stderr.toString().trim() || `gh release view ${tag} failed`)
-    return ((await res.json()) as { assets?: Asset[] }).assets ?? []
+    const res = await exec("gh", ["release", "view", tag, "--json", "assets"], { windowsHide: true })
+    const release: { assets?: Asset[] } = JSON.parse(res.stdout)
+    return release.assets ?? []
   }
 }
 
@@ -117,7 +120,7 @@ export async function upload(input: Options) {
     console.warn(
       `upload: ${name} failed (attempt ${attempts - left + 1}/${attempts}), retrying in ${delay / 1000}s: ${res.message}`,
     )
-    await Bun.sleep(delay)
+    await setTimeout(delay)
     return one(file, left - 1)
   }
 
