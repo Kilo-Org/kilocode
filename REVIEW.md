@@ -17,7 +17,7 @@ CI already runs and will report failures directly. Do **not** comment on:
 - Workflow allowlist drift (`script/check-workflows.ts`)
 - Stale `packages/kilo-docs/source-links.md` (`script/extract-source-links.ts`)
 - Markdown table padding (`script/check-md-table-padding.ts`)
-- Visual regression snapshots (CI generates baselines on Linux)
+
 - Generated artifact freshness (`check-kilo-generated-artifacts.yml`)
 - Docs link checks, nix evals, container builds
 
