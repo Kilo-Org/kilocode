@@ -16,7 +16,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        label: [ubuntu-24.04, windows-11-arm, ubuntu-slim]
+        include:
+          - label: ubuntu-24.04-8core-x64
+            arch: X64
+          - label: ubuntu-24.04-8core-arm-x64
+            arch: ARM64
+          - label: windows-11-arm64
+            arch: ARM64
     runs-on: ${{ matrix.label }}
     timeout-minutes: 5
     steps:
@@ -24,9 +30,11 @@ jobs:
         shell: bash
         env:
           HOSTING: ${{ runner.environment }}
+          ARCH: ${{ matrix.arch }}
         run: |
           echo "Runner: $HOSTING ($RUNNER_OS/$RUNNER_ARCH)"
           test "$HOSTING" = github-hosted
+          test "$RUNNER_ARCH" = "$ARCH"
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
