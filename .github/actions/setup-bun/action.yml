@@ -9,6 +9,15 @@ inputs:
     description: "Additional flags to pass to 'bun install'"
     required: false
     default: ""
+  # kilocode_change start - jobs with write scopes or secrets skip the shared caches
+  # Jobs with write scopes, secrets, or outputs that feed a publish or signing job must pass
+  # cache: false so they never restore an entry another job saved. Read-only CI
+  # jobs keep the default.
+  cache:
+    description: "Restore and save the Bun dependency and executable caches; pass false in jobs with write scopes, secrets, or outputs that feed a publish or signing job"
+    required: false
+    default: "true"
+  # kilocode_change end
 runs:
   using: "composite"
   steps:
@@ -32,6 +41,7 @@ runs:
       uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0 # kilocode_change
       with:
         node-version: "24"
+        package-manager-cache: ${{ inputs.cache != 'false' }} # kilocode_change
 
     - name: Get baseline download URL
       id: bun-url
@@ -55,8 +65,10 @@ runs:
         bun-version: ${{ !steps.bun-url.outputs.url && inputs.bun-version || '' }}
         bun-version-file: ${{ !steps.bun-url.outputs.url && !inputs.bun-version && 'package.json' || '' }}
         bun-download-url: ${{ steps.bun-url.outputs.url }}
+        no-cache: ${{ inputs.cache == 'false' }} # kilocode_change
 
     - name: Get cache directory
+      if: inputs.cache != 'false' # kilocode_change
       id: cache
       shell: bash
       run: |
@@ -67,7 +79,7 @@ runs:
     # extracting the same packages itself, so Windows installs skip the cache.
     - name: Restore Bun dependencies
       id: bun-cache
-      if: runner.os != 'Windows'
+      if: runner.os != 'Windows' && inputs.cache != 'false' # kilocode_change
       uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0 # kilocode_change
       with:
         path: ${{ steps.cache.outputs.dir }}
@@ -98,7 +110,7 @@ runs:
       shell: bash
 
     - name: Save Bun dependencies
-      if: runner.os != 'Windows' && steps.bun-cache.outputs.cache-hit != 'true' && github.event_name != 'pull_request' && github.event_name != 'pull_request_target'
+      if: runner.os != 'Windows' && inputs.cache != 'false' && steps.bun-cache.outputs.cache-hit != 'true' && github.event_name != 'pull_request' && github.event_name != 'pull_request_target' # kilocode_change
       uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0 # kilocode_change
       with:
         path: ${{ steps.cache.outputs.dir }}
