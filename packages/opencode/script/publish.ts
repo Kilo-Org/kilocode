@@ -9,6 +9,7 @@ import path from "node:path"
 import { NpmPublish } from "./kilocode/npm-publish"
 import * as KiloSbom from "./kilocode/sbom"
 import * as KiloDraft from "../../../script/kilocode/draft-assets"
+import * as Artifact from "../../../script/kilocode/sbom/artifact"
 import type { Manifest } from "../../../script/kilocode/sbom/index"
 // kilocode_change end
 
@@ -23,7 +24,7 @@ const evidence: Manifest.Entry[] = []
  */
 const pending: { name: string; run: () => Promise<unknown> }[] = []
 
-/** Record SBOM evidence for one npm tarball, or an explicit failure entry. */
+/** Record SBOM evidence for one npm tarball, or an explicit failure entry that keeps its digest. */
 async function describe(file: string | undefined, name: string, version: string) {
   const described = file
     ? await KiloSbom.npmPackage({
@@ -39,7 +40,7 @@ async function describe(file: string | undefined, name: string, version: string)
   evidence.push(
     described?.entry ?? {
       artifact: file ? path.basename(file) : `${name}@${version}`,
-      sha256: "",
+      sha256: file ? await Artifact.digest(file) : "",
       distribution: "npm",
       error: `SBOM generation failed for ${name}@${version}`,
     },
@@ -352,7 +353,12 @@ async function release() {
     entries: evidence,
     expected: packages + images,
   })
-  await KiloDraft.publish({ version: Script.version, prerelease: Script.preview, files: described.files })
+  await KiloDraft.publish({
+    version: Script.version,
+    prerelease: Script.preview,
+    files: described.files,
+    entries: described.manifest.entries,
+  })
 }
 
 /** Publish the packed npm tarballs: the platform packages, then the launcher that depends on them. */

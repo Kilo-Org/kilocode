@@ -121,10 +121,18 @@ export async function undraft(id: string, fields: string[]) {
   await api(["--method", "PATCH", `repos/${repo()}/releases/${id}`, "-F", "draft=false", ...fields])
 }
 
-/** `gh release upload --clobber`, addressed by release id: drop an asset of the same name, then upload. */
+/**
+ * `gh release upload --clobber`, addressed by release id: drop an asset of the same name, then
+ * upload. Before each file the release must still be a draft; a published release stops the
+ * whole upload (no retry), before anything is deleted.
+ */
 function pusher(id: string, url: string) {
   return async (file: string): Promise<Result> => {
     const name = path.basename(file)
+    const message = (err: unknown) => (err instanceof Error ? err.message : String(err))
+    const current = await view(id).catch((err) => message(err))
+    if (typeof current === "string") return { ok: false, message: current }
+    if (!current.draft) throw new Error(`Release ${id} is no longer a draft; ${name} was not uploaded.`)
     try {
       const existing = (await assets(id)).find((item) => item.name === name)
       if (existing?.id) await remove(existing.id)
@@ -132,7 +140,7 @@ function pusher(id: string, url: string) {
       await api(["--method", "POST", "-H", "Content-Type: application/octet-stream", "--input", file, target])
       return { ok: true, message: "" }
     } catch (err) {
-      return { ok: false, message: err instanceof Error ? err.message : String(err) }
+      return { ok: false, message: message(err) }
     }
   }
 }

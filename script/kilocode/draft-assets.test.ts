@@ -154,6 +154,21 @@ test("checks a published release's distribution evidence against its own manifes
   }
 })
 
+test("refuses a sidecar the manifest records without a digest", async () => {
+  const f = await fixture()
+  try {
+    const file = path.join(f.root, "cli-distribution-sbom-evidence.json")
+    const own = await Manifest.read(file)
+    delete own.entries[0].sbomSha256
+    await Manifest.write(file, own)
+    await expect(f.run({ extra: undefined, published: true })).rejects.toThrow(
+      "kilocode-cli-1.2.3.tgz.cdx.json: the manifest records no digest",
+    )
+  } finally {
+    await rm(f.root, { recursive: true, force: true })
+  }
+})
+
 test("trusts the CLI manifest only under the recorded digest", async () => {
   const f = await fixture()
   try {

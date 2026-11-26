@@ -57,7 +57,7 @@ The `publish.yml` workflow starts with `version`, which creates the draft releas
 
 ### 4. Publish (`publish`)
 
-Downloads all build artifacts and publishes to every distribution channel, in this order. Every request to the GitHub Release addresses it by the release id the `version` job recorded, never by tag.
+Downloads all build artifacts and publishes to every distribution channel, in this order. Every write to the GitHub Release and the checks before publishing it address it by the release id the `version` job recorded; the smoke test and the conda build download assets by tag.
 
 #### Release Assets on the Draft
 
@@ -70,7 +70,7 @@ Downloads all build artifacts and publishes to every distribution channel, in th
 - Updates the `version` field in all `package.json` files across the monorepo.
 - Updates the Zed extension manifest (`extension.toml`) with the new version.
 - Rebuilds the TypeScript SDK (`packages/sdk/js`).
-- Commits the version bump, tags the commit, and pushes to the repo. If an earlier run already pushed them (tag `v<version>` on origin, pointing at a commit on `main` whose `packages/opencode/package.json` has that version), this is skipped; any other existing tag fails the run.
+- Commits the version bump, tags the commit, and pushes to the repo. If an earlier run already pushed them (tag `v<version>` on origin, pointing at a commit on `main` whose `packages/opencode/package.json` has that version), this is skipped; any other existing tag fails the run. If only the tag is missing but the `release: v<version>` commit with that version is on `main`, that commit is tagged instead of committing again.
 
 #### CLI (`@kilocode/cli`)
 

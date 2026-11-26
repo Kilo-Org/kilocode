@@ -44,12 +44,18 @@ export function list(text: string, source: string) {
   return files
 }
 
-/** `SHA256SUMS` text of a manifest, as `Manifest.checksums` writes it. */
+/**
+ * Digest of the `SHA256SUMS` text of a manifest, as `Manifest.checksums` writes it. Every
+ * sidecar must have a recorded digest: the fallback `Manifest.checksums` has for a missing one
+ * (hashing the file beside it) has no recorded value to check against.
+ */
 function sums(entries: Manifest["entries"]) {
   const lines: string[] = []
   for (const entry of [...entries].sort((a, b) => a.artifact.localeCompare(b.artifact))) {
     if (entry.sha256) lines.push(`${entry.sha256}  ${entry.artifact}`)
-    if (entry.sbom) lines.push(`${entry.sbomSha256}  ${entry.sbom}`)
+    if (!entry.sbom) continue
+    if (!/^[0-9a-f]{64}$/.test(entry.sbomSha256 ?? "")) throw new Error(`${entry.sbom}: the manifest records no digest`)
+    lines.push(`${entry.sbomSha256}  ${entry.sbom}`)
   }
   const text = `${lines.join("\n")}\n`
   return createHash("sha256").update(text).digest("hex")
@@ -118,7 +124,11 @@ export async function check(input: {
 /**
  * Reads the release with this id and fails unless it holds exactly the expected assets.
  * Draft assets are downloaded and hashed. A published release's assets carry the SHA-256
- * GitHub computed (the `digest` field), which is used when present.
+ * GitHub computed (the `digest` field), which is used when present; the manifests the check
+ * reads are downloaded, and their bytes must have that digest.
+ *
+ * Returns the release and, for a published release, the distribution manifest the check
+ * accepted: its asset id, digest and the parsed bytes that were checked.
  */
 export async function verify(input: { tag: string; release: string; extra?: Map<string, string>; prune?: boolean }) {
   const target = await release(input.release, input.tag)
@@ -150,7 +160,16 @@ export async function verify(input: { tag: string; release: string; extra?: Map<
       const published = /^sha256:[0-9a-f]{64}$/.test(item.digest ?? "") && !target.draft
       actual.set(item.name, published ? item.digest!.slice("sha256:".length) : await digest(await fetch(item)))
     }
-    const read = async (name: string) => readFile(await fetch(found.find((item) => item.name === name)!), "utf8")
+    const texts = new Map<string, string>()
+    const read = async (name: string) => {
+      const file = await fetch(found.find((item) => item.name === name)!)
+      const got = await digest(file)
+      if (got !== actual.get(name))
+        throw new Error(`${name}: downloaded bytes have digest ${got}, the release lists ${actual.get(name)}`)
+      const text = await readFile(file, "utf8")
+      texts.set(name, text)
+      return text
+    }
     problems.push(
       ...(await check({
         assets: actual,
@@ -166,7 +185,11 @@ export async function verify(input: { tag: string; release: string; extra?: Map<
     if (problems.length)
       throw new Error(`The ${label} does not hold the checked assets (${problems.length} problem(s)).`)
     console.log(`The ${label} holds exactly the ${actual.size} checked assets.`)
-    return target
+    const own = found.find((item) => item.name === DISTRIBUTION)
+    const text = texts.get(DISTRIBUTION)
+    if (target.draft || !own || text === undefined) return { release: target, distribution: undefined }
+    const manifest: Manifest = JSON.parse(text)
+    return { release: target, distribution: { id: own.id!, digest: actual.get(DISTRIBUTION)!, manifest } }
   } finally {
     await rm(dir, { recursive: true, force: true })
   }
@@ -182,8 +205,18 @@ export async function open(version: string) {
 /**
  * Uploads the publish script's own assets to the draft, checks the complete draft and only
  * then publishes the release with its notes. Nothing is uploaded to the release after this.
+ *
+ * Every npm tarball and image the distribution evidence names must carry its digest, even
+ * when its SBOM failed: a later re-run checks the npm tarballs against these digests.
  */
-export async function publish(input: { version: string; prerelease: boolean; files: string[] }) {
+export async function publish(input: {
+  version: string
+  prerelease: boolean
+  files: string[]
+  entries: Manifest["entries"]
+}) {
+  const missing = input.entries.filter((entry) => !/^[0-9a-f]{64}$/.test(entry.sha256)).map((entry) => entry.artifact)
+  if (missing.length) throw new Error(`No digest for ${missing.join(", ")}. The release was not published.`)
   const tag = `v${input.version}`
   const { id } = await open(input.version)
   await upload({ tag, release: id, files: input.files })
@@ -207,26 +240,27 @@ export async function publish(input: { version: string; prerelease: boolean; fil
 export async function recheck(input: { version: string; entries: Manifest["entries"] }) {
   const tag = `v${input.version}`
   const { id } = await open(input.version)
-  await verify({ tag, release: id })
-  const item = (await assets(id)).find((asset) => asset.name === DISTRIBUTION)!
-  const dir = await mkdtemp(path.join(process.env.RUNNER_TEMP ?? os.tmpdir(), "release-evidence-"))
-  try {
-    await download(item.id!, path.join(dir, DISTRIBUTION))
-    const evidence: Manifest = JSON.parse(await readFile(path.join(dir, DISTRIBUTION), "utf8"))
-    const recorded = new Map(evidence.entries.map((entry) => [entry.artifact, entry.sha256]))
-    const problems: string[] = []
-    for (const entry of input.entries.filter((item) => item.distribution === "npm")) {
-      const want = recorded.get(entry.artifact)
-      if (want === entry.sha256 && /^[0-9a-f]{64}$/.test(want)) continue
-      const got = entry.sha256 || "none"
-      problems.push(`${entry.artifact}: digest ${got}, the published evidence names ${want ?? "nothing"}`)
+  // The distribution manifest whose bytes the check downloaded and accepted, not a second copy.
+  const { distribution: own } = await verify({ tag, release: id })
+  if (!own) throw new Error(`The published release ${tag} holds no checked distribution evidence.`)
+  const recorded = new Map(own.manifest.entries.map((entry) => [entry.artifact, entry.sha256]))
+  const problems: string[] = []
+  for (const entry of input.entries.filter((item) => item.distribution === "npm")) {
+    const want = recorded.get(entry.artifact)
+    // A release published before every entry had to carry a digest can name a tarball without one.
+    if (want !== undefined && !/^[0-9a-f]{64}$/.test(want)) {
+      console.log(`::warning::${entry.artifact}: the published evidence records no digest; not compared`)
+      continue
     }
-    for (const problem of problems) console.log(`::error::${problem}`)
-    if (problems.length) throw new Error(`The npm tarballs are not the ones the published release ${tag} describes.`)
-    console.log(`Release ${tag} (${id}) is already published; its assets and the npm tarballs match its evidence.`)
-  } finally {
-    await rm(dir, { recursive: true, force: true })
+    if (want === entry.sha256) continue
+    const got = entry.sha256 || "none"
+    problems.push(`${entry.artifact}: digest ${got}, the published evidence names ${want ?? "nothing"}`)
   }
+  for (const problem of problems) console.log(`::error::${problem}`)
+  if (problems.length) throw new Error(`The npm tarballs are not the ones the published release ${tag} describes.`)
+  console.log(
+    `Release ${tag} (${id}) is already published; its assets and the npm tarballs match its evidence (asset ${own.id}, sha256 ${own.digest}).`,
+  )
 }
 
 if (import.meta.main) {
