@@ -4,6 +4,8 @@ import { isRecord } from "@/util/record"
 export const KILO_ERROR_CODES = {
   PAID_MODEL_AUTH_REQUIRED: "PAID_MODEL_AUTH_REQUIRED",
   PROMOTION_MODEL_LIMIT_REACHED: "PROMOTION_MODEL_LIMIT_REACHED",
+  /** The gateway rejected the stored credential: the user was signed out and has to sign in again. */
+  INVALID_TOKEN: "INVALID_TOKEN",
 } as const
 
 export type KiloErrorCode = (typeof KILO_ERROR_CODES)[keyof typeof KILO_ERROR_CODES]
@@ -27,6 +29,8 @@ export function kiloErrorTitle(code: KiloErrorCode): string {
       return "You need to sign in to use this model"
     case KILO_ERROR_CODES.PROMOTION_MODEL_LIMIT_REACHED:
       return "You need to sign up to keep going"
+    case KILO_ERROR_CODES.INVALID_TOKEN:
+      return "You've been signed out of Kilo"
   }
 }
 
@@ -39,6 +43,8 @@ export function kiloErrorDescription(code: KiloErrorCode): string {
       return "Sign in or create an account to access over 500 models, use credits at cost, or bring your own key."
     case KILO_ERROR_CODES.PROMOTION_MODEL_LIMIT_REACHED:
       return "Sign up for free to continue and explore 500 other models. Takes 2 minutes, no credit card required. Or come back later."
+    case KILO_ERROR_CODES.INVALID_TOKEN:
+      return "Your Kilo session is no longer valid. Sign in again, then resend your message."
   }
 }
 
@@ -61,6 +67,15 @@ export function showKiloErrorToast(
 }
 
 /**
+ * One-line form for output that cannot render a card, such as `kilo run`.
+ */
+export function kiloErrorLine(error: ReturnType<NamedError["toObject"]>): string | undefined {
+  const code = parseKiloErrorCode(error)
+  if (!code) return undefined
+  return `${kiloErrorTitle(code)}. Run \`kilo auth login\` to connect to Kilo Gateway.`
+}
+
+/**
  * Extract the specific Kilo error code from an APIError's responseBody.
  * Returns the code string if found, undefined otherwise.
  *
@@ -70,16 +85,18 @@ export function showKiloErrorToast(
  */
 export function parseKiloErrorCode(error: ReturnType<NamedError["toObject"]>): KiloErrorCode | undefined {
   if (error.name !== "APIError") return undefined
-  const responseBody = isRecord(error.data) ? error.data.responseBody : undefined
+  const data = isRecord(error.data) ? error.data : undefined
+  const responseBody = data?.responseBody
   if (typeof responseBody !== "string") return undefined
   try {
     const body = JSON.parse(responseBody)
     // Backend sends: { error: { code: "PAID_MODEL_AUTH_REQUIRED" } }
     // or: { code: "PROMOTION_MODEL_LIMIT_REACHED" }
     const code = body?.error?.code ?? body?.code
-    if (typeof code === "string" && KILO_ERROR_CODE_VALUES.includes(code)) {
-      return code as KiloErrorCode
-    }
+    if (typeof code !== "string" || !KILO_ERROR_CODE_VALUES.includes(code)) return undefined
+    // INVALID_TOKEN is a generic name, so it only counts on the 401 the gateway sends with it.
+    if (code === KILO_ERROR_CODES.INVALID_TOKEN && data?.statusCode !== 401) return undefined
+    return code as KiloErrorCode
   } catch {}
   return undefined
 }
