@@ -634,7 +634,7 @@ jobs:
     uses: ./.github/workflows/smoke-test.yml
     with:
       cli_version: ${{ needs.version.outputs.version }}
-      waive_bench: ${{ inputs.pre_release && needs.version.outputs.version == '7.8.34' }}
+      waive_bench: ${{ inputs.pre_release }}
     secrets:
       KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
       KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
