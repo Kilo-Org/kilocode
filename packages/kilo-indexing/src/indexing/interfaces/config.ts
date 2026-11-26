@@ -17,7 +17,7 @@ export interface CodeIndexConfig {
   kiloOptions?: { apiKey: string; baseUrl?: string; organizationId?: string }
   openAiOptions?: { apiKey: string }
   ollamaOptions?: { baseUrl: string; modelId?: string }
-  openAiCompatibleOptions?: { baseUrl: string; apiKey?: string }
+  openAiCompatibleOptions?: { baseUrl: string; apiKey?: string; sendDimensions?: boolean }
   geminiOptions?: { apiKey: string }
   mistralOptions?: { apiKey: string }
   vercelAiGatewayOptions?: { apiKey: string }
@@ -48,6 +48,7 @@ export type PreviousConfigSnapshot = {
   ollamaBaseUrl?: string
   openAiCompatibleBaseUrl?: string
   openAiCompatibleApiKey?: string
+  openAiCompatibleSendDimensions?: boolean
   geminiApiKey?: string
   mistralApiKey?: string
   vercelAiGatewayApiKey?: string

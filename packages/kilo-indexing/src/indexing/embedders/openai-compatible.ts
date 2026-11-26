@@ -43,6 +43,7 @@ interface OpenAIEmbeddingResponse {
 type OpenAICompatibleOptions = {
   headers?: Record<string, string>
   dimensions?: number
+  sendDimensions?: boolean
 }
 
 /**
@@ -59,6 +60,7 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
   private readonly maxItemTokens: number
   private readonly headers: Record<string, string>
   private readonly dimensions?: number
+  private readonly sendDimensions: boolean
   private readonly omitted = new Set<string>()
 
   // Global rate limiting state shared across all instances
@@ -106,6 +108,7 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
     this.maxItemTokens = maxItemTokens || MAX_ITEM_TOKENS
     this.headers = options.headers ?? {}
     this.dimensions = options.dimensions
+    this.sendDimensions = options.sendDimensions ?? true
   }
 
   /**
@@ -273,30 +276,38 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
       }
       return { response, projected }
     }
-    const dimensions = this.omitted.has(model) ? undefined : this.dimensions
+    const dimensions = this.sendDimensions ? (this.omitted.has(model) ? undefined : this.dimensions) : undefined
 
     try {
       return check(await send(dimensions))
     } catch (error) {
       const status = extractStatusCode(error)
+      const message = error instanceof Error ? error.message : ""
       const param = error instanceof Error && "param" in error && error.param === "dimensions"
-      if (
-        dimensions === undefined ||
-        (status !== 400 && status !== 422) ||
-        !(error instanceof Error) ||
-        (!param && !/\bdimensions\b/i.test(error.message)) ||
-        !/unsupported|not support|not allowed|not permitted|unknown|unrecognized|unexpected|extra|does not|doesn't/i.test(
-          error.message,
+      const namesDimensions = param || /\bdimensions\b/i.test(message)
+      const unsupportedWording =
+        /unsupported|not support|not allowed|not permitted|unknown|unrecognized|unexpected|extra|does not|doesn't/i.test(
+          message,
         )
-      ) {
+      // A gateway that answers with a body the SDK cannot read leaves no way to tell
+      // which field it disliked, so the only way to find out is to retry without it.
+      const unreadableResponse = message === "" || /status code \(no body\)/i.test(message)
+      const rejectedDimensions = namesDimensions ? unsupportedWording : unreadableResponse
+      if (dimensions === undefined || (status !== 400 && status !== 422) || !rejectedDimensions) {
         throw error
       }
 
       log.warn("Embedding endpoint rejected the dimensions parameter, retrying without it")
       // Keep the configured store size. Omit dimensions only after a matching response succeeds.
-      const result = check(await send(undefined))
-      if (result.projected) this.omitted.add(model)
-      return result
+      try {
+        const result = check(await send(undefined))
+        if (result.projected) this.omitted.add(model)
+        return result
+      } catch (retryError) {
+        // The retry failed the same way, so dimensions were not the cause.
+        if (extractStatusCode(retryError) === status) throw error
+        throw retryError
+      }
     }
   }
 
