@@ -63,6 +63,10 @@ jobs:
           fetch-depth: 0
 
       - uses: ./.github/actions/setup-bun
+        # kilocode_change start - job holds write scopes, so skip the shared dependency cache
+        with:
+          cache: false
+        # kilocode_change end
 
       # kilocode_change start - install deps for version script workspace resolution
       - name: Install dependencies
@@ -93,6 +97,10 @@ jobs:
           fetch-tags: true
 
       - uses: ./.github/actions/setup-bun
+        # kilocode_change start - job holds write scopes, so skip the shared dependency cache
+        with:
+          cache: false
+        # kilocode_change end
 
       - uses: ./.github/actions/setup-sbom # kilocode_change
 
@@ -567,6 +575,10 @@ jobs:
       - uses: actions/checkout@v6 # kilocode_change
 
       - uses: ./.github/actions/setup-bun
+        # kilocode_change start - job holds write scopes, so skip the shared dependency cache
+        with:
+          cache: false
+        # kilocode_change end
 
       - uses: ./.github/actions/setup-sbom # kilocode_change - VSIX sidecars scan the packaged archive
 
@@ -650,6 +662,10 @@ jobs:
         # kilocode_change end
 
       - uses: ./.github/actions/setup-bun
+        # kilocode_change start - job holds write scopes and secrets, so skip the shared dependency cache
+        with:
+          cache: false
+        # kilocode_change end
 
       - uses: ./.github/actions/setup-sbom # kilocode_change - npm and OCI sidecars scan the published bytes
 

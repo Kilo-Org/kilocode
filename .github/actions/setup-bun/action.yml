@@ -1,9 +1,14 @@
 name: "Setup Bun"
 description: "Setup Bun with caching and install dependencies"
 inputs:
-  # kilocode_change start - allow lightweight jobs to install only the pinned runtime
+  # kilocode_change start - allow lightweight jobs to install only the pinned runtime,
+  # and jobs with write scopes or secrets to skip the shared dependency cache
   install:
     description: "Install and cache repository dependencies"
+    required: false
+    default: "true"
+  cache:
+    description: "Restore and save the dependency cache; set to false in jobs that hold write scopes or secrets"
     required: false
     default: "true"
   # kilocode_change end
@@ -28,7 +33,7 @@ runs:
     # kilocode_change end
 
     - name: Get cache directory
-      if: inputs.install != 'false' # kilocode_change
+      if: inputs.install != 'false' && inputs.cache != 'false' # kilocode_change
       id: cache
       shell: bash
       run: echo "dir=$(bun pm cache)" >> "$GITHUB_OUTPUT"
@@ -36,7 +41,7 @@ runs:
     # Restoring the ~1 GB cache buys nothing on Windows even with Defender exclusions # kilocode_change
     # (measured 83-102s Setup Bun with cache vs ~86s fresh install); keep Windows off it. # kilocode_change
     - name: Restore Bun dependencies
-      if: inputs.install != 'false' && runner.os != 'Windows' # kilocode_change
+      if: inputs.install != 'false' && inputs.cache != 'false' && runner.os != 'Windows' # kilocode_change
       id: bun-cache
       uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
       with:
@@ -110,7 +115,7 @@ runs:
 
     # Do not upload a Windows cache that Windows jobs intentionally never restore. # kilocode_change
     - name: Save Bun dependencies
-      if: inputs.install != 'false' && runner.os != 'Windows' && steps.bun-cache.outputs.cache-hit != 'true' && github.event_name != 'pull_request' && github.event_name != 'pull_request_target' # kilocode_change
+      if: inputs.install != 'false' && inputs.cache != 'false' && runner.os != 'Windows' && steps.bun-cache.outputs.cache-hit != 'true' && github.event_name != 'pull_request' && github.event_name != 'pull_request_target' # kilocode_change
       uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
       with:
         path: ${{ steps.cache.outputs.dir }}

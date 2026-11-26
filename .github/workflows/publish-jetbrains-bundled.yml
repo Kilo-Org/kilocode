@@ -148,6 +148,8 @@ jobs:
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
+        with:
+          cache: false # job holds write scopes, id-token and signing secrets
 
       - name: Install dependencies
         run: bun install --frozen-lockfile

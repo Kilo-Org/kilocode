@@ -25,6 +25,10 @@ jobs:
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
+        # kilocode_change start - job uses a repository secret, so skip the shared dependency cache
+        with:
+          cache: false
+        # kilocode_change end
 
       - name: Build site
         run: bun run --filter @kilocode/kilo-docs build
