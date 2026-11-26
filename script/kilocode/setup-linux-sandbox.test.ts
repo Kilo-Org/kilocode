@@ -45,6 +45,7 @@ describe.skipIf(process.platform === "win32")("Linux sandbox toolchain setup", (
     const output = path.join(dir, "path")
     if (existing) await Bun.write(file, existing === "valid" ? archive : tampered)
     const requests: string[] = []
+    let flaky = 0
     const server = Bun.serve({
       hostname: "127.0.0.1",
       port: 0,
@@ -58,6 +59,9 @@ describe.skipIf(process.platform === "win32")("Linux sandbox toolchain setup", (
         if (route === "bad") return new Response(tampered)
         if (route === "large") return new Response(new Uint8Array(49091961))
         if (route === "slow") return new Response(new ReadableStream())
+        if (route === "flaky") {
+          return flaky++ === 0 ? new Response("unavailable", { status: 503 }) : new Response(archive)
+        }
         return new Response("unavailable", { status: 503 })
       },
     })
@@ -70,6 +74,9 @@ describe.skipIf(process.platform === "win32")("Linux sandbox toolchain setup", (
           GITHUB_PATH: output,
           ZIG_SHA256: new Bun.CryptoHasher("sha256").update(archive).digest("hex"),
           ZIG_MIRRORS: mirrors.map((mirror) => `${server.url}${mirror}`).join("\n"),
+          // Short stall and retry waits keep the stalled-mirror and second-pass cases fast.
+          ZIG_SPEED_TIME: "2",
+          ZIG_RETRY_DELAY: "0",
         },
         stdout: "pipe",
         stderr: "pipe",
@@ -104,7 +111,7 @@ describe.skipIf(process.platform === "win32")("Linux sandbox toolchain setup", (
   test("never reuses an archive already on disk, even a verified one", async () => {
     const result = await run(["missing"], "valid")
     expect(result.code).not.toBe(0)
-    expect(result.requests).toEqual(["missing"])
+    expect(result.requests).toEqual(["missing", "missing"])
     expect(result.extracted).toBe(false)
     expect(result.installed).toBe(false)
   })
@@ -116,13 +123,21 @@ describe.skipIf(process.platform === "win32")("Linux sandbox toolchain setup", (
     expect(result.installed).toBe(true)
   })
 
-  test("fails without extracting or retaining unverified archives", async () => {
+  test("fails after two passes without extracting or retaining unverified archives", async () => {
     const result = await run(["missing", "bad"])
     expect(result.code).not.toBe(0)
+    expect(result.requests).toEqual(["missing", "bad", "missing", "bad"])
     expect(result.log).toContain("Could not obtain the verified Zig 0.14.0 archive")
     expect(result.extracted).toBe(false)
     expect(result.retained).toBe(false)
     expect(result.installed).toBe(false)
+  })
+
+  test("retries the whole list once when every source fails the first pass", async () => {
+    const result = await run(["missing", "flaky"])
+    expect(result.code, result.log).toBe(0)
+    expect(result.requests).toEqual(["missing", "flaky", "missing", "flaky"])
+    expect(result.installed).toBe(true)
   })
 
   test("abandons a stalled mirror and tries the next source", async () => {
@@ -130,5 +145,5 @@ describe.skipIf(process.platform === "win32")("Linux sandbox toolchain setup", (
     expect(result.code, result.log).toBe(0)
     expect(result.requests).toEqual(["slow", "good"])
     expect(result.installed).toBe(true)
-  }, 30000)
+  })
 })

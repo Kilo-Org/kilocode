@@ -7,31 +7,45 @@ runs:
     - name: Setup Zig
       env:
         ZIG_SHA256: "473ec26806133cf4d1918caf1a410f8403a13d979726a9045b421b685031a982"
-        # Community mirrors use mirror/filename; only the origin needs a version directory.
+        # Fastest sources from https://ziglang.org/download/community-mirrors.txt, measured
+        # 2026-11-26, then the origin. Community mirrors use mirror/filename; only the origin
+        # needs a version directory. The digest decides, so any https source is acceptable.
         ZIG_MIRRORS: |
+          https://zig.squirl.dev
+          https://zig.bcr.ist
+          https://zig.chainsafe.dev
+          https://zig.vortan.dev/zig
+          https://zigmirror.com
           https://zig.linus.dev/zig
-          https://zigmirror.hryx.net/zig
           https://ziglang.org/download/0.14.0
       run: |
         set -euo pipefail
         file="$RUNNER_TEMP/zig-linux-x86_64-0.14.0.tar.xz"
         # Mirrors are untrusted. Always download (never restore from a shared cache, whose
         # extraction could write files before this check) and verify against the
-        # repository's pinned digest before extraction.
+        # repository's pinned digest before extraction. A mirror that drops below 50 KB/s
+        # for 30 seconds is abandoned; the whole list is tried twice before failing.
+        # ZIG_SPEED_TIME and ZIG_RETRY_DELAY exist so the tests can shorten the waits.
         rm -f "$file"
-        while IFS= read -r mirror; do
-          [ -n "$mirror" ] || continue
-          echo "Downloading Zig from $mirror"
-          if curl --fail --silent --show-error --location \
-            --connect-timeout 5 --max-time 60 --speed-limit 102400 --speed-time 15 \
-            --max-filesize 49091960 \
-            "$mirror/zig-linux-x86_64-0.14.0.tar.xz" --output "$file" \
-            && echo "$ZIG_SHA256  $file" | sha256sum -c - > /dev/null; then
-            break
+        for pass in 1 2; do
+          while IFS= read -r mirror; do
+            [ -n "$mirror" ] || continue
+            echo "Downloading Zig from $mirror"
+            if curl --fail --silent --show-error --location \
+              --connect-timeout 10 --max-time 300 --speed-limit 51200 --speed-time "${ZIG_SPEED_TIME:-30}" \
+              --max-filesize 49091960 \
+              "$mirror/zig-linux-x86_64-0.14.0.tar.xz" --output "$file" \
+              && echo "$ZIG_SHA256  $file" | sha256sum -c - > /dev/null; then
+              break 2
+            fi
+            echo "::warning::Zig download failed or checksum mismatched at $mirror; trying the next source"
+            rm -f "$file"
+          done <<< "$ZIG_MIRRORS"
+          if [ "$pass" = 1 ]; then
+            echo "::warning::No Zig source worked; retrying the list once"
+            sleep "${ZIG_RETRY_DELAY:-10}"
           fi
-          echo "::warning::Zig download failed or checksum mismatched at $mirror; trying the next source"
-          rm -f "$file"
-        done <<< "$ZIG_MIRRORS"
+        done
         if [ ! -f "$file" ] || ! echo "$ZIG_SHA256  $file" | sha256sum -c - > /dev/null; then
           echo "::error::Could not obtain the verified Zig 0.14.0 archive"
           exit 1
