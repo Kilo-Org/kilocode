@@ -899,18 +899,25 @@ class HostedStreamLifecycleTest {
                 systems.send(it.sessionID)
             }
         }
+        assertTrue(mock.awaitFeed(system), "initial system stream did not open")
+        // Live events can arrive while the RPC collector is still replaying pending prompts.
+        // Hold the replay's reattach on the old CLI so stop() consistently interrupts it.
+        val gate = CountDownLatch(1)
+        mock.hostedAttachGate = gate
+        mock.pendingPermissionsStatuses.add(410)
         val nativeJob = scope.launch {
             api.events(session, HostedIDs.workspace("cloud", "wrk_1")).collect { received.send(it) }
         }
-        assertTrue(mock.awaitFeed(path), "initial native stream did not open")
-        assertTrue(mock.awaitFeed(system), "initial system stream did not open")
-        next(received) { it is ChatEventDto.Resnapshot && it.phase == "start" }
-        mock.pushFeed(path, """{"type":"session.status","properties":{"sessionID":"ses_cloud","status":{"type":"busy"}}}""")
-        next(received) { it is ChatEventDto.SessionStatusChanged }
-
-        // Production restart/reinstall calls stop() before start(); the RPC collectors above stay
-        // subscribed throughout, so retained ownership must not be erased with the transport.
-        app.hosted.stop()
+        try {
+            assertTrue(mock.awaitFeed(path), "initial native stream did not open")
+            next(received) { it is ChatEventDto.Resnapshot && it.phase == "start" }
+            mock.pushFeed(path, """{"type":"session.status","properties":{"sessionID":"ses_cloud","status":{"type":"busy"}}}""")
+            next(received) { it is ChatEventDto.SessionStatusChanged }
+            assertTrue(mock.awaitRequestCount(attach, 2), "pending replay did not request a replacement attachment")
+            app.hosted.stop()
+        } finally {
+            gate.countDown()
+        }
         assertTrue(mock.awaitRequestCount("/kilocode/session-host/attachment/wrk_att_test", 1))
 
         val replacement = MockCliServer()

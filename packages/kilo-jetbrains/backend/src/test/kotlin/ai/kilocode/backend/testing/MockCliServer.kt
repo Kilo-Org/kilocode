@@ -189,6 +189,7 @@ class MockCliServer : AutoCloseable {
     @Volatile var lastHostedProfileDefaultBody: String? = null
     @Volatile var hostedAttach = """{"attachmentID":"wrk_att_test","session":{"providerID":"cloud","sessionID":"ses_cloud"},"expiresAt":${System.currentTimeMillis() + 600_000}}"""
     @Volatile var hostedAttachStatus = 200
+    @Volatile var hostedAttachGate: CountDownLatch? = null
     val hostedAttachStatuses = ConcurrentLinkedQueue<Int>()
     val hostedAttachments = ConcurrentHashMap<String, String>()
     val hostedStreamStatus = ConcurrentHashMap<String, Int>()
@@ -795,6 +796,7 @@ class MockCliServer : AutoCloseable {
                 }
                 bare.matches(Regex("/kilocode/session-host/session/[^/]+/[^/]+/attach")) && method == "POST" -> {
                     lastHostedAttachPath = path
+                    hostedAttachGate?.await()
                     respond(output, hostedAttachStatuses.poll() ?: hostedAttachStatus, hostedAttachments[bare] ?: hostedAttach)
                 }
                 bare.matches(Regex("/kilocode/session-host/attachment/[^/]+")) && method == "DELETE" -> {
