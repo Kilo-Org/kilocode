@@ -110,7 +110,7 @@ jobs:
 
     # kilocode_change start
     permissions:
-      contents: write
+      contents: read
     # kilocode_change end
 
     steps:

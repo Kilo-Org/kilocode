@@ -21,8 +21,7 @@ on:
         type: string
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 concurrency:
   group: prepare-jetbrains-release-${{ inputs.version }}
