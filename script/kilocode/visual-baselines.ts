@@ -7,8 +7,8 @@
 // and the baselines the run deleted) and `files/<repo path>` for every new or
 // changed baseline. Only regular PNG files under the baseline directory of the
 // artifact's own job are accepted. Symlinks, `..`, other names and other entries
-// are refused, and the metadata must match the workflow_run payload. Nothing is
-// written until every artifact has passed.
+// are refused, and the metadata must match the workflow_run payload. The planned
+// writes are capped at LIMIT. Nothing is written until every artifact has passed.
 //
 // Usage: bun script/kilocode/visual-baselines.ts <artifacts dir> <checkout dir>
 // with VR_SHA, VR_REF, VR_REPO and VR_PRS (the payload's `pull_requests` JSON).
@@ -20,6 +20,8 @@ export const DIRS = {
   "kilo-ui": "packages/kilo-docs/public/img/screenshot-tests/kilo-ui/",
   "kilo-vscode": "packages/kilo-docs/public/img/screenshot-tests/kilo-vscode/",
 } as const
+
+export const LIMIT = { files: 1000, bytes: 100 * 1024 * 1024 }
 
 export type Expected = {
   sha: string
@@ -104,6 +106,13 @@ export async function validate(root: string, expected: Expected) {
       plan.remove.push(file)
     }
   }
+  const bytes = plan.write.reduce((sum, item) => sum + lstatSync(item.from).size, 0)
+  if (plan.write.length > LIMIT.files || bytes > LIMIT.bytes) {
+    throw new Error(
+      `${plan.write.length} files and ${bytes} bytes exceed the automatic commit limit of ${LIMIT.files} files or ${LIMIT.bytes} bytes (100 MiB). ` +
+        "The new images are in the visual-regression-baselines-* artifacts of the failing Visual Regression Tests run.",
+    )
+  }
   return plan
 }
 
@@ -144,7 +153,10 @@ if (import.meta.main) {
     prs: JSON.parse(process.env.VR_PRS ?? "[]"),
   }
   if (!expected.ref || !expected.repo) throw new Error("VR_REF and VR_REPO are required")
-  const plan = await validate(root, expected)
+  const plan = await validate(root, expected).catch((err: Error) => {
+    console.log(`::error::${err.message}`)
+    process.exit(1)
+  })
   apply(plan, target)
   for (const item of plan.write) console.log(`write ${item.to}`)
   for (const file of plan.remove) console.log(`remove ${file}`)

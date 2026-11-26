@@ -76,8 +76,36 @@ jobs:
             echo "The run uploaded no baselines."
           fi
 
-      - name: Checkout default branch
+      # Baselines go only to a branch that no ruleset or branch protection covers.
+      # A deleted branch (HTTP 404) gets a notice; any other API error fails the job.
+      - name: Check target branch
         if: steps.found.outputs.found == 'true'
+        id: target
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          branch="$(jq -rn --arg ref "$HEAD_REF" '$ref | @uri')"
+          err="$RUNNER_TEMP/branch-read.err"
+          if ! rules="$(gh api "repos/${GITHUB_REPOSITORY}/rules/branches/${branch}" --jq 'length' 2> "$err")" ||
+            ! protected="$(gh api "repos/${GITHUB_REPOSITORY}/branches/${branch}" --jq '.protected' 2> "$err")"; then
+            if grep -q '(HTTP 404)' "$err"; then
+              echo "allowed=false" >> "$GITHUB_OUTPUT"
+              echo "::notice::${HEAD_REF} no longer exists; baselines are not pushed."
+              exit 0
+            fi
+            cat "$err" >&2
+            exit 1
+          fi
+          if [ "$rules" = "0" ] && [ "$protected" = "false" ]; then
+            echo "allowed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "allowed=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::${HEAD_REF} is covered by a ruleset or branch protection; baselines are not pushed to it."
+          fi
+
+      - name: Checkout default branch
+        if: steps.target.outputs.allowed == 'true'
         uses: actions/checkout@v6
         with:
           persist-credentials: false
@@ -87,7 +115,7 @@ jobs:
             script/kilocode
 
       - name: Setup Bun
-        if: steps.found.outputs.found == 'true'
+        if: steps.target.outputs.allowed == 'true'
         uses: ./.github/actions/setup-bun
         with:
           install: false
@@ -95,7 +123,7 @@ jobs:
       # Without LFS: nothing here needs the existing images, and the pull request's
       # LFS settings are never read before .lfsconfig is compared below.
       - name: Checkout tested head commit
-        if: steps.found.outputs.found == 'true'
+        if: steps.target.outputs.allowed == 'true'
         uses: actions/checkout@v6
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
@@ -104,7 +132,7 @@ jobs:
           persist-credentials: false
 
       - name: Apply baselines
-        if: steps.found.outputs.found == 'true'
+        if: steps.target.outputs.allowed == 'true'
         id: apply
         env:
           VR_SHA: ${{ github.event.workflow_run.head_sha }}
@@ -135,26 +163,8 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      # Baselines go only to a branch that no ruleset or branch protection covers.
-      - name: Check target branch
-        if: steps.apply.outputs.changed == 'true'
-        id: target
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          branch="$(jq -rn --arg ref "$HEAD_REF" '$ref | @uri')"
-          rules="$(gh api "repos/${GITHUB_REPOSITORY}/rules/branches/${branch}" --jq 'length')"
-          protected="$(gh api "repos/${GITHUB_REPOSITORY}/branches/${branch}" --jq '.protected')"
-          if [ "$rules" = "0" ] && [ "$protected" = "false" ]; then
-            echo "allowed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "allowed=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::${HEAD_REF} is covered by a ruleset or branch protection; baselines are not pushed to it."
-          fi
-
       - name: Setup Git Committer
-        if: steps.target.outputs.allowed == 'true'
+        if: steps.apply.outputs.changed == 'true'
         id: committer
         uses: ./.github/actions/setup-git-committer
         with:
@@ -164,7 +174,7 @@ jobs:
           permission-contents: write
 
       - name: Commit baselines
-        if: steps.target.outputs.allowed == 'true'
+        if: steps.apply.outputs.changed == 'true'
         env:
           TOKEN: ${{ steps.committer.outputs.token }}
         run: |
@@ -173,14 +183,14 @@ jobs:
           git -C pr-head commit --no-verify -m "chore: update visual regression baselines"
 
       - name: Check push paths
-        if: steps.target.outputs.allowed == 'true'
+        if: steps.apply.outputs.changed == 'true'
         uses: ./.github/actions/check-push-paths
         with:
           base: ${{ github.event.workflow_run.head_sha }}
           working-directory: pr-head
 
       - name: Push baselines
-        if: steps.target.outputs.allowed == 'true'
+        if: steps.apply.outputs.changed == 'true'
         working-directory: pr-head
         run: |
           set -euo pipefail

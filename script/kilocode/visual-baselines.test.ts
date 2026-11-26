@@ -1,8 +1,17 @@
 import { afterEach, describe, expect, test } from "bun:test"
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  truncateSync,
+  writeFileSync,
+} from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
-import { allowed, apply, DIRS, validate, type Expected } from "./visual-baselines"
+import { allowed, apply, DIRS, LIMIT, validate, type Expected } from "./visual-baselines"
 
 const sha = "0123456789abcdef0123456789abcdef01234567"
 const expected: Expected = {
@@ -100,6 +109,28 @@ describe("validate and apply", () => {
 
   test("returns an empty plan when no artifact was downloaded", async () => {
     expect(await validate(path.join(temp(), "missing"), expected)).toEqual({ write: [], remove: [] })
+  })
+
+  test("refuses a plan over the file count or size limit", async () => {
+    const files = Object.fromEntries(
+      Array.from({ length: LIMIT.files }, (_, i) => [`${ui}button/story-${i}-chromium-linux.png`, image]),
+    )
+    const fits = temp()
+    artifact(fits, "kilo-ui", files)
+    expect((await validate(fits, expected)).write).toHaveLength(LIMIT.files)
+
+    const count = temp()
+    artifact(count, "kilo-ui", files)
+    artifact(count, "kilo-vscode", { [`${vscode}chat/view-chromium-linux.png`]: image })
+    await expect(validate(count, expected)).rejects.toThrow(
+      `${LIMIT.files + 1} files and ${(LIMIT.files + 1) * image.length} bytes exceed the automatic commit limit`,
+    )
+
+    const size = temp()
+    const dir = artifact(size, "kilo-ui", { [`${ui}button/huge-chromium-linux.png`]: image })
+    truncateSync(path.join(dir, "files", ui, "button/huge-chromium-linux.png"), LIMIT.bytes + 1)
+    await expect(validate(size, expected)).rejects.toThrow(`1 files and ${LIMIT.bytes + 1} bytes exceed`)
+    await expect(validate(size, expected)).rejects.toThrow("visual-regression-baselines-* artifacts")
   })
 
   test("refuses a path outside the job's baseline directory", async () => {
