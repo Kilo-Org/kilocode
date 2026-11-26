@@ -1,5 +1,45 @@
 # Changelog
 
+## 7.8.32
+
+### Patch Changes
+
+- [#16443](https://github.com/Kilo-Org/kilocode/pull/16443) [`1eb4d10`](https://github.com/Kilo-Org/kilocode/commit/1eb4d10391f5feac464db99ed479dcdc72d51fd7) - Keep the current account visible when the details cannot be loaded right after signing in or switching organization, and show a notice with a Refresh action that retries. The notice stays available while the details are still unavailable, and a read that brings the account clears it. A switch made from the session account switcher reports the same outcome with an action that opens the account settings.
+
+- [#16527](https://github.com/Kilo-Org/kilocode/pull/16527) [`b12e612`](https://github.com/Kilo-Org/kilocode/commit/b12e612bd3ad9c4073ea57caaf0197fad7f98d63) - Show Cloud workspace compute status, such as Active or Sleeping, only in the workspace editor instead of duplicating it in the Agent Manager tree. The status remains available in the tree row tooltip.
+
+- [#16393](https://github.com/Kilo-Org/kilocode/pull/16393) [`3dee754`](https://github.com/Kilo-Org/kilocode/commit/3dee7548532ba622b6aa73f0450b85e063868da0) - Keep Agent Manager working when a worktree listing repeats the primary checkout. Previously the duplicate row could crash the list with "ActiveTree keys must be unique" during a refresh or worktree delete.
+
+- [#16528](https://github.com/Kilo-Org/kilocode/pull/16528) [`4008ac3`](https://github.com/Kilo-Org/kilocode/commit/4008ac3212f9276d8b0cbc777413b7effb925c5f) - Show workspace counts in Agent Manager section headers, match the IDE theme, and drag section headers to reorder them with their contents.
+
+- [#16413](https://github.com/Kilo-Org/kilocode/pull/16413) [`95c4008`](https://github.com/Kilo-Org/kilocode/commit/95c40086f8d301e84965dbd4f211fbee528d65cb) - Report backend fetch failures by resource, HTTP status and response size, and keep user-facing fetch errors short.
+
+- [#16454](https://github.com/Kilo-Org/kilocode/pull/16454) [`f29945c`](https://github.com/Kilo-Org/kilocode/commit/f29945c7c1fe565293430dd53f096c6703dd67ca) - Answering the plan follow-up question with **Start new session** now opens the new session it starts, so the saved plan carries over into it.
+
+- [#16501](https://github.com/Kilo-Org/kilocode/pull/16501) [`e8da38e`](https://github.com/Kilo-Org/kilocode/commit/e8da38e0ef343be28aee234ee2401287005235bd) - Cloud workspace sessions now follow the selected account context: each organization gets its own hosted attachment, and switching organization starts a fresh Cloud session state.
+
+- [#16471](https://github.com/Kilo-Org/kilocode/pull/16471) [`65c1564`](https://github.com/Kilo-Org/kilocode/commit/65c156489431d1eec47ca250d5ab39f2eaea3a58) - Keep a Cloud workspace permission card on Allow once and Reject, because a Cloud workspace stores no per-pattern allow rules.
+
+- [#16416](https://github.com/Kilo-Org/kilocode/pull/16416) [`f708f7b`](https://github.com/Kilo-Org/kilocode/commit/f708f7b69bca55d10e562603574099d6a60df71a) - Legacy custom modes now migrate to the same permission keys the CLI reads: only a command group grants shell commands, a browser group grants the Integrated Browser tool of the VS Code client, an MCP group grants the tools of each migrated server, and a file restriction becomes a wildcard glob that keeps the files it allowed. A migrated mode's MCP grant and the CLI's own MCP tool ids come from one definition, so the grant always names the tools the CLI registers and a server name outside the Basic Multilingual Plane yields the same key in the CLI and the plugin, and the grant covers every server the loader that ran the migration converted rather than only the ones a project file declared. A file restriction that alternates at the top level keeps the files of every alternative. A file restriction made only of digits is reported and asks instead of denying the allowed files, one whose translated arm resolves against the home directory is reported and asks, one that escapes a character the glob cannot carry literally, including backslash, `*` and `?`, is reported and asks, so the migrated rule always means what the legacy pattern meant, a migrated mode in the CLI keeps the default skill permission because no legacy group governs it, the JetBrains migration denies skill and states that in its report, and an MCP group is reported when a skipped store declared a server the migration can grant and that no converted server's permission key covers, even when other servers were migrated, while a disabled entry, a local entry with no command and a remote entry with no url are not reported. An empty alternative matches the empty string. A pattern whose empty alternative is its whole body matches every path; when the alternative sits inside a longer pattern, it matches that pattern's surrounding characters instead. With both anchors the empty alternative is dropped so the alternatives that name a path survive, and a pattern whose every alternative is empty is reported and asks. A mode that lists the same group more than once keeps the narrower rule and reports the repeat in the migration warnings when the rule differs. With auto-approval on and no command lists, the migration grants shell commands and leaves other tools at their defaults. A mode that writes a group with its options in flow style keeps the file restriction that group names, and a group whose options arrive as their own entry asks instead of widening to every file. A single-quoted scalar decodes a doubled quote to one quote, and a `#` after it stays part of the value instead of starting a comment.
+
+- [#16500](https://github.com/Kilo-Org/kilocode/pull/16500) [`a4021da`](https://github.com/Kilo-Org/kilocode/commit/a4021da903445358ce564b1fc99edb2065f22fc2) - Store a migrated provider credential in the shape its provider accepts: the Kilo gateway token keeps the OAuth-shaped envelope the CLI uses for Kilo sign-in, with the organization as the account id, and every other provider stores an api credential. A migrated provider config patch carries its base URL and no secret.
+
+- [#16450](https://github.com/Kilo-Org/kilocode/pull/16450) [`53b73eb`](https://github.com/Kilo-Org/kilocode/commit/53b73eb18b4c5ca1666a2707355a87aa79e70ae1) - Report legacy provider profiles whose provider is unsupported or unrecognised as a migration result, and migrate credentials only for a provider the import can identify.
+
+- [#16406](https://github.com/Kilo-Org/kilocode/pull/16406) [`b686b98`](https://github.com/Kilo-Org/kilocode/commit/b686b987a82c641be6651087dfde973f8e9a7141) - Report when a permission or question answer is not accepted, and keep the card on screen with the answers already given so it can be sent again.
+
+- [#16408](https://github.com/Kilo-Org/kilocode/pull/16408) [`92b19f9`](https://github.com/Kilo-Org/kilocode/commit/92b19f9da9db71d19f372df9f5da7b25680d86fa) - Keep the Kilo Gateway entry managed by the gateway login flow in Provider Settings, and turn a provider back on in every configuration file that lists it as turned off when you enable it.
+
+- [#16393](https://github.com/Kilo-Org/kilocode/pull/16393) [`3dee754`](https://github.com/Kilo-Org/kilocode/commit/3dee7548532ba622b6aa73f0450b85e063868da0) - Keep JetBrains responsive when questions appear or are answered in long conversations by updating only the linked question card instead of rebuilding the transcript.
+
+- [#16393](https://github.com/Kilo-Org/kilocode/pull/16393) [`3dee754`](https://github.com/Kilo-Org/kilocode/commit/3dee7548532ba622b6aa73f0450b85e063868da0) - Reduce JetBrains chat freezes by keeping the transcript footer attached when session state or messages change.
+
+- [#16503](https://github.com/Kilo-Org/kilocode/pull/16503) [`0e6ad52`](https://github.com/Kilo-Org/kilocode/commit/0e6ad52d2a386a4a457fefee1378c839203770e2) - Report when a manual session cleanup cannot switch automatic cleanup back off, and offer a retry from the Checkpoints settings page.
+
+- [#16409](https://github.com/Kilo-Org/kilocode/pull/16409) [`cede8c3`](https://github.com/Kilo-Org/kilocode/commit/cede8c3136eec6ec1cdbf787597e1503c28edf20) - Signing out of Kilo Gateway now also clears Cloud workspace session state, so the IDE returns to a clean signed-out state and the next sign-in starts fresh.
+
+- [#16556](https://github.com/Kilo-Org/kilocode/pull/16556) [`05c9710`](https://github.com/Kilo-Org/kilocode/commit/05c971024306d992e3dea8567695fbb2f51150a5) - Show a clear "signed out" message with a sign-in action when Kilo rejects your login, instead of a generic error. The CLI points to `/connect` and `kilo auth login`. In VS Code, the Sign in button starts login in the Kilo Profile tab. JetBrains opens User Profile and resends your message once you are signed in again.
+
 ## 7.9.0
 
 ### Minor Changes
