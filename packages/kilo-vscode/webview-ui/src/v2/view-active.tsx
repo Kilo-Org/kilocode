@@ -97,6 +97,37 @@ export function skipInactiveFocus(event: FocusEvent, container: HTMLElement): vo
 }
 
 /**
+ * Pin a hidden keep-alive slot to the box it last rendered at, so it neither
+ * reflows nor re-measures while hidden, and release the pin when it is shown
+ * again. Reads no DOM: the size comes from the caller's cached observation.
+ */
+export function pinHiddenSlot(
+  active: Accessor<boolean>,
+  el: () => HTMLElement | undefined,
+  size: () => { width: number; height: number } | undefined,
+): void {
+  createComputed(
+    on(
+      active,
+      (shown) => {
+        const slot = el()
+        if (!slot) return
+        if (shown) {
+          slot.style.width = ""
+          slot.style.height = ""
+          return
+        }
+        const pinned = size()
+        if (!pinned) return
+        slot.style.width = `${pinned.width}px`
+        slot.style.height = `${pinned.height}px`
+      },
+      { defer: true },
+    ),
+  )
+}
+
+/**
  * Blur any focused descendant inside `el` when `visible()` transitions to false.
  * Runs in `createComputed` before render effects mutate DOM classes/styles so
  * Chromium does not force a synchronous style recalc inside `blur()`.

@@ -5,7 +5,6 @@ import {
   createEffect,
   createMemo,
   createSignal,
-  on,
   onCleanup,
   onMount,
   untrack,
@@ -23,7 +22,7 @@ import { V2Scope } from "../src/v2/client"
 import type { V2 } from "../src/v2/scope"
 import { SessionView } from "../src/v2/session-view"
 import type { ManagerContext } from "../src/v2/shortcut-hint"
-import { ViewActiveProvider, blurOnHide, freezeValue, skipInactiveFocus } from "../src/v2/view-active"
+import { ViewActiveProvider, blurOnHide, freezeValue, pinHiddenSlot, skipInactiveFocus } from "../src/v2/view-active"
 import { SpeechToTextStatusProvider } from "../src/components/speech-to-text/status"
 import {
   chatSlotKey,
@@ -251,25 +250,7 @@ export const ChatViewCache: Component<ChatViewCacheProps> = (props) => {
           // Blur before render effects mutate DOM classes, and pin hidden slot box
           // dimensions using the slot's last observed host size (zero DOM reads on switch).
           blurOnHide(active, () => slotEl)
-          createEffect(
-            on(
-              active,
-              (isActive) => {
-                if (!slotEl) return
-                if (!isActive) {
-                  const pinned = entry.size ?? (hostSize.width > 0 && hostSize.height > 0 ? hostSize : undefined)
-                  if (pinned) {
-                    slotEl.style.width = `${pinned.width}px`
-                    slotEl.style.height = `${pinned.height}px`
-                  }
-                  return
-                }
-                slotEl.style.width = ""
-                slotEl.style.height = ""
-              },
-              { defer: true },
-            ),
-          )
+          pinHiddenSlot(active, () => slotEl, () => entry.size ?? (hostSize.width > 0 && hostSize.height > 0 ? hostSize : undefined))
 
           const frozenReadOnly = freezeValue(active, props.readOnly)
           const frozenRowWhenEmpty = freezeValue(active, props.rowWhenEmpty)

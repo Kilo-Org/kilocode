@@ -3,7 +3,6 @@ import {
   createEffect,
   createMemo,
   createSignal,
-  on,
   onCleanup,
   onMount,
   untrack,
@@ -18,7 +17,7 @@ import type { PRComment } from "./pr/pr-types"
 import type { PRDiffSnapshot, PRTarget } from "../../src/shared/pr-comment-actions"
 import { DiffPanel } from "./DiffPanel"
 import { diffDataKey } from "./worktree-diffs"
-import { ViewActiveProvider, blurOnHide, freezeValue, skipInactiveFocus } from "../src/v2/view-active"
+import { ViewActiveProvider, blurOnHide, freezeValue, pinHiddenSlot, skipInactiveFocus } from "../src/v2/view-active"
 
 const CACHE_SIZE = 24
 /** Number of MRU diff panels kept warm in place (no content-visibility: hidden) for instant switching. */
@@ -230,25 +229,7 @@ export const DiffPanelCache: Component<Props> = (props) => {
         })
 
         blurOnHide(active, () => slotEl)
-        createEffect(
-          on(
-            active,
-            (isActive) => {
-              if (!slotEl) return
-              if (!isActive) {
-                const pinned = entry.size ?? (hostSize.width > 0 && hostSize.height > 0 ? hostSize : undefined)
-                if (pinned) {
-                  slotEl.style.width = `${pinned.width}px`
-                  slotEl.style.height = `${pinned.height}px`
-                }
-                return
-              }
-              slotEl.style.width = ""
-              slotEl.style.height = ""
-            },
-            { defer: true },
-          ),
-        )
+        pinHiddenSlot(active, () => slotEl, () => entry.size ?? (hostSize.width > 0 && hostSize.height > 0 ? hostSize : undefined))
 
         // Freeze reactive inputs while hidden so switching worktrees or background
         // diff polls never trigger Solid reactive churn inside inactive diff panels.
