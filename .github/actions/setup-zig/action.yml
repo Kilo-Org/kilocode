@@ -14,9 +14,9 @@ runs:
     - name: Download and verify Zig
       shell: bash
       run: |
-        version=0.14.0
-        archive="zig-linux-x86_64-$version.tar.xz"
-        sha256=473ec26806133cf4d1918caf1a410f8403a13d979726a9045b421b685031a982
+        version=0.14.1
+        archive="zig-x86_64-linux-$version.tar.xz"
+        sha256=24aeeec8af16c381934a6cd7d95c807a8cb2cf7df9fa40d359aa884195c4716c
         # Zig Software Foundation release key from https://ziglang.org/download/
         pubkey=RWSGOq2NVecA2UPNdBUZykf1CCb147pkmdtYxgb3Ti+JO/wCYvhbAb/U
 
