@@ -1,0 +1,67 @@
+# kilocode_change - new file
+# Not used by any workflow yet; read README.md next to this file before adding a caller.
+name: "Kilo credentials"
+description: "Read the job's secret bundle from Kilo STS with the GitHub OIDC token and set each requested secret as a step output"
+inputs:
+  workload:
+    description: "STS policy name of the job, for example ci-kilocode-release; the action fails unless STS returns the bundle of this workload"
+    required: true
+  secrets:
+    description: "Newline-separated bundle keys; each must be in the bundle and declared under outputs, and becomes the output of the same name"
+    required: true
+  sts-url:
+    description: "STS origin; also the audience of the GitHub OIDC token"
+    required: false
+    default: "https://sts.kiloapps.io"
+# One output per bundle key that a kilocode STS policy grants (services/sts/policy/ci-kilocode-*.yaml
+# in Kilo-Org/cloud). A composite action passes on only declared outputs, and the script refuses a
+# requested key that is not declared here. A private key or certificate chain is declared as
+# `<KEY>_FILE`: the script writes it to a mode 0600 file under RUNNER_TEMP and sets the path.
+outputs:
+  KILOCODE_ANACONDA_API_KEY:
+    description: "Anaconda.org API token (ci-kilocode-release)"
+    value: ${{ steps.bundle.outputs.KILOCODE_ANACONDA_API_KEY }}
+  KILOCODE_AUR_KEY_FILE:
+    description: "Path of the AUR SSH private key file (ci-kilocode-release)"
+    value: ${{ steps.bundle.outputs.KILOCODE_AUR_KEY_FILE }}
+  KILOCODE_MAINTAINER_APP_KEY_FILE:
+    description: "Path of the Kilo Maintainer GitHub App private key file (ci-kilocode-release, -app-key, -scan-notify, -community)"
+    value: ${{ steps.bundle.outputs.KILOCODE_MAINTAINER_APP_KEY_FILE }}
+  KILOCODE_JETBRAINS_MARKETPLACE_TOKEN:
+    description: "JetBrains Marketplace token (ci-kilocode-release-jetbrains)"
+    value: ${{ steps.bundle.outputs.KILOCODE_JETBRAINS_MARKETPLACE_TOKEN }}
+  KILOCODE_JETBRAINS_PRIVATE_KEY_FILE:
+    description: "Path of the JetBrains plugin signing key file (ci-kilocode-release-jetbrains)"
+    value: ${{ steps.bundle.outputs.KILOCODE_JETBRAINS_PRIVATE_KEY_FILE }}
+  KILOCODE_JETBRAINS_PRIVATE_KEY_PASSWORD:
+    description: "Password of the JetBrains plugin signing key (ci-kilocode-release-jetbrains)"
+    value: ${{ steps.bundle.outputs.KILOCODE_JETBRAINS_PRIVATE_KEY_PASSWORD }}
+  KILOCODE_JETBRAINS_CERTIFICATE_CHAIN_FILE:
+    description: "Path of the JetBrains plugin signing certificate chain file (ci-kilocode-release-jetbrains)"
+    value: ${{ steps.bundle.outputs.KILOCODE_JETBRAINS_CERTIFICATE_CHAIN_FILE }}
+  KILOCODE_SECURITY_ALERTS_SLACK_WEBHOOK:
+    description: "Security alerts Slack webhook (ci-kilocode-scan-notify, ci-kilocode-notify)"
+    value: ${{ steps.bundle.outputs.KILOCODE_SECURITY_ALERTS_SLACK_WEBHOOK }}
+  KILOCODE_COMMUNITY_TRIAGE_SLACK_TOKEN:
+    description: "Community triage Slack token (ci-kilocode-community)"
+    value: ${{ steps.bundle.outputs.KILOCODE_COMMUNITY_TRIAGE_SLACK_TOKEN }}
+  KILOCODE_COMMUNITY_TRIAGE_SLACK_WEBHOOK:
+    description: "Community triage Slack webhook (ci-kilocode-community)"
+    value: ${{ steps.bundle.outputs.KILOCODE_COMMUNITY_TRIAGE_SLACK_WEBHOOK }}
+  KILOCODE_V2_SYNC_SLACK_WEBHOOK:
+    description: "v2 sync Slack webhook (ci-kilocode-notify)"
+    value: ${{ steps.bundle.outputs.KILOCODE_V2_SYNC_SLACK_WEBHOOK }}
+  KILOCODE_OPENCODE_WATCH_SLACK_WEBHOOK:
+    description: "opencode watch Slack webhook (ci-kilocode-opencode-watch)"
+    value: ${{ steps.bundle.outputs.KILOCODE_OPENCODE_WATCH_SLACK_WEBHOOK }}
+runs:
+  using: "composite"
+  steps:
+    - name: Read the STS bundle
+      id: bundle
+      shell: bash
+      env:
+        INPUT_WORKLOAD: ${{ inputs.workload }}
+        INPUT_SECRETS: ${{ inputs.secrets }}
+        INPUT_STS_URL: ${{ inputs['sts-url'] }}
+      run: bash "$GITHUB_ACTION_PATH/kilo-credentials.sh"
