@@ -38,7 +38,7 @@ export interface ProjectMessageDeps {
   /** Push one project's managed state to the webview. */
   pushState?: (ctx: ProjectContext) => void
   /** Acknowledge an atomically validated sidebar selection. */
-  selected: (target: SidebarTarget) => void
+  selected: (target: SidebarTarget, seq?: number) => void
   /** Post an outbound message to the webview. */
   post: (message: AgentManagerOutMessage) => void
   /** Show a user-facing error. */
@@ -108,7 +108,7 @@ export async function handleProjectMessage(m: AgentManagerInMessage, deps: Proje
     return true
   }
   if (m.type === "agentManager.activateSelection") {
-    await activateSelection(m.target, deps, m.restore === true)
+    await activateSelection(m.target, deps, m.restore === true, m.seq)
     return true
   }
   if (m.type === "agentManager.openSessionLocally") {
@@ -140,7 +140,12 @@ export async function handleProjectMessage(m: AgentManagerInMessage, deps: Proje
   return false
 }
 
-async function activateSelection(requested: SidebarTarget, deps: ProjectMessageDeps, restore = false): Promise<void> {
+async function activateSelection(
+  requested: SidebarTarget,
+  deps: ProjectMessageDeps,
+  restore = false,
+  seq?: number,
+): Promise<void> {
   const ctx = deps.contexts.resolve(requested.projectId)
   if (!ctx) {
     deps.error("The project is unavailable. Check that the repository still exists.")
@@ -167,16 +172,16 @@ async function activateSelection(requested: SidebarTarget, deps: ProjectMessageD
   // Fall back to the project's local context instead of an error toast.
   if (target.kind === "worktree" && !state?.getWorktree(target.worktreeId)) {
     deps.log(`selection target worktree ${target.worktreeId} is gone, falling back to local`)
-    return finish({ projectId: target.projectId, kind: "local" }, deps)
+    return finish({ projectId: target.projectId, kind: "local" }, deps, { push: false, seq })
   }
   if (target.kind === "session" && !state?.getSession(target.sessionId)) {
     if (!ctx.hasLiveSession(target.sessionId) || !fileLiveSession(ctx, target.sessionId)) {
       deps.log(`selection target session ${target.sessionId} is gone, falling back to local`)
-      return finish({ projectId: target.projectId, kind: "local" }, deps)
+      return finish({ projectId: target.projectId, kind: "local" }, deps, { push: false, seq })
     }
     deps.pushState?.(ctx)
   }
-  finish(target, deps)
+  finish(target, deps, { push: false, seq })
 }
 
 /**
@@ -296,7 +301,7 @@ async function openSessionLocally(projectId: string, sessionId: string, deps: Pr
 }
 
 /** Commit the active project, persist the target, and acknowledge the selection. */
-function finish(target: SidebarTarget, deps: ProjectMessageDeps): void {
+function finish(target: SidebarTarget, deps: ProjectMessageDeps, opts?: { push?: boolean; seq?: number }): void {
   const previous = deps.contexts.active()?.id
   const activated = deps.contexts.activate(target.projectId)
   if (!activated) {
@@ -304,9 +309,12 @@ function finish(target: SidebarTarget, deps: ProjectMessageDeps): void {
     return
   }
   activated.peekState()?.setActiveTarget(target)
-  if (previous !== activated.id) deps.activate(activated)
-  deps.push()
-  deps.selected(target)
+  const switched = previous !== activated.id
+  if (switched) deps.activate(activated)
+  // Same-project worktree switches do not change the project catalog, so skip
+  // re-pushing projects/expanded background states unless the active project changed.
+  if (switched || opts?.push !== false) deps.push()
+  deps.selected(target, opts?.seq)
 }
 
 /** Persist the webview's current selection without activating or validating anything. */

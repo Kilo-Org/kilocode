@@ -37,6 +37,7 @@
     "test/fixtures/worktree-command-project.ts"
   ],
   "project": ["{src,webview-ui,script,test}/**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs}"],
+  "ignore": ["script/oxlint/**"],
   "includeEntryExports": true,
   "ignoreExportsUsedInFile": true,
   "include": ["files", "exports", "nsExports", "classMembers", "types", "nsTypes", "enumMembers", "duplicates"],

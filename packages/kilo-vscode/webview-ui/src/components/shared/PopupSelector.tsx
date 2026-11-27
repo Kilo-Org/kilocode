@@ -80,6 +80,7 @@ export function PopupSelector<T extends ValidComponent = ValidComponent>(props: 
     setPanelW(document.documentElement.clientWidth)
 
     const id = requestAnimationFrame(() => {
+      // oxlint-disable-next-line kilo-vscode/require-view-active-guard -- Kobalte portals popover-content to document.body only while this selector is open
       const el = document.querySelector<HTMLElement>("[data-component='popover-content']")
       if (!el) return
       const raw = getComputedStyle(el).getPropertyValue("--kb-popper-content-available-height")

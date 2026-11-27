@@ -16,7 +16,7 @@ import { useVSCode } from "../context/vscode"
 import { onTimelineHighlight, type TimelineHighlight } from "../utils/timeline/highlight"
 import { partKey } from "../utils/timeline/timeline-parts"
 import { useV2 } from "./client"
-import { collectInstructionFiles } from "./instruction-files"
+import { collectInstructionFiles, sameInstructionFiles } from "./instruction-files"
 import { QuestionDock } from "./question"
 import { revertedCount, visibleMessages } from "./revert"
 import type { Selection } from "./selectors"
@@ -37,12 +37,12 @@ import {
 import {
   getMeasurement,
   getScroll,
-  layoutFingerprint,
   resolveAnchor,
   rowFingerprint,
   setMeasurement,
   setScroll,
 } from "./transcript-cache"
+import { createTranscriptLayout } from "./transcript-layout"
 import { createRowHandoff } from "./transcript-row-handoff"
 import { TranscriptRowView } from "./transcript-row"
 import { useTranscriptSearch } from "./transcript-search"
@@ -56,6 +56,7 @@ import type { ReplyHandler } from "./append-ready"
 import { partFeedback } from "../../../src/shared/browser-feedback"
 import { isChatReference } from "../../../src/shared/review-comments"
 import { capacity, historyAction, promptItems, railEntries, type PromptRailItem } from "./prompt-rail-data"
+import { freezeMemo, freezeValue, sameArray, useViewActive } from "./view-active"
 
 /**
  * Container for Virtua rows. Virtua sizes it from cached row heights and places
@@ -76,13 +77,7 @@ const VirtualBox: Component<{
   </div>
 )
 
-function sameKeys(left: readonly string[], right: readonly string[]) {
-  if (left.length !== right.length) return false
-  for (let index = 0; index < left.length; index++) {
-    if (left[index] !== right[index]) return false
-  }
-  return true
-}
+let searchHighlightOwner: symbol | undefined
 
 export function MessageList(props: {
   session?: string
@@ -114,52 +109,68 @@ export function MessageList(props: {
   question?: () => FormInfo | undefined
 }) {
   const v2 = useV2()
+  const viewActive = useViewActive()
   const vscode = useVSCode()
   const language = useLanguage()
   const notifications = useNotificationsOptional()
   const [highlight, setHighlight] = createSignal<TimelineHighlight>()
-  onCleanup(onTimelineHighlight(setHighlight))
+  onCleanup(
+    onTimelineHighlight((next) => {
+      if (viewActive()) setHighlight(next)
+    }),
+  )
 
   const [scrollEl, setScrollEl] = createSignal<HTMLDivElement>()
   const [virtualizer, setVirtualizer] = createSignal<VirtualizerHandle>()
-  const [layout, setLayout] = createSignal("")
-  // Transcript height, kept reactive so the prompt rail re-caps on resize.
-  const [height, setHeight] = createSignal(0)
+  const transcriptLayout = createTranscriptLayout({ scrollEl, viewActive })
+  const layout = transcriptLayout.layout
+  const height = transcriptLayout.height
   const [pendingJump, setPendingJump] = createSignal<{ session: string; key: string }>()
   const [pendingRestore, setPendingRestore] = createSignal<string>()
 
   // createData already puts pending user input into the message list. Only queued
   // input waits for the end of the turn, so it moves below the transcript.
-  const queued = () => {
-    const id = props.session
-    if (!id) return []
-    return v2.data.session.pending
-      .list(id)
-      .flatMap((item): SessionInboxUser[] => (item.type === "user" && item.delivery === "queue" ? [item] : []))
-  }
-  const revert = () => (props.session ? v2.data.session.get(props.session)?.revert : undefined)
+  // Freeze live store reads while hidden in Agent Manager's keep-alive chat cache so
+  // background streaming worktrees do zero DOM/Virtua work until switched to.
+  const queued = freezeMemo(
+    viewActive,
+    () => {
+      const id = props.session
+      if (!id) return [] as SessionInboxUser[]
+      return v2.data.session.pending
+        .list(id)
+        .flatMap((item): SessionInboxUser[] => (item.type === "user" && item.delivery === "queue" ? [item] : []))
+    },
+    sameArray,
+  )
+  const revert = freezeValue(viewActive, () => (props.session ? v2.data.session.get(props.session)?.revert : undefined))
   const allMessages = () => {
     const all = props.session ? v2.data.session.message.list(props.session) : []
     const ids = new Set(queued().map((item) => item.id))
     return ids.size === 0 ? all : all.filter((message) => !ids.has(message.id))
   }
-  const messages = createMemo(() => visibleMessages(allMessages(), revert()))
-  const revertCount = createMemo(() => revertedCount(allMessages(), revert()))
-  const instructions = createMemo(() => collectInstructionFiles(messages(), v2.directory))
-  const sentReferences = createMemo(() =>
-    messages().flatMap((message) =>
-      message.type === "user"
-        ? (partFeedback(message.metadata, message.text)?.review?.comments.filter(isChatReference) ?? [])
-        : [],
-    ),
+  const messages = freezeMemo(viewActive, () => visibleMessages(allMessages(), revert()).slice(), sameArray)
+  const revertCount = freezeValue(viewActive, () => revertedCount(allMessages(), revert()))
+  const instructions = freezeMemo(viewActive, () => collectInstructionFiles(messages(), v2.directory), sameInstructionFiles)
+  const sentReferences = freezeMemo(
+    viewActive,
+    () =>
+      messages().flatMap((message) =>
+        message.type === "user"
+          ? (partFeedback(message.metadata, message.text)?.review?.comments.filter(isChatReference) ?? [])
+          : [],
+      ),
+    sameArray,
   )
-  const working = () => !!props.session && v2.data.session.status(props.session) === "running"
-  const loadingOlder = () => !!props.session && v2.data.session.message.loading(props.session)
-  // The server always returns a next cursor, so a page shorter than the limit is what proves the start is loaded.
-  const more = () =>
-    !!props.session &&
-    v2.data.session.message.more(props.session) &&
-    !v2.data.session.message.startLoaded(props.session)
+  const working = freezeValue(viewActive, () => !!props.session && v2.data.session.status(props.session) === "running")
+  const loadingOlder = freezeValue(viewActive, () => !!props.session && v2.data.session.message.loading(props.session))
+  const more = freezeValue(
+    viewActive,
+    () =>
+      !!props.session &&
+      v2.data.session.message.more(props.session) &&
+      !v2.data.session.message.startLoaded(props.session),
+  )
   const empty = () => !props.session || (messages().length === 0 && queued().length === 0 && !revert())
   // The open session shows its loader instead of the welcome screen until the first transcript page lands.
   const starting = () =>
@@ -174,11 +185,12 @@ export function MessageList(props: {
   props.onScrollToBottomReady?.(() => autoScroll.resume())
   onCleanup(() => props.onScrollToBottomReady?.(undefined))
 
-  // An instruction load a read card reports is shown there, so its transcript
-  // notice row would repeat the same line. The row is dropped after the rows are
-  // built, so the turn grouping still sees the instruction message.
-  const rows = createMemo<TranscriptRow[]>((previous) =>
-    withoutReportedNotices(transcriptRows(messages(), previous), instructions().reported),
+  // An instruction load a read card reports is shown there, so its transcript notice row would repeat the same line.
+  // Gating on viewActive() catches up in-place store mutations on reactivation while reusing unchanged row objects.
+  const rows = freezeMemo<TranscriptRow[]>(
+    viewActive,
+    (previous) => withoutReportedNotices(transcriptRows(messages(), previous), instructions().reported),
+    sameArray,
   )
   // A run that waits on a permission reports idle while its last step can still
   // change, so an unfinished last step also keeps its turn live.
@@ -201,8 +213,8 @@ export function MessageList(props: {
   const partition = createMemo<TranscriptPartition>((previous) =>
     partitionTranscript(rows(), queued(), direct(), previous),
   )
-  const virtualKeys = createMemo(() => partition().virtualKeys, undefined, { equals: sameKeys })
-  const directKeys = createMemo(() => partition().directKeys, undefined, { equals: sameKeys })
+  const virtualKeys = createMemo(() => partition().virtualKeys, undefined, { equals: sameArray })
+  const directKeys = createMemo(() => partition().directKeys, undefined, { equals: sameArray })
   const lookup = createMemo(() => new Map(rows().map((row) => [row.key, row])))
   // A fork keeps the messages before the chosen one, so a fork at the first user message is an empty session.
   // Only a transcript without older pages proves which user message is the first. A session created in this view
@@ -276,6 +288,7 @@ export function MessageList(props: {
   )
 
   createEffect(() => {
+    if (!viewActive()) return
     const id = pendingRestore()
     if (!id) return
     if (loadingOlder()) return
@@ -506,12 +519,20 @@ export function MessageList(props: {
   let highlightFrame: number | undefined
   let highlightFrameInner: number | undefined
   let pendingCenter = false
+  const highlightToken = Symbol("search-highlight")
   const paintHighlights = () => {
+    if (!viewActive()) return
     const el = scrollEl()
     if (!el || !search.active()) {
-      clearTranscriptHighlights()
+      // Only clear highlights this transcript owns: an always-active peer view
+      // (for example the subagent inspector) must not wipe the active chat's.
+      if (searchHighlightOwner === highlightToken) {
+        searchHighlightOwner = undefined
+        clearTranscriptHighlights()
+      }
       return
     }
+    searchHighlightOwner = highlightToken
     const active = activeMatch()
     const range = applyTranscriptHighlights(
       el,
@@ -522,29 +543,18 @@ export function MessageList(props: {
     if (!pendingCenter) return
     pendingCenter = false
     if (!range) return
-    // Only nudge the scroll position when the match is not already comfortably
-    // placed. Re-centering on every step (even when the match is already
-    // visible) reads as constant, distracting jumping when several occurrences
-    // share one message.
     const rect = range.getClientRects()[0]
     if (!rect) return
     const box = el.getBoundingClientRect()
     const fullyVisible = rect.top >= box.top && rect.bottom <= box.bottom
-    // The comfort band covers the middle 70% of the viewport, wide enough that
-    // most steps between nearby matches do not scroll at all, while still
-    // recentering before a match gets uncomfortably close to the edge.
     const comfortMargin = box.height * 0.35
     const centered = Math.abs(rect.top + rect.height / 2 - (box.top + box.height / 2)) <= comfortMargin
     if (fullyVisible && centered) return
     el.scrollBy({ top: rect.top + rect.height / 2 - box.top - el.clientTop - el.clientHeight / 2 })
   }
 
-  // Two frames of margin so the virtualizer has settled the DOM for the new
-  // scroll position before it is scanned for the precise occurrence to
-  // center. Both frame ids are tracked so cleanup can cancel whichever leg of
-  // the chain has not fired yet.
   const scheduleHighlight = () => {
-    if (highlightFrame !== undefined) return
+    if (!viewActive() || highlightFrame !== undefined) return
     highlightFrame = requestAnimationFrame(() => {
       highlightFrameInner = requestAnimationFrame(() => {
         highlightFrame = undefined
@@ -556,7 +566,7 @@ export function MessageList(props: {
 
   createEffect(
     on(
-      () => [search.query(), search.matchCase(), search.wholeWord(), search.regex(), search.active(), activeMatch()],
+      () => [search.query(), search.matchCase(), search.wholeWord(), search.regex(), search.active(), activeMatch(), viewActive()],
       scheduleHighlight,
     ),
   )
@@ -587,10 +597,14 @@ export function MessageList(props: {
   onCleanup(() => {
     if (highlightFrame !== undefined) cancelAnimationFrame(highlightFrame)
     if (highlightFrameInner !== undefined) cancelAnimationFrame(highlightFrameInner)
-    clearTranscriptHighlights()
+    if (searchHighlightOwner === highlightToken) {
+      searchHighlightOwner = undefined
+      clearTranscriptHighlights()
+    }
   })
 
   const onScrollToMessage = (event: Event) => {
+    if (!viewActive()) return
     const detail = (event as CustomEvent<{ id: string; partId?: string }>).detail
     if (!detail?.id) return
     const matches = rows().flatMap((row) => (row.type === "assistant" && row.message.id === detail.id ? [row] : []))
@@ -622,6 +636,7 @@ export function MessageList(props: {
   const [startMargin, setStartMargin] = createSignal(0)
   let turnsEl: HTMLDivElement | undefined
   const syncStart = () => {
+    if (!viewActive()) return
     const el = scrollEl()
     if (!el || !turnsEl) return
     const next = Math.round(el.scrollTop + turnsEl.getBoundingClientRect().top - el.getBoundingClientRect().top)
@@ -736,10 +751,10 @@ export function MessageList(props: {
   }
   let activeFrame: number | undefined
   const scheduleActive = () => {
-    if (activeFrame !== undefined) return
+    if (!viewActive() || activeFrame !== undefined) return
     activeFrame = requestAnimationFrame(() => {
       activeFrame = undefined
-      trackActive()
+      if (viewActive()) trackActive()
     })
   }
   onCleanup(() => {
@@ -765,38 +780,11 @@ export function MessageList(props: {
     if (search.active()) scheduleHighlight()
   }
 
-  let resize: ResizeObserver | undefined
-  const refreshLayout = () => {
-    const el = scrollEl()
-    if (!el) return
-    const style = getComputedStyle(el)
-    setHeight(el.clientHeight)
-    setLayout(
-      layoutFingerprint({
-        width: Math.round(el.clientWidth),
-        ratio: window.devicePixelRatio,
-        font: style.fontFamily,
-        size: style.fontSize,
-        line: style.lineHeight,
-      }),
-    )
-  }
   const setScrollRef = (el: HTMLDivElement | undefined) => {
-    resize?.disconnect()
     setScrollEl(el)
     autoScroll.scrollRef(el)
-    if (!el) return
-    refreshLayout()
-    resize = new ResizeObserver(refreshLayout)
-    resize.observe(el)
+    transcriptLayout.observe(el)
   }
-  window.addEventListener("resize", refreshLayout)
-  document.fonts?.addEventListener("loadingdone", refreshLayout)
-  onCleanup(() => {
-    resize?.disconnect()
-    window.removeEventListener("resize", refreshLayout)
-    document.fonts?.removeEventListener("loadingdone", refreshLayout)
-  })
 
   const handoff = createRowHandoff()
   const Row: Component<{ id: string }> = (entry) => {

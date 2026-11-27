@@ -5,6 +5,7 @@ import { createContext, createEffect, createSignal, onCleanup, onMount, useConte
 import type { SpeechSettingKey, SpeechToTextStatus } from "../../../../src/protocol"
 import { useVSCode } from "../../context/vscode"
 import { useV2 } from "../../v2/client"
+import { useViewActive } from "../../v2/view-active"
 import { emptySpeechStatus } from "./availability"
 
 const EVENTS = new Set(["config.updated", "integration.updated", "model.updated", "provider.updated"])
@@ -26,6 +27,7 @@ const Context = createContext<SpeechStatusValue>()
 export const SpeechToTextStatusProvider: ParentComponent = (props) => {
   const vscode = useVSCode()
   const v2 = useV2()
+  const viewActive = useViewActive()
   const [status, setStatus] = createSignal<SpeechToTextStatus>(lastStatus ?? emptySpeechStatus())
   const saves = new Map<string, { resolve: () => void; reject: (error: Error) => void }>()
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -56,7 +58,7 @@ export const SpeechToTextStatusProvider: ParentComponent = (props) => {
   })
   // Re-resolve after a config write or a sign-in, so the mic appears or disappears without reopening the sidebar.
   const stopListening = v2.data.listen((event) => {
-    if (EVENTS.has(event.name)) request()
+    if (viewActive() && EVENTS.has(event.name)) request()
   })
   const save = (key: SpeechSettingKey, value: string) =>
     new Promise<void>((resolve, reject) => {
@@ -64,9 +66,11 @@ export const SpeechToTextStatusProvider: ParentComponent = (props) => {
       saves.set(requestId, { resolve, reject })
       vscode.postMessage({ type: "speechToTextSave", requestId, key, value })
     })
-  const focus = () => request()
+  const focus = () => {
+    if (viewActive()) request()
+  }
   createEffect(() => {
-    if (vscode.active()) request()
+    if (vscode.active() && viewActive()) request()
   })
   // Retry a failed Gateway catalog, as the v1 catalog provider did, instead of keeping the static fallback.
   createEffect(() => {

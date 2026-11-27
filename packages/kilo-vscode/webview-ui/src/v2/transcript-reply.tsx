@@ -5,7 +5,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
-import { createEffect, createSignal, onCleanup, onMount, Show } from "solid-js"
+import { createEffect, createSignal, onCleanup, Show } from "solid-js"
 import { Portal } from "solid-js/web"
 import type { ChatReferenceData } from "../../../src/shared/review-comments"
 import { REVEAL_CHAT_REFERENCE } from "../components/chat/review-actions"
@@ -15,6 +15,7 @@ import type { ReplyHandler } from "./append-ready"
 import { isMac } from "./pending-actions"
 import { anchorRange, selectionAnchor, type ReplyAnchor } from "./transcript-reply-anchor"
 import { highlightApi } from "./transcript-search-highlight"
+import { useViewActive } from "./view-active"
 
 const QUOTE = "kilo-reply-quote"
 const COMMENT = "kilo-reply-comment"
@@ -23,6 +24,7 @@ const ACTIVE = "kilo-reply-active"
 const FLASH = "kilo-reply-flash"
 const NAMES = [QUOTE, COMMENT, SENT, ACTIVE, FLASH]
 const GAP = 6
+let replyHighlightOwner: symbol | undefined
 
 type Draft = { anchor: ReplyAnchor; reference?: ChatReferenceData; editing: boolean }
 type Position = { top: number; left: number }
@@ -112,11 +114,15 @@ export function TranscriptReply(props: {
     cardEl.querySelector("textarea")?.focus({ preventScroll: true })
   }
 
+  const viewActive = useViewActive()
+  const ownerToken = Symbol("reply-highlight")
   let frame: number | undefined
   const schedule = () => {
-    if (frame !== undefined) return
+    if (!viewActive() || frame !== undefined) return
     frame = requestAnimationFrame(() => {
       frame = undefined
+      if (!viewActive()) return
+      replyHighlightOwner = ownerToken
       paint()
       place()
     })
@@ -128,7 +134,7 @@ export function TranscriptReply(props: {
     draft()
     flash()
     selection()
-    schedule()
+    if (viewActive()) schedule()
   })
 
   const read = () => {
@@ -256,7 +262,13 @@ export function TranscriptReply(props: {
     requestAnimationFrame(find)
   }
 
-  onMount(() => {
+  createEffect(() => {
+    if (!viewActive()) {
+      setSelection(undefined)
+      close()
+      return
+    }
+    schedule()
     const root = props.root()
     const up = () => setTimeout(read)
     const keyup = (event: KeyboardEvent) => {
@@ -295,9 +307,15 @@ export function TranscriptReply(props: {
       document.removeEventListener("mousedown", press)
       window.removeEventListener("resize", schedule)
       window.removeEventListener(REVEAL_CHAT_REFERENCE, reveal)
-      if (frame !== undefined) cancelAnimationFrame(frame)
-      const api = highlightApi()
-      for (const name of NAMES) api?.registry.delete(name)
+      if (frame !== undefined) {
+        cancelAnimationFrame(frame)
+        frame = undefined
+      }
+      if (replyHighlightOwner === ownerToken) {
+        replyHighlightOwner = undefined
+        const api = highlightApi()
+        for (const name of NAMES) api?.registry.delete(name)
+      }
     })
   })
 

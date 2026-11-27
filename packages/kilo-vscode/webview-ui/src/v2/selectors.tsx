@@ -18,6 +18,7 @@ import { shiftTabCyclesVariant } from "./kilo-settings"
 import { configuredModel, initialModel } from "./model-default"
 import { kiloTeam } from "./kilo-models"
 import { cycleVariant, preserveVariant } from "./variant"
+import { useViewActive } from "./view-active"
 
 const DEFAULT = "default"
 
@@ -299,8 +300,10 @@ export function Selectors(props: { selection: Selection; blocked: boolean }) {
   // `kilo-code.v2.chat.shiftTabCyclesVariant` setting (on by default). The tooltip hint follows the same setting.
   // Only the prompt of this composer counts: the Agent Manager's New Worktree dialog has its own prompt and cycle.
   let root: HTMLDivElement | undefined
+  const viewActive = useViewActive()
   onMount(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (!viewActive()) return
       if (event.key !== "Tab" || !event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return
       if (!shiftTabCyclesVariant()) return
       const active = document.activeElement

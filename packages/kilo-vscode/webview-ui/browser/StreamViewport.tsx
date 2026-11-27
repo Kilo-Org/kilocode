@@ -213,9 +213,10 @@ export const StreamViewport: Component<{
       return
     }
     if (unchanged && hold(previous, viewport.active)) return
-    // Like a native browser, a new document of the same page keeps the last image until its first frame. Input waits
-    // for that frame, because it must reach the new document.
-    clear(page && viewport.active)
+    // Keep the last painted image across worktree switches for the same document
+    // (`unchanged`) and live same-page navigations (`page && viewport.active`),
+    // while clearing stale screenshots if a new document navigated while hidden.
+    clear(unchanged || (page && viewport.active))
     if (previous && !unchanged) publish(previous, { ...previous.viewport, revision: ++revision, active: false })
     const version = ++revision
     current = {

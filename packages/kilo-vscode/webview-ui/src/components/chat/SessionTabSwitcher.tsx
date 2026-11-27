@@ -5,6 +5,7 @@ import { Popover } from "@kilocode/kilo-ui/popover"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Show, createEffect, createMemo, createSignal, onCleanup, type Component, type JSX } from "solid-js"
 import { ActivityIcon } from "../shared/ActivityIcon"
+import { useViewActive } from "../../v2/view-active"
 import type { Activity } from "../../../agent-manager/v2/activity"
 
 interface SessionTabSwitcherItem {
@@ -33,6 +34,7 @@ interface SessionTabSwitcherProps {
 }
 
 export const SessionTabSwitcher: Component<SessionTabSwitcherProps> = (props) => {
+  const viewActive = useViewActive()
   const [open, setOpen] = createSignal(props.defaultOpen ?? false)
   const [notice, setNotice] = createSignal("")
   let list: ListRef | undefined
@@ -63,9 +65,13 @@ export const SessionTabSwitcher: Component<SessionTabSwitcherProps> = (props) =>
   }
   const reveal = () => {
     cancel()
-    requestAnimationFrame(() => setOpen(true))
+    if (!viewActive()) return
+    requestAnimationFrame(() => {
+      if (viewActive()) setOpen(true)
+    })
   }
   const show = () => {
+    if (!viewActive()) return
     cancel()
     if (document.hasFocus()) {
       setOpen(true)

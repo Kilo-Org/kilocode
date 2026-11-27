@@ -127,8 +127,13 @@ export function ReasoningContent(props: {
     finish()
   }
   createEffect(
-    on(following, (value) => {
-      if (!value) return unpin(follow())
+    on(following, (value, prev) => {
+      if (!value) {
+        // Completed reasoning blocks mount already unpinned; avoid forcing a
+        // synchronous layout read (scrollHeight) on every historical turn.
+        if (prev === undefined && !pinned() && !glide.anim) return
+        return unpin(follow())
+      }
       glide.height = body()?.offsetHeight ?? 0
       const node = viewport()
       glide.cap = node ? capOf(node) : 0

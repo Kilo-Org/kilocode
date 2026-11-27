@@ -8,6 +8,7 @@ import { Portal } from "solid-js/web"
 import { VList, type VListHandle } from "virtua/solid"
 import { useLanguage } from "../context/language"
 import { RAIL_INSET, ROW_HEIGHT, TICK_MIN, TICK_STEP, type PromptRailEntry, type PromptRailItem } from "./prompt-rail-data"
+import { useViewActive } from "./view-active"
 
 interface PromptRailProps {
   side: "left" | "right"
@@ -182,7 +183,9 @@ export function PromptRail(props: PromptRailProps) {
     }, CLOSE_DELAY)
   }
 
+  const viewActive = useViewActive()
   const escape = (event: KeyboardEvent) => {
+    if (!viewActive()) return
     if (event.key !== "Escape" || event.defaultPrevented) return
     cancelOpen()
     if (!open()) return
@@ -190,6 +193,16 @@ export function PromptRail(props: PromptRailProps) {
     event.stopPropagation()
     dismiss()
   }
+
+  createEffect(
+    on(
+      viewActive,
+      (isActive) => {
+        if (!isActive) dismiss()
+      },
+      { defer: true },
+    ),
+  )
 
   window.addEventListener("keydown", escape, true)
   onCleanup(() => {
@@ -206,7 +219,7 @@ export function PromptRail(props: PromptRailProps) {
 
   // Resizing the panel moves the rail out from under an open card.
   createEffect(() => {
-    if (!open()) return
+    if (!viewActive() || !open()) return
     const onResize = () => place()
     window.addEventListener("resize", onResize)
     onCleanup(() => window.removeEventListener("resize", onResize))

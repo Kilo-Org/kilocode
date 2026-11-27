@@ -15,6 +15,20 @@ export type SidebarTarget =
   | { projectId: string; kind: "worktree"; worktreeId: string }
   | { projectId: string; kind: "session"; sessionId: string }
 
+export interface SelectionActivatedMessage {
+  type: "agentManager.selectionActivated"
+  target: SidebarTarget
+  seq?: number
+}
+
+export interface ActivateSelectionIn {
+  type: "agentManager.activateSelection"
+  target: SidebarTarget
+  /** Resolve the project's persisted target instead of using `target` verbatim. */
+  restore?: boolean
+  seq?: number
+}
+
 export type ProjectRouteErrorCode = "project_unknown" | "project_stale"
 
 export class ProjectRouteError extends Error {

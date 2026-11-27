@@ -46,6 +46,8 @@ const child = Bun.spawn([...entry, ...args], {
       ? {}
       : { OPENCODE_CONFIG_CONTENT: JSON.stringify({ model: "kilo/kilo-auto/free" }) }),
     // Source children need the JSX transform outside the package cwd. A built binary already includes it.
+    // Keep Bun's content-addressed TS transpiler cache per-worktree so isolated profiles (`XDG_CACHE_HOME`) do not
+    // force every fresh profile to re-transpile the entire monorepo from scratch.
     ...(executable
       ? {}
       : {
@@ -56,6 +58,8 @@ const child = Bun.spawn([...entry, ...args], {
           ]
             .filter(Boolean)
             .join(" "),
+          BUN_RUNTIME_TRANSPILER_CACHE_PATH:
+            process.env.BUN_RUNTIME_TRANSPILER_CACHE_PATH ?? path.join(host, "node_modules", ".cache", "bun-transpiler"),
         }),
     XDG_DATA_HOME: dirs[0],
     XDG_CONFIG_HOME: dirs[1],
