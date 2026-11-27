@@ -2,18 +2,46 @@
 
 Reads the job's secret bundle from Kilo STS and sets each requested secret as a step output.
 
-**Callers.** Four jobs read an STS bundle. Each takes only the keys in its `secrets:` input.
+**Callers.** Six jobs read an STS bundle. Each takes only the keys in its `secrets:` input.
 
 | Workflow | Job | Workload and environment | Use |
 |---|---|---|---|
 | `.github/workflows/nix-hashes.yml` | `update-hashes` | `ci-kilocode-app-key`, `automation` | Pushes the updated `nix/hashes.json` to `main`; reads the bundle only when that file changed |
 | `.github/workflows/nix-hashes.yml` | `sts-check` | `ci-kilocode-app-key`, `automation` | Manual check (`gh workflow run nix-hashes.yml -f sts_check=true` on `main`) that mints an app token with metadata read only |
 | `.github/workflows/prepare-jetbrains-release.yml` | `prepare` | `ci-kilocode-app-key`, `automation` | Creates the JetBrains release tag, branch and pull request; installs no packages, so the release script imports none |
+| `.github/workflows/publish.yml` | `release-push` | `ci-kilocode-release`, `release-keys` | Checks the release commit that the `release-commit` job bundled (see [Release commit check](#release-commit-check)) and pushes it to `main` with its tag (app key); installs no packages, runs only `script/kilocode/release-push.ts` on Bun |
 | `.github/workflows/publish.yml` | `package-managers` | `ci-kilocode-release`, `release-keys` | Updates the AUR package `kilo-bin` (AUR key) and the Homebrew formula in `Kilo-Org/homebrew-tap` (app key) after a stable release; installs no packages, runs only `script/kilocode/package-managers.ts` on Node |
+| `.github/workflows/publish.yml` | `jetbrains-pin` | `ci-kilocode-release`, `release-keys` | Opens or updates the JetBrains CLI pin bump pull request after a release (app key); installs no packages, runs only `.kilo/skills/release-jetbrains/script/set-pin.ts` on Bun |
 
 The Kilo Maintainer app id comes from the repository variable `KILO_MAINTAINER_APP_ID` (the app id
-is public). Every other job still reads GitHub secrets, including the `KILO_MAINTAINER_APP_SECRET`
-reader in the `publish` job of `.github/workflows/publish.yml`.
+is public). No workflow reads the app key from the GitHub secret `KILO_MAINTAINER_APP_SECRET` any
+more; the secret itself still exists.
+
+**Release commit check.** The `release-commit` job of `publish.yml` writes the version commit with
+third-party code (`bun install`, `changeset version`) and holds no secret and no OIDC permission.
+`release-push` pushes that commit with an app token that may bypass the `main` ruleset, so
+`script/kilocode/release-check.ts` compares the full trees of the dispatch commit and the release
+commit with git and accepts only these changes:
+
+| Path | Change | Rule |
+|---|---|---|
+| `package.json` files | modified | Only `"version"` lines change, from the previous release version to the new one; same line count. Not `packages/kilo-jetbrains/package.json` (the JetBrains CLI pin) |
+| `bun.lock` | modified | The same `"version"` line rule |
+| `packages/extensions/zed/extension.toml` | modified | Only its `version = "..."` line and the `releases/download/v<version>/` part of its archive URLs |
+| `CHANGELOG.md` files | modified | Any text |
+| `.changeset/<name>.md` | deleted | Not `.changeset/README.md` |
+
+Refused even where a row above matches: `.github/`, `script/`, `bin/`, `nix/`, every other
+lockfile, added files, renames, any mode change (an executable bit set or cleared, a file turned
+into a symlink) and any symlink or submodule; a file that is already executable may change if it
+stays so. Every other path must keep its blob and mode. The commit has
+exactly one parent, the dispatch commit (`github.sha`), its subject is `release: v<version>`, and
+the bundle holds only the tag `v<version>`, which names that commit directly (no tag object). If
+`main` moved since the dispatch, `release-push` merges `main` and the release commit with
+`git merge-tree` and `git commit-tree`, refuses any conflict, and runs the same check from the
+current `main` to the merge. `main` and the tag are pushed atomically, with a lease on the merged
+`main`; when the lease fails because `main` moved again, the merge is made again at most twice. A
+re-run that finds the tag on `main` at the release commit pushes nothing.
 
 **Subject.** Kilo-Org/kilocode's OIDC tokens still carry GitHub's default subject
 (`repo:Kilo-Org/kilocode:environment:<name>`). STS admits that subject through its `legacySubject`
@@ -144,8 +172,9 @@ jobs:
   OIDC token has no claim that names the job. Every job of the workflow that runs in that
   environment with `id-token: write` can therefore read the bundle, whether or not it uses this
   action. This is why the `publish` job of `publish.yml`, which installs packages and runs in
-  `release` for npm, VS Code Marketplace and Open VSX trusted publishing, leaves the AUR and
-  Homebrew updates to the `package-managers` job in `release-keys`.
+  `release` for npm, VS Code Marketplace and Open VSX trusted publishing, holds no app token and
+  leaves the release push, the AUR and Homebrew updates and the JetBrains pin pull request to jobs
+  in `release-keys`.
 - Its workflow is never callable with `workflow_call`. The OIDC token of a reusable workflow carries
   that workflow's `job_workflow_ref`, so any workflow allowed to call it would receive its bundle.
 - `secrets:` lists every key the job reads.

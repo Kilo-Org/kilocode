@@ -55,22 +55,21 @@ The `publish.yml` workflow starts with `version`, which creates the draft releas
 - Each VSIX bundles the platform-specific CLI binary.
 - Uploads the VSIX files as a workflow artifact (`kilo-vscode`).
 
-### 4. Publish (`publish`)
+### 4. Release Commit (`release-commit`, then `release-push`)
 
-Downloads all build artifacts and publishes to every distribution channel, in this order. Every write to the GitHub Release and the checks before publishing it address it by the release id the `version` job recorded; the smoke test downloads assets by tag.
+- `release-commit` runs right after `version`, holds no secret and no OIDC permission, and checks out the dispatch commit. It updates the `version` field in the `package.json` files (not the JetBrains CLI pin, and none under `.github/`, `script/`, `bin/` or `nix/`), updates the Zed extension manifest (`extension.toml`), consumes the changesets into the changelogs, updates `bun.lock`, and commits only those changes as `release: v<version>` with the tag `v<version>`. Other changes in the working tree (for example regenerated SDK sources) stay out of the commit, with a warning. It uploads the commit and tag as a git bundle (artifact `release-commit`) and records the bundle's sha256.
+- `release-push` runs once every check before publishing has passed (the validation jobs and the smoke test), in the `release-keys` environment, and installs nothing. It checks the bundle's sha256 and the release commit (see "Release commit check" in `.github/actions/kilo-credentials/README.md`): one parent, the dispatch commit; only version and changelog lines and paths. Then it pushes the commit to `main` and the tag in one atomic push, with the kilo-maintainer app key from the STS bundle of `ci-kilocode-release`. If `main` moved since the dispatch, it merges `main` and the release commit with git alone, refuses a conflict, checks the merge the same way, and pushes the merge; the tag stays on the release commit, which is exactly the built source plus the version commit. A re-run that finds the tag on `main` at the release commit pushes nothing.
+
+### 5. Publish (`publish`)
+
+Checks out the pushed tag (and checks that it is the commit `release-push` pushed), downloads all build artifacts and publishes to every distribution channel, in this order. Every write to the GitHub Release and the checks before publishing it address it by the release id the `version` job recorded, with the job token (`contents: write`); the smoke test downloads assets by tag. The job holds no app token.
 
 #### Release Assets on the Draft
 
 - Checks the downloaded CLI dist and VS Code packages against the digests their jobs recorded.
 - Uploads the VSIX files and their SBOM evidence to the draft GitHub Release.
 - Checks that the draft holds exactly the CLI assets of the checked evidence manifest and the VS Code files `build-vscode` recorded. Distribution evidence that a failed earlier run left on the draft is removed first; it is uploaded again later.
-
-#### Version Commit and Tagging
-
-- Updates the `version` field in all `package.json` files across the monorepo.
-- Updates the Zed extension manifest (`extension.toml`) with the new version.
 - Rebuilds the TypeScript SDK (`packages/sdk/js`).
-- Commits the version bump, tags the commit, and pushes to the repo. If an earlier run already pushed them (tag `v<version>` on origin, pointing at a commit on `main` whose `packages/opencode/package.json` has that version), this is skipped; any other existing tag fails the run. If only the tag is missing but the `release: v<version>` commit with that version is among the last 100 commits on `main`, that commit is tagged instead of committing again. If neither is found but `main` already has the version, the run fails without committing.
 
 #### CLI (`@kilocode/cli`)
 
@@ -93,7 +92,7 @@ Downloads all build artifacts and publishes to every distribution channel, in th
 - Publishes platform-specific VSIX packages to the **VS Code Marketplace** via `vsce publish --oidc`. The `publish` job runs in the `release` GitHub Actions environment, and the `kilocode` publisher trusts `Kilo-Org/kilocode`'s `publish.yml` workflow in that environment, so no Marketplace token is stored.
 - Publishes the same packages to **Open VSX** via `ovsx publish --trusted-publishing`, using GitHub Actions OIDC instead of a PAT.
 
-### 5. AUR and Homebrew (`package-managers`, stable releases only)
+### 6. AUR and Homebrew (`package-managers`, stable releases only)
 
 Runs after `publish`, once the release is public, in the `release-keys` environment. It installs no packages and runs only `script/kilocode/package-managers.ts` on Node. It reads the AUR key and the kilo-maintainer app key from the STS bundle of `ci-kilocode-release` (see `.github/actions/kilo-credentials/README.md`), and takes the archive digests from the CLI evidence manifest `build-cli` recorded, after checking that manifest's digest.
 
@@ -102,11 +101,15 @@ Runs after `publish`, once the release is public, in the `release-keys` environm
 
 Each update is retried from a new clone up to three times. A repository that already has the files of this version is left unchanged, so the job can be re-run on its own (**Re-run failed jobs**). A failure fails the job but does not touch the release or the npm packages.
 
+### 7. JetBrains CLI Pin (`jetbrains-pin`)
+
+Runs after `publish` in the `release-keys` environment and installs nothing. With a kilo-maintainer app token (the key comes from the STS bundle of `ci-kilocode-release`), `.kilo/skills/release-jetbrains/script/set-pin.ts` opens or updates the pull request that bumps the JetBrains CLI pin to this release. A pull request opened with the job token would start no checks. A failure leaves the release as it is and reports a warning.
+
 ### Recovering from a Failed `publish` Job
 
-Re-run the failed `publish` job (**Re-run failed jobs**); the build jobs and their recorded digests are reused.
+Re-run the failed `publish` job (**Re-run failed jobs**); the build jobs and their recorded digests are reused. `release-commit` and `release-push` do not run again once they succeeded, so the re-run publishes from the same pushed tag. If `release-push` itself failed, its re-run checks the same bundle again; if the tag is already on `main` at the release commit, it pushes nothing.
 
-- **Failed before the release was published** (for example the evidence upload or the second draft check): the GitHub Release is still a draft. The Docker images may already be pushed. The re-run skips the version commit and tag if they were pushed, removes leftover distribution evidence from the draft, packs and describes the npm packages again, rebuilds and pushes the images, uploads the evidence, checks the draft and publishes it. npm has nothing yet: packages are published only after the release.
+- **Failed before the release was published** (for example the evidence upload or the second draft check): the GitHub Release is still a draft. The Docker images may already be pushed. The re-run removes leftover distribution evidence from the draft, packs and describes the npm packages again, rebuilds and pushes the images, uploads the evidence, checks the draft and publishes it. npm has nothing yet: packages are published only after the release.
 - **Failed after the release was published** (for example an npm publish): the re-run uploads nothing and does not touch the release. It checks the published assets (the CLI and VS Code assets against their recorded digests, the distribution evidence against its own manifest), skips the Docker builds, skips npm packages that are already published, and packs the others again; each tarball must have the digest the published evidence names, or the run stops before publishing it. AUR and Homebrew are updated only after a `publish` run succeeds: the `package-managers` job runs after the successful re-run.
 
 ### Fixing a Bad Release
@@ -124,8 +127,8 @@ Immutable releases are turned on for this repository: once a GitHub Release is p
 
 The workflow requires these GitHub token permissions:
 
-- `id-token: write` -- for VS Code Marketplace and Open VSX Trusted Publishing, npm provenance attestation, and the `package-managers` job's read of the STS bundle (`ci-kilocode-release`)
-- `contents: write` -- for creating releases, pushing tags, and uploading assets
+- `id-token: write` -- for VS Code Marketplace and Open VSX Trusted Publishing, npm provenance attestation, and the STS bundle (`ci-kilocode-release`) that `release-push`, `package-managers` and `jetbrains-pin` read
+- `contents: write` -- for the draft release in `publish` (uploads, checks, publishing); the release commit and tag are pushed with the kilo-maintainer app token
 - `packages: write` -- for publishing Docker images to GHCR
 
 ### Open VSX Trusted Publishing
@@ -140,14 +143,13 @@ The `publish` job inherits the workflow's `id-token: write` permission. The Open
 
 ### Required Secrets
 
-The following secrets must be configured in the repository. The VS Code Marketplace needs no secret (see [Checking Marketplace Trusted Publishing](#checking-marketplace-trusted-publishing)). The AUR key and the kilo-maintainer app key of the `package-managers` job come from Kilo STS, not from GitHub secrets.
+The following secrets must be configured in the repository. The VS Code Marketplace needs no secret (see [Checking Marketplace Trusted Publishing](#checking-marketplace-trusted-publishing)). The AUR key and the kilo-maintainer app key come from Kilo STS, not from GitHub secrets; no job reads `KILO_MAINTAINER_APP_SECRET`.
 
 | Secret | Purpose |
 |---|---|
 | `KILO_API_KEY` | Kilo Gateway key for the pre-publish smoke test (`smoke-test.yml`) |
 | `KILO_ORG_ID` | Kilo organization ID for the pre-publish smoke test |
 | `BENCH_GITHUB_TOKEN` | Read access to `Kilo-Org/kilo-bench` for the pre-publish smoke test |
-| `KILO_MAINTAINER_APP_SECRET` | GitHub App private key for the kilo-maintainer bot (release commit, tag, draft release and JetBrains pin PR in the `publish` job) |
 | `NPM_TOKEN` | npm authentication token for publishing packages |
 
 The repository variable `KILO_MAINTAINER_APP_ID` holds the kilo-maintainer app id, which is public.
@@ -157,7 +159,7 @@ The repository variable `KILO_MAINTAINER_APP_ID` holds the kilo-maintainer app i
 | Environment | Jobs | Purpose |
 |---|---|---|
 | `release` | `publish`, `oidc-check` | npm, VS Code Marketplace and Open VSX trusted publishing |
-| `release-keys` | `package-managers` | The only environment the STS policy `ci-kilocode-release` accepts; no other job of the workflow may use it (see `.github/actions/kilo-credentials/README.md`) |
+| `release-keys` | `release-push`, `package-managers`, `jetbrains-pin` | The only environment the STS policy `ci-kilocode-release` accepts; no job of the workflow that installs packages may use it (see `.github/actions/kilo-credentials/README.md`) |
 
 Both allow only `main`.
 

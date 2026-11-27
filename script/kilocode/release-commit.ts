@@ -31,7 +31,7 @@ async function commit(tag: string) {
 }
 
 /**
- * Whether an earlier run of the publish job already pushed the release commit for `version`,
+ * Whether an earlier run of the release-push job already pushed the release commit for `version`,
  * so that a re-run continues without committing or pushing it again.
  *
  * True when tag v<version> exists on origin, points at a commit reachable from main, and that

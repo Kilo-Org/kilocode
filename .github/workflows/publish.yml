@@ -919,10 +919,131 @@ jobs:
       BENCH_GITHUB_TOKEN: ${{ secrets.BENCH_GITHUB_TOKEN }}
   # kilocode_change end
 
-  publish:
-    # kilocode_change start - release, tag and JetBrains PR writes use the maintainer App token
+  # kilocode_change start - the version commit and tag of the release. This job runs the version bump,
+  # which installs packages and runs `changeset version`, so it holds no secret and no OIDC
+  # permission (only read access for the changelog's commit and pull request metadata). It packs the
+  # commit and tag into a git bundle; release-push checks the bundle and pushes it.
+  release-commit:
+    name: Write release commit
+    needs: version
+    if: github.repository == 'Kilo-Org/kilocode' && needs.version.outputs.release != ''
     permissions:
       contents: read
+      pull-requests: read
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-bun
+        with:
+          cache: false # the bundle feeds a job that holds the Kilo Maintainer app key
+
+      - name: Write the release commit
+        id: commit
+        env:
+          KILO_VERSION: ${{ needs.version.outputs.version }}
+          KILO_RELEASE: ${{ needs.version.outputs.release }}
+          KILO_PRE_RELEASE: ${{ inputs.pre_release }}
+          GH_REPO: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: bun script/kilocode/release-bundle.ts "$RUNNER_TEMP/release-commit"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-commit
+          path: ${{ runner.temp }}/release-commit
+          if-no-files-found: error
+    outputs:
+      bundle-sha256: ${{ steps.commit.outputs.bundle-sha256 }}
+
+  # Pushes the release commit to main and its tag, once every gate before publishing passed. It
+  # reads the Kilo Maintainer app key from the STS bundle of ci-kilocode-release (environment
+  # release-keys, main only) and runs only pinned actions from GitHub's actions organisation and this
+  # repository's code: Bun from setup-bun without installing packages, and
+  # script/kilocode/release-push.ts, which checks the bundle (release-check.ts) before it pushes.
+  # Read .github/actions/kilo-credentials/README.md before adding or moving a step.
+  release-push:
+    name: Push release commit
+    needs:
+      - version
+      - build-cli
+      - upload-cli
+      - sign-cli-windows
+      - sbom-cli-windows
+      - build-vscode
+      - pack-signed-cli
+      - validate-cli-unix
+      - validate-cli-windows
+      - smoke-test
+      - release-commit
+    if: github.repository == 'Kilo-Org/kilocode' && needs.version.outputs.release != ''
+    runs-on: ubuntu-24.04-8core-x64 # GitHub-hosted because the job holds release keys; static egress for the org IP allow list.
+    environment: release-keys
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/actions/kilo-credentials/
+            /.github/actions/setup-bun/
+            /.github/actions/setup-git-committer/
+            /script/kilocode/bun.json
+            /script/kilocode/bun.ts
+            /script/kilocode/release-check.ts
+            /script/kilocode/release-commit.ts
+            /script/kilocode/release-push.ts
+
+      - uses: ./.github/actions/setup-bun
+        with:
+          install: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-commit
+          path: ${{ runner.temp }}/release-commit
+
+      - name: Read the STS bundle
+        id: creds
+        uses: ./.github/actions/kilo-credentials
+        with:
+          workload: ci-kilocode-release
+          secrets: KILOCODE_MAINTAINER_APP_KEY
+
+      - name: Setup Git Committer
+        uses: ./.github/actions/setup-git-committer
+        with:
+          kilo-maintainer-app-id: ${{ vars.KILO_MAINTAINER_APP_ID }}
+          kilo-maintainer-app-secret: ${{ steps.creds.outputs.KILOCODE_MAINTAINER_APP_KEY }}
+          repositories: kilocode
+          permission-contents: write
+
+      - name: Push the release commit and tag
+        id: push
+        env:
+          BUNDLE_SHA256: ${{ needs.release-commit.outputs.bundle-sha256 }}
+          VERSION: ${{ needs.version.outputs.version }}
+          BASE: ${{ github.sha }}
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: bun script/kilocode/release-push.ts "$RUNNER_TEMP/release-commit/release.bundle"
+    outputs:
+      commit: ${{ steps.push.outputs.commit }}
+  # kilocode_change end
+
+  publish:
+    # kilocode_change start - draft release writes use the job token; the release commit and tag are
+    # pushed by release-push, and no app token is minted here
+    permissions:
+      contents: write # Upload to, check and publish the draft release.
       packages: write # Push to GHCR.
       id-token: write # Trusted publishing to npm, VS Code Marketplace and Open VSX.
     # kilocode_change end
@@ -937,13 +1058,25 @@ jobs:
       - validate-cli-unix # kilocode_change
       - validate-cli-windows # kilocode_change
       - smoke-test
+      - release-push # kilocode_change
     runs-on: ubuntu-24.04-8core-x64 # kilocode_change - GitHub-hosted publisher with static egress for the org IP allow list.
     environment: release # kilocode_change - VS Code Marketplace trusted publishing policy
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0 # kilocode_change
-        # kilocode_change start
+        # kilocode_change start - the pushed release tag: the built source plus the version commit
         with:
           persist-credentials: false
+          ref: refs/tags/v${{ needs.version.outputs.version }}
+
+      - name: Verify the release tag
+        env:
+          COMMIT: ${{ needs.release-push.outputs.commit }}
+        run: |
+          actual="$(git rev-parse HEAD)"
+          if [ -z "$COMMIT" ] || [ "$actual" != "$COMMIT" ]; then
+            echo "::error::The release tag checks out $actual; release-push pushed ${COMMIT:-nothing}. Nothing was published."
+            exit 1
+          fi
         # kilocode_change end
 
       - uses: ./.github/actions/setup-bun
@@ -987,20 +1120,6 @@ jobs:
 
       - name: Install @vscode/vsce
         run: bun install -g @vscode/vsce@4.1.1 # kilocode_change
-
-      - name: Setup Git Committer
-        id: committer
-        uses: ./.github/actions/setup-git-committer
-        with:
-          # kilocode_change start
-          kilo-maintainer-app-id: ${{ vars.KILO_MAINTAINER_APP_ID }}
-          kilo-maintainer-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
-          # The release script pushes the release commit and tag to this repo and opens the
-          # JetBrains CLI pin bump PR. The package-managers job updates Kilo-Org/homebrew-tap.
-          repositories: kilocode
-          permission-contents: write
-          permission-pull-requests: write
-          # kilocode_change end
 
       # kilocode_change start - download into /tmp and extract the tar.zst packed by build-cli
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -1054,7 +1173,7 @@ jobs:
           VERSION: ${{ needs.version.outputs.version }}
           KILO_RELEASE: ${{ needs.version.outputs.release }}
           GH_REPO: ${{ github.repository }}
-          GH_TOKEN: ${{ steps.committer.outputs.token }}
+          GH_TOKEN: ${{ github.token }}
           VSIX_SHA256: ${{ needs.build-vscode.outputs.vsix-sha256 }}
         run: bun script/kilocode/vsix-assets.ts packages/kilo-vscode/out "v$VERSION"
 
@@ -1067,7 +1186,7 @@ jobs:
           VERSION: ${{ needs.version.outputs.version }}
           KILO_RELEASE: ${{ needs.version.outputs.release }}
           GH_REPO: ${{ github.repository }}
-          GH_TOKEN: ${{ steps.committer.outputs.token }}
+          GH_TOKEN: ${{ github.token }}
           CLI_MANIFEST_SHA256: ${{ needs.sbom-cli-windows.outputs.manifest-sha256 }}
           VSIX_SHA256: ${{ needs.build-vscode.outputs.vsix-sha256 }}
         run: bun script/kilocode/draft-assets.ts "v$VERSION"
@@ -1079,7 +1198,7 @@ jobs:
           KILO_RELEASE: ${{ needs.version.outputs.release }}
           KILO_PRE_RELEASE: ${{ inputs.pre_release }}
           GH_REPO: ${{ github.repository }}
-          GITHUB_TOKEN: ${{ steps.committer.outputs.token }}
+          GITHUB_TOKEN: ${{ github.token }}
           NPM_CONFIG_PROVENANCE: true
           SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }} # kilocode_change
           CLI_MANIFEST_SHA256: ${{ needs.sbom-cli-windows.outputs.manifest-sha256 }} # kilocode_change
@@ -1089,9 +1208,9 @@ jobs:
   # in Kilo-Org/homebrew-tap once the release is public. This job reads the AUR key and the Kilo
   # Maintainer app key from the STS bundle of ci-kilocode-release, which needs environment
   # release-keys (main only) and id-token: write. STS tells jobs apart only by their environment, so
-  # no other job of this workflow uses release-keys, and this job runs only pinned actions from
-  # GitHub's actions organisation and this repository's code: it installs no packages. Read
-  # .github/actions/kilo-credentials/README.md before adding or moving a step.
+  # only release-push, package-managers and jetbrains-pin use release-keys, and each runs only pinned
+  # actions from GitHub's actions organisation and this repository's code: none installs packages.
+  # Read .github/actions/kilo-credentials/README.md before adding or moving a step.
   package-managers:
     name: Update AUR and Homebrew
     needs: [version, build-cli, publish]
@@ -1173,6 +1292,81 @@ jobs:
         env:
           AUR_KEY_FILE: ${{ steps.creds.outputs.KILOCODE_AUR_KEY_FILE }}
         run: rm -f -- "$AUR_KEY_FILE"
+
+  # Opens or updates the pull request that bumps the JetBrains CLI pin to this release, once the
+  # release and its assets are public. A pull request opened with the job token starts no checks, so
+  # it uses a Kilo Maintainer app token from the STS bundle of ci-kilocode-release (environment
+  # release-keys) and runs only pinned actions from GitHub's actions organisation and this
+  # repository's code: Bun from setup-bun without installing packages, and set-pin.ts, which imports
+  # only Bun and Node built-ins and script/kilocode/jetbrains-version.ts. Read
+  # .github/actions/kilo-credentials/README.md before adding or moving a step. A failure leaves the
+  # release as it is and reports a warning, as before.
+  jetbrains-pin:
+    name: Open JetBrains CLI pin PR
+    needs: [version, publish]
+    if: github.repository == 'Kilo-Org/kilocode' && needs.version.outputs.release != ''
+    runs-on: ubuntu-24.04-8core-x64 # GitHub-hosted because the job holds release keys; static egress for the org IP allow list.
+    environment: release-keys
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/actions/kilo-credentials/
+            /.github/actions/setup-bun/
+            /.github/actions/setup-git-committer/
+            /.kilo/skills/release-jetbrains/script/pin-common.ts
+            /.kilo/skills/release-jetbrains/script/set-pin.ts
+            /script/kilocode/bun.json
+            /script/kilocode/bun.ts
+            /script/kilocode/jetbrains-version.ts
+
+      - uses: ./.github/actions/setup-bun
+        with:
+          install: false
+
+      - name: Read the STS bundle
+        id: creds
+        uses: ./.github/actions/kilo-credentials
+        with:
+          workload: ci-kilocode-release
+          secrets: KILOCODE_MAINTAINER_APP_KEY
+
+      - name: Setup Git Committer
+        id: committer
+        uses: ./.github/actions/setup-git-committer
+        with:
+          kilo-maintainer-app-id: ${{ vars.KILO_MAINTAINER_APP_ID }}
+          kilo-maintainer-app-secret: ${{ steps.creds.outputs.KILOCODE_MAINTAINER_APP_KEY }}
+          repositories: kilocode
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Open the JetBrains CLI pin bump PR
+        id: pin
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ steps.committer.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ needs.version.outputs.version }}
+          PRE_RELEASE: ${{ inputs.pre_release }}
+        run: |
+          args=(--version "$VERSION" --pr)
+          if [ "$PRE_RELEASE" = "true" ]; then args+=(--pre-release); fi
+          out="$(bun .kilo/skills/release-jetbrains/script/set-pin.ts "${args[@]}")"
+          printf '%s\n' "$out"
+          url="$(printf '%s\n' "$out" | grep -oE 'https://github\.com/[^ ]+/pull/[0-9]+' | head -n 1 || true)"
+          if [ -n "$url" ]; then echo "::notice title=JetBrains CLI pin bump PR::$url"; fi
+
+      - name: Report a failed pin bump
+        if: steps.pin.outcome == 'failure'
+        run: echo "::warning title=JetBrains CLI pin bump PR failed::Release completed, but the JetBrains CLI pin bump PR was not created. Check the logs above and create it manually if needed."
   # kilocode_change end
 
   # kilocode_change start - check VS Code Marketplace trusted publishing without
