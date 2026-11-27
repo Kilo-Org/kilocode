@@ -28,7 +28,7 @@ import { promptFiles } from "./prompt-attachments"
 import { transcriptChildren } from "../components/chat/background-agents"
 import { useV2 } from "./client"
 import { useDisplaySettings } from "./display-settings"
-import { ErrorBanner } from "./error-banner"
+import { createBannerState, ErrorBanner } from "./error-banner"
 import { createInboxRefresh } from "./inbox-refresh"
 import { sessionMissing } from "./scope"
 import { childTools, createChildSessions } from "./child-session"
@@ -198,6 +198,16 @@ export function SessionView(props: {
   const forms = createMemo(() => family().flatMap((id) => v2.data.session.form.list(id) ?? []))
 
   const inbox = createInboxRefresh(v2.data.session.pending.sync)
+  const banner = createBannerState({
+    handshake: v2.handshake,
+    failure: v2.failure,
+    clearError: v2.clearError,
+    inbox: inbox.failure,
+    dismissInbox: inbox.dismiss,
+    kiloFailure: v2.kiloFailure,
+    signInLabel: () => language.t("common.signIn"),
+    onSignIn: () => getVSCodeAPI().postMessage({ type: "openProfile", login: true } satisfies ToHost as never),
+  })
   // The session-start loader lasts until the first transcript page lands. createData reports loading only for pages it
   // adds, and an already loaded transcript must stay instant, so the view that starts the first request tracks it. A
   // newer request owns the loader, so the settle of a superseded one cannot clear it.
@@ -639,12 +649,9 @@ export function SessionView(props: {
           </div>
           <Show when={!props.readOnly}>
             <div class="chat-input">
-              <Show when={v2.handshake() ?? v2.failure() ?? inbox.failure()}>
-                {(failure) => (
-                  <ErrorBanner
-                    failure={failure()}
-                    onDismiss={v2.handshake() ? undefined : v2.failure() ? v2.clearError : inbox.dismiss}
-                  />
+              <Show when={banner()}>
+                {(item) => (
+                  <ErrorBanner failure={item().failure} action={item().action} onDismiss={item().onDismiss} />
                 )}
               </Show>
               <Show when={visiblePermission()} keyed>

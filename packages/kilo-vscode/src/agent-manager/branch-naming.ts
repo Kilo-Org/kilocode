@@ -87,9 +87,26 @@ export class BranchNamingController {
     this.applyPending(sessionID)
   }
 
+  /** Clear tracked busy sessions (for example on SSE disconnect so a missed idle event cannot pin a session busy). */
+  clearBusy(): void {
+    this.busySessions.clear()
+  }
+
+  /** Reconcile busy sessions on reconnect: re-mark active sessions busy and apply held renames for idle ones. */
+  reconcileBusy(active: ReadonlySet<string>): void {
+    this.busySessions.clear()
+    for (const sessionID of active) this.busy(sessionID)
+    for (const [id, pending] of [...this.pending]) {
+      if (this.busySessions.has(pending.sessionID)) continue
+      this.pending.delete(id)
+      void this.applyRename(id, pending.sessionID, pending.branch)
+    }
+  }
+
   dispose(): void {
     for (const request of this.requests.values()) request.abort()
     this.requests.clear()
+    this.busySessions.clear()
     this.pending.clear()
   }
 

@@ -41,7 +41,7 @@ import { forkSession } from "./fork-session"
 import { handleMessage, setReviewMarkdownRender, type MessageHost } from "./provider-messages"
 import { messageHost, lifecycleHost, multiVersionHost, type ProviderHostsSource } from "./provider-hosts"
 import { createWorktreeActivity } from "./worktree-activity"
-import { handleSessionLifecycle } from "./session-lifecycle"
+import { handleSessionLifecycle, watchBusySessions } from "./session-lifecycle"
 import { runningFromEvent } from "../session-status"
 import { WorktreeImporter } from "./worktree-importer"
 import { shouldOpenLinkInIntegratedBrowser } from "../browser-links"
@@ -159,6 +159,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   public readonly panelSessions = new Set<string>()
   public readonly busySessions = new Set<string>()
   public readonly removedSessions = new Set<string>()
+  private readonly busyTracker: ReturnType<typeof watchBusySessions>
   public visibleSession: string | null = null
   public readonly sessionRoots: SessionRoots
   public readonly caffeination: CaffeinationService
@@ -371,39 +372,27 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     )
     const stopSessionEvents = this.connection.onEvent(
       (event) => this.onSessionEvent(event),
-      located(() =>
-        [...this.contexts.values()].flatMap((ctx) => [
-          ctx.root,
-          ...(ctx
-            .peekState()
-            ?.getWorktrees()
-            .map((wt) => wt.path) ?? []),
-        ]),
-      ),
+      located(() => this.trackedDirectories()),
     )
-    // Events sent while the stream reconnects are lost, so a move or delete in that gap would leave a stale root.
-    const stopSessionRootsReset = this.connection.onState((status) => {
-      if (status === "connected") this.sessionRoots.clear()
+    // Events sent while the stream reconnects are lost, so a move, delete, or idle transition in that gap would leave
+    // stale roots or sessions stuck busy.
+    this.busyTracker = watchBusySessions({
+      connection: this.connection,
+      busy: this.busySessions,
+      removed: this.removedSessions,
+      naming: this.naming,
+      onConnected: () => this.sessionRoots.clear(),
     })
     this.unsubEvents = () => {
       stopSessionRoots()
-      stopSessionRootsReset()
+      this.busyTracker.dispose()
       stopSessionEvents()
     }
     this.autoApprove = createHostAutoApprove({
       client: () => this.connection.client(),
       directories: () => {
         const workspace = this.host.workspacePath()
-        return [
-          ...(workspace ? [workspace] : []),
-          ...[...this.contexts.values()].flatMap((ctx) => [
-            ctx.root,
-            ...(ctx
-              .peekState()
-              ?.getWorktrees()
-              .map((wt) => wt.path) ?? []),
-          ]),
-        ]
+        return [...(workspace ? [workspace] : []), ...this.trackedDirectories()]
       },
       log: (message) => this.log(message),
     })
@@ -420,35 +409,40 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       stopAutoApproveState()
       stopAutoApproveConnection()
     }
-    this.caffeination = new CaffeinationService(this.connection, () =>
-      [...this.contexts.values()].flatMap((ctx) => [
-        ctx.root,
-        ...(ctx
-          .peekState()
-          ?.getWorktrees()
-          .map((wt) => wt.path) ?? []),
-      ]),
-    )
+    this.caffeination = new CaffeinationService(this.connection, () => this.trackedDirectories())
     this.caffeination.onChange((state) => this.postToWebview({ type: "agentManager.caffeination", ...state }))
+  }
+
+  private trackedDirectories(): string[] {
+    return [...this.contexts.values()].flatMap((ctx) => [
+      ctx.root,
+      ...(ctx
+        .peekState()
+        ?.getWorktrees()
+        .map((wt) => wt.path) ?? []),
+    ])
   }
 
   public onSessionEvent(event: OpenCodeEvent): void {
     handleSessionLifecycle(event, { busy: this.busySessions, removed: this.removedSessions })
     const running = runningFromEvent(event)
     if (!running) return
+    this.busyTracker.record(running.sessionID, running.running)
     if (running.running) this.naming.busy(running.sessionID)
     else this.naming.idle(running.sessionID)
   }
 
   public onSessionStatus(sessionID: string, running: boolean): void {
-    if (this.removedSessions.has(sessionID)) return
     if (running) {
+      if (this.removedSessions.has(sessionID)) return
+      this.busyTracker.record(sessionID, true)
       this.busySessions.add(sessionID)
       this.naming.busy(sessionID)
       return
     }
+    this.busyTracker.record(sessionID, false)
     this.busySessions.delete(sessionID)
-    this.naming.idle(sessionID)
+    if (!this.removedSessions.has(sessionID)) this.naming.idle(sessionID)
   }
 
   public stateHost(): ProviderStateHost {

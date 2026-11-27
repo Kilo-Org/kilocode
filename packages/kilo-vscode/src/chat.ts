@@ -46,7 +46,7 @@ import { promptKeybindings, promptSelection, watchPromptContext } from "./prompt
 import { readDisplaySettings } from "./display-settings"
 import { workStyleHost } from "./work-style-host"
 import { SANDBOX_DEFAULT_KEY, SandboxPreference } from "./services/sandbox-preference"
-import { createSpeechToTextHost } from "./speech-to-text/host"
+import { createSpeechToTextHost, type SpeechAuthSubscribe } from "./speech-to-text/host"
 import { setSidebarSession, sidebarSession } from "./browser-tab/sidebar-session"
 import { openBrowserLink } from "./browser-links"
 import { DEVTOOLS } from "./browser-tab/html"
@@ -97,6 +97,8 @@ export function chat(input: {
   gitStats?: (onStats: (stats?: GitChangesStats) => void) => GitChanges
   /** The Agent Manager worktree actions of the sidebar chat. */
   worktree?: ChatWorktree
+  /** Shared host auth subscription for speech-to-text status refreshes. */
+  onSpeechAuthChange?: SpeechAuthSubscribe
 }) {
   // This host owns the persisted auto-approve flag, and the Agent Manager sweep reads it. Record it at activation, so
   // the sweep works before any webview resolves.
@@ -252,6 +254,8 @@ export function wire(input: {
   openBrowser?: (sessionId: string, url: string) => boolean
   /** The editor tab that previews Markdown files, when this view has one. */
   documents?: () => DocumentViewerProvider | undefined
+  /** Shared host auth subscription for speech-to-text status refreshes. */
+  onSpeechAuthChange?: SpeechAuthSubscribe
 }) {
   const webview = input.webview
   const root = input.context.extensionUri
@@ -300,6 +304,7 @@ export function wire(input: {
     remote: !!env.remoteName,
     profile: resolveKiloProfile(input.context),
     secrets: input.view === "settings",
+    onAuthChange: speechAuthSubscription(input.view, input.directory, input.onSpeechAuthChange),
     post,
   })
   // Config read and write are host-side: the Settings panel uses the full host, and the sidebar writes the
@@ -787,6 +792,17 @@ export function routeWorktreeMessage(
 }
 
 type View = "chat" | "settings" | "profile" | "marketplace" | "agentManager" | "documents" | "diffViewer" | "subagent"
+
+const SPEECH_VIEWS: ReadonlySet<View> = new Set(["chat", "agentManager", "settings"])
+
+function speechAuthSubscription(
+  view: View,
+  directory: string,
+  subscribe?: SpeechAuthSubscribe,
+): ((listener: () => void) => () => void) | undefined {
+  if (!subscribe || !SPEECH_VIEWS.has(view)) return undefined
+  return (listener) => subscribe(directory, listener)
+}
 
 /** The Changes editor tab: the session, working tree and turn diffs with review comments. */
 export type ChangesTab = {

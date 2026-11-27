@@ -12,11 +12,12 @@ import { ModeSwitcherBase } from "../components/shared/ModeSwitcher"
 import { ThinkingSelectorBase } from "../components/shared/ThinkingSelector"
 import { useLanguage } from "../context/language"
 import { useModelPreferences } from "../context/model-preferences"
+import { useVSCode } from "../context/vscode"
 import { syncAgentsOnColdActivation } from "./agent-sync"
-import { useV2, type V2 } from "./client"
-import { failureMessage } from "./kilo-catalog"
+import { useV2 } from "./client"
+import { failureMessage, signInAction } from "./kilo-catalog"
 import { shiftTabCyclesVariant } from "./kilo-settings"
-import { configuredModel, initialModel } from "./model-default"
+import { configuredModel, createDefaultModel, initialModel } from "./model-default"
 import { kiloTeam } from "./kilo-models"
 import { cycleVariant, preserveVariant } from "./variant"
 import { useViewActive } from "./view-active"
@@ -52,13 +53,18 @@ export function createSelection(
   )
   onCleanup(syncAgentsOnColdActivation(v2))
   // Sign-in, sign-out and a team switch reload the catalog through createData, and can change the default model and
-  // the models a draft may use. A draft model that left the catalog falls back to the default, as on v1.
+  // the models a draft may use. A draft model that left the catalog falls back to the default, as on v1. Skip empty
+  // Wave-1 reloads so a draft survives until the replacement catalog lands.
   createEffect(
     on(
       () => v2.data.location.model.list(),
       (list) => {
+        if (!list || list.length === 0) return
         const draft = draftModel()
-        if (list && draft && !list.some((item) => item.providerID === draft.providerID && item.id === draft.id))
+        if (
+          draft &&
+          !list.some((item) => item.enabled && item.providerID === draft.providerID && item.id === draft.id)
+        )
           setDraftModel(undefined)
       },
     ),
@@ -268,32 +274,12 @@ export function createSelection(
 
 export type Selection = ReturnType<typeof createSelection>
 
-/**
- * The server default model of the directory, the fallback of every composer after its own choice, the agent model and
- * Kilo Auto Free. Sign-in, sign-out and a team switch reload the catalog, so the default follows the catalog.
- */
-export function createDefaultModel(v2: V2) {
-  const [model, setModel] = createSignal<ModelRef>()
-  createEffect(
-    on(
-      () => v2.data.location.model.list(),
-      (list) => {
-        if (!list) return
-        void v2.api.model
-          .default({ location: { directory: v2.directory } })
-          .then((response) =>
-            setModel(response.data ? { id: response.data.id, providerID: response.data.providerID } : undefined),
-          )
-          .catch(v2.report)
-      },
-    ),
-  )
-  return model
-}
+export { createDefaultModel } from "./model-default"
 
 export function Selectors(props: { selection: Selection; blocked: boolean }) {
   const v2 = useV2()
   const language = useLanguage()
+  const vscode = useVSCode()
   const model = () => {
     const current = props.selection.model()
     return current ? { providerID: current.providerID, modelID: current.id } : null
@@ -356,6 +342,9 @@ export function Selectors(props: { selection: Selection; blocked: boolean }) {
           blocked={props.blocked}
           descriptionRenderer={ModelDescription}
           failure={failureMessage(language.t, v2.kiloFailure())}
+          onFailureAction={signInAction(v2.kiloFailure(), () =>
+            vscode.postMessage({ type: "openProfile", login: true }),
+          )}
           onSelect={props.selection.selectModel}
           onPick={restore}
           onCancel={restore}

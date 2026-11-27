@@ -128,4 +128,27 @@ describe("model drafts", () => {
     drafts.ensure("ses_waiting", undefined, undefined)
     expect(drafts.get("ses_waiting")).toBeUndefined()
   })
+
+  test("prunes stale drafts while keeping valid ones and in-flight commits", () => {
+    const drafts = createModelDrafts()
+    const free: ModelRef = { providerID: "kilo", id: "kilo-auto/free" }
+    const paid: ModelRef = { providerID: "kilo", id: "claude-sonnet-4", variant: "high" }
+    const committing: ModelRef = { providerID: "kilo", id: "old-model" }
+
+    drafts.set("ses_stale", free, undefined)
+    drafts.set("ses_valid", paid, undefined)
+    drafts.set("ses_committing", committing, undefined)
+    drafts.commit("ses_committing", committing)
+
+    drafts.prune((ref) => ref.providerID === "kilo" && ref.id === "claude-sonnet-4")
+
+    expect(drafts.get("ses_stale")).toBeUndefined()
+    expect(drafts.get("ses_valid")).toEqual(paid)
+    expect(drafts.get("ses_committing")).toEqual(committing)
+
+    // Once the in-flight commit fails, a subsequent prune can drop the stale draft.
+    drafts.failed("ses_committing", committing)
+    drafts.prune((ref) => ref.providerID === "kilo" && ref.id === "claude-sonnet-4")
+    expect(drafts.get("ses_committing")).toBeUndefined()
+  })
 })

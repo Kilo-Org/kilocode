@@ -299,4 +299,47 @@ describe("WorktreeActivity", () => {
     expect(loaded).toEqual([LIVE, gone])
     activity.dispose()
   })
+
+  it("reports session status accurately using runningFromEvent instead of marking idle session.status as running", () => {
+    const listener: { fn?: (event: unknown) => void } = {}
+    const connection = {
+      client: async () => ({
+        session: { list: async () => ({ data: [] }), active: async () => ({}) },
+        permission: { request: { list: async () => ({ data: [] }) } },
+        form: { list: async () => ({ data: [] }) },
+      }),
+      state: () => "connected",
+      onState: () => () => undefined,
+      onEvent: (fn: (event: unknown) => void) => {
+        listener.fn = fn
+        return () => undefined
+      },
+    }
+    const statuses: Array<[string, boolean]> = []
+    const activity = createWorktreeActivity({
+      connection: connection as never,
+      paths: () => [LIVE],
+      post: () => {},
+      status: (id, running) => statuses.push([id, running]),
+      log: () => {},
+    })
+
+    listener.fn?.({ type: "session.status", data: { sessionID: "s1", status: { type: "busy" } } })
+    listener.fn?.({ type: "session.status", data: { sessionID: "s1", status: { type: "idle" } } })
+    listener.fn?.({ type: "session.status", data: { sessionID: "s2", status: { type: "retry" } } })
+    listener.fn?.({ type: "session.status", data: { sessionID: "s2" } })
+    listener.fn?.({ type: "session.retry.scheduled", data: { sessionID: "s3" } })
+    listener.fn?.({ type: "session.deleted", data: { sessionID: "s3" } })
+    listener.fn?.({ type: "session.created", data: { sessionID: "s4" } })
+
+    expect(statuses).toEqual([
+      ["s1", true],
+      ["s1", false],
+      ["s2", true],
+      ["s2", false],
+      ["s3", true],
+      ["s3", false],
+    ])
+    activity.dispose()
+  })
 })

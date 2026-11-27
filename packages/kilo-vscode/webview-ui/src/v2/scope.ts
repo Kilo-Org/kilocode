@@ -1,12 +1,13 @@
 // The v2 data of one directory over a shared client and event stream. Kept free of JSX and webview contexts, so the
 // extension tests can load it.
-import type { OpenCodeClient } from "@opencode/client"
+import type { ModelInfo, OpenCodeClient } from "@opencode/client"
 import { createClientConnection, createData } from "@opencode/client/solid"
+import type { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
 import { createEffect, createSignal, on, onCleanup, type Accessor } from "solid-js"
 import { createConnectionMetadata, type ConnectionMetadata } from "./connection-metadata"
 import { toFailure, type Failure } from "./error"
 import type { events } from "./events"
-import { createKiloCatalog } from "./kilo-catalog"
+import { createKiloCatalog, failureNeedsSignIn } from "./kilo-catalog"
 import { createKiloModels } from "./kilo-models"
 import { createModelDrafts } from "./model-draft"
 import { createWakeups } from "./wakeups"
@@ -98,6 +99,22 @@ export function createV2Scope(input: {
   const drafts = createModelDrafts()
   onCleanup(input.event.on("session.model.selected", (event) => drafts.settle(event.data.sessionID, event.data.model)))
   onCleanup(input.event.on("session.deleted", (event) => drafts.drop(event.data.sessionID)))
+  // Revalidate persisted drafts on catalog reload and clear stale pre-recovery/Wave-1 failures once usable models
+  // return after auth or catalog recovery, without hiding brand-new post-recovery errors.
+  const recovery = createCatalogRecovery({
+    models: () => data.location.model.list(),
+    kiloFailure,
+    drafts,
+    clearFailure: () => setFailure(undefined),
+    clearAuthFailure: () => setFailure((current) => (current?.auth ? undefined : current)),
+  })
+  onCleanup(
+    input.event.on("credential.switched", (event) =>
+      recovery.onCredentialSwitched(event.data.integrationID, event.data.credentialID !== null),
+    ),
+  )
+  onCleanup(input.event.on("provider.updated", recovery.onCatalogEvent))
+  onCleanup(input.event.on("model.updated", recovery.onCatalogEvent))
   // Settings scopes draw no sessions, so only a chat scope that was not given a shared store reads its own directory.
   const wakeups =
     input.scheduled || !chat
@@ -305,4 +322,77 @@ function wrapLocationSync(
   if (api.vcs) wrapped.vcs = { ...api.vcs, get: observe(api.vcs.get) }
   if (api.shell) wrapped.shell = { ...api.shell, list: observe(api.shell.list) }
   return wrapped
+}
+
+function createCatalogRecovery(input: {
+  models: Accessor<readonly ModelInfo[] | undefined>
+  kiloFailure: Accessor<KiloGatewayRpc.CatalogFailure | undefined>
+  drafts: ReturnType<typeof createModelDrafts>
+  clearFailure: () => void
+  clearAuthFailure: () => void
+}) {
+  const state = {
+    switched: false,
+    switchedIntegration: undefined as string | undefined,
+    catalogUpdated: false,
+    emptyCatalog: false,
+    previousEnabled: new Set<string>(),
+    previousProviders: new Set<string>(),
+  }
+
+  createEffect(
+    on(input.models, (list) => {
+      if (!list) return
+      const enabled = list.filter((item) => item.enabled)
+      const keys = new Set(enabled.map((item) => `${item.providerID}/${item.id}`))
+      const providers = new Set(enabled.map((item) => item.providerID))
+
+      // Revalidate persisted drafts once a non-empty catalog settles; skip empty Wave-1 reloads.
+      if (list.length > 0) input.drafts.prune((ref) => keys.has(`${ref.providerID}/${ref.id}`))
+
+      if (enabled.length === 0) {
+        state.emptyCatalog = true
+        return
+      }
+
+      const added = enabled.some((item) => !state.previousEnabled.has(`${item.providerID}/${item.id}`))
+      const awaitingSwitched =
+        state.switched &&
+        state.switchedIntegration !== undefined &&
+        state.previousProviders.has(state.switchedIntegration) &&
+        !providers.has(state.switchedIntegration)
+
+      const switched = state.switched
+      const catalogUpdated = state.catalogUpdated
+      const wasEmpty = state.emptyCatalog
+
+      state.previousEnabled = keys
+      state.previousProviders = providers
+      state.emptyCatalog = false
+      state.catalogUpdated = false
+      if (!awaitingSwitched) {
+        state.switched = false
+        state.switchedIntegration = undefined
+      }
+
+      if (switched || (catalogUpdated && wasEmpty)) {
+        input.clearFailure()
+        return
+      }
+      if (catalogUpdated && added) {
+        const kilo = input.kiloFailure()
+        if (!kilo || !failureNeedsSignIn(kilo)) input.clearAuthFailure()
+      }
+    }),
+  )
+
+  return {
+    onCredentialSwitched(integrationID: string, active: boolean) {
+      state.switched = true
+      state.switchedIntegration = active ? integrationID : undefined
+    },
+    onCatalogEvent() {
+      state.catalogUpdated = true
+    },
+  }
 }

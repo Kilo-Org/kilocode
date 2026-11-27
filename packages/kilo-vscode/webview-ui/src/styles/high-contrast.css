@@ -9,6 +9,7 @@ body.vscode-high-contrast-light {
   /* Buttons */
   .scroll-to-bottom-button,
   .feedback-button,
+  .startup-error-action,
   .startup-error-dismiss,
   .image-attachment-remove,
   .prompt-review-row-remove,

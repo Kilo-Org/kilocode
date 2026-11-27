@@ -18,7 +18,7 @@ import type { TimelineHighlight } from "../utils/timeline/highlight"
 import { partKey, timelinePart } from "../utils/timeline/timeline-parts"
 import { useV2, useV2Optional } from "./client"
 import { displaySettings } from "./display-settings"
-import { isSignedOutError, readableMessage } from "./error"
+import { isAuthSessionError, isSignedOutError, readableMessage } from "./error"
 import { tokenThroughputVisible } from "./kilo-settings"
 import { mcpServerFromError } from "./mcp-error"
 import { formatTokenThroughput, type TurnMetadata } from "./message-status"
@@ -241,12 +241,13 @@ export function AssistantMessage(props: {
 
 /** The error card of an assistant step. The message list also uses it for a run that fails before a step. */
 export function ErrorCard(props: {
-  error: { message: string; status?: number; response?: { body: string } }
+  error: { type?: string; message: string; status?: number; response?: { body: string } }
 }) {
   const language = useLanguage()
   const vscode = useVSCode()
   const v2 = useV2Optional()
   const kilo = () => v2?.data.location.provider.list()?.find((item) => item.id === "kilo")?.name ?? "Kilo Gateway"
+  const signIn = () => vscode.postMessage({ type: "openProfile", login: true } satisfies ToHost as never)
   return (
     <Show
       when={isSignedOutError(props.error)}
@@ -256,6 +257,13 @@ export function ErrorCard(props: {
             <Icon name="warning" size="small" />
             <div class="error-card-message">{readableMessage(props.error, language.t)}</div>
           </div>
+          <Show when={isAuthSessionError(props.error)}>
+            <div class="error-card-actions">
+              <Button variant="secondary" size="small" onClick={signIn}>
+                {language.t("common.signIn")}
+              </Button>
+            </div>
+          </Show>
           <Collapsible variant="ghost">
             <Collapsible.Trigger class="error-details-trigger">
               <span>{language.t("error.details.show")}</span>
@@ -274,10 +282,7 @@ export function ErrorCard(props: {
           <span data-slot="auth-prompt-title">{language.t("error.providerAuth.title", { provider: kilo() })}</span>
         </div>
         <p data-slot="auth-prompt-description">{language.t("error.providerAuth.description", { provider: kilo() })}</p>
-        <Button
-          variant="primary"
-          onClick={() => vscode.postMessage({ type: "openProfile", login: true } satisfies ToHost as never)}
-        >
+        <Button variant="primary" onClick={signIn}>
           {language.t("common.signIn")}
         </Button>
       </div>

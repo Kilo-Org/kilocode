@@ -2,6 +2,9 @@
 // OpenAI-compatible endpoint. The webview never sees the server password or the audio bytes.
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import path from "node:path"
+import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
+import type { AgentManagerConnection } from "../agent-manager/connection"
+import { samePath } from "../agent-manager/project/paths"
 import { applyConfigEdits, configWriteQueue } from "../config-file-edit"
 import type { ToHost, ToWebview, SpeechToTextStatus } from "../protocol"
 import type { Manager } from "../server"
@@ -19,6 +22,67 @@ type Cancel = { type: "speechToTextCancel"; requestId: string }
 type Save = { type: "speechToTextSave"; requestId: string; key: "base_url" | "api_key" | "model"; value: string }
 
 const CATALOG_TTL = 60_000
+const GATEWAY_ORG_EVENT = `rpc.${KiloGatewayRpc.Definition.id}.organization`
+
+export type SpeechAuthSubscribe = (directory: string, listener: () => void) => () => void
+
+/**
+ * Shares one subscription on the host SSE connection across every open webview that renders speech-to-text UI,
+ * notifying listeners when Kilo Gateway auth, organization, or provider state changes.
+ */
+export function createSpeechAuthWatcher(connection: Pick<AgentManagerConnection, "onEvent" | "onState" | "state">) {
+  const listeners = new Set<{ directory: string; notify: () => void }>()
+  let needsRefresh = connection.state() !== "connected"
+
+  const notifyAll = () => {
+    for (const entry of [...listeners]) entry.notify()
+  }
+
+  const unsubEvent = connection.onEvent((event) => {
+    if (event.type === "credential.switched") {
+      const id =
+        "integrationID" in event.data && typeof event.data.integrationID === "string"
+          ? event.data.integrationID
+          : undefined
+      if (id && id !== "kilo") return
+      notifyAll()
+      return
+    }
+    if (event.type === GATEWAY_ORG_EVENT) {
+      notifyAll()
+      return
+    }
+    if (event.type === "provider.updated") {
+      const dir = event.location?.directory
+      for (const entry of [...listeners]) {
+        if (!dir || samePath(normalizeDir(entry.directory), normalizeDir(dir))) entry.notify()
+      }
+    }
+  })
+
+  const unsubState = connection.onState((status) => {
+    if (status !== "connected") {
+      needsRefresh = true
+      return
+    }
+    if (!needsRefresh) return
+    needsRefresh = false
+    notifyAll()
+  })
+
+  return {
+    subscribe: ((directory, notify) => {
+      const entry = { directory, notify }
+      listeners.add(entry)
+      return () => void listeners.delete(entry)
+    }) satisfies SpeechAuthSubscribe,
+    dispose() {
+      unsubEvent()
+      unsubState()
+      listeners.clear()
+    },
+  }
+}
 
 type Dependencies = {
   start: typeof startSpeechCapture
@@ -40,6 +104,8 @@ export function createSpeechToTextHost(input: {
   profile: string
   /** Settings sends the custom key back to its own view; the composer never receives it. */
   secrets?: boolean
+  /** Shared host auth subscription: invalidates cached Gateway models and pushes updated status on changes. */
+  onAuthChange?: (listener: () => void) => () => void
   deps?: Partial<Dependencies>
   post: (message: ToWebview) => void
 }) {
@@ -61,18 +127,34 @@ export function createSpeechToTextHost(input: {
   const cancelled = new Set<string>()
   const starts = new Map<string, Promise<boolean>>()
   const stopping = new Set<string>()
-  let catalog: { server: string; at: number; models: SpeechToTextModelDef[] } | undefined
+  let catalog: { server: string; signedIn: boolean; at: number; models: SpeechToTextModelDef[] } | undefined
+  let catalogVersion = 0
   let active: string | undefined
+  let disposed = false
 
   const target = async (): Promise<Target> => input.server.get()
 
-  const gatewayCatalog = async (target: Target, signal?: AbortSignal) => {
-    if (catalog && catalog.server === target.url && Date.now() - catalog.at < CATALOG_TTL)
+  const invalidateCatalog = () => {
+    catalog = undefined
+    catalogVersion++
+  }
+
+  const gatewayCatalog = async (target: Target, signedIn: boolean, signal?: AbortSignal) => {
+    if (
+      catalog &&
+      catalog.server === target.url &&
+      catalog.signedIn === signedIn &&
+      Date.now() - catalog.at < CATALOG_TTL
+    )
       return { models: catalog.models, error: undefined }
+    const version = catalogVersion
     const result = await deps.fetchModels(target, input.directory, signal)
     // Do not cache a failure: the next status request retries instead of showing the static list for a minute.
-    if (!result.ok) return { models: [...deps.staticModels()], error: result.error }
-    catalog = { server: target.url, at: Date.now(), models: result.models }
+    if (!result.ok) {
+      if (version === catalogVersion) catalog = undefined
+      return { models: [...deps.staticModels()], error: result.error }
+    }
+    if (version === catalogVersion) catalog = { server: target.url, signedIn, at: Date.now(), models: result.models }
     return { models: result.models, error: undefined }
   }
 
@@ -81,10 +163,8 @@ export function createSpeechToTextHost(input: {
     if (settings.baseUrl)
       return resolveSpeechStatus({ settings, remote, signedIn: false, models: [], secrets: input.secrets })
     const server = await target()
-    const [signedIn, found] = await Promise.all([
-      deps.signedIn(server, input.directory),
-      gatewayCatalog(server),
-    ])
+    const signedIn = await deps.signedIn(server, input.directory)
+    const found = await gatewayCatalog(server, signedIn)
     return resolveSpeechStatus({
       settings,
       remote,
@@ -97,17 +177,23 @@ export function createSpeechToTextHost(input: {
 
   let statusSeq = 0
   const postStatus = () => {
+    if (disposed) return
     const seq = ++statusSeq
     void status().then(
       (value) => {
-        if (seq === statusSeq) input.post({ type: "speechToTextConfigLoaded", status: value })
+        if (!disposed && seq === statusSeq) input.post({ type: "speechToTextConfigLoaded", status: value })
       },
       (err: unknown) => {
         console.warn("[Kilo v2] Speech status failed", err)
-        if (seq === statusSeq) input.post({ type: "speechToTextConfigLoaded", status: offline(remote) })
+        if (!disposed && seq === statusSeq) input.post({ type: "speechToTextConfigLoaded", status: offline(remote) })
       },
     )
   }
+
+  const stopAuth = input.onAuthChange?.(() => {
+    invalidateCatalog()
+    postStatus()
+  })
 
   const prewarm = () => {
     void deps.prewarm().catch((err: unknown) => console.warn("[Kilo v2] Speech capture prewarm failed:", err))
@@ -166,6 +252,10 @@ export function createSpeechToTextHost(input: {
         if (result.ok) {
           input.post({ type: "speechToTextResult", text: result.text, requestId: message.requestId })
           return
+        }
+        if (result.code === "not_authenticated" || result.code === "unauthorized") {
+          invalidateCatalog()
+          postStatus()
         }
         input.post({
           type: "speechToTextError",
@@ -287,7 +377,11 @@ export function createSpeechToTextHost(input: {
   return {
     handle,
     postStatus,
+    invalidateCatalog,
     dispose: () => {
+      disposed = true
+      statusSeq++
+      stopAuth?.()
       // A disposed webview cannot be relied on to send its cancel, so stop the microphone here. Capture the id,
       // because cancel() clears `active`.
       const current = active
@@ -298,6 +392,12 @@ export function createSpeechToTextHost(input: {
       aborts.forEach((ctrl) => ctrl.abort())
     },
   }
+}
+
+function normalizeDir(dir: string): string {
+  const value = dir.replace(/\\/g, "/")
+  if (/^[A-Za-z]:\/+$/u.test(value)) return `${value.slice(0, 2)}/`
+  return value.replace(/\/+$/u, "") || "/"
 }
 
 function offline(remote: boolean): SpeechToTextStatus {

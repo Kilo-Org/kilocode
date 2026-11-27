@@ -164,4 +164,33 @@ describe("BranchNamingController", () => {
     expect(renamed).toEqual([])
     expect(state.getWorktree(wt.id)?.branch).toBe("user-branch")
   })
+
+  it("clears busy sessions on disconnect and reconciles held renames on reconnect", async () => {
+    const wt = armed(state)
+    const { naming, renamed } = makeNaming(state, {
+      generate: async () => ({ branch: "fix-sse-gap" }),
+    })
+
+    naming.prompt({ sessionID: "session-1", text: "one" })
+    naming.busy("session-1")
+    naming.prompt({ sessionID: "session-1", text: "two" })
+    await settle()
+    expect(renamed).toEqual([])
+
+    // Disconnect clears busy state without renaming while disconnected.
+    naming.clearBusy()
+    await settle()
+    expect(renamed).toEqual([])
+
+    // Reconnecting while session-1 is still active keeps holding the rename.
+    naming.reconcileBusy(new Set(["session-1"]))
+    await settle()
+    expect(renamed).toEqual([])
+
+    // Reconnecting after session-1 finished during an SSE gap releases and applies the held rename.
+    naming.reconcileBusy(new Set())
+    await settle()
+    expect(renamed).toEqual(["fix-sse-gap"])
+    expect(state.getWorktree(wt.id)?.autoNameSessionId).toBeUndefined()
+  })
 })

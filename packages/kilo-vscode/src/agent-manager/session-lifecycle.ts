@@ -1,4 +1,6 @@
 import { runningFromEvent } from "../session-status"
+import type { AgentManagerConnection } from "./connection"
+import type { BranchNamingController } from "./branch-naming"
 import { samePath } from "./project/paths"
 import { sessionCatalogHost } from "./project/init"
 
@@ -109,4 +111,80 @@ function forget(id: string, deps: Deps): void {
   if (!ctx) return
   ctx.removeLiveSession(id)
   host.post({ type: "agentManager.projectSessions", projectId: ctx.id, sessions: [...ctx.sessions()] })
+}
+
+/**
+ * Keeps host-side busy session sets in sync across SSE disconnects and reconnects: clears stale busy entries on
+ * non-connected states and reconciles against the server's active sessions once reconnected.
+ */
+export function watchBusySessions(deps: {
+  connection: Pick<AgentManagerConnection, "current" | "state" | "onState">
+  busy: Set<string>
+  removed: ReadonlySet<string>
+  naming: Pick<BranchNamingController, "clearBusy" | "reconcileBusy">
+  onConnected?: () => void
+}) {
+  let seq = 0
+  let pending: Map<string, boolean> | undefined
+
+  const clear = () => {
+    seq++
+    pending = undefined
+    deps.busy.clear()
+    deps.naming.clearBusy()
+  }
+
+  const reconcile = () => {
+    const client = deps.connection.current()
+    if (!client || typeof client.session?.active !== "function") return
+    const gen = ++seq
+    const events = new Map<string, boolean>()
+    pending = events
+    void client.session
+      .active()
+      .then((snapshot) => {
+        if (seq !== gen) return
+        pending = undefined
+        if (deps.connection.state() !== "connected") return
+        const active = mergeRunning(Object.keys(snapshot), events, deps.removed)
+        deps.busy.clear()
+        for (const id of active) deps.busy.add(id)
+        deps.naming.reconcileBusy(active)
+      })
+      .catch(() => {
+        if (seq === gen) pending = undefined
+      })
+  }
+
+  const unsub = deps.connection.onState((status) => {
+    if (status !== "connected") return clear()
+    deps.onConnected?.()
+    reconcile()
+  })
+
+  return {
+    record(sessionID: string, running: boolean) {
+      pending?.set(sessionID, running)
+    },
+    dispose() {
+      seq++
+      pending = undefined
+      unsub()
+    },
+  }
+}
+
+function mergeRunning(
+  snapshot: readonly string[],
+  events: ReadonlyMap<string, boolean>,
+  removed: ReadonlySet<string>,
+): Set<string> {
+  const active = new Set<string>()
+  for (const id of snapshot) {
+    if (!removed.has(id) && events.get(id) !== false) active.add(id)
+  }
+  for (const [id, isRunning] of events) {
+    if (isRunning && !removed.has(id)) active.add(id)
+  }
+  return active
 }

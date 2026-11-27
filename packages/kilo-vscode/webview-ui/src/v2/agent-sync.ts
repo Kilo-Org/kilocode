@@ -8,6 +8,7 @@ type AgentSyncScope = Pick<V2, "directory" | "connection" | "data" | "report">
  * empty, refetch immediately on the first `agent.updated` event for this directory.
  */
 export function syncAgentsOnColdActivation(scope: AgentSyncScope): () => void {
+  if (typeof scope.data.on !== "function") return () => {}
   return scope.data.on("agent.updated", (event) => {
     if (event.location && event.location.directory !== scope.directory) return
     if (scope.connection.status() !== "connected") return
