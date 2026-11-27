@@ -401,8 +401,13 @@ const AppContent: Component = () => {
         console.log("[Kilo New] App: 🧭 navigate:", message.view, message.tab ? `tab=${message.tab}` : "")
         if (message.tab) setSettingsTab(message.tab)
         if (message.subtab) setSettingsSubtab(message.subtab)
-        if (message.view === "profile" && message.focus === "login") server.startLogin()
-        else if (message.focus) setSettingsFocus((prev) => ({ token: (prev?.token ?? 0) + 1, value: message.focus! }))
+        if (message.view === "profile" && message.focus === "login") {
+          setMigration(false)
+          vscode.postMessage({ type: "refreshProfile" })
+          server.startLogin()
+        } else if (message.focus) {
+          setSettingsFocus((prev) => ({ token: (prev?.token ?? 0) + 1, value: message.focus! }))
+        }
         setAgentManagerProjectId(message.projectId)
         setCurrentView(message.view as ViewType)
         vscode.postMessage({ type: "settingsTabChanged", tab: message.tab })
