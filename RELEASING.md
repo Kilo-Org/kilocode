@@ -105,6 +105,10 @@ Re-run the failed `publish` job (**Re-run failed jobs**); the build jobs and the
 - **Failed before the release was published** (for example the evidence upload or the second draft check): the GitHub Release is still a draft. The Docker images may already be pushed. The re-run skips the version commit and tag if they were pushed, removes leftover distribution evidence from the draft, packs and describes the npm packages again, rebuilds and pushes the images, uploads the evidence, checks the draft and publishes it. npm has nothing yet: packages are published only after the release.
 - **Failed after the release was published** (for example an npm publish): the re-run uploads nothing and does not touch the release. It checks the published assets (the CLI and VS Code assets against their recorded digests, the distribution evidence against its own manifest), skips the Docker builds, skips npm packages that are already published, and packs the others again; each tarball must have the digest the published evidence names, or the run stops before publishing it. AUR and Homebrew are updated again only if they changed.
 
+### Fixing a Bad Release
+
+Immutable releases are turned on for this repository: once a GitHub Release is published, its tag and assets can no longer be changed or deleted. A bad release is fixed by publishing a new version (for example a patch bump), not by editing or replacing the published release. Drafts stay editable until they are published, which is why every asset is uploaded and checked before the release is published.
+
 ## Prerequisites and Permissions
 
 ### Repository Access
