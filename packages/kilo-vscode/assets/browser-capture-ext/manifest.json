@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Kilo Browser Capture",
+  "version": "1.0",
+  "incognito": "split",
+  "action": {},
+  "permissions": ["tabCapture", "offscreen"],
+  "background": {
+    "service_worker": "bg.js"
+  }
+}

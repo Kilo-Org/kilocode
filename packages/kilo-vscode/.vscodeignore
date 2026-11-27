@@ -4,6 +4,7 @@
 node_modules/**
 src/**
 test/**
+.browser-*/**
 webview-ui/**
 script/**
 out/**

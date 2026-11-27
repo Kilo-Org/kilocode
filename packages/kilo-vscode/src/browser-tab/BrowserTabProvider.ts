@@ -151,6 +151,9 @@ export class BrowserTabProvider {
     const entry: Panel = { panel, sessionId, ready: false }
     this.panels.set(sessionId, entry)
     panel.webview.onDidReceiveMessage((message: InMessage) => this.input(entry, message))
+    panel.onDidChangeViewState((event) => {
+      if (!event.webviewPanel.visible) this.opts.browser?.suspendSession(sessionId)
+    })
     panel.onDidDispose(() => {
       this.panels.delete(sessionId)
       void this.opts.browser?.closeScoped(sessionId).catch((error: unknown) => this.log("Browser close failed:", error))

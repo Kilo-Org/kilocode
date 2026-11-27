@@ -46,6 +46,7 @@ export interface BrowserState {
   frameError?: string
   back?: boolean
   forward?: boolean
+  streamUrl?: string
 }
 
 export interface BrowserInspection {

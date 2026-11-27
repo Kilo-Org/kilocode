@@ -10,6 +10,7 @@ import type {
   BrowserCursor,
   BrowserFrame,
   BrowserInteraction,
+  BrowserStateFields,
   BrowserViewIdentity,
   BrowserViewport,
 } from "../../../../src/shared/browser-stream"
@@ -567,23 +568,8 @@ export interface AgentManagerWorktreeDiffLoadingMessage {
 /** Source-level diff notice. */
 export type DiffViewerNotice = "snapshots-disabled"
 
-export interface BrowserStateMessage {
+export interface BrowserStateMessage extends BrowserStateFields {
   type: "agentManager.browserState"
-  browserId: string
-  projectId?: string
-  sessionId: string
-  navigation?: number
-  status: "starting" | "ready" | "loading" | "error" | "closed"
-  inspecting?: boolean
-  url?: string
-  title?: string
-  errors: number
-  logs?: string[]
-  error?: string
-  missing?: "chrome" | "chromium"
-  frameError?: string
-  back?: boolean
-  forward?: boolean
 }
 
 export interface BrowserInspectionMessage {

@@ -246,6 +246,9 @@ function pipe(client: Duplex, upstream: Socket, head: Buffer) {
   else upstream.once("drain", resume)
 }
 
+export type BrowserProxyHandle = Pick<BrowserProxy, "proxy" | "credentials" | "close">
+export type BrowserProxyConfig = Omit<BrowserProxyHandle, "close">
+
 export class BrowserProxy {
   readonly proxy: Readonly<{ server: string; bypass: "<-loopback>" }>
   readonly credentials: Readonly<{ username: string; password: string; origin: string; realm: string }>

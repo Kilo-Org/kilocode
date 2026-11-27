@@ -30,6 +30,7 @@ export function browserTabHtml(input: {
     `script-src 'nonce-${nonce}' 'strict-dynamic'`,
     `worker-src ${csp}`,
     `font-src ${csp}`,
+    "connect-src ws://127.0.0.1:*",
     `img-src ${csp} data: https:`,
     `frame-src ${DEVTOOLS}`,
   ].join("; ")

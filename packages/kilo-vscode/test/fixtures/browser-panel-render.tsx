@@ -348,6 +348,35 @@ cursor({ cursor: "grab" })
 assert.equal(canvas.style.cursor, "crosshair")
 inspect(false)
 assert.equal(canvas.style.cursor, "grab")
+// A trackpad can reverse within one display interval. Preserve the earlier distance, then send the reversal immediately.
+Object.assign(globalThis, { createImageBitmap: async () => ({ close() {} }) })
+Object.defineProperty(canvas, "getContext", { value: () => ({ drawImage() {} }) })
+canvas.getBoundingClientRect = () => bounds
+for (const reader of readers) {
+  reader({
+    type: "frame",
+    value: { ...identity, scope, width: 400, height: 200, sequence: 1, data: new ArrayBuffer(1) },
+  })
+}
+await Promise.resolve()
+const wheelDeltas = () =>
+  commands.flatMap((command) =>
+    command.type === "interact" && command.event.kind === "wheel" ? [command.event.deltaY] : [],
+  )
+const sendWheel = (deltaY: number) =>
+  canvas.dispatchEvent(
+    Object.assign(new window.MouseEvent("wheel", { bubbles: true, clientX: 30, clientY: 30 }), {
+      deltaMode: 0,
+      deltaX: 0,
+      deltaY,
+    }) as unknown as WheelEvent,
+  )
+sendWheel(12)
+sendWheel(6)
+sendWheel(4)
+assert.deepEqual(wheelDeltas(), [12])
+sendWheel(-3)
+assert.deepEqual(wheelDeltas(), [12, 10, -3])
 setPage({ ...state, navigation: 1 })
 assert.equal(canvas.style.cursor, "default")
 cursor()

@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test
 import { EventEmitter } from "node:events"
 import { chromium, type Browser, type Page } from "playwright-core"
 import { BrowserStream } from "../src/services/browser-automation/browser-stream"
-import { source, type BrowserCursor, type BrowserFrame, type BrowserInteraction } from "../src/shared/browser-stream"
+import type { BrowserCursor, BrowserFrame, BrowserInteraction } from "../src/shared/browser-stream"
 import { executable, hookTimeout, launchTimeout } from "./fixtures/chromium"
 
 const streams: BrowserStream[] = []
@@ -65,18 +65,18 @@ function protocol(cursor?: (value: BrowserCursor) => void) {
     page as unknown as Page,
     () => scope,
     (frame) => {
-      if (delivery.fail) throw new Error(frame.data)
+      if (delivery.fail) throw new Error("Cannot deliver frame")
       frames.push(frame)
     },
     (...args) => logs.push(args),
     cursor,
   )
   streams.push(stream)
-  const send = (id: number, data?: string, size = view) => {
+  const send = (id: number, data?: string, size = view, monotonicTimestamp?: number) => {
     session.emit("Page.screencastFrame", {
       sessionId: id,
       data: data ?? jpeg(size.width, size.height).toString("base64"),
-      metadata: { deviceWidth: size.width, deviceHeight: size.height },
+      metadata: { deviceWidth: size.width, deviceHeight: size.height, monotonicTimestamp },
     })
   }
   return { stream, session, page, calls, hooks, frames, logs, scope, send, delivery }
@@ -142,7 +142,10 @@ describe("BrowserStream protocol lifecycle", () => {
     await fixture.stream.close()
     expect(fixture.calls).toContainEqual({
       method: "Runtime.evaluate",
-      params: { contextId: 9, expression: "globalThis.__kiloCursorCleanup?.(); delete globalThis.__kiloCursor" },
+      params: {
+        contextId: 9,
+        expression: "globalThis.__kiloCursorCleanup?.(); delete globalThis.__kiloCursor; globalThis.__kiloOverscrollCleanup?.()",
+      },
     })
     expect(fixture.calls).toContainEqual({ method: "Runtime.removeBinding", params: { name: "__kiloCursor" } })
     expect(fixture.calls.at(-2)?.method).toBe("Runtime.removeBinding")
@@ -152,18 +155,14 @@ describe("BrowserStream protocol lifecycle", () => {
     expect(cursors).toHaveLength(3)
   })
 
-  test("keeps frame sources in data images without treating payloads as external URLs", () => {
-    const payload = jpeg().toString("base64")
-    expect(source(payload)).toBe(`data:image/jpeg;base64,${payload}`)
-    for (const type of ["jpeg", "png", "webp"]) {
-      const image = `data:image/${type};base64,${payload}`
-      expect(source(image)).toBe(image)
-    }
-    for (const value of ["https://public.example/image", "javascript:alert(1)"]) {
-      expect(source(value)).toBe(`data:image/jpeg;base64,${value}`)
-    }
-    expect(source(`data:image/svg+xml;base64,${payload}`)).toBeUndefined()
-    expect(source(`data:text/html;base64,${payload}`)).toBeUndefined()
+  test("sends only the JPEG bytes, never external URLs or a pooled buffer", async () => {
+    const fixture = protocol()
+    await fixture.stream.configure(view)
+    fixture.send(1, "https://public.example/image")
+    fixture.send(2, "data:image/svg+xml;base64,PHN2Zy8+")
+    fixture.send(3)
+    expect(fixture.frames).toHaveLength(1)
+    expect(new Uint8Array(fixture.frames[0]!.data)).toEqual(new Uint8Array(jpeg()))
   })
 
   test("acknowledges CDP immediately and keeps only the newest buffered frame while input is blocked", async () => {
@@ -357,6 +356,19 @@ describe("BrowserStream protocol lifecycle", () => {
     expect(fixture.frames.at(0)).toMatchObject({ width: view.width, height: view.height })
   })
 
+  test("a late JPEG cannot overwrite a newer capture waiting for display credit", async () => {
+    const f = protocol()
+    await f.stream.configure(view)
+    const send = (time: number, id: number) =>
+      f.send(id, Buffer.concat([jpeg(), Buffer.from([id])]).toString("base64"), view, time)
+    send(1, 1)
+    send(3, 3)
+    send(2, 2)
+    f.stream.acknowledge(1)
+    expect(f.frames.map((frame) => Buffer.from(frame.data).at(-1))).toEqual([1, 3])
+    expect(f.calls.filter((call) => call.method === "Page.screencastFrameAck")).toHaveLength(3)
+  })
+
   test("drops oversized frames including a one-byte overflow with the same base64 length", async () => {
     const fixture = protocol()
     await fixture.stream.configure(view)
@@ -364,7 +376,7 @@ describe("BrowserStream protocol lifecycle", () => {
     fixture.send(2, jpeg(view.width, view.height, 2 * 1024 * 1024 + 1).toString("base64"))
     fixture.send(3, jpeg(view.width, view.height, 2 * 1024 * 1024 + 8).toString("base64"))
     expect(fixture.frames).toHaveLength(1)
-    expect(Buffer.byteLength(fixture.frames.at(0)!.data, "base64")).toBe(2 * 1024 * 1024)
+    expect(fixture.frames.at(0)!.data.byteLength).toBe(2 * 1024 * 1024)
     fixture.stream.acknowledge(1)
     expect(fixture.frames).toHaveLength(1)
     expect(fixture.calls.filter((call) => call.method === "Page.screencastFrameAck")).toHaveLength(3)
@@ -806,7 +818,7 @@ describe.skipIf(!executable)("BrowserStream Chromium", () => {
       640,
       480,
     ])
-    const bytes = Buffer.from(frame.data, "base64")
+    const bytes = Buffer.from(frame.data)
     expect(bytes.byteLength).toBeLessThanOrEqual(2 * 1024 * 1024)
     expect([...bytes.subarray(0, 2)]).toEqual([255, 216])
     expect(
@@ -815,7 +827,7 @@ describe.skipIf(!executable)("BrowserStream Chromium", () => {
         image.src = `data:image/jpeg;base64,${data}`
         await image.decode()
         return [image.naturalWidth, image.naturalHeight]
-      }, frame.data),
+      }, bytes.toString("base64")),
     ).toEqual([640, 480])
     expect(page.context().pages()).toHaveLength(1)
     await stream.configure({ ...view, revision: 3, active: false })
@@ -843,7 +855,7 @@ describe.skipIf(!executable)("BrowserStream Chromium", () => {
         image.src = `data:image/jpeg;base64,${data}`
         await image.decode()
         return [image.naturalWidth, image.naturalHeight, innerWidth, innerHeight, devicePixelRatio]
-      }, frame.data),
+      }, Buffer.from(frame.data).toString("base64")),
     ).toEqual([640, 480, 320, 240, 2])
     const point = { kind: "pointer", x: 60 / 320, y: 35 / 240, button: "left", clicks: 1, modifiers: 0 } as const
     await stream.interact({ ...point, action: "down", buttons: 1 })

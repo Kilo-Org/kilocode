@@ -79,7 +79,7 @@ function inspection(requestId: string, scope: BrowserScope, error?: string): Bro
 function frame(scope: BrowserScope, browserId = "browser", navigation = 1): BrowserEvent {
   return {
     type: "frame",
-    value: { scope, browserId, navigation, revision: 1, sequence: 1, width: 100, height: 100, data: "frame" },
+    value: { scope, browserId, navigation, revision: 1, sequence: 1, width: 100, height: 100, data: new ArrayBuffer(1) },
   }
 }
 

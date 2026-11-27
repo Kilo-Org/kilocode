@@ -1,8 +1,8 @@
-import { createEffect, createSignal, onCleanup, onMount, type Accessor, type Component } from "solid-js"
+import { createEffect, createMemo, createSignal, onCleanup, onMount, type Accessor, type Component } from "solid-js"
 import {
   CURSORS,
   mergeWheel,
-  source,
+  sameWheel,
   VIEWPORT_LIMIT,
   type BrowserFrame,
   type BrowserInteraction,
@@ -10,12 +10,13 @@ import {
   type BrowserViewport,
 } from "../../src/shared/browser-stream"
 import type { BrowserPosition, BrowserScope, BrowserState, BrowserTransport } from "./types"
+import { DirectStream } from "./direct-stream"
 import { clicks, clipboard, key, modifiers, pointer, transition, typing, wheel } from "./stream-input"
 import "./stream.css"
 
 type Frame = BrowserFrame & { scope: BrowserScope }
 type View = { scope: BrowserScope; identity: BrowserViewIdentity; viewport: BrowserViewport }
-type Job = { frame: Frame; done: boolean; image?: HTMLImageElement }
+type Job = { frame: Frame; done: boolean }
 
 let revision = Date.now()
 const SETTLE = 300
@@ -51,9 +52,9 @@ function valid(frame: Frame) {
     frame.width <= 8192 &&
     frame.height <= 8192 &&
     frame.width * frame.height <= 16 * 1024 * 1024 &&
-    typeof frame.data === "string" &&
-    frame.data.length > 0 &&
-    frame.data.length <= 16 * 1024 * 1024
+    frame.data instanceof ArrayBuffer &&
+    frame.data.byteLength > 0 &&
+    frame.data.byteLength <= 2 * 1024 * 1024
   )
 }
 
@@ -68,6 +69,8 @@ export const StreamViewport: Component<{
   let host!: HTMLDivElement
   let canvas!: HTMLCanvasElement
   let textarea!: HTMLTextAreaElement
+  let ctx: CanvasRenderingContext2D | null | undefined
+  let canvasRect: DOMRect | undefined
   let current: View | undefined
   let painted: BrowserViewIdentity | undefined
   let held: View | undefined
@@ -81,6 +84,7 @@ export const StreamViewport: Component<{
   let scheduled: number | undefined
   let moving: BrowserInteraction | undefined
   let wheeling: Extract<BrowserInteraction, { kind: "wheel" }> | undefined
+  let leading: typeof wheeling
   let published = 0
   let deferred: ReturnType<typeof setTimeout> | undefined
   const keyboard = new Map<string, Extract<BrowserInteraction, { kind: "key" }>>()
@@ -111,7 +115,6 @@ export const StreamViewport: Component<{
 
   const drop = (job: Job | undefined) => {
     if (!job) return
-    job.image?.removeAttribute("src")
     acknowledge(job)
   }
 
@@ -123,6 +126,7 @@ export const StreamViewport: Component<{
     clicker.reset()
     moving = undefined
     wheeling = undefined
+    leading = undefined
     if (scheduled !== undefined) cancelAnimationFrame(scheduled)
     scheduled = undefined
     const captured = pid
@@ -144,8 +148,10 @@ export const StreamViewport: Component<{
     pending = undefined
     drop(queued)
     drop(decoding)
+    direct.reset()
     painted = undefined
     sequence = -1
+    canvasRect = undefined
     if (!canvas || keep) return
     canvas.width = 0
     canvas.height = 0
@@ -162,16 +168,45 @@ export const StreamViewport: Component<{
     textarea.blur()
   }
 
-  const target = () => {
-    const scope = props.scope()
-    const state = props.state()
-    if (!scope || !state || !same(scope, state.scope) || state.status === "closed" || !state.browserId) return
-    const navigation = state.navigation
-    if (navigation === undefined || !Number.isSafeInteger(navigation) || navigation < 0) return
-    return { scope, browserId: state.browserId, navigation, inspecting: state.inspecting }
+  type Target = {
+    scope: BrowserScope
+    browserId: string
+    navigation: number
+    inspecting?: boolean
+    streamUrl?: string
   }
 
-  const inspecting = () => props.state()?.inspecting || props.inspecting?.()
+  // Memoize structural stream identity so console logs, title updates, and status ticks never flush layout mid-scroll.
+  const target = createMemo<Target | undefined>(
+    () => {
+      const scope = props.scope()
+      const state = props.state()
+      if (!scope || !state || !same(scope, state.scope) || state.status === "closed" || !state.browserId) return
+      const navigation = state.navigation
+      if (navigation === undefined || !Number.isSafeInteger(navigation) || navigation < 0) return
+      return {
+        scope,
+        browserId: state.browserId,
+        navigation,
+        inspecting: state.inspecting,
+        streamUrl: state.streamUrl,
+      }
+    },
+    undefined,
+    {
+      equals: (prev, next) =>
+        prev === next ||
+        (!!prev &&
+          !!next &&
+          same(prev.scope, next.scope) &&
+          prev.browserId === next.browserId &&
+          prev.navigation === next.navigation &&
+          prev.inspecting === next.inspecting &&
+          prev.streamUrl === next.streamUrl),
+    },
+  )
+
+  const inspecting = createMemo(() => Boolean(target()?.inspecting || props.inspecting?.()))
 
   const restrict = () => {
     if (inspecting() && (held || moving?.kind === "pointer")) release()
@@ -192,12 +227,17 @@ export const StreamViewport: Component<{
     }
   }
 
+  const connectDirect = (active: boolean) => {
+    direct.connect(active ? target()?.streamUrl : undefined)
+  }
+
   const sync = () => {
     const next = target()
     if (disposed || !mounted) return
     const previous = current
     if (!next) {
       current = undefined
+      connectDirect(false)
       clear()
       if (previous) publish(previous, { ...previous.viewport, revision: ++revision, active: false })
       host.dataset.active = "false"
@@ -206,9 +246,11 @@ export const StreamViewport: Component<{
       return
     }
     const viewport = measure()
+    canvasRect = undefined
     const page = previous && same(previous.scope, next.scope) && previous.identity.browserId === next.browserId
     const unchanged = page && previous.identity.navigation === next.navigation
     if (unchanged && fits(previous.viewport, viewport)) {
+      connectDirect(viewport.active)
       restrict()
       return
     }
@@ -224,6 +266,7 @@ export const StreamViewport: Component<{
       identity: { browserId: next.browserId, navigation: next.navigation, revision: version },
       viewport: { ...viewport, revision: version },
     }
+    connectDirect(viewport.active)
     host.dataset.active = String(viewport.active)
     host.setAttribute("aria-busy", String(viewport.active))
     if (!page || !viewport.active) textarea.blur()
@@ -261,7 +304,7 @@ export const StreamViewport: Component<{
     if (!view) return false
     if (event.kind !== "wheel") held = view
     props.transport.send({ type: "interact", scope: view.scope, identity: view.identity, event })
-    if (event.kind === "wheel") {
+    if (event.kind === "wheel" && inspecting()) {
       const bounds = canvas.getBoundingClientRect()
       props.onScroll?.({ x: event.x, y: event.y, width: bounds.width, height: bounds.height })
     }
@@ -275,7 +318,53 @@ export const StreamViewport: Component<{
     const height = `${viewport.height}px`
     if (canvas.style.width !== width) canvas.style.width = width
     if (canvas.style.height !== height) canvas.style.height = height
+    canvasRect = undefined
   }
+
+  const present = (
+    source: CanvasImageSource,
+    meta: {
+      width: number
+      height: number
+      browserId: string
+      navigation: number
+      revision: number
+      sequence: number
+      scope: BrowserScope
+    },
+  ) => {
+    if (disposed || !current?.viewport.active) return
+    const context = ctx ?? (ctx = canvas.getContext("2d", { alpha: false }))
+    if (!context) return
+    if (canvas.width !== meta.width) canvas.width = meta.width
+    if (canvas.height !== meta.height) canvas.height = meta.height
+    context.drawImage(source, 0, 0)
+    canvas.dataset.sequence = String(meta.sequence)
+    if (painted) return
+    fit(current.viewport)
+    painted = identity(meta)
+    canvas.dataset.browserId = meta.browserId
+    canvas.dataset.navigation = String(meta.navigation)
+    canvas.dataset.revision = String(meta.revision)
+    canvas.dataset.sessionId = meta.scope.sessionId
+    delete canvas.dataset.projectId
+    if (meta.scope.projectId !== undefined) canvas.dataset.projectId = meta.scope.projectId
+    host.dataset.ready = "true"
+    host.setAttribute("aria-busy", "false")
+    if (deferred !== undefined) resume()
+  }
+
+  const direct = new DirectStream(
+    (meta) =>
+      !disposed &&
+      !!current?.viewport.active &&
+      current.identity.navigation === meta.navigation &&
+      current.identity.revision === meta.revision,
+    (source, meta) => {
+      if (!current) return
+      present(source, { ...meta, browserId: current.identity.browserId, scope: current.scope })
+    },
+  )
 
   // After a frame, send a size that waited for it, then draw the newest frame.
   const proceed = () => {
@@ -283,38 +372,16 @@ export const StreamViewport: Component<{
     drain()
   }
 
-  const draw = async (job: Job, data: string) => {
-    const image = new Image()
-    job.image = image
-    image.decoding = "async"
+  const draw = async (job: Job) => {
+    let image: ImageBitmap | undefined
     try {
-      image.src = data
-      await image.decode()
-      sync()
+      image = await createImageBitmap(new Blob([job.frame.data], { type: "image/jpeg" }))
       if (disposed || job.done || !bound(job.frame) || !current?.viewport.active || pending) return
-      const context = canvas.getContext("2d")
-      if (!context || !image.naturalWidth || !image.naturalHeight) return
-      const frame = job.frame
-      if (canvas.width !== frame.width) canvas.width = frame.width
-      if (canvas.height !== frame.height) canvas.height = frame.height
-      context.clearRect(0, 0, canvas.width, canvas.height)
-      context.drawImage(image, 0, 0, canvas.width, canvas.height)
-      fit(current.viewport)
-      painted = identity(frame)
-      canvas.dataset.browserId = frame.browserId
-      canvas.dataset.navigation = String(frame.navigation)
-      canvas.dataset.revision = String(frame.revision)
-      canvas.dataset.sequence = String(frame.sequence)
-      canvas.dataset.sessionId = frame.scope.sessionId
-      delete canvas.dataset.projectId
-      if (frame.scope.projectId !== undefined) canvas.dataset.projectId = frame.scope.projectId
-      host.dataset.ready = "true"
-      host.setAttribute("aria-busy", "false")
+      present(image, job.frame)
     } catch (error) {
       if (!disposed && !job.done) console.warn("[Kilo] Browser frame decode failed", error)
     } finally {
-      image.removeAttribute("src")
-      job.image = undefined
+      image?.close()
       acknowledge(job)
       decoding = undefined
       if (!disposed) proceed()
@@ -325,18 +392,12 @@ export const StreamViewport: Component<{
     if (disposed || decoding || !pending) return
     const job = pending
     pending = undefined
-    const data = source(job.frame.data)
-    if (!data) {
-      drop(job)
-      return
-    }
     decoding = job
-    void draw(job, data)
+    void draw(job)
   }
 
   const receive = (frame: Frame) => {
     if (disposed) return
-    sync()
     if (!bound(frame) || !Number.isSafeInteger(frame.sequence) || frame.sequence < 0) return
     if (
       (decoding && !decoding.done && decoding.frame.sequence === frame.sequence) ||
@@ -364,6 +425,7 @@ export const StreamViewport: Component<{
     scheduled = undefined
     const queue = [wheeling, moving]
     wheeling = undefined
+    leading = undefined
     moving = undefined
     for (const event of queue) if (event) emit(event)
   }
@@ -393,7 +455,8 @@ export const StreamViewport: Component<{
     if (action === "down") return down(event)
     if (action === "up") return up(event)
     clicker.move(event)
-    moving = pointer(event, canvas.getBoundingClientRect(), "move", 0)
+    const rect = canvasRect ?? (canvasRect = canvas.getBoundingClientRect())
+    moving = pointer(event, rect, "move", 0)
     if (!moving || scheduled !== undefined) return
     scheduled = requestAnimationFrame(flush)
   }
@@ -414,20 +477,45 @@ export const StreamViewport: Component<{
     if (pid === event.pointerId) release()
   }
 
+  const sendDirectWheel = (value: Extract<BrowserInteraction, { kind: "wheel" }>, rect: DOMRect): boolean => {
+    if (!current || moving || wheeling) return false
+    const sent = direct.sendWheel({
+      navigation: current.identity.navigation,
+      revision: current.identity.revision,
+      x: value.x,
+      y: value.y,
+      deltaX: value.deltaX,
+      deltaY: value.deltaY,
+      modifiers: value.modifiers,
+    })
+    if (sent && inspecting()) props.onScroll?.({ x: value.x, y: value.y, width: rect.width, height: rect.height })
+    return sent
+  }
+
   const scroll = (event: WheelEvent) => {
-    if (!ready(false)) return
+    if (!current?.viewport.active || !painted) return
     if (event.target instanceof Element && event.target.closest(".am-browser-error-overlay")) return
     const line = event.deltaMode === 1 ? Number.parseFloat(getComputedStyle(host).lineHeight) || 16 : 16
-    const value = wheel(event, canvas.getBoundingClientRect(), line)
+    const rect = canvasRect ?? (canvasRect = canvas.getBoundingClientRect())
+    const value = wheel(event, rect, line)
     if (!value) return
     event.preventDefault()
     event.stopPropagation()
+    if (sendDirectWheel(value, rect)) return
+    // Send the leading wheel delta immediately. Batch the rest of the burst until the next refresh.
+    // A reversal or a different scroll target starts a new burst, even before the scheduled refresh.
+    if (moving || (leading && !sameWheel(leading, value))) flush()
+    if (!leading) {
+      if (emit(value)) {
+        leading = value
+        scheduled ??= requestAnimationFrame(flush)
+      }
+      return
+    }
     if (wheeling && mergeWheel(wheeling, value)) return
-    // A new target, direction, or modifier set starts a fresh batch so batches stay ordered and bounded.
+    // Flush a full batch before it would exceed the limit on a single wheel delta.
     if (wheeling) emit(wheeling)
     wheeling = value
-    if (scheduled !== undefined) return
-    scheduled = requestAnimationFrame(flush)
   }
 
   const press = (event: KeyboardEvent) => {
@@ -554,6 +642,10 @@ export const StreamViewport: Component<{
     viewport.addEventListener("pointerdown", flush, true)
     viewport.addEventListener("pointerleave", flush)
     document.addEventListener("visibilitychange", sync)
+    const invalidate = () => {
+      canvasRect = undefined
+    }
+    window.addEventListener("resize", invalidate)
     window.addEventListener("blur", blur)
     sync()
     onCleanup(() => {
@@ -564,6 +656,7 @@ export const StreamViewport: Component<{
       viewport.removeEventListener("pointerdown", flush, true)
       viewport.removeEventListener("pointerleave", flush)
       document.removeEventListener("visibilitychange", sync)
+      window.removeEventListener("resize", invalidate)
       window.removeEventListener("blur", blur)
     })
   })
@@ -572,6 +665,7 @@ export const StreamViewport: Component<{
     disposed = true
     clearTimeout(deferred)
     unsubscribe()
+    direct.dispose()
     clear()
     textarea.blur()
     if (current) publish(current, { ...current.viewport, revision: ++revision, active: false })
@@ -598,6 +692,7 @@ export const StreamViewport: Component<{
         }}
         onPointerDown={down}
         onPointerMove={move}
+        onPointerLeave={() => update("default")}
         onPointerUp={up}
         onPointerCancel={cancel}
         onLostPointerCapture={cancel}

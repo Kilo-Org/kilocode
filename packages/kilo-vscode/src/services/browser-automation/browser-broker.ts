@@ -3,13 +3,15 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { Socket } from "node:net"
 import { URL } from "node:url"
 import { stripVTControlCharacters } from "node:util"
-import type { BrowserContext, BrowserContextOptions, CDPSession, LaunchOptions, Page } from "playwright-core"
+import type { Browser, BrowserContext, BrowserContextOptions, CDPSession, LaunchOptions, Page } from "playwright-core"
+import { BrowserCaptureExtension } from "./browser-capture-ext"
 import { BrowserDevtools } from "./browser-devtools"
 import { capture as element, locate } from "./browser-element"
-import { options } from "./browser-runtime"
+import { brokerOptions } from "./browser-runtime"
 import { BrowserStream } from "./browser-stream"
 import { BrowserNetwork } from "./browser-network"
-import { BrowserProxy, UNREACHABLE } from "./browser-proxy"
+import { BrowserProxy, UNREACHABLE, type BrowserProxyHandle } from "./browser-proxy"
+import { openBrowserPage, readBody, reservePort, writeJson } from "./browser-page"
 import { parse } from "./browser-policy"
 import type {
   BrowserCursor,
@@ -45,6 +47,7 @@ export interface BrowserState {
   frameError?: string
   back?: boolean
   forward?: boolean
+  streamUrl?: string
 }
 
 export interface BrowserElement {
@@ -78,6 +81,7 @@ export interface BrowserBrokerOptions {
   theme?: () => "dark" | "light"
   enabled?: () => boolean
   trusted?: () => boolean
+  writeClipboard?: (text: string) => void | PromiseLike<void>
   launch?: (options: LaunchOptions) => Promise<BrowserContextFactory>
   useSystemChrome?: () => boolean
   fallback?: () => boolean
@@ -105,7 +109,9 @@ interface Entry {
   browserId: string
   context: BrowserContext
   page: Page
-  proxy: BrowserProxy
+  proxy: BrowserProxyHandle
+  workerPort?: number
+  committed: number
   network?: Pick<BrowserNetwork, "authorize" | "close" | "active">
   waiting: Set<string>
   local: boolean
@@ -162,7 +168,6 @@ type RequestBody = {
   capture?: unknown
 }
 
-const MAX_BODY = 32 * 1024
 const MAX_SCREENSHOT = 2 * 1024 * 1024
 const TIMEOUT = /ERR_CONNECTION_TIMED_OUT|ETIMEDOUT|Timeout \d+ms exceeded/i
 const CRASHED = "The browser stopped unexpectedly. Refresh to start it again."
@@ -201,48 +206,6 @@ export function diagnostic(error: unknown, url?: string): string {
     .slice(0, 500)
 }
 
-function reserve(): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const server = createServer()
-    server.once("error", reject)
-    server.listen(0, "127.0.0.1", () => {
-      const address = server.address()
-      if (!address || typeof address === "string") {
-        server.close(() => reject(new Error("Browser developer tools did not receive a local port")))
-        return
-      }
-      server.close((error) => {
-        if (error) return reject(error)
-        resolve(address.port)
-      })
-    })
-  })
-}
-
-function json(res: ServerResponse, status: number, value: unknown): void {
-  const body = JSON.stringify(value)
-  res.writeHead(status, { "content-type": "application/json", "content-length": Buffer.byteLength(body) })
-  res.end(body)
-}
-
-function read(req: IncomingMessage): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = []
-    let size = 0
-    req.on("data", (chunk: Buffer) => {
-      size += chunk.length
-      if (size > MAX_BODY) {
-        reject(new Error("Request body is too large"))
-        req.destroy()
-        return
-      }
-      chunks.push(chunk)
-    })
-    req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")))
-    req.on("error", reject)
-  })
-}
-
 export class BrowserBroker {
   private readonly entries = new Map<string, Entry>()
   private readonly pending = new Map<string, Promise<unknown>>()
@@ -251,13 +214,14 @@ export class BrowserBroker {
   private readonly viewers = new Set<(frame: BrowserFrame & Pick<BrowserRoute, "sessionId" | "projectId">) => void>()
   private readonly pointers = new Set<(cursor: BrowserCursor & Pick<BrowserRoute, "sessionId" | "projectId">) => void>()
   private readonly token = randomBytes(32).toString("hex")
-  private readonly proxies = new Set<BrowserProxy>()
+  private readonly proxies = new Set<BrowserProxyHandle>()
   private gateway: BrowserProxy | undefined
   private readonly owners: BrowserOwner[] = []
   private server: Server | undefined
   private readonly sockets = new Set<Socket>()
   private port: number | undefined
   private debugging: number | undefined
+  private captureExt: BrowserCaptureExtension | undefined
   private tools: BrowserDevtools | undefined
   private browser: BrowserContextFactory | undefined
   private browserStarting: Promise<BrowserContextFactory> | undefined
@@ -293,7 +257,7 @@ export class BrowserBroker {
       this.server = createServer((req, res) => {
         void this.handle(req, res).catch((error: unknown) => {
           this.opts.log("Browser request failed", error)
-          if (!res.headersSent) json(res, 500, { error: "Browser request failed" })
+          if (!res.headersSent) writeJson(res, 500, { error: "Browser request failed" })
           else res.end()
         })
       })
@@ -360,7 +324,11 @@ export class BrowserBroker {
     const index = this.owners.indexOf(owner)
     if (index >= 0) this.owners.splice(index, 1)
     // A removed owner may not resolve its sessions anymore, so their next view call must revalidate.
-    for (const entry of this.entries.values()) if (entry.owner === owner) entry.validated = undefined
+    for (const entry of this.entries.values()) {
+      if (entry.owner !== owner) continue
+      entry.validated = undefined
+      if (entry.workerPort && !this.revalid(entry.route, entry.owner)) this.suspendEntry(entry)
+    }
   }
 
   private resolve(route: BrowserRoute): { scope: BrowserRoute; owner?: BrowserOwner } | undefined {
@@ -427,7 +395,11 @@ export class BrowserBroker {
     const route = entry.route
     entry.stream = new BrowserStream(
       entry.page,
-      () => ({ browserId: entry.browserId, navigation: entry.state.navigation }),
+      () => ({
+        browserId: entry.browserId,
+        navigation: entry.state.navigation,
+        committed: entry.workerPort ? entry.committed : undefined,
+      }),
       (frame) => {
         if (!this.view(route.sessionId, route.projectId, frame, true) || entry.viewport?.active !== true) return
         for (const viewer of this.viewers) viewer({ ...frame, projectId: route.projectId, sessionId: route.sessionId })
@@ -438,13 +410,32 @@ export class BrowserBroker {
         for (const listener of this.pointers)
           listener({ ...cursor, projectId: route.projectId, sessionId: route.sessionId })
       },
+      entry.workerPort,
+      (url) => {
+        if (entry.dead || entry.state.streamUrl === url) return
+        entry.state.streamUrl = url
+        this.emit(entry.state)
+      },
+      () => this.captureExt,
+      this.opts.writeClipboard
+        ? (identity, text) => {
+            if (!this.accepts(route.sessionId, route.projectId, identity)) return
+            void Promise.resolve(this.opts.writeClipboard?.(text)).catch((error: unknown) =>
+              this.opts.log("Browser clipboard write failed", error),
+            )
+          }
+        : undefined,
     )
     return entry.stream
   }
 
   accepts(sessionId: string, projectId: string | undefined, identity: BrowserViewIdentity): boolean {
+    return !!this.inputStream(sessionId, projectId, identity)
+  }
+
+  private inputStream(sessionId: string, projectId: string | undefined, identity: BrowserViewIdentity) {
     const entry = this.view(sessionId, projectId, identity)
-    return !!entry?.stream && entry.viewport?.active === true && entry.viewport.revision === identity.revision
+    if (entry?.viewport?.active && entry.viewport.revision === identity.revision) return entry.stream
   }
 
   acknowledge(sessionId: string, projectId: string | undefined, identity: BrowserViewIdentity, sequence: number): void {
@@ -461,30 +452,40 @@ export class BrowserBroker {
     read?: () => Promise<string>,
     write?: (text: string) => void | Promise<void>,
   ): Promise<string | undefined> {
-    if (!this.accepts(sessionId, projectId, identity)) return
-    const entry = this.view(sessionId, projectId, identity)
-    if (!entry?.stream) return
-    const copied = await entry.stream.interact(
+    const stream = this.inputStream(sessionId, projectId, identity)
+    if (!stream) return
+    if (event.kind !== "clipboard") return stream.interact(event)
+    const copied = await stream.interact(
       event,
       read,
       write &&
         ((text) => {
-          if (this.view(sessionId, projectId, identity)) return write(text)
+          if (this.inputStream(sessionId, projectId, identity) === stream) return write(text)
         }),
     )
-    return this.view(sessionId, projectId, identity) ? copied : undefined
+    return copied !== undefined && this.inputStream(sessionId, projectId, identity) === stream ? copied : undefined
   }
 
   /** Pause frame streams. With `owner`, only that surface's streams pause, so a visible surface keeps streaming. */
   suspend(owner?: BrowserOwner): void {
     for (const entry of this.entries.values()) {
-      if (!entry.viewport || !entry.stream) continue
       if (owner && entry.owner !== owner) continue
-      entry.viewport = { ...entry.viewport, active: false }
-      void entry.stream
-        .configure(entry.viewport)
-        .catch((error: unknown) => this.opts.log("Browser stream pause failed", error))
+      this.suspendEntry(entry)
     }
+  }
+
+  /** Pause one session's frame stream without disturbing other open surfaces. */
+  suspendSession(sessionId: string, projectId?: string): void {
+    const entry = this.entries.get(this.key(sessionId, projectId))
+    if (entry) this.suspendEntry(entry)
+  }
+
+  private suspendEntry(entry: Entry): void {
+    if (!entry.viewport || !entry.stream) return
+    entry.viewport = { ...entry.viewport, active: false }
+    void entry.stream
+      .configure(entry.viewport)
+      .catch((error: unknown) => this.opts.log("Browser stream pause failed", error))
   }
 
   private view(
@@ -575,29 +576,13 @@ export class BrowserBroker {
 
     const browser = await this.ensureBrowser()
     this.available()
-    const proxy = await BrowserProxy.start(url.protocol === "http:" ? url : "public")
-    this.proxies.add(proxy)
-    const context = await (async () => {
-      this.available()
-      return browser.newContext({
-        serviceWorkers: "block",
-        viewport: { width: 1280, height: 720 },
-        deviceScaleFactor: 2,
-        colorScheme: this.scheme(),
-        proxy: proxy.proxy,
-        ignoreHTTPSErrors: false,
-        acceptDownloads: false,
-      })
-    })().catch(async (error: unknown) => {
-      await proxy.close()
-      this.proxies.delete(proxy)
-      throw error
-    })
-    const page = await context.newPage().catch(async (error: unknown) => {
-      await proxy.close()
-      this.proxies.delete(proxy)
-      await context.close().catch((failure: unknown) => this.opts.log("Browser context close failed", failure))
-      throw error
+    const workerPort = this.debugging
+    const { context, page, proxy, failure } = await openBrowserPage(browser, url, {
+      colorScheme: this.scheme(),
+      proxyWorker: url.protocol === "https:" && !!this.debugging,
+      proxies: this.proxies,
+      available: () => this.available(),
+      log: this.opts.log,
     })
     const entry: Entry = {
       route: { ...scope },
@@ -606,7 +591,9 @@ export class BrowserBroker {
       context,
       page,
       proxy,
+      workerPort,
       waiting: new Set(),
+      committed: 0,
       local: url.protocol === "http:",
       origin: url.origin,
       state: {
@@ -624,6 +611,8 @@ export class BrowserBroker {
     this.entries.set(key, entry)
     this.attach(entry)
     try {
+      failure.throwIfAborted()
+      failure.addEventListener("abort", () => this.proxyLost(entry), { once: true })
       this.available()
       if (this.owners.length > 0 && !this.revalid(scope, owner))
         throw new Error("Browser session is no longer available")
@@ -652,8 +641,12 @@ export class BrowserBroker {
         // A new document starts a new view identity, so input for the old document cannot reach it. Same-document
         // navigations keep the identity, so a client-side route change does not restart the view or drop input.
         committed: () => {
-          if (entry.navigating) return
+          if (entry.navigating) {
+            entry.committed = entry.state.navigation
+            return
+          }
           entry.state.navigation++
+          entry.committed = entry.state.navigation
           this.emit(entry.state)
           void this.update(entry)
             .then(() => this.emit(entry.state))
@@ -829,6 +822,8 @@ export class BrowserBroker {
     this.proxies.clear()
     this.gateway = undefined
     await this.browserStarting?.catch((error: unknown) => this.opts.log("Browser startup failed", error))
+    this.captureExt?.dispose()
+    this.captureExt = undefined
     await this.browser?.close().catch((error: unknown) => this.opts.log("Browser close failed", error))
     this.browser = undefined
     this.debugging = undefined
@@ -858,25 +853,12 @@ export class BrowserBroker {
     if (this.browserStarting) return this.browserStarting
     let system = this.opts.useSystemChrome?.() !== false
     const starting = (async () => {
-      const port = this.opts.launch ? undefined : await reserve()
-      const base = options(system, port)
+      const port = this.opts.launch ? undefined : await reservePort()
       const gateway = await BrowserProxy.start("deny")
       this.proxies.add(gateway)
       this.gateway = gateway
       this.available()
-      const config: LaunchOptions = {
-        ...base,
-        proxy: gateway.proxy,
-        ignoreDefaultArgs: ["--disable-popup-blocking"],
-        args: [
-          ...(base.args ?? []).filter((arg) => arg !== "--no-proxy-server"),
-          "--force-device-scale-factor=2",
-          "--disable-quic",
-          "--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1",
-          "--webrtc-ip-handling-policy=disable_non_proxied_udp",
-          "--force-webrtc-ip-handling-policy=disable_non_proxied_udp",
-        ],
-      }
+      const config = brokerOptions(system, port, gateway.proxy)
       const launch = async (config: LaunchOptions): Promise<BrowserContextFactory> =>
         this.opts.launch?.(config) ?? (await engine()).chromium.launch(config)
       const browser = await launch(config).catch((error: unknown) => {
@@ -887,6 +869,9 @@ export class BrowserBroker {
         return launch({ ...config, channel: undefined })
       })
       this.debugging = ("debugging" in browser ? browser.debugging : undefined) ?? port
+      if (this.debugging && "newBrowserCDPSession" in browser) {
+        this.captureExt = await BrowserCaptureExtension.load(browser as unknown as Browser, this.opts.log)
+      }
       this.browser = browser
       browser.on?.("disconnected", () => this.lost(browser))
       return browser
@@ -919,6 +904,8 @@ export class BrowserBroker {
     this.opts.log("Browser disconnected")
     this.browser = undefined
     this.debugging = undefined
+    this.captureExt?.dispose()
+    this.captureExt = undefined
     void this.release()
     for (const entry of this.entries.values()) this.kill(entry, CRASHED)
   }
@@ -937,7 +924,13 @@ export class BrowserBroker {
     entry.state.screenshot = undefined
     entry.state.mime = undefined
     entry.state.inspecting = false
+    entry.state.streamUrl = undefined
     this.emit(entry.state)
+  }
+
+  private proxyLost(entry: Entry): void {
+    this.kill(entry, "The browser proxy stopped unexpectedly. Refresh to start it again.")
+    void entry.context.close().catch((error: unknown) => this.opts.log("Browser context close failed", error))
   }
 
   private record(entry: Entry, message: string): void {
@@ -1004,6 +997,9 @@ export class BrowserBroker {
       const response = reload
         ? await entry.page.reload({ waitUntil: "domcontentloaded", timeout: 30_000 })
         : await entry.page.goto(url.href, { waitUntil: "domcontentloaded", timeout: 30_000 })
+      // Fragment navigations can succeed without committing a new document.
+      entry.committed = entry.state.navigation
+      if (entry.workerPort) entry.stream?.synchronize()
       entry.response = response?.status() ?? entry.response
       if (entry.response !== undefined && entry.response >= 400) {
         await this.update(entry)
@@ -1175,7 +1171,7 @@ export class BrowserBroker {
 
   private status(req: IncomingMessage, res: ServerResponse, route: URL): boolean {
     if (req.method !== "GET" || route.pathname !== "/browser/status") return false
-    json(res, 200, {
+    writeJson(res, 200, {
       enabled: !this.closed && this.opts.enabled?.() !== false && this.opts.trusted?.() !== false,
     })
     return true
@@ -1205,30 +1201,30 @@ export class BrowserBroker {
     try {
       route = new URL(req.url ?? "/", "http://127.0.0.1")
     } catch {
-      json(res, 400, { error: "Malformed request target" })
+      writeJson(res, 400, { error: "Malformed request target" })
       return
     }
     if (this.tools && (await this.tools.handle(req, res, route))) return
     if (!this.authorized(req)) {
-      json(res, 401, { error: "Unauthorized" })
+      writeJson(res, 401, { error: "Unauthorized" })
       return
     }
     if (this.status(req, res, route)) return
     if (req.method !== "POST") {
-      json(res, 405, { error: "Method not allowed" })
+      writeJson(res, 405, { error: "Method not allowed" })
       return
     }
     let body: RequestBody
     try {
-      const value: unknown = JSON.parse(await read(req))
+      const value: unknown = JSON.parse(await readBody(req))
       if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Invalid JSON object")
       body = value
     } catch (error) {
-      json(res, 400, { error: error instanceof Error ? error.message : "Invalid JSON" })
+      writeJson(res, 400, { error: error instanceof Error ? error.message : "Invalid JSON" })
       return
     }
     if (typeof body.sessionID !== "string" || typeof body.directory !== "string") {
-      json(res, 400, { error: "sessionID and directory are required" })
+      writeJson(res, 400, { error: "sessionID and directory are required" })
       return
     }
     try {
@@ -1238,12 +1234,12 @@ export class BrowserBroker {
         directory: body.directory,
       })
       if (!result) {
-        json(res, 404, { error: "Unknown browser operation" })
+        writeJson(res, 404, { error: "Unknown browser operation" })
         return
       }
-      json(res, 200, result)
+      writeJson(res, 200, result)
     } catch (error) {
-      json(res, 400, { error: diagnostic(error, typeof body.url === "string" ? body.url : undefined) })
+      writeJson(res, 400, { error: diagnostic(error, typeof body.url === "string" ? body.url : undefined) })
     }
   }
 }

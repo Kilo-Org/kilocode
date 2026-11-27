@@ -1,5 +1,5 @@
 import type { Browser, CDPSession, Page } from "playwright-core"
-import type { BrowserProxy } from "./browser-proxy"
+import type { BrowserProxyHandle } from "./browser-proxy"
 
 type Command = Parameters<CDPSession["send"]>[0]
 type Params = Parameters<CDPSession["send"]>[1]
@@ -20,6 +20,7 @@ type Owner = {
 type Paused = { owner: Owner; auth: boolean }
 
 const guards = new WeakMap<Browser, Promise<Guard>>()
+const extensions = new WeakMap<Browser, string>()
 
 class Guard {
   private readonly owners = new Map<string, Owner>()
@@ -85,6 +86,11 @@ class Guard {
 
   private readonly request = (event: Request | Challenge) => {
     const auth = "authChallenge" in event
+    const ext = extensions.get(this.browser)
+    if (ext && !auth && event.request.url === `chrome-extension://${ext}/offscreen.js`) {
+      void this.send("Fetch.continueRequest", { requestId: event.requestId }).catch(() => {})
+      return
+    }
     const owner = [...this.owners.values()].find((owner) => owner.frames.has(event.frameId))
     if (this.closed || !owner?.active()) {
       void this.cancel(event.requestId, auth)
@@ -146,7 +152,7 @@ interface Challenge {
 
 interface Options {
   url: URL
-  proxy: BrowserProxy
+  proxy: BrowserProxyHandle
   approve: (url: URL) => Promise<boolean>
   blocked: (message: string) => void
   /** Called when the main frame commits a new document. Same-document navigations, such as pushState, do not call it. */
@@ -178,6 +184,10 @@ export class BrowserNetwork {
     private readonly opts: Options,
   ) {
     this.origins.add(opts.url.origin)
+  }
+
+  static allowExtension(browser: Browser, id: string): void {
+    extensions.set(browser, id)
   }
 
   static async attach(page: Page, opts: Options): Promise<BrowserNetwork> {
@@ -221,7 +231,9 @@ export class BrowserNetwork {
 
   private async enable(send: Send): Promise<void> {
     await send("Page.enable")
-    await send("Network.setCacheDisabled", { cacheDisabled: true })
+    // Local dev servers change files without cache-busting; remote HTTPS pages keep Chromium's HTTP cache for
+    // smoother revisits and back/forward navigation while Fetch interception still enforces origin policy.
+    if (this.opts.url.protocol === "http:") await send("Network.setCacheDisabled", { cacheDisabled: true })
     await send("Target.setAutoAttach", {
       autoAttach: true,
       waitForDebuggerOnStart: true,

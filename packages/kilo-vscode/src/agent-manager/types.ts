@@ -9,7 +9,14 @@
 
 import type { FileDiffInfo, SessionInfo } from "@opencode/client"
 import type { BrowserElement } from "../services/browser-automation"
-import type { BrowserCursor, BrowserFrame, BrowserInteraction, BrowserViewIdentity, BrowserViewport } from "../shared/browser-stream"
+import type {
+  BrowserCursor,
+  BrowserFrame,
+  BrowserInteraction,
+  BrowserStateFields,
+  BrowserViewIdentity,
+  BrowserViewport,
+} from "../shared/browser-stream"
 import type { DiffImage } from "../diff/types"
 import type { Worktree, ManagedSession, Section } from "./WorktreeStateManager"
 import type { WorktreeStats, LocalStats } from "./GitStatsPoller"
@@ -524,23 +531,8 @@ interface CommentReactionResultMessage {
   error?: string
 }
 
-interface BrowserStateMessage {
+interface BrowserStateMessage extends BrowserStateFields {
   type: "agentManager.browserState"
-  browserId: string
-  projectId?: string
-  sessionId: string
-  navigation?: number
-  status: "starting" | "ready" | "loading" | "error" | "closed"
-  inspecting?: boolean
-  url?: string
-  title?: string
-  errors: number
-  logs?: string[]
-  error?: string
-  missing?: "chrome" | "chromium"
-  frameError?: string
-  back?: boolean
-  forward?: boolean
 }
 
 interface BrowserInspectionMessage {

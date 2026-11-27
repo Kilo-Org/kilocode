@@ -105,6 +105,7 @@ export function browserStatePayload(state: BrowserState) {
     frameError: state.frameError,
     back: state.back,
     forward: state.forward,
+    ...(state.streamUrl ? { streamUrl: state.streamUrl } : {}),
   }
 }
 
@@ -152,7 +153,6 @@ function streaming(message: BrowserControlMessage, browser: BrowserBroker, surfa
   const event = message.event
   if (!identity || !event) return true
   void (async () => {
-    if (!browser.accepts(sessionId, projectId, identity)) return
     if (event.kind === "clipboard") {
       await browser.interact(sessionId, projectId, identity, event, surface.readClipboard, (text) =>
         surface.writeClipboard(text),
