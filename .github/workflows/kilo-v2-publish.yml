@@ -144,7 +144,7 @@ jobs:
       - name: Install the packed CLI with npm
         run: |
           prefix="$(mktemp -d)"
-          npm install --prefix "$prefix" --no-audit --no-fund "npm-release/kilocode-cli-linux-x64-$KILO_VERSION.tgz" "npm-release/kilocode-cli-$KILO_VERSION.tgz"
+          npm install --prefix "$prefix" --no-audit --no-fund "$PWD/npm-release/kilocode-cli-linux-x64-$KILO_VERSION.tgz" "$PWD/npm-release/kilocode-cli-$KILO_VERSION.tgz"
           test "$("$prefix/node_modules/.bin/kilo2" --version)" = "kilo2 v$KILO_VERSION"
           # v2 must not install a `kilo` command, which would start v2 for v1 users.
           test ! -e "$prefix/node_modules/.bin/kilo"
