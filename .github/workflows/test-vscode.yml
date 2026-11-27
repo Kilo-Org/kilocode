@@ -22,6 +22,11 @@ on:
       - "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/views/permission/PermissionView.kt" # kilocode_change
   workflow_dispatch:
 
+# kilocode_change start
+permissions:
+  contents: read
+# kilocode_change end
+
 jobs:
   unit:
     name: unit tests
