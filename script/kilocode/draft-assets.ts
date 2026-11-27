@@ -18,8 +18,8 @@ import type { Manifest } from "./sbom/manifest.ts"
 
 const MANIFEST = "cli-sbom-evidence.json"
 const SUMS = "kilo-cli-SHA256SUMS"
-const DISTRIBUTION = "cli-distribution-sbom-evidence.json"
-const DISTRIBUTION_SUMS = "kilo-cli-distribution-SHA256SUMS"
+export const DISTRIBUTION = "cli-distribution-sbom-evidence.json"
+export const DISTRIBUTION_SUMS = "kilo-cli-distribution-SHA256SUMS"
 
 /** Names of the distribution evidence: its manifest, checksum file and npm and image sidecars. */
 export function distribution(name: string) {

@@ -71,6 +71,10 @@ export async function push(input: Input) {
     throw new Error(`The bundle must hold exactly refs/tags/${tag}; it holds: ${heads.join(", ")}. Nothing was pushed.`)
   }
   await git`git -c fetch.fsckObjects=true fetch --quiet --no-tags ${bundle} ${`+refs/tags/${tag}:refs/kilo-release/bundle`}`
+  // The changelog check needs the commit history of the dispatch commit (commits only, no trees or blobs).
+  if ((await git`git rev-parse --is-shallow-repository`.text()).trim() === "true") {
+    await git`git fetch --quiet --no-tags --filter=tree:0 --unshallow origin ${base}`
+  }
   const fetched = (await git`git rev-parse refs/kilo-release/bundle`.text()).trim()
   const problems = [
     ...shape({ cwd, commit: listed, parents: [base], subject: `release: ${tag}` }),
@@ -142,7 +146,7 @@ export async function push(input: Input) {
         ).trim()
         const found = [
           ...shape({ cwd, commit: target, parents: [head, commit] }),
-          ...check({ cwd, from: head, to: target, version }),
+          ...check({ cwd, from: head, to: target, version, base }),
         ]
         if (found.length > 0)
           throw new Error(`The merge with main is refused. Nothing was pushed.\n${found.join("\n")}`)

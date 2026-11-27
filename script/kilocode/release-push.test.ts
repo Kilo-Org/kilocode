@@ -71,6 +71,8 @@ const toml = (version: string) =>
 const sha40 = "0123456789abcdef0123456789abcdef01234567"
 const entry = `- [#12](https://github.com/Kilo-Org/kilocode/pull/12) [\`0123456\`](https://github.com/Kilo-Org/kilocode/commit/${sha40}) - A change`
 const cli = (sections: string) => `# @kilocode/cli\n\n${sections}`
+/** What the changelog lines may name: these packages and only the commit sha40 in the history. */
+const known = { packages: new Set(["@kilocode/sdk"]), commit: (full: string) => full === sha40 }
 
 /** Writes the release files of `version` the way the version bump and `changeset version` do. */
 async function release(dir: string, version: string) {
@@ -80,7 +82,10 @@ async function release(dir: string, version: string) {
   await writeFile(path.join(dir, "packages/extensions/zed/extension.toml"), toml(version))
   const file = path.join(dir, "packages/opencode/CHANGELOG.md")
   const old = await readFile(file, "utf8")
-  await writeFile(file, old.replace("\n\n", `\n\n## ${version}\n\n### Patch Changes\n\n${entry}\n\n`))
+  // The commit link names a commit in the history, as changesets does (the commit that added the changeset).
+  const head = git(dir, "rev-parse", "HEAD")
+  const linked = entry.replace(sha40, head).replace("`0123456`", `\`${head.slice(0, 7)}\``)
+  await writeFile(file, old.replace("\n\n", `\n\n## ${version}\n\n### Patch Changes\n\n${linked}\n\n`))
   await rm(path.join(dir, ".changeset/one.md"))
 }
 
@@ -251,17 +256,24 @@ describe("release-check", () => {
     const block = `## 1.0.1\n\n### Patch Changes\n\n${entry}\n\n  Second paragraph\n\n`
     const next = cli(`${block}## 1.0.0\n\n- First\n`)
     const p = "packages/opencode/CHANGELOG.md"
-    expect(changelog(p, old, next, "1.0.1", summaries)).toEqual([])
+    expect(changelog(p, old, next, "1.0.1", summaries, known)).toEqual([])
     const thanks = entry.replace(" - A change", " Thanks [@someone](https://github.com/someone)! - A change")
-    expect(changelog(p, old, next.replace(entry, thanks), "1.0.1", summaries)).toEqual([])
-    expect(changelog(p, old, next.replace(entry, "- A change"), "1.0.1", summaries)).toEqual([])
+    expect(changelog(p, old, next.replace(entry, thanks), "1.0.1", summaries, known)).toEqual([])
+    expect(changelog(p, old, next.replace(entry, "- A change"), "1.0.1", summaries, known)).toEqual([])
     const deps = `- Updated dependencies [[\`0123456\`](https://github.com/Kilo-Org/kilocode/commit/${sha40})]:\n  - @kilocode/sdk@1.0.1`
     expect(
-      changelog(p, old, cli(`## 1.0.1\n\n### Patch Changes\n\n${deps}\n\n## 1.0.0\n\n- First\n`), "1.0.1", summaries),
+      changelog(
+        p,
+        old,
+        cli(`## 1.0.1\n\n### Patch Changes\n\n${deps}\n\n## 1.0.0\n\n- First\n`),
+        "1.0.1",
+        summaries,
+        known,
+      ),
     ).toEqual([])
     // JetBrains: any version in the header.
-    expect(changelog(p, old, next.replace("## 1.0.1", "## 0.9.1"), undefined, summaries)).toEqual([])
-    expect(changelog(p, old, next.replace("## 1.0.1", "## 0.9.1"), "1.0.1", summaries).join()).toContain(
+    expect(changelog(p, old, next.replace("## 1.0.1", "## 0.9.1"), undefined, summaries, known)).toEqual([])
+    expect(changelog(p, old, next.replace("## 1.0.1", "## 0.9.1"), "1.0.1", summaries, known).join()).toContain(
       'must start with "## 1.0.1"',
     )
   })
@@ -285,12 +297,52 @@ describe("release-check", () => {
     ["an appended block", cli(`## 1.0.0\n\n- First\n\n## 1.0.1\n\n${entry}\n`), /old text must stay unchanged/],
     ["a removed title", `## 1.0.1\n\n${entry}\n\n## 1.0.0\n\n- First\n`, /title/],
     ["an oversized block", cli(`## 1.0.1\n\n${"\n".repeat(70 * 1024)}## 1.0.0\n\n- First\n`), /larger than 64 KiB/],
+    [
+      "a dependency line naming a package the commit does not change",
+      cli(
+        `## 1.0.1\n\n- Updated dependencies [[\`0123456\`](https://github.com/Kilo-Org/kilocode/commit/${sha40})]:\n  - evil-package@1.0.1\n\n## 1.0.0\n\n- First\n`,
+      ),
+      /evil-package is not a package whose package.json this commit changes/,
+    ],
+    [
+      "a user link whose text is not its target",
+      cli(
+        `## 1.0.1\n\n${entry.replace(" - A change", " Thanks [@someone](https://github.com/evil)! - A change")}\n\n## 1.0.0\n\n- First\n`,
+      ),
+      /user link text @someone does not match its URL/,
+    ],
+    [
+      "a pull request link whose text is not its target",
+      cli(`## 1.0.1\n\n${entry.replace("[#12]", "[#13]")}\n\n## 1.0.0\n\n- First\n`),
+      /pull request link text #13 does not match its URL/,
+    ],
+    [
+      "a commit link whose text is not the start of its hash",
+      cli(`## 1.0.1\n\n${entry.replace("`0123456`", "`abcdef0`")}\n\n## 1.0.0\n\n- First\n`),
+      /commit link text abcdef0 is not the start of/,
+    ],
+    [
+      "a commit link outside the history",
+      cli(
+        `## 1.0.1\n\n${entry.replaceAll(sha40, `fedcba9${"0".repeat(33)}`).replace("`0123456`", "`fedcba9`")}\n\n## 1.0.0\n\n- First\n`,
+      ),
+      /is not in the history of the dispatch commit/,
+    ],
+    [
+      "a dependency update commit outside the history",
+      cli(
+        `## 1.0.1\n\n- Updated dependencies [[\`fedcba9\`](https://github.com/Kilo-Org/kilocode/commit/fedcba9${"0".repeat(33)})]:\n  - @kilocode/sdk@1.0.1\n\n## 1.0.0\n\n- First\n`,
+      ),
+      /is not in the history of the dispatch commit/,
+    ],
   ]
   for (const [name, next, problem] of refusedChangelogs) {
     test(`changelog: refuses ${name}`, () => {
       const summaries = new Set(["A change"])
-      expect(changelog("c", cli("## 1.0.0\n\n- First\n"), next, "1.0.1", summaries).join("\n")).toMatch(problem)
-      expect(changelog("c", cli("## 1.0.0\n\n- First\n"), next, undefined, summaries).join("\n")).toMatch(problem)
+      expect(changelog("c", cli("## 1.0.0\n\n- First\n"), next, "1.0.1", summaries, known).join("\n")).toMatch(problem)
+      expect(changelog("c", cli("## 1.0.0\n\n- First\n"), next, undefined, summaries, known).join("\n")).toMatch(
+        problem,
+      )
     })
   }
 
@@ -390,7 +442,7 @@ describe("release-check", () => {
       "an invented changelog bullet",
       async (dir) => {
         const file = path.join(dir, "packages/opencode/CHANGELOG.md")
-        await writeFile(file, (await readFile(file, "utf8")).replace(entry, "- Invented"))
+        await writeFile(file, (await readFile(file, "utf8")).replace(/^- \[#12\].* - A change$/m, "- Invented"))
       },
       /is not changesets output/,
     ],

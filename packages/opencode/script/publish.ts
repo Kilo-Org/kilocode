@@ -161,10 +161,16 @@ const tagFlags = tags.flatMap((t) => ["-t", t])
 
 // kilocode_change start - a re-run after the release was published only finishes what the first
 // run left: the images were pushed and described before the release was published. This job's
-// token may not read drafts, so a release it can read by its tag is a published one.
-const live =
-  Script.release &&
-  (await $`gh api ${`repos/${process.env.GH_REPO}/releases/tags/v${Script.version}`}`.quiet().nothrow()).exitCode === 0
+// token may not read drafts, so a release it can read by its tag is a published one, and HTTP 404
+// means a draft; any other answer stops the job.
+async function released() {
+  if (!Script.release) return false
+  const found = await $`gh api ${`repos/${process.env.GH_REPO}/releases/tags/v${Script.version}`}`.quiet().nothrow()
+  if (found.exitCode === 0) return true
+  if (/HTTP 404/.test(found.stderr.toString())) return false
+  throw new Error(`Could not read release v${Script.version}: ${found.stderr.toString().trim()}`)
+}
+const live = await released()
 // kilocode_change end
 // registries
 if (!Script.preview && !live) {
@@ -198,7 +204,9 @@ await stage()
 // be the one the published evidence names.
 async function stage() {
   const out = process.env.KILO_PUBLISH_DIR
-  if (!out) throw new Error("KILO_PUBLISH_DIR (the publish-build artifact directory) is required")
+  const tarballs = process.env.KILO_PUBLISH_TARBALLS
+  if (!out || !tarballs)
+    throw new Error("KILO_PUBLISH_DIR and KILO_PUBLISH_TARBALLS (the hand-over directories) are required")
   // Expected coverage is derived from what this release had to produce, not from
   // what happened to be recorded, so a missing package or image is a shortfall.
   const packages = Object.keys(binaries).length + 1
@@ -221,12 +229,15 @@ async function stage() {
     ...pending.filter((item) => item.name !== pkg.name),
     ...pending.filter((item) => item.name === pkg.name),
   ]
-  const sha256 = await Stage.write(out, {
-    version: Script.version,
-    tarballs: ordered,
-    files: described?.files ?? [],
-    entries: described?.manifest.entries ?? evidence,
-  })
+  const sha256 = await Stage.write(
+    { stage: out, tarballs },
+    {
+      version: Script.version,
+      tarballs: ordered,
+      files: described?.files ?? [],
+      entries: described?.manifest.entries ?? evidence,
+    },
+  )
   console.log(`handed over ${ordered.length} npm tarball(s) and ${described?.files.length ?? 0} evidence file(s)`)
   if (process.env.GITHUB_OUTPUT) fs.appendFileSync(process.env.GITHUB_OUTPUT, `stage-sha256=${sha256}\n`)
 }

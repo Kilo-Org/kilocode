@@ -11,9 +11,12 @@ import { NpmPublish } from "./npm-publish"
 import * as Stage from "../../../../script/kilocode/publish-stage"
 
 const dir = process.env.KILO_PUBLISH_DIR
+const tarballs = process.env.KILO_PUBLISH_TARBALLS
 const digest = process.env.KILO_PUBLISH_SHA256
-if (!dir || !digest) throw new Error("KILO_PUBLISH_DIR and KILO_PUBLISH_SHA256 are required")
-const stage = await Stage.read(dir, digest, Script.version)
+if (!dir || !tarballs || !digest) {
+  throw new Error("KILO_PUBLISH_DIR, KILO_PUBLISH_TARBALLS and KILO_PUBLISH_SHA256 are required")
+}
+const stage = await Stage.read({ stage: dir, tarballs, digest, version: Script.version, need: "tarballs" })
 
 const published = async (name: string, version: string) =>
   (await $`npm view ${name}@${version} version`.nothrow()).exitCode === 0

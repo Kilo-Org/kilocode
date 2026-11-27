@@ -28,7 +28,7 @@
  * and mode as in the commit it is compared with.
  */
 
-import { execFileSync } from "node:child_process"
+import { execFileSync, spawnSync } from "node:child_process"
 
 const DENY = [/^\.github\//, /^script\//, /^bin\//, /^nix\//]
 const LOCKFILE =
@@ -48,15 +48,16 @@ const VERSION = new RegExp(`^${SEMVER}$`)
 const JSON_VERSION = new RegExp(`^(\\s*)"version": "(${SEMVER})"(,?)$`)
 const TOML_VERSION = new RegExp(`^version = "${SEMVER}"$`)
 const DOWNLOAD = new RegExp(`/releases/download/v${SEMVER}/`, "g")
-const COMMIT_LINK = String.raw`\[\x60[0-9a-f]{7,40}\x60\]\(https://github\.com/Kilo-Org/kilocode/commit/[0-9a-f]{40}\)`
-const USER_LINK = String.raw`\[@[\w.-]+(?:\[bot\])?\]\(https://github\.com/[\w.-]+(?:\[bot\])?\)`
 const DOWNLOAD_ONE = new RegExp(DOWNLOAD.source)
+/** A commit link changesets writes: the short hash shown, then the full hash in the URL. */
+const COMMIT = /\[`([0-9a-f]{7,40})`\]\(https:\/\/github\.com\/Kilo-Org\/kilocode\/commit\/([0-9a-f]{40})\)/g
 /** The link prefix changesets (script/changelog-github.cjs) writes before a summary's first line. */
-const PREFIX = new RegExp(
-  String.raw`^(?:\[#\d+\]\(https://github\.com/Kilo-Org/kilocode/pull/\d+\) )?(?:${COMMIT_LINK} )?(?:Thanks ${USER_LINK}(?:(?:, | and )${USER_LINK})*! )?- `,
-)
-const DEPENDENCIES = new RegExp(String.raw`^Updated dependencies \[${COMMIT_LINK}(?:, ${COMMIT_LINK})*\]:$`)
-const DEPENDENCY = new RegExp(`^- (?:@[a-z0-9-]+/)?[a-z0-9._-]+@${SEMVER}$`)
+const PREFIX =
+  /^(?:\[#(\d+)\]\(https:\/\/github\.com\/Kilo-Org\/kilocode\/pull\/(\d+)\) )?(?:(\[`[0-9a-f]{7,40}`\]\(https:\/\/github\.com\/Kilo-Org\/kilocode\/commit\/[0-9a-f]{40}\)) )?(?:Thanks ((?:\[@[\w.-]+(?:\[bot\])?\]\(https:\/\/github\.com\/[\w.-]+(?:\[bot\])?\)(?:, | and )?)+)! )?- (.*)$/
+const USER = /\[@([\w.-]+(?:\[bot\])?)\]\(https:\/\/github\.com\/([\w.-]+(?:\[bot\])?)\)/g
+const DEPENDENCIES =
+  /^Updated dependencies \[(\[`[0-9a-f]{7,40}`\]\(https:\/\/github\.com\/Kilo-Org\/kilocode\/commit\/[0-9a-f]{40}\)(?:, \[`[0-9a-f]{7,40}`\]\(https:\/\/github\.com\/Kilo-Org\/kilocode\/commit\/[0-9a-f]{40}\))*)\]:$/
+const DEPENDENCY = new RegExp(`^- ((?:@[a-z0-9-]+/)?[a-z0-9._-]+)@${SEMVER}$`)
 
 /** The identity of release commits and merges, the one setup-git-committer gives the Kilo Maintainer app. */
 export const IDENTITY = { name: "kilo-maintainer[bot]", email: "kilo-maintainer[bot]@users.noreply.github.com" }
@@ -141,12 +142,54 @@ export function body(text: string) {
     .filter((line) => line !== "")
 }
 
+/** What the changelog lines may name, read from the commit and its history. */
+export type Known = {
+  /** The "name" of every package.json the commit changes. */
+  packages: Set<string>
+  /** Whether the commit with this full hash is in the history of the dispatch commit. */
+  commit: (full: string) => boolean
+}
+
+/** Problems of the commit links in `text`: the short hash must start the full one, which must be in the history. */
+function commits(text: string, known: Known) {
+  return [...text.matchAll(COMMIT)].flatMap(([, short = "", full = ""]) => {
+    if (!full.startsWith(short)) return [`the commit link text ${short} is not the start of ${full}`]
+    if (!known.commit(full)) return [`commit ${full} is not in the history of the dispatch commit`]
+    return []
+  })
+}
+
+/**
+ * The problems of one bullet line's text (after "- "), or undefined when it is not one changesets
+ * writes for a summary line or a dependency update.
+ */
+function bullet(text: string, summaries: Set<string>, known: Known) {
+  if (DEPENDENCIES.test(text)) return commits(text, known)
+  const match = PREFIX.exec(text)
+  const summary = match ? (match[5] ?? "") : text
+  if (!summaries.has(summary)) return summaries.has(text) ? [] : undefined
+  if (!match) return []
+  const problems = commits(match[3] ?? "", known)
+  if (match[1] !== match[2]) problems.push(`the pull request link text #${match[1]} does not match its URL`)
+  for (const [, name, target] of (match[4] ?? "").matchAll(USER)) {
+    if (name !== target) problems.push(`the user link text @${name} does not match its URL`)
+  }
+  return problems
+}
+
 /**
  * Problems of one changelog change: `next` must be `old` with one block of changesets output
  * inserted after the `# title` line. `header` is the version the block's `## ` header must name,
  * or undefined for any version. `summaries` are the body lines of the changesets the commit deletes.
  */
-export function changelog(path: string, old: string, next: string, header: string | undefined, summaries: Set<string>) {
+export function changelog(
+  path: string,
+  old: string,
+  next: string,
+  header: string | undefined,
+  summaries: Set<string>,
+  known: Known,
+) {
   const title = /^# [^\n]*\n\n/.exec(old)?.[0]
   if (!title || !next.startsWith(title)) return [`${path}: the "# title" line and the blank line after it must stay`]
   const rest = old.slice(title.length)
@@ -167,17 +210,25 @@ export function changelog(path: string, old: string, next: string, header: strin
   }
   for (const [i, line] of added.slice(1).entries()) {
     if (line === "" || /^### (?:Major|Minor|Patch) Changes$/.test(line)) continue
+    const where = `${path}: line ${i + 2} of the new block`
+    const text = line.slice(2).trimEnd()
     if (line.startsWith("- ")) {
-      const text = line.slice(2).trimEnd()
-      const summary = text.replace(PREFIX, "")
-      if (DEPENDENCIES.test(text) || summaries.has(summary) || summaries.has(text)) continue
+      const found = bullet(text, summaries, known)
+      if (found) {
+        problems.push(...found.map((problem) => `${where}: ${problem}`))
+        continue
+      }
     } else if (line.startsWith("  ")) {
-      const text = line.slice(2).trimEnd()
-      if (DEPENDENCY.test(text) || summaries.has(text)) continue
+      if (summaries.has(text)) continue
+      const dependency = DEPENDENCY.exec(text)
+      if (dependency) {
+        if (!known.packages.has(dependency[1] ?? "")) {
+          problems.push(`${where}: ${dependency[1]} is not a package whose package.json this commit changes`)
+        }
+        continue
+      }
     }
-    problems.push(
-      `${path}: line ${i + 2} of the new block is not changesets output of a deleted changeset: ${JSON.stringify(line.slice(0, 120))}`,
-    )
+    problems.push(`${where} is not changesets output of a deleted changeset: ${JSON.stringify(line.slice(0, 120))}`)
   }
   return problems
 }
@@ -186,8 +237,9 @@ export function changelog(path: string, old: string, next: string, header: strin
  * Problems with the change from `from` to `to` (both commits in the repository at `cwd`), for
  * release `version`. Empty when every change is one the release commit may make.
  */
-export function check(input: { cwd: string; from: string; to: string; version: string }) {
+export function check(input: { cwd: string; from: string; to: string; version: string; base?: string }) {
   const { cwd, from, to, version } = input
+  const base = input.base ?? from
   if (!VERSION.test(version)) return [`invalid release version ${JSON.stringify(version)}`]
   const problems: string[] = []
   const entries = changes(cwd, from, to)
@@ -197,6 +249,27 @@ export function check(input: { cwd: string; from: string; to: string; version: s
       .filter((entry) => entry.status === "D" && "kind" in rule(entry.path, entry.status))
       .flatMap((entry) => (entry.path.startsWith(".changeset/") ? body(show(cwd, from, entry.path)) : [])),
   )
+  const packages = new Set(
+    entries
+      .filter(
+        (entry) => entry.status === "M" && /(^|\/)package\.json$/.test(entry.path) && "kind" in rule(entry.path, "M"),
+      )
+      .map((entry) => {
+        const name: unknown = JSON.parse(show(cwd, to, entry.path)).name
+        return typeof name === "string" ? name : ""
+      }),
+  )
+  const ancestors = new Map<string, boolean>()
+  const known: Known = {
+    packages,
+    commit: (full) => {
+      const cached = ancestors.get(full)
+      if (cached !== undefined) return cached
+      const result = spawnSync("git", ["merge-base", "--is-ancestor", full, base], { cwd }).status === 0
+      ancestors.set(full, result)
+      return result
+    },
+  }
   for (const entry of entries) {
     const allowed = rule(entry.path, entry.status)
     const kept = FILE_MODES.includes(entry.from) && (entry.status === "D" || entry.to === entry.from)
@@ -210,7 +283,9 @@ export function check(input: { cwd: string; from: string; to: string; version: s
     }
     if (allowed.kind === "changelog") {
       const header = CHANGELOGS[entry.path] === "release" ? version : undefined
-      problems.push(...changelog(entry.path, show(cwd, from, entry.path), show(cwd, to, entry.path), header, summaries))
+      problems.push(
+        ...changelog(entry.path, show(cwd, from, entry.path), show(cwd, to, entry.path), header, summaries, known),
+      )
     }
   }
   return problems

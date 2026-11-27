@@ -6,28 +6,26 @@ Kilo Code uses a fully automated CI pipeline triggered via GitHub Actions `workf
 
 1. Go to the [`publish` workflow](https://github.com/Kilo-Org/kilocode/actions/workflows/publish.yml) in GitHub Actions.
 2. Click **"Run workflow"**.
-3. Select the `main` branch. On any other branch the `version` job fails in its first step, before it creates the draft release, and the `publish` job runs in the `release` environment, which only accepts `main`.
+3. Select the `main` branch. On any other branch the `version` job fails in its first step, before `release-draft` creates the draft release, and the `publish` job runs in the `release` environment, which only accepts `main`.
 4. Fill in the inputs:
    - **`bump`** (choice): `patch`, `minor`, or `major`. Determines how the version number is incremented.
    - **`version`** (string, optional): Override the version explicitly instead of using `bump`. Leave empty to use the bump-based calculation.
    - **`oidc_check`** (boolean, default off): Only check VS Code Marketplace trusted publishing. See [Checking Marketplace Trusted Publishing](#checking-marketplace-trusted-publishing).
 
    > **⚠️ Do not fill in `version` unless you have a specific reason to.**
-   > The default behavior — leaving `version` empty and selecting a `bump` level — is almost always what you want. The automated bump logic computes the correct next version from the current state of the repo. Only use the `version` override for exceptional cases like skipping versions or publishing a pre-release (e.g. `1.5.0-beta.1`).
+   > The default behavior — leaving `version` empty and selecting a `bump` level — is almost always what you want. The automated bump logic computes the correct next version from the current state of the repo. Only use the `version` override for exceptional cases like skipping versions or publishing a release candidate (e.g. `1.5.0-rc.1`, with `pre_release` on). `release-draft` accepts only `x.y.z` and `x.y.z-rc.n`, the forms the JetBrains CLI pin accepts.
 
 5. Click **"Run workflow"** to start the release.
 
 ## What Happens During a Release
 
-The `publish.yml` workflow starts with `version`, which creates the draft release before the build and publish jobs run. The main jobs are:
+The `publish.yml` workflow starts with `version` and `release-draft`, which creates the draft release before the build and publish jobs run. The main jobs are:
 
-### 1. Version (`version`)
+### 1. Version (`version`, then `release-draft`)
 
-- Checks out the repo with full history (`fetch-depth: 0`).
-- Runs `script/version.ts` to compute the next version based on the `bump` or `version` input.
-- Generates release notes from the commit history since the last release.
-- Creates a **draft** GitHub Release with the computed tag (e.g. `v1.2.3`) and release notes.
-- Outputs the `version`, `release` (database ID), and `tag` for downstream jobs.
+- `version` checks out the repo with full history (`fetch-depth: 0`), installs packages and runs `script/version.ts` to propose the next version from the `bump` or `version` input. It holds only read access, so its output is a proposal.
+- `release-draft` holds the job token with `contents: write` and installs nothing. `script/kilocode/release-draft.ts` checks the proposal: it must be `x.y.z` or `x.y.z-rc.n` (`-rc.n` only with `pre_release`), and equal to the `version` input when that is set, or else to the `bump` of the highest `vx.y.z` tag on origin. It then creates the **draft** GitHub Release with the tag name (e.g. `v1.2.3`); the notes are written when the release is published. A version that already has a tag or a release stops here.
+- `release-draft` outputs the `version`, `release` (database ID), and `tag` for every later job.
 
 ### 2. Build CLI (`build-cli`)
 
@@ -57,12 +55,12 @@ The `publish.yml` workflow starts with `version`, which creates the draft releas
 
 ### 4. Release Commit (`release-commit`, then `release-push`)
 
-- `release-commit` runs right after `version`, holds no secret and no OIDC permission, and checks out the dispatch commit. It updates the `version` field in the `package.json` files (not the JetBrains CLI pin, and none under `.github/`, `script/`, `bin/` or `nix/`), updates the Zed extension manifest (`extension.toml`), consumes the changesets into the changelogs, updates `bun.lock`, and commits only those changes as `release: v<version>` with the tag `v<version>`. Other changes in the working tree, tracked or new (for example regenerated SDK sources), stay out of the commit, with a warning. It uploads the commit and tag as a git bundle (artifact `release-commit`) and records the bundle's sha256.
-- `release-push` runs once every check before publishing has passed (the validation jobs and the smoke test), in the `release-keys` environment, and installs nothing. It checks the bundle's sha256 and the bundled commit (see "Release commit check" in `.github/actions/kilo-credentials/README.md`): one parent, the dispatch commit; only version and changelog lines and paths. It then writes the release commit itself from the checked tree (parent the dispatch commit, the kilo-maintainer identity) and pushes it to `main` with the tag in one atomic push, with the kilo-maintainer app key from the STS bundle of `ci-kilocode-release`. If `main` moved since the dispatch, it merges `main` and the release commit with git alone, refuses a conflict, checks the merge the same way, and pushes the merge; the tag stays on the release commit, which is exactly the built source plus the version commit. A re-run that finds the tag on origin at that commit pushes nothing.
+- `release-commit` runs right after `release-draft`, holds no secret and no OIDC permission, and checks out the dispatch commit with its commit history. It updates the `version` field in the `package.json` files (not the JetBrains CLI pin, and none under `.github/`, `script/`, `bin/` or `nix/`), updates the Zed extension manifest (`extension.toml`), consumes the changesets into the changelogs, updates `bun.lock`, and commits only those changes as `release: v<version>` with the tag `v<version>`. Other changes in the working tree, tracked or new, stay out of the commit, with a warning. It uploads the commit and tag as a git bundle (artifact `release-commit`) and records the bundle's sha256.
+- `release-push` runs once every check before publishing has passed (the validation jobs, the smoke test and `release-assets`' check of the draft), in the `release-keys` environment, and installs nothing. It checks the bundle's sha256 and the bundled commit (see "Release commit check" in `.github/actions/kilo-credentials/README.md`): one parent, the dispatch commit; only version and changelog lines and paths. It then writes the release commit itself from the checked tree (parent the dispatch commit, the kilo-maintainer identity) and pushes it to `main` with the tag in one atomic push, with the kilo-maintainer app key from the STS bundle of `ci-kilocode-release`. If `main` moved since the dispatch, it merges `main` and the release commit with git alone, refuses a conflict, checks the merge the same way, and pushes the merge; the tag stays on the release commit, which is exactly the built source plus the version commit. A re-run that finds the tag on origin at that commit pushes nothing.
 
 ### 5. Release Assets (`release-assets`)
 
-Runs next to `release-push` with the job token (`contents: write`) and installs nothing. Checks the downloaded VS Code packages against the digests `build-vscode` recorded, uploads the VSIX files and their SBOM evidence to the draft GitHub Release, and checks that the draft holds exactly the CLI assets of the checked evidence manifest and those VS Code files. Distribution evidence that a failed earlier run left on the draft is removed first; it is uploaded again later. Every write to the GitHub Release and every check before publishing it address it by the release id the `version` job recorded; the smoke test downloads assets by tag.
+Runs before `release-push` with the job token (`contents: write`) and installs nothing. Checks the downloaded VS Code packages against the digests `build-vscode` recorded, uploads the VSIX files and their SBOM evidence to the draft GitHub Release, and checks that the draft holds exactly the CLI assets of the checked evidence manifest and those VS Code files. Distribution evidence that a failed earlier run left on the draft is removed first; it is uploaded again later. Every write to the GitHub Release and every check before publishing it address it by the release id `release-draft` recorded; the smoke test downloads assets by tag.
 
 ### 6. Packages and Images (`publish-build`)
 
@@ -71,11 +69,11 @@ Checks out the pushed tag (and checks that it is the commit `release-push` pushe
 - Packs the platform-specific CLI npm packages (e.g. `@kilocode/cli-linux-x64`) and the main `@kilocode/cli` package, and describes each exact tarball.
 - Builds and pushes a multi-arch **Docker image** (`ghcr.io/kilo-org/kilocode`) to GitHub Container Registry (linux/amd64 + linux/arm64).
 - Builds and pushes the image's **OpenShell variant** (`ghcr.io/kilo-org/kilocode:<version>-openshell` and `:latest-openshell`) from the Dockerfile's `openshell` stage, for the same platforms.
-- Writes the npm and container SBOM evidence and hands it, with the tarballs, to the next jobs (artifact `publish-build`, whose stage file's sha256 it records).
+- Writes the npm and container SBOM evidence and hands it to the next jobs as the artifact `publish-build` (the stage file and the evidence, whose stage file's sha256 it records), and the tarballs as `publish-tarballs`, which only `publish` downloads.
 
 ### 7. GitHub Release (`release-undraft`)
 
-With the job token (`contents: write`) and nothing installed: uploads the npm and container evidence to the draft, checks the complete draft again (every expected asset, each with its recorded digest, nothing else) and only then publishes the GitHub Release with its notes, from the changelogs of the tag. No asset is uploaded after this, so the published release never changes.
+With the job token (`contents: write`) and nothing installed: checks that the evidence of `publish-build` is the distribution manifest, its checksum file and exactly the sidecars the manifest's entries name, with those entries, before anything is uploaded; deletes distribution evidence an earlier attempt left on the draft; uploads the npm and container evidence; checks the complete draft again (every expected asset, each with its recorded digest, nothing else) and only then publishes the GitHub Release with its notes, from the changelogs of the tag. No asset is uploaded after this, so the published release never changes.
 
 ### 8. Publish (`publish`)
 
@@ -86,7 +84,7 @@ Checks out the pushed tag, in the `release` environment, with read access to the
 - **Plugin** (`@kilocode/plugin`): builds and publishes the plugin interface package to **npm**.
 - **VS Code Extension**: publishes platform-specific VSIX packages to the **VS Code Marketplace** via `vsce publish --oidc`. The `publish` job runs in the `release` GitHub Actions environment, and the `kilocode` publisher trusts `Kilo-Org/kilocode`'s `publish.yml` workflow in that environment, so no Marketplace token is stored. It publishes the same packages to **Open VSX** via `ovsx publish --trusted-publishing`, using GitHub Actions OIDC instead of a PAT.
 
-The user-visible order is unchanged: the release commit and tag, the images, the GitHub Release, npm (CLI, SDK, plugin), the VS Code Marketplace and Open VSX, then AUR, Homebrew and the JetBrains pin pull request.
+The user-visible order is unchanged: the release commit and tag, the images, the GitHub Release, npm (CLI, SDK, plugin), the VS Code Marketplace and Open VSX, then, in parallel, AUR and Homebrew (stable releases only) and the JetBrains pin pull request.
 
 ### 9. AUR and Homebrew (`package-managers`, stable releases only)
 
@@ -105,6 +103,8 @@ Runs after `publish` in the `release-keys` environment and installs nothing. Wit
 
 | Job | Repository token | Other |
 |---|---|---|
+| `version` | `contents: read` | none |
+| `release-draft` | `contents: write` | none |
 | `release-commit` | `contents: read`, `pull-requests: read` | none |
 | `release-push` | `contents: read` | `id-token: write`, environment `release-keys` (kilo-maintainer app key from STS) |
 | `release-assets` | `contents: write` | none |
@@ -115,11 +115,11 @@ Runs after `publish` in the `release-keys` environment and installs nothing. Wit
 
 ### Refusals at `release-commit` or `release-push`
 
-A refused release commit cannot be fixed by a re-run: the re-run checks the same bundle again. Examples: `bun.lock` on `main` not in Bun's canonical form; a changelog on `main` that changesets reformats when it adds the new section (it runs prettier over the whole file); a change outside the allowed version and changelog lines. The draft release the `version` job created is then an orphan. Fix the cause on `main` (merge the `bun install` output, or format the changelog with prettier), then either delete the orphan draft and dispatch again with the same version, or dispatch again and let the bump skip to the next version.
+A refused release commit cannot be fixed by a re-run: the re-run checks the same bundle again. Examples: `bun.lock` on `main` not in Bun's canonical form; a changelog on `main` that changesets reformats when it adds the new section (it runs prettier over the whole file); a change outside the allowed version and changelog lines. The draft release `release-draft` created is then an orphan. Fix the cause on `main` (merge the `bun install` output, or format the changelog with prettier), then either delete the orphan draft and dispatch again with the same version, or dispatch again and let the bump skip to the next version.
 
 ### Recovering from a Failed Job
 
-Re-run the failed job (**Re-run failed jobs**); the build jobs, their recorded digests and the artifacts of the jobs that succeeded are reused. `release-commit` and `release-push` do not run again once they succeeded, so a re-run publishes from the same pushed tag. If `release-push` itself failed, its re-run checks the same bundle again; if the tag is already on origin at the release commit, it pushes nothing.
+Re-run the failed job (**Re-run failed jobs**); the build jobs, their recorded digests and the artifacts of the jobs that succeeded are reused. `release-commit` and `release-push` do not run again once they succeeded, so a re-run publishes from the same pushed tag. If `release-push` itself failed, its re-run checks the same bundle again; if the tag is already on origin at the release commit, it pushes nothing. Never re-run `version`, `release-draft` or `release-commit` on its own after `release-push` succeeded (their outputs feed the jobs after it); re-run `publish-build` instead.
 
 - **`publish-build` or `release-undraft` failed**: the GitHub Release is still a draft. The Docker images may already be pushed. A re-run of `publish-build` packs and describes the npm packages again and rebuilds and pushes the images; `release-undraft` then uploads the evidence (replacing assets of the same name that an earlier attempt left), checks the draft and publishes it. npm has nothing yet: packages are published only after the release.
 - **`publish` failed** (for example an npm publish): the release is public. The re-run publishes the tarballs `publish-build` packed, each with its recorded sha256, and skips npm packages that are already published. AUR and Homebrew are updated only after a `publish` run succeeds: the `package-managers` job runs after the successful re-run.

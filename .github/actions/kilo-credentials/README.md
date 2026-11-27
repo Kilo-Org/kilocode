@@ -29,7 +29,7 @@ commit with git and accepts only these changes:
 | `package.json` files | modified | Only `"version"` lines change, from any version (read from the dispatch commit) to the release version; same line count. Not `packages/kilo-jetbrains/package.json` (the JetBrains CLI pin) |
 | `bun.lock` | modified | The same `"version"` line rule |
 | `packages/extensions/zed/extension.toml` | modified | Only its `version = "..."` line and the `releases/download/v<version>/` part of its archive URLs, to the release version |
-| `packages/opencode/CHANGELOG.md`, `packages/kilo-vscode/CHANGELOG.md`, `packages/kilo-jetbrains/CHANGELOG.md` | modified | The old text stays an exact suffix after the `# title` line. The one block in front of it is at most 64 KiB and holds only changesets output: a `## <version>` header (the release version; any version for JetBrains), `### Major\|Minor\|Patch Changes`, blank lines, bullets whose text (after changesets' pull request, commit and thanks links) is a line of a `.changeset/*.md` file the commit deletes, read from the dispatch commit, and changesets' "Updated dependencies" lines |
+| `packages/opencode/CHANGELOG.md`, `packages/kilo-vscode/CHANGELOG.md`, `packages/kilo-jetbrains/CHANGELOG.md` | modified | The old text stays an exact suffix after the `# title` line. The one block in front of it is at most 64 KiB and holds only changesets output: a `## <version>` header (the release version; any version for JetBrains), `### Major\|Minor\|Patch Changes`, blank lines, bullets whose text (after changesets' pull request, commit and thanks links) is a line of a `.changeset/*.md` file the commit deletes, read from the dispatch commit, and changesets' "Updated dependencies" lines. In those links a pull request's and a user's text must match the link target, a commit's short hash must start its full hash, and that commit must be in the history of the dispatch commit; a dependency line must name a package whose `package.json` the commit changes |
 | `.changeset/<name>.md` | deleted | Not `.changeset/README.md` |
 
 Refused even where a row above matches: `.github/`, `script/`, `bin/`, `nix/`, every other
@@ -183,6 +183,12 @@ jobs:
   `release` for npm, VS Code Marketplace and Open VSX trusted publishing, holds no app token and
   leaves the release push, the AUR and Homebrew updates and the JetBrains pin pull request to jobs
   in `release-keys`.
+- Known limit, not changed by this split: the `publish` job still runs `bun install` and the npm,
+  vsce and ovsx tooling next to `id-token: write`, for npm, VS Code Marketplace and Open VSX
+  trusted publishing. It runs in `release`, not `release-keys`, so it cannot read the
+  `ci-kilocode-release` bundle, but a compromised package there could publish to those registries
+  and read any STS bundle whose policy names `release`. Moving the installs out of that job is a
+  separate change.
 - Its workflow is never callable with `workflow_call`. The OIDC token of a reusable workflow carries
   that workflow's `job_workflow_ref`, so any workflow allowed to call it would receive its bundle.
 - `secrets:` lists every key the job reads.

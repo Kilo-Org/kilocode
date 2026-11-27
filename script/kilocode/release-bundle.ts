@@ -64,8 +64,8 @@ export async function bump(version: string) {
 
 /**
  * Commits the allowed working-tree changes of the repository at `cwd` as `release: v<version>`,
- * tags the commit `v<version>`, checks it, and writes the bundle and manifest to `out`. Changes the
- * release commit may not carry (for example regenerated SDK sources) stay out of it, with a warning.
+ * tags the commit `v<version>`, checks it, and writes the bundle and manifest to `out`. Other
+ * changes in the working tree, tracked or new, stay out of the commit, with a warning.
  */
 export async function pack(input: { cwd: string; version: string; out: string }) {
   const { cwd, version, out } = input
