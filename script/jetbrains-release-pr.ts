@@ -2,8 +2,8 @@
 // kilocode_change - new file
 
 import { $ } from "bun"
-import semver from "semver"
 import { parseArgs } from "util"
+import { parse, previous } from "./kilocode/jetbrains-version"
 
 const props = new URL("../packages/kilo-jetbrains/gradle.properties", import.meta.url).pathname
 const log = new URL("../packages/kilo-jetbrains/CHANGELOG.md", import.meta.url).pathname
@@ -39,11 +39,13 @@ if (kind !== "rc" && kind !== "stable") throw new Error("--kind must be rc or st
 if (!ver) throw new Error("--version is required")
 if (kind === "rc" && !/^\d+\.\d+\.\d+-rc\.\d+$/.test(ver)) throw new Error("RC versions must match x.y.z-rc.n")
 if (kind === "stable" && !/^\d+\.\d+\.\d+$/.test(ver)) throw new Error("Stable versions must match x.y.z")
-if (!semver.valid(ver)) throw new Error(`Invalid semver: ${ver}`)
+if (!parse(ver)) throw new Error(`Invalid version: ${ver}`)
 
 await $`git fetch origin main --tags`
 if (!(await pinned())) {
-  throw new Error("packages/kilo-jetbrains/gradle.properties has kilo.cli.pinned=false; JetBrains releases require kilo.cli.pinned=true")
+  throw new Error(
+    "packages/kilo-jetbrains/gradle.properties has kilo.cli.pinned=false; JetBrains releases require kilo.cli.pinned=true",
+  )
 }
 
 const tag = `jetbrains/v${ver}`
@@ -103,32 +105,10 @@ async function base(ver: string, kind: "rc" | "stable") {
     .split(/\r?\n/)
     .map((item) => item.trim())
     .filter(Boolean)
-    .map((item) => ({ tag: item, ver: item.replace(/^jetbrains\/v/, "") }))
-    .filter((item) => semver.valid(item.ver))
-
-  const want = semver.parse(ver)!
-  const stable = tags
-    .filter((item) => !semver.prerelease(item.ver) && semver.lt(item.ver, ver))
-    .sort((a, b) => semver.rcompare(a.ver, b.ver))
-
-  if (kind === "stable") {
-    const hit = stable[0]
-    if (!hit) throw new Error("No previous stable JetBrains tag found; pass --from-tag")
-    return hit.tag
-  }
-
-  const rc = tags
-    .filter((item) => {
-      const parsed = semver.parse(item.ver)
-      if (!parsed) return false
-      if (parsed.major !== want.major || parsed.minor !== want.minor || parsed.patch !== want.patch) return false
-      return Boolean(semver.prerelease(item.ver)) && semver.lt(item.ver, ver)
-    })
-    .sort((a, b) => semver.rcompare(a.ver, b.ver))
-
-  const hit = rc[0] ?? stable[0]
-  if (!hit) throw new Error("No previous JetBrains tag found; pass --from-tag")
-  return hit.tag
+  const hit = previous(ver, kind, tags)
+  if (hit) return hit
+  if (kind === "stable") throw new Error("No previous stable JetBrains tag found; pass --from-tag")
+  throw new Error("No previous JetBrains tag found; pass --from-tag")
 }
 
 async function lock(tag: string, sha: string, dry: boolean) {

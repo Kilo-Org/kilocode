@@ -31,9 +31,11 @@ jobs:
   prepare:
     if: github.repository == 'Kilo-Org/kilocode'
     runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 15
     # The Kilo Maintainer app key comes from the STS bundle of ci-kilocode-app-key, which needs
-    # environment automation (main only) and id-token: write. Read
-    # .github/actions/kilo-credentials/README.md before adding a step before "Read the STS bundle".
+    # environment automation (main only) and id-token: write. The job therefore installs no
+    # packages and runs only this repository's code: read .github/actions/kilo-credentials/README.md
+    # before adding a step.
     environment: automation
     permissions:
       contents: read
@@ -52,10 +54,12 @@ jobs:
           workload: ci-kilocode-app-key
           secrets: KILOCODE_MAINTAINER_APP_KEY
 
+      # Bun and Node only: the release script imports no package, so nothing is installed and no
+      # install or lifecycle script runs in this job.
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
         with:
-          cache: false # job holds the maintainer app secrets
+          install: false
 
       - name: Setup Git Committer
         id: committer
@@ -73,7 +77,7 @@ jobs:
           if [[ -n "$FROM_TAG" ]]; then
             args+=(--from-tag "$FROM_TAG")
           fi
-          bun script/jetbrains-release-pr.ts "${args[@]}"
+          bun --no-install script/jetbrains-release-pr.ts "${args[@]}"
         env:
           GH_TOKEN: ${{ steps.committer.outputs.token }}
           GH_REPO: ${{ github.repository }}
