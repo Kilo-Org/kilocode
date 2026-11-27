@@ -6,6 +6,7 @@ import type { Service } from "./browser-settings"
 import { wire } from "./chat"
 import type { ToHost, ToWebview } from "./protocol"
 import type { Manager } from "./server"
+import type { SpeechAuthSubscribe } from "./speech-to-text/host"
 
 export function editorPanel(input: {
   context: ExtensionContext
@@ -21,6 +22,7 @@ export function editorPanel(input: {
   browserSettings?: Service
   /** Extra window globals of the webview bundle. */
   globals?: Record<string, unknown>
+  onSpeechAuthChange?: SpeechAuthSubscribe
 }) {
   const state: { panel?: WebviewPanel; post?: (message: ToWebview) => void } = {}
   const serializer: Disposable = window.registerWebviewPanelSerializer(input.type, {
@@ -69,6 +71,7 @@ export function editorPanel(input: {
       agentManager: input.agentManager,
       browserSettings: input.browserSettings,
       globals: input.globals,
+      onSpeechAuthChange: input.onSpeechAuthChange,
     })
     state.post = surface.post
     panel.onDidDispose(() => {

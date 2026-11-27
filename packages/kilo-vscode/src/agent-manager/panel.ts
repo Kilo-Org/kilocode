@@ -7,6 +7,7 @@ import { promptKeybindings, promptSelection, watchPromptContext } from "../promp
 import type { ToHost, ToWebview } from "../protocol"
 import type { Manager } from "../server"
 import type { Disposable, PanelContext } from "./host"
+import type { SpeechAuthSubscribe } from "../speech-to-text/host"
 import { chatFocus } from "../services/code-actions/target"
 
 export const PANEL_TYPE = "kilo-code.v2.agentManagerPanel"
@@ -23,6 +24,7 @@ export function createPanel(input: {
   directory: string
   trackCostSession?: (sessionID: string) => void
   saveImageDirectory?: (sessionID?: string) => string | undefined | Promise<string | undefined>
+  onSpeechAuthChange?: SpeechAuthSubscribe
 }) {
   return {
     /** A new panel in the active editor column. */
@@ -66,6 +68,7 @@ export function createPanel(input: {
       view: "agentManager",
       trackCostSession: input.trackCostSession,
       saveImageDirectory: input.saveImageDirectory,
+      onSpeechAuthChange: input.onSpeechAuthChange,
       onMessage: ready,
       globals: {
         KILO_AGENT_MANAGER_INTRO_DISMISSED: input.context.globalState.get<boolean>(INTRO) === true,

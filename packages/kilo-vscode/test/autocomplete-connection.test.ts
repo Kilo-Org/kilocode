@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "bun:test"
+import { ErrorBackoff } from "../src/services/autocomplete/classic-auto-complete/ErrorBackoff"
 import { AutocompleteRequestError, createConnection } from "../src/services/autocomplete/connection"
 import type { Manager } from "../src/server"
 
@@ -15,6 +16,10 @@ type Call = {
 
 const calls: Call[] = []
 
+const encoder = new TextEncoder()
+const streams = new Set<ReadableStreamDefaultController<Uint8Array>>()
+let eventHandler: ((request: Request) => Response) | undefined
+
 let fimReply: Reply = { status: 200, body: { output: { text: "hello", cost: 0.1, inputTokens: 1, outputTokens: 2 } } }
 let balanceReply: Reply = { status: 200, body: { output: { balance: 12.5 } } }
 
@@ -22,6 +27,49 @@ const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } })
 
 const rpcError = (type: string, message: string, data?: unknown) => ({ _tag: "RpcError", type, message, data })
+
+function frame(event: unknown) {
+  return `data: ${JSON.stringify(event)}\n\n`
+}
+
+function openStream(connected = true) {
+  let active: ReadableStreamDefaultController<Uint8Array> | undefined
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      active = controller
+      streams.add(controller)
+      if (connected)
+        controller.enqueue(encoder.encode(frame({ type: "server.connected", id: "evt_0", created: 0, data: {} })))
+    },
+    cancel() {
+      if (active) streams.delete(active)
+    },
+  })
+  return new Response(stream, { status: 200, headers: { "content-type": "text/event-stream" } })
+}
+
+function emit(event: unknown) {
+  for (const controller of [...streams]) controller.enqueue(encoder.encode(frame(event)))
+}
+
+function dropStreams() {
+  for (const controller of [...streams]) {
+    streams.delete(controller)
+    try {
+      controller.close()
+    } catch {
+      // Already closed.
+    }
+  }
+}
+
+async function until(check: () => boolean, label = "condition") {
+  for (let attempt = 0; attempt < 200; attempt++) {
+    if (check()) return
+    await Bun.sleep(10)
+  }
+  throw new Error(`timed out waiting for ${label}`)
+}
 
 const server = Bun.serve({
   port: 0,
@@ -33,6 +81,7 @@ const server = Bun.serve({
       directory: url.searchParams.get("location[directory]"),
     })
     if (url.pathname === "/api/event") {
+      if (eventHandler) return eventHandler(request)
       return new Response("", { status: 200, headers: { "content-type": "text/event-stream" } })
     }
     if (url.pathname === "/api/rpc/kilocode.gateway/autocomplete.fim") return json(fimReply.body, fimReply.status)
@@ -41,11 +90,11 @@ const server = Bun.serve({
   },
 })
 
-function create() {
+function create(opts?: { reconnect?: number; maxReconnect?: number }) {
   const manager = {
     get: async () => ({ url: `http://127.0.0.1:${server.port}`, authorization: AUTHORIZATION }),
   } as unknown as Manager
-  return createConnection({ server: manager, directory: DIRECTORY })
+  return createConnection({ server: manager, directory: DIRECTORY, ...opts })
 }
 
 const request = { prefix: "", suffix: "" }
@@ -57,11 +106,14 @@ describe("createConnection", () => {
 
   beforeEach(() => {
     calls.length = 0
+    eventHandler = undefined
+    dropStreams()
     fimReply = { status: 200, body: { output: { text: "hello", cost: 0.1, inputTokens: 1, outputTokens: 2 } } }
     balanceReply = { status: 200, body: { output: { balance: 12.5 } } }
   })
 
   afterAll(() => {
+    dropStreams()
     server.stop(true)
   })
 
@@ -154,6 +206,131 @@ describe("createConnection", () => {
     unsubscribe()
     connection.started()
     expect(changes).toBe(2)
+
+    connection.dispose()
+  })
+
+  it("notifies onAuthChange for auth and organization events but ignores unrelated events", async () => {
+    eventHandler = () => openStream()
+    const connection = create({ reconnect: 10 })
+    let authEvents = 0
+    connection.onAuthChange(() => authEvents++)
+
+    connection.started()
+    await until(() => streams.size === 1, "initial SSE stream")
+
+    emit({ type: "provider.updated", id: "evt_1", created: 1, data: {} })
+    emit({ type: "session.idle", id: "evt_2", created: 2, data: { sessionID: "s1" } })
+    emit({ type: "credential.updated", id: "evt_3", created: 3, data: { integrationID: "kilo", credentialID: "c1" } })
+    emit({ type: "credential.switched", id: "evt_4", created: 4, data: { integrationID: "kilo", credentialID: "c1" } })
+    emit({
+      type: "rpc.kilocode.gateway.organization",
+      id: "evt_5",
+      created: 5,
+      data: { organizationID: "org_1" },
+    })
+
+    await until(() => authEvents === 3, "auth notifications")
+    expect(authEvents).toBe(3)
+    connection.dispose()
+  })
+
+  it("reconnects after a transient SSE drop and continues delivering onAuthChange", async () => {
+    eventHandler = () => openStream()
+    const connection = create({ reconnect: 10, maxReconnect: 40 })
+    let authEvents = 0
+    connection.onAuthChange(() => authEvents++)
+
+    connection.started()
+    await until(() => streams.size === 1, "first SSE stream")
+    expect(authEvents).toBe(0)
+
+    // Drop the SSE stream without restarting the server.
+    dropStreams()
+    await until(
+      () => calls.filter((call) => call.path === "/api/event").length === 2 && streams.size === 1 && authEvents === 1,
+      "reconnected SSE stream",
+    )
+
+    // Subsequent re-login events on the reconnected stream still fire onAuthChange.
+    emit({ type: "credential.switched", id: "evt_relogin", created: 10, data: { integrationID: "kilo", credentialID: "c2" } })
+    await until(() => authEvents === 2, "post-reconnect credential.switched")
+    expect(authEvents).toBe(2)
+
+    connection.dispose()
+  })
+
+  it("backs off across consecutive SSE failures and recovers once the stream returns", async () => {
+    const timestamps: number[] = []
+    let attempt = 0
+    eventHandler = () => {
+      timestamps.push(Date.now())
+      attempt++
+      if (attempt <= 3) return new Response("unavailable", { status: 503 })
+      return openStream()
+    }
+
+    const connection = create({ reconnect: 20, maxReconnect: 80 })
+    let authEvents = 0
+    connection.onAuthChange(() => authEvents++)
+
+    connection.started()
+    await until(() => attempt === 4 && streams.size === 1, "eventual SSE connect after failures")
+
+    // Delay after attempt 2 (40ms) should be longer than delay after attempt 1 (20ms), and initial connect after
+    // failures should not fire a spurious onAuthChange.
+    expect(timestamps[2]! - timestamps[1]!).toBeGreaterThanOrEqual(25)
+    expect(timestamps[3]! - timestamps[2]!).toBeGreaterThanOrEqual(50)
+    expect(authEvents).toBe(0)
+
+    emit({ type: "credential.switched", id: "evt_after_fail", created: 1, data: { integrationID: "kilo", credentialID: "c1" } })
+    await until(() => authEvents === 1, "auth event after recovery")
+    connection.dispose()
+  })
+
+  it("stops reconnecting immediately when stopped during backoff", async () => {
+    let attempts = 0
+    eventHandler = () => {
+      attempts++
+      return new Response("unavailable", { status: 503 })
+    }
+
+    const connection = create({ reconnect: 50, maxReconnect: 200 })
+    connection.started()
+    await until(() => attempts === 1, "first failed SSE attempt")
+
+    connection.stopped()
+    await Bun.sleep(100)
+    expect(attempts).toBe(1)
+    connection.dispose()
+  })
+
+  it("recovers ErrorBackoff from a 401 fatal lock after an SSE drop and re-login", async () => {
+    eventHandler = () => openStream()
+    const connection = create({ reconnect: 10, maxReconnect: 40 })
+    const backoff = new ErrorBackoff()
+    connection.onAuthChange(() => backoff.reset())
+
+    connection.started()
+    await until(() => streams.size === 1, "initial SSE stream")
+
+    // Simulate an SSE drop while connected, followed by a 401 FIM failure locking ErrorBackoff fatal.
+    dropStreams()
+    await until(
+      () => calls.filter((call) => call.path === "/api/event").length === 2 && streams.size === 1,
+      "reconnected SSE stream",
+    )
+
+    fimReply = { status: 400, body: rpcError("unauthorized", "not signed in") }
+    const error = await connection.fim(request).catch((value: unknown) => value)
+    expect(backoff.failure(error)).toBe("fatal")
+    expect(backoff.getFatalStatus()).toBe(401)
+    expect(backoff.blocked()).toBe(true)
+
+    // Re-login arrives on the reconnected SSE stream and unlocks ErrorBackoff.
+    emit({ type: "credential.switched", id: "evt_relogin_401", created: 2, data: { integrationID: "kilo", credentialID: "c2" } })
+    await until(() => !backoff.blocked(), "ErrorBackoff reset after re-login")
+    expect(backoff.getFatalStatus()).toBeNull()
 
     connection.dispose()
   })

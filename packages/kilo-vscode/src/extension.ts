@@ -44,6 +44,7 @@ import {
   migrateIntegratedBrowserUseSystemChrome,
 } from "./services/browser-automation/chrome-setting"
 import { createConnection } from "./services/autocomplete/connection"
+import { createSpeechAuthWatcher } from "./speech-to-text/host"
 import {
   createChatTarget,
   KiloCodeActionProvider,
@@ -262,6 +263,8 @@ export function activate(context: ExtensionContext) {
   indexing = indexingService
   context.subscriptions.push(indexingService)
   const connection = createAgentManagerConnection({ server })
+  const speechAuth = createSpeechAuthWatcher(connection)
+  context.subscriptions.push({ dispose: speechAuth.dispose })
   const autocomplete = createConnection({ server, directory })
   context.subscriptions.push({ dispose: autocomplete.dispose })
   context.subscriptions.push({ dispose: disposeGitChangesTarget })
@@ -297,6 +300,7 @@ export function activate(context: ExtensionContext) {
     },
     openBrowser: (sessionId, url) => browserTab?.openUrl(sessionId, url) ?? false,
     documents: () => documentsRef.current,
+    onSpeechAuthChange: speechAuth.subscribe,
   })
   const documents = new DocumentViewerProvider({
     extension: context,
@@ -313,6 +317,7 @@ export function activate(context: ExtensionContext) {
     directory,
     trackCostSession: alerts.track,
     saveImageDirectory: (sessionID) => agentManagerRef?.imageDirectory(sessionID),
+    onSpeechAuthChange: speechAuth.subscribe,
   })
   const agentManager = new AgentManagerProvider(agentHost, connection, agentPanel, undefined, broker)
   agentManagerRef = agentManager
@@ -429,6 +434,7 @@ export function activate(context: ExtensionContext) {
     browserSettings,
     onReset: view.syncState,
     agentManager: () => agentManager.settings,
+    onSpeechAuthChange: speechAuth.subscribe,
   })
   const profilePanel = profile({ context, server, directory })
   const subagents = subagentPanels({
