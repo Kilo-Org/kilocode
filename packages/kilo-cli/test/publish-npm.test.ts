@@ -6,9 +6,9 @@ import { clients, filename, launcher, platforms, record } from "../../../script/
 import { publishNpm } from "../../../script/kilocode/publish-npm"
 
 const version = "0.0.0-v2-123.2"
-const cleanups: Array<() => Promise<unknown>> = []
+const cleanups: Array<() => unknown> = []
 afterEach(async () => {
-  for (const cleanup of cleanups.splice(0)) await cleanup()
+  for (const cleanup of cleanups.splice(0).reverse()) await cleanup()
 })
 
 async function release() {
@@ -40,7 +40,9 @@ async function release() {
       return new Response(null, { status: 404 })
     },
   })
-  cleanups.push(() => server.stop(true))
+  cleanups.push(() => {
+    void server.stop(true)
+  })
 
   async function npm([command, file, ...flags]: string[]) {
     expect(command).toBe("publish")
