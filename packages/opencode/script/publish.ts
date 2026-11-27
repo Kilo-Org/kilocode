@@ -8,7 +8,8 @@ import fs from "node:fs"
 import path from "node:path"
 import { NpmPublish } from "./kilocode/npm-publish"
 import * as KiloSbom from "./kilocode/sbom"
-import * as KiloRelease from "../../../script/kilocode/release"
+import * as KiloDraft from "../../../script/kilocode/draft-assets"
+import * as Artifact from "../../../script/kilocode/sbom/artifact"
 import type { Manifest } from "../../../script/kilocode/sbom/index"
 // kilocode_change end
 
@@ -17,8 +18,13 @@ process.chdir(dir)
 
 // kilocode_change start
 const evidence: Manifest.Entry[] = []
+/**
+ * npm publishes of the packed tarballs, run after the GitHub release is public: the CLI installer
+ * and `kilo upgrade` take the version from npm and download the archives from the release.
+ */
+const pending: { name: string; run: () => Promise<unknown> }[] = []
 
-/** Record SBOM evidence for one npm tarball, or an explicit failure entry. */
+/** Record SBOM evidence for one npm tarball, or an explicit failure entry that keeps its digest. */
 async function describe(file: string | undefined, name: string, version: string) {
   const described = file
     ? await KiloSbom.npmPackage({
@@ -34,7 +40,7 @@ async function describe(file: string | undefined, name: string, version: string)
   evidence.push(
     described?.entry ?? {
       artifact: file ? path.basename(file) : `${name}@${version}`,
-      sha256: "",
+      sha256: file ? await Artifact.digest(file) : "",
       distribution: "npm",
       error: `SBOM generation failed for ${name}@${version}`,
     },
@@ -81,8 +87,8 @@ async function publish(dir: string, name: string, version: string) {
   }
   // kilocode_change end
   await $`bun pm pack`.cwd(dir)
-  // kilocode_change start - describe the exact tarball before publishing it, and
-  // publish that resolved path rather than a glob.
+  // kilocode_change start - describe the exact tarball, and publish that resolved
+  // path rather than a glob once the release is public (see `pending`).
   const packed = await Array.fromAsync(new Bun.Glob("*.tgz").scan({ cwd: dir }))
   if (packed.length !== 1) {
     throw new Error(`bun pm pack must produce exactly one tarball for ${name}, found ${packed.length}`)
@@ -90,11 +96,15 @@ async function publish(dir: string, name: string, version: string) {
   const tarball = packed[0]
   await describe(path.join(dir, tarball), name, version)
 
-  await NpmPublish.retry({
+  pending.push({
     name,
-    version,
-    run: () => $`npm publish ${tarball} --access public --tag ${Script.channel} --provenance`.cwd(dir),
-    exists: () => published(name, version),
+    run: () =>
+      NpmPublish.retry({
+        name,
+        version,
+        run: () => $`npm publish ${tarball} --access public --tag ${Script.channel} --provenance`.cwd(dir),
+        exists: () => published(name, version),
+      }),
   })
   // kilocode_change end
 }
@@ -158,8 +168,13 @@ const platforms = "linux/amd64,linux/arm64"
 const tags = [`${image}:${version}`, `${image}:${Script.channel}`]
 const tagFlags = tags.flatMap((t) => ["-t", t])
 
+// kilocode_change start - a re-run after the release was published only finishes what the first
+// run left: the images were pushed and described before the release was published.
+const live = Script.release && !(await KiloDraft.open(Script.version)).draft
+// kilocode_change end
 // registries
-if (!Script.preview) {
+if (!Script.preview && !live) {
+  // kilocode_change - images are pushed only before the release is published
   // kilocode_change start - BuildKit attestations are requested explicitly rather
   // than relying on defaults, and the pushed digests are captured so the image
   // SBOM describes an immutable manifest instead of a moving channel tag.
@@ -171,6 +186,13 @@ if (!Script.preview) {
   const variantTagFlags = tags.flatMap((t) => ["-t", `${t}-openshell`])
   await $`docker buildx build --platform ${platforms} ${variantTagFlags} --target openshell --provenance=mode=max --sbom=true --metadata-file ${variantMetadata} --push .`
   evidence.push(...(await describeImages(variantMetadata)))
+  // kilocode_change end
+  // kilocode_change start - every asset reaches the draft and the draft is checked and published
+  // here, after the image digests are known; the npm packages and AUR and Homebrew follow
+}
+await release()
+await publishNpm()
+if (!Script.preview) {
   // kilocode_change end
   // kilocode_change start - use verified archive digests without duplicating archives in the signed dist
   const digest = await KiloSbom.digests("dist")
@@ -312,9 +334,15 @@ if (!Script.preview) {
 }
 
 // kilocode_change start - record which npm tarballs and container manifests this
-// release produced. Homebrew and AUR redistribute the archives described by the
-// archive manifest, so they need no separate evidence.
-if (Script.release) {
+// release produced, put that evidence on the draft, check the complete draft and
+// publish the release. Homebrew and AUR redistribute the archives described by the
+// archive manifest, so they need no separate evidence. A failure leaves the
+// release a draft: published assets cannot be added or replaced later. On a re-run
+// after the release was published, nothing is uploaded: the published assets are
+// checked, and every npm tarball must be the one the published evidence names.
+async function release() {
+  if (!Script.release) return
+  if (live) return KiloDraft.recheck({ version: Script.version, entries: evidence })
   // Expected coverage is derived from what this release had to produce, not from
   // what happened to be recorded, so a missing package or image is a shortfall.
   const packages = Object.keys(binaries).length + 1
@@ -325,11 +353,18 @@ if (Script.release) {
     entries: evidence,
     expected: packages + images,
   })
-  // Evidence is a record of a release that already shipped, so a failure here is
-  // reported rather than rolled back onto an npm publish that cannot be undone.
-  await KiloRelease.upload({ tag: `v${Script.version}`, files: described.files }).catch((err) =>
-    console.error("sbom: could not publish the distribution evidence", err),
-  )
+  await KiloDraft.publish({
+    version: Script.version,
+    prerelease: Script.preview,
+    files: described.files,
+    entries: described.manifest.entries,
+  })
+}
+
+/** Publish the packed npm tarballs: the platform packages, then the launcher that depends on them. */
+async function publishNpm() {
+  await Promise.all(pending.filter((item) => item.name !== pkg.name).map((item) => item.run()))
+  await Promise.all(pending.filter((item) => item.name === pkg.name).map((item) => item.run()))
 }
 
 /**

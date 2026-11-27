@@ -509,7 +509,9 @@ export async function distribution(input: {
     ok: report.ok,
     missing: report.missing,
   })
-  Policy.gate({ label: `cli distribution evidence for ${manifest.version}`, issues: report.issues })
+  // The release is published right after this, so an exit code would come too late: stop now
+  // when enforcing. Advisory mode only reports.
+  Policy.block({ label: `cli distribution evidence for ${manifest.version}`, issues: report.issues })
 
   return {
     manifest,
@@ -537,20 +539,93 @@ export async function digests(dir: string) {
  * still advisory, and block the release once `SBOM_ENFORCE` is set.
  */
 export async function evidence(input: { dir: string; release: Release; expected: number }) {
-  const manifest = await archives(input)
-  const sums = path.join(input.dir, CHECKSUMS)
-  await Bun.write(sums, await Manifest.checksums({ manifest, dir: input.dir }))
+  return seal({ dir: input.dir, manifest: await archives(input) })
+}
 
-  const report = await Manifest.verify({ manifest, dir: input.dir })
+/**
+ * Packages `script/build.ts` installs for every platform before it describes the
+ * archives. Describing an archive for another platform reads the licences of its
+ * native packages, so a later description must install the same set first.
+ */
+export const CROSS_PLATFORM = ["@opentui/core", "@parcel/watcher", "@ff-labs/fff-bun"]
+
+/**
+ * Describe the signed Windows zips in place of the unsigned ones the build described.
+ *
+ * sign-cli-windows signs the executables and packages new zips, so the zips the
+ * release ships are not the ones `evidence` described. Their sidecars and
+ * manifest entries are generated again from the signed bytes, and every other
+ * entry stays as the build recorded it. `digests` holds the zip digests
+ * sign-cli-windows recorded; each zip must match its digest.
+ */
+export async function signed(input: { dir: string; zips: string; digests: Map<string, string>; release: Release }) {
+  const file = path.join(input.dir, Manifest.name("cli"))
+  const manifest = await Manifest.read(file)
+  const windows = manifest.entries
+    .map((entry) => entry.artifact)
+    .filter((name) => name.startsWith("kilo-windows-"))
+    .sort()
+  const names = (await fs.promises.readdir(input.zips)).sort()
+  const recorded = [...input.digests.keys()].sort()
+  if (names.join("\n") !== windows.join("\n") || recorded.join("\n") !== windows.join("\n")) {
+    throw new Error(
+      `The build manifest lists Windows zips [${windows.join(", ")}], the zip directory holds [${names.join(", ")}] and sign-cli-windows recorded [${recorded.join(", ")}]`,
+    )
+  }
+
+  const lock = await Deps.load(path.join(repo, "bun.lock"))
+  const entries = new Map(manifest.entries.map((entry) => [entry.artifact, entry]))
+  for (const name of windows) {
+    const zip = path.join(input.zips, name)
+    const sha256 = await Artifact.digest(zip)
+    if (sha256 !== input.digests.get(name)) {
+      throw new Error(`${name} has digest ${sha256}; sign-cli-windows recorded ${input.digests.get(name)}`)
+    }
+    // The unsigned sidecar must not stay beside the new entry, even when the new description fails.
+    const stale = entries.get(name)?.sbom
+    if (stale) await fs.promises.rm(path.join(input.dir, path.basename(stale)), { force: true })
+    try {
+      const result = await archive({
+        file: zip,
+        target: target(name.replace(/^kilo-/, "").replace(/\.zip$/, "")),
+        release: input.release,
+        lock,
+      })
+      await fs.promises.copyFile(result.sidecar, path.join(input.dir, result.entry.sbom))
+      await fs.promises.rm(result.sidecar)
+      entries.set(name, result.entry)
+      console.log(`sbom: signed ${name} -> ${result.entry.sbom}`)
+    } catch (err) {
+      console.error(`sbom: could not describe signed ${name}`, err)
+      entries.set(name, {
+        artifact: name,
+        sha256,
+        error: `SBOM generation failed: ${err instanceof Error ? err.message : String(err)}`,
+      })
+    }
+  }
+
+  const next = { ...manifest, entries: [...entries.values()] }
+  await Manifest.write(file, next)
+  return seal({ dir: input.dir, manifest: next })
+}
+
+/** Write the checksum file beside a written CLI manifest, then report and gate its coverage. */
+async function seal(input: { dir: string; manifest: Manifest.Manifest }) {
+  const { dir, manifest } = input
+  const sums = path.join(dir, CHECKSUMS)
+  await Bun.write(sums, await Manifest.checksums({ manifest, dir }))
+
+  const report = await Manifest.verify({ manifest, dir })
   await Policy.summary({ product: "cli", expected: manifest.expected, ok: report.ok, missing: report.missing })
   Policy.gate({ label: `cli evidence for ${manifest.version}`, issues: report.issues })
 
   return {
     manifest,
     files: [
-      path.join(input.dir, Manifest.name("cli")),
+      path.join(dir, Manifest.name("cli")),
       sums,
-      ...manifest.entries.flatMap((entry) => (entry.sbom ? [path.join(input.dir, entry.sbom)] : [])),
+      ...manifest.entries.flatMap((entry) => (entry.sbom ? [path.join(dir, entry.sbom)] : [])),
     ],
   }
 }

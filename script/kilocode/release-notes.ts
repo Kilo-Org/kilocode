@@ -1,4 +1,5 @@
 import { $ } from "bun"
+import { undraft } from "./release.ts"
 
 const fallback = "No notable changes"
 const pattern = /^v?(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)$/
@@ -60,7 +61,14 @@ export function buildReleaseNotes(input: {
   return notes.join("\n\n") || fallback
 }
 
-export async function publishNotes(input: { version: string; prerelease: boolean; repo?: string; temp?: string }) {
+/** Publishes the draft release with this database id, with its title and notes. */
+export async function publishNotes(input: {
+  version: string
+  prerelease: boolean
+  release: string
+  repo?: string
+  temp?: string
+}) {
   const repo = input.repo ? ["--repo", input.repo] : []
   const releases: Release[] = await $`gh release list --limit 1000 --json tagName,isDraft,isPrerelease ${repo}`.json()
   const [vscode, cli] = await Promise.all([
@@ -72,10 +80,15 @@ export async function publishNotes(input: { version: string; prerelease: boolean
   const body = buildReleaseNotes({ ...input, releases, vscode, cli })
   const notes = `${input.temp ?? "/tmp"}/release-notes.txt`
   const target = input.version.startsWith("v") ? input.version : `v${input.version}`
-  const flags = input.prerelease ? ["--draft=false", "--prerelease"] : ["--draft=false"]
   await Bun.write(notes, body)
-  flags.push("--title", `${target} (${input.prerelease ? "pre-release" : "release"})`, "--notes-file", notes)
-  await $`gh release edit ${target} ${flags} ${repo}`
+  await undraft(input.release, [
+    "-F",
+    `prerelease=${input.prerelease}`,
+    "-f",
+    `name=${target} (${input.prerelease ? "pre-release" : "release"})`,
+    "-F",
+    `body=@${notes}`,
+  ])
 }
 
 function parse(input: string) {

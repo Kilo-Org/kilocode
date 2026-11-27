@@ -12,7 +12,6 @@
  *   bun script/kilocode/sbom.ts merge --into <file> --from <file>
  */
 
-import fs from "node:fs"
 import path from "node:path"
 import { Manifest, Policy, validate } from "./sbom/index"
 
@@ -69,36 +68,6 @@ async function main() {
     return
   }
 
-  if (command === "matrix") {
-    const file = flag("manifest")
-    if (!file) throw new Error("Usage: sbom.ts matrix --manifest <file> [--output <name>]")
-    const manifest = await Manifest.read(file)
-    // Only artifacts that actually have a sidecar can be attested. Publishing a
-    // matrix entry without one would fail the attestation step for a problem the
-    // evidence gate has already reported. Each entry carries the sidecar digest,
-    // which the attestation job checks before it signs the downloaded SBOM.
-    const include = manifest.entries.flatMap((entry: Manifest.Entry) =>
-      entry.sbom && !entry.error && !entry.distribution
-        ? [
-            {
-              artifact: entry.artifact,
-              digest: `sha256:${entry.sha256}`,
-              sbom: entry.sbom,
-              sbomSha256: entry.sbomSha256 ?? "",
-            },
-          ]
-        : [],
-    )
-    const value = JSON.stringify({ include })
-    const name = flag("output") ?? "matrix"
-    const out = process.env.GITHUB_OUTPUT
-    // Appended, never rewritten: the runner owns this file and other steps in the
-    // same job append to it too.
-    if (out) await fs.promises.appendFile(out, `${name}=${value}\n`)
-    console.log(value)
-    return
-  }
-
   if (command === "merge") {
     const into = flag("into")
     const from = flag("from")
@@ -108,7 +77,7 @@ async function main() {
     return
   }
 
-  throw new Error(`Unknown command ${command ?? "<none>"}. Expected validate, verify, checksums, matrix, or merge.`)
+  throw new Error(`Unknown command ${command ?? "<none>"}. Expected validate, verify, checksums, or merge.`)
 }
 
 if (import.meta.main) await main()
