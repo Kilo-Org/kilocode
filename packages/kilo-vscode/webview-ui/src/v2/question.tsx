@@ -1,12 +1,13 @@
 import type { FormField, FormInfo, FormValue } from "@opencode/client"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
-import { createEffect, createMemo, createSignal, For, on, Show } from "solid-js"
+import { createEffect, createMemo, createSignal, For, on, onCleanup, Show } from "solid-js"
 import { useLanguage } from "../context/language"
 import { isTextControl } from "../utils/focus"
 import { isEnterKeyCommitNotIme } from "../utils/ime-enter"
 import { useV2 } from "./client"
-import { type Draft, formAnswer } from "./form"
+import { type Draft, formAnswer, usesComposerReply } from "./form"
+import { registerQuestionAnswer } from "./question-answer"
 import { useViewActive } from "./view-active"
 
 export function QuestionDock(props: { form: FormInfo }) {
@@ -34,10 +35,8 @@ export function QuestionDock(props: { form: FormInfo }) {
   }
   const free = () => {
     const current = field()
-    return (
-      (current?.type === "multiselect" || (current?.type === "string" && !!current.options?.length)) &&
-      current.custom === true
-    )
+    const offered = current?.type === "multiselect" || (current?.type === "string" && !!current.options?.length)
+    return !usesComposerReply(props.form) && offered && current?.custom === true
   }
   const value = (current: FormField | undefined = field()) => {
     if (!current || current.type === "external") return undefined
@@ -129,24 +128,33 @@ export function QuestionDock(props: { form: FormInfo }) {
     }
     setEditing(false)
     if (single()) {
-      submit()
+      void submit()
       return
     }
     if (!multi()) select(tab() + 1)
   }
   const focus = () => requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
-  const submit = () => {
-    if (sending() || (!confirm() && !answered())) return
+  const submit = async () => {
+    if (sending() || (!confirm() && !answered())) return false
     if (result().errors.length) {
       v2.report(result().errors.join("\n"))
-      return
+      return false
     }
     setSending(true)
-    void v2.data.session.form
-      .reply({ sessionID: props.form.sessionID, formID: props.form.id, answer: result().answer })
-      .then(focus)
-      .catch(v2.report)
-      .finally(() => setSending(false))
+    try {
+      await v2.data.session.form.reply({
+        sessionID: props.form.sessionID,
+        formID: props.form.id,
+        answer: result().answer,
+      })
+      focus()
+      return true
+    } catch (error) {
+      v2.report(error)
+      return false
+    } finally {
+      setSending(false)
+    }
   }
   const reject = () => {
     if (sending()) return
@@ -157,6 +165,20 @@ export function QuestionDock(props: { form: FormInfo }) {
       .catch(v2.report)
       .finally(() => setSending(false))
   }
+  // The main prompt is the free-text channel even when the dock hides its custom row.
+  const answerCustom = async (text: string) => {
+    const current = field()
+    const answer = text.trim()
+    if (!current || sending() || confirm() || !answer) return undefined
+    if (current.type !== "string" && current.type !== "multiselect") return undefined
+    setCustom((custom) => ({ ...custom, [current.key]: answer }))
+    setEditing(false)
+    if (fields().length === 1) return submit()
+    select(Math.min(tab() + 1, fields().length))
+    focus()
+    return true
+  }
+  onCleanup(registerQuestionAnswer(props.form.id, answerCustom))
   const toggleCollapse = () => {
     const next = !collapsed()
     setCollapsed(next)
@@ -214,7 +236,7 @@ export function QuestionDock(props: { form: FormInfo }) {
         if (!isEnterKeyCommitNotIme(event) || (!event.metaKey && !event.ctrlKey)) return
         event.preventDefault()
         event.stopPropagation()
-        submit()
+        void submit()
       }}
     >
       <div data-slot="question-dock-header" onClick={toggleCollapse}>
@@ -501,7 +523,7 @@ export function QuestionDock(props: { form: FormInfo }) {
                     <Button
                       variant={last() && single() ? "primary" : "secondary"}
                       size="small"
-                      onClick={last() && single() ? submit : () => select(tab() + 1)}
+                      onClick={last() && single() ? () => void submit() : () => select(tab() + 1)}
                       disabled={sending() || !answered()}
                     >
                       {language.t(
@@ -510,7 +532,7 @@ export function QuestionDock(props: { form: FormInfo }) {
                     </Button>
                   }
                 >
-                  <Button variant="primary" size="small" onClick={submit} disabled={sending()}>
+                  <Button variant="primary" size="small" onClick={() => void submit()} disabled={sending()}>
                     {language.t("ui.common.submit")}
                   </Button>
                 </Show>

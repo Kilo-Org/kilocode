@@ -197,13 +197,13 @@ function commandLayer(project: string, global: string) {
   return Layer.merge(built, Watcher.testLayer)
 }
 
-function changed(update: Watcher.Update, matches: (info: Command.Info | undefined) => boolean) {
+function changed(update: Watcher.Update, matches: (info: Command.Info | undefined) => boolean, name = "review") {
   return Effect.gen(function* () {
     const watcher = yield* Watcher.Test
     const bus = yield* Bus.Service
     const command = yield* Command.Service
     const pending = yield* bus.subscribe(Command.Event.Updated).pipe(
-      Stream.filterEffect(() => Effect.map(command.get("review"), matches)),
+      Stream.filterEffect(() => Effect.map(command.get(name), matches)),
       Stream.take(1),
       Stream.runDrain,
       Effect.forkScoped({ startImmediately: true }),
@@ -328,7 +328,7 @@ describe("workflow model discovery", () => {
             JSON.stringify({ commands: { review: { model: "test/other#low" }, marker: { template: "Marker" } } }),
           ),
         )
-        yield* changed({ type: "update", path: configFile }, (info) => info === undefined)
+        yield* changed({ type: "update", path: configFile }, (info) => info?.template === "Marker", "marker")
         expect(yield* command.get("marker")).toMatchObject({ template: "Marker" })
         expect(yield* command.get("review")).toBeUndefined()
       }).pipe(Effect.provide(commandLayer(project, global)))

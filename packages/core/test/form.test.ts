@@ -30,6 +30,30 @@ describe("Form", () => {
     }),
   )
 
+  // kilocode_change start - the plan follow-up submits typed custom answers through the shared form
+  it.effect("accepts a typed answer for a field that allows custom values", () =>
+    Effect.sync(() => {
+      const fields = [
+        {
+          key: "choice",
+          type: "string",
+          options: [{ value: "Build", label: "Build", description: "Build it" }],
+          custom: true,
+        },
+      ] satisfies ReadonlyArray<Form.Field>
+
+      expect(Form.validateAnswer(fields, { choice: "Also cover the login page" })).toBeUndefined()
+      expect(Form.validateAnswer(fields, { choice: "Build" })).toBeUndefined()
+      expect(
+        Form.validateAnswer(
+          [{ key: "choice", type: "string", options: [{ value: "Build", label: "Build", description: "Build it" }] }],
+          { choice: "Also cover the login page" },
+        ),
+      ).toBe("Invalid option for form field: choice")
+    }),
+  )
+  // kilocode_change end
+
   it.effect("returns a terminal cancelled state from ask", () =>
     Effect.gen(function* () {
       const service = yield* Form.Service
