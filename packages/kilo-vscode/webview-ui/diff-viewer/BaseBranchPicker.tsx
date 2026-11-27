@@ -1,8 +1,9 @@
-import { type Component, createMemo, createSignal, Show } from "solid-js"
+import { type Component, createEffect, createMemo, createSignal, Show } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { BRANCH_LIMIT, BranchSelect, BranchSelectPopover } from "../src/components/shared/BranchSelect"
 import type { BranchInfo } from "../src/types/messages/agent-manager"
 import { useLanguage } from "../src/context/language"
+import { useViewActive } from "../src/v2/view-active"
 
 interface BaseBranchPickerProps {
   branches: BranchInfo[]
@@ -24,10 +25,10 @@ interface BaseBranchPickerProps {
  */
 export const BaseBranchPicker: Component<BaseBranchPickerProps> = (props) => {
   const { t } = useLanguage()
+  const viewActive = useViewActive()
   const [open, setOpen] = createSignal(false)
   const [search, setSearch] = createSignal("")
   const [highlight, setHighlight] = createSignal(0)
-
   const filtered = createMemo<BranchInfo[]>(() => {
     const q = search().trim().toLowerCase()
     if (!q) return props.branches
@@ -39,6 +40,12 @@ export const BaseBranchPicker: Component<BaseBranchPickerProps> = (props) => {
     setSearch("")
     setHighlight(0)
   }
+
+  createEffect(() => {
+    // Reset the filter as well as the popover, so a reopened picker cannot show a
+    // stale list that Enter would select from.
+    if (!viewActive()) close()
+  })
 
   const choose = (branch: string | undefined) => {
     props.onSelect(branch)

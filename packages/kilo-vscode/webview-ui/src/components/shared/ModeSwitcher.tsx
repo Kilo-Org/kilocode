@@ -13,6 +13,7 @@ import { PopupSelector } from "./PopupSelector"
 import { Button } from "@kilocode/kilo-ui/button"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 import { createTypeahead, isTypeaheadChar } from "../../utils/typeahead"
+import { useViewActive } from "../../v2/view-active"
 
 /**
  * v2 agents carry their display name in `name`; `id` is the value the server stores. An agent without a display name
@@ -62,8 +63,9 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
     slash = true
     openSelected()
   }
+  const viewActive = useViewActive()
   createEffect(() => {
-    if (props.blocked) {
+    if (props.blocked || !viewActive()) {
       setOpen(false)
       slash = false
       return

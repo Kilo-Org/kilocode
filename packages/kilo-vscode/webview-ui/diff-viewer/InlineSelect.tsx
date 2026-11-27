@@ -1,6 +1,7 @@
-import { type Component, For, Show, createSignal } from "solid-js"
+import { type Component, For, Show, createEffect, createSignal } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { DeferredPopover } from "../src/components/shared/DeferredPopover"
+import { useViewActive } from "../src/v2/view-active"
 
 export interface InlineOption<T extends string> {
   value: T
@@ -36,6 +37,10 @@ interface InlineSelectProps<T extends string> {
  */
 export function InlineSelect<T extends string>(props: InlineSelectProps<T>) {
   const [open, setOpen] = createSignal(false)
+  const viewActive = useViewActive()
+  createEffect(() => {
+    if (!viewActive()) setOpen(false)
+  })
 
   const current = () => props.options.find((opt) => opt.value === props.value)
   const label = () => current()?.label ?? ""

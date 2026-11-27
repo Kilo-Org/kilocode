@@ -20,6 +20,7 @@ import { type Component, type ComponentProps, type JSX, createEffect, createSign
 import { WorkingIndicator } from "../shared/WorkingIndicator"
 import { showsWorking } from "../shared/working-indicator-utils"
 import { useTodoSource } from "../../v2/todo"
+import { useViewActive } from "../../v2/view-active"
 import type { BackgroundJobs } from "../../v2/background-jobs"
 import type { GoalSource } from "../../v2/goal"
 import { AgentStack, useAgentStack } from "./AgentStack"
@@ -78,6 +79,7 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
   // The stack leads the centered spinner out of flow. The lane reserves the stack width on both sides, so the
   // spinner stays centered and the label truncates before the stack leaves the row. The avatar count depends only on
   // the dock width, so the reserve cannot feed back into it, and both states show the same stack.
+  const viewActive = useViewActive()
   const [dock, setDock] = createSignal<HTMLDivElement>()
   const [lane, setLane] = createSignal<HTMLDivElement>()
   const [lead, setLead] = createSignal<HTMLDivElement>()
@@ -88,7 +90,10 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
     const el = dock()
     if (!visible() || !el || typeof ResizeObserver === "undefined") return
     const count = stack.items().length
-    const measure = () => setMax(stackFit((el.clientWidth - 200) / 2, count))
+    const measure = () => {
+      if (!viewActive()) return
+      setMax(stackFit((el.clientWidth - 200) / 2, count))
+    }
     const observer = new ResizeObserver(measure)
     observer.observe(el)
     onCleanup(() => observer.disconnect())
@@ -99,7 +104,10 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
     const content = lane()
     const el = lead()
     if (!working() || !content || !el || typeof ResizeObserver === "undefined") return
-    const measure = () => content.style.setProperty("--session-lead", `${Math.ceil(el.offsetWidth)}px`)
+    const measure = () => {
+      if (!viewActive()) return
+      content.style.setProperty("--session-lead", `${Math.ceil(el.offsetWidth)}px`)
+    }
     const observer = new ResizeObserver(measure)
     observer.observe(el)
     onCleanup(() => {
@@ -147,7 +155,7 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
       content.style.setProperty("--session-trail", `${reserve}px`)
     }
     const schedule = () => {
-      if (frame) return
+      if (!viewActive() || frame) return
       frame = requestAnimationFrame(measure)
     }
     const resize = new ResizeObserver(schedule)
@@ -194,6 +202,7 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
     const state = idle()
     if (!actions() || !visible() || !state || typeof ResizeObserver === "undefined") return
     const place = () => {
+      if (!viewActive()) return
       const row = state.querySelector<HTMLElement>(".session-actions-row")
       const item = row?.querySelector<HTMLElement>(':scope > [data-component="agent-stack"]')
       if (!row || !item) return
