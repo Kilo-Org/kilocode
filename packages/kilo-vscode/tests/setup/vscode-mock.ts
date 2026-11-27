@@ -95,6 +95,8 @@ const mockVscode = {
     onDidChangeWindowState: () => ({ dispose: noop }),
     onDidChangeTextEditorSelection: () => ({ dispose: noop }),
     onDidChangeActiveTextEditor: () => ({ dispose: noop }),
+    onDidCloseTerminal: () => ({ dispose: noop }),
+    onDidChangeActiveTerminal: () => ({ dispose: noop }),
     activeNotebookEditor: undefined,
     visibleTextEditors: [],
     visibleNotebookEditors: [],

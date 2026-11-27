@@ -93,6 +93,7 @@ describe("WorktreeActivity", () => {
     expect(WorktreeActivity.accepts({ type: "question.replied" })).toBe(true)
     expect(WorktreeActivity.accepts({ type: "question.rejected" })).toBe(true)
     expect(WorktreeActivity.accepts({ type: "server.instance.disposed" })).toBe(true)
+    expect(WorktreeActivity.accepts({ type: "global.disposed" })).toBe(true)
     expect(WorktreeActivity.accepts({ type: "session.created" })).toBe(false)
     expect(WorktreeActivity.accepts(null)).toBe(false)
     expect(WorktreeActivity.accepts("session.status")).toBe(false)
@@ -524,6 +525,88 @@ describe("WorktreeActivity", () => {
     posted.length = 0
     await wrapper.sync(true)
     expect(posted).toEqual([["/repo"]])
+    wrapper.dispose()
+  })
+
+  it("invalidates all worktrees on global.disposed and drops in-flight snapshots", async () => {
+    const firstA = defer<Snapshot>()
+    const firstB = defer<Snapshot>()
+    const test = setup(["/repo/a", "/repo/b"], (dir) => (dir === "/repo/a" ? firstA.promise : firstB.promise))
+    const pending = test.activity.sync()
+    test.activity.event(status("a1", "busy"), "/repo/a")
+    test.activity.event(status("b1", "busy"), "/repo/b")
+    expect(test.posted.at(-1)).toEqual(["/repo/a", "/repo/b"])
+
+    test.activity.event({ type: "global.disposed", properties: {} }, "global")
+    expect(test.posted.at(-1)).toEqual([])
+
+    firstA.resolve(snapshot({ a1: "busy" }))
+    firstB.resolve(snapshot({ b1: "busy" }))
+    await pending
+    expect(test.posted.at(-1)).toEqual([])
+  })
+
+  it("re-syncs disposed worktrees and forwards disposal lifecycle events when connected", async () => {
+    const loads: string[] = []
+    let activeByDir: Record<string, Record<string, { type: string }>> = {
+      "/repo/a": { a1: { type: "busy" } },
+      "/repo/b": { b1: { type: "busy" } },
+    }
+    const client = {
+      session: {
+        status: async (input: { directory: string }) => {
+          loads.push(input.directory)
+          return { data: activeByDir[input.directory] ?? {} }
+        },
+      },
+      permission: { list: async () => ({ data: [] }) },
+      question: { list: async () => ({ data: [] }) },
+    }
+    const conn = connection(client)
+    const posted: string[][] = []
+    const lifecycle: Array<{ event: unknown; directory?: string }> = []
+    const wrapper = createWorktreeActivity({
+      connection: conn as never,
+      paths: () => ["/repo/a", "/repo/b"],
+      post: (active) => posted.push(active),
+      status: () => {},
+      lifecycle: (event, directory) => lifecycle.push({ event, directory }),
+      log: () => {},
+    })
+
+    await wrapper.sync()
+    expect(loads).toEqual(["/repo/a", "/repo/b"])
+    expect(posted.at(-1)).toEqual(["/repo/a", "/repo/b"])
+
+    // Single worktree disposal clears /repo/a immediately and re-syncs only /repo/a.
+    loads.length = 0
+    activeByDir = { "/repo/a": { a2: { type: "busy" } }, "/repo/b": { b1: { type: "busy" } } }
+    conn.emit({ type: "server.instance.disposed", properties: { directory: "/repo/a" } }, "/repo/a")
+    expect(posted.at(-1)).toEqual(["/repo/b"])
+    expect(lifecycle.at(-1)).toEqual({
+      event: { type: "server.instance.disposed", properties: { directory: "/repo/a" } },
+      directory: "/repo/a",
+    })
+    await Bun.sleep(0)
+    expect(loads).toEqual(["/repo/a"])
+    expect(posted.at(-1)).toEqual(["/repo/a", "/repo/b"])
+
+    // Global disposal clears all worktrees immediately and re-syncs every worktree.
+    loads.length = 0
+    activeByDir = { "/repo/a": {}, "/repo/b": {} }
+    conn.emit({ type: "global.disposed", properties: {} }, "global")
+    expect(posted.at(-1)).toEqual([])
+    expect(lifecycle.at(-1)).toEqual({ event: { type: "global.disposed", properties: {} }, directory: "global" })
+    await Bun.sleep(0)
+    expect(loads).toEqual(["/repo/a", "/repo/b"])
+    expect(posted.at(-1)).toEqual([])
+
+    // Disconnected disposal still clears state without issuing HTTP requests.
+    loads.length = 0
+    conn.set("disconnected")
+    conn.emit({ type: "global.disposed", properties: {} }, "global")
+    await Bun.sleep(0)
+    expect(loads).toEqual([])
     wrapper.dispose()
   })
 })

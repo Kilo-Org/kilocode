@@ -11,6 +11,9 @@ on:
       - "script/check-kilo-generated-artifacts.ts"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   check:
     name: Check Kilo generated artifacts

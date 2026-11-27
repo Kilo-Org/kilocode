@@ -8,6 +8,11 @@ on:
       - ".github/workflows/check-md-table-padding.yml"
   workflow_dispatch:
 
+# kilocode_change start
+permissions:
+  contents: read
+# kilocode_change end
+
 jobs:
   check:
     name: Check markdown table padding
