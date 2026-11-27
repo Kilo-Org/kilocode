@@ -191,21 +191,32 @@ function kept(current: BrowserViewport | undefined, next: BrowserViewport) {
 // Discrete CDP wheel events lack trackpad phases, so macOS Chrome stretches and snaps elastic overscroll on every tick
 // at the top or bottom of a page. Suppress root elastic bounce when the page uses the browser default.
 function suppressOverscroll() {
+  const globals = globalThis as unknown as Record<string, unknown>
+  const cleanup = "__kiloOverscrollCleanup"
+  const previous = globals[cleanup]
+  if (typeof previous === "function") previous()
   const apply = () => {
     const root = document.documentElement
     if (root instanceof HTMLElement && getComputedStyle(root).overscrollBehavior === "auto") {
       root.style.overscrollBehavior = "none"
     }
   }
+  let observer: MutationObserver | undefined
   const watch = () => {
     apply()
     if (document.documentElement) {
-      new MutationObserver(apply).observe(document.documentElement, { attributes: true, attributeFilter: ["style"] })
+      observer = new MutationObserver(apply)
+      observer.observe(document.documentElement, { attributes: true, attributeFilter: ["style"] })
     }
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", watch, { once: true })
   else watch()
   apply()
+  globals[cleanup] = () => {
+    document.removeEventListener("DOMContentLoaded", watch)
+    observer?.disconnect()
+    delete globals[cleanup]
+  }
 }
 
 // Runs only in an isolated world. Read the hovered element, not the page's full text or layout.
@@ -324,7 +335,8 @@ export class BrowserStream {
   private y = 0
   private composing = false
   private readonly keys = new Map<string, Key>()
-  private readonly contexts = new Set<number>()
+  private readonly contexts = new Map<number, string | undefined>()
+  private mainFrameId?: string
   private reporter: Promise<void> = Promise.resolve()
   private script?: string
   private copyScript?: string
@@ -567,13 +579,13 @@ export class BrowserStream {
         this.copyScript = undefined
       }
       await Promise.all(
-        [...this.contexts].map((contextId) =>
+        [...this.contexts.keys()].map((contextId) =>
           session
             .send("Runtime.evaluate", {
               contextId,
               expression: this.copy
-                ? `globalThis.${BINDING}Cleanup?.(); delete globalThis.${BINDING}; globalThis.${COPY_BINDING}Cleanup?.(); delete globalThis.${COPY_BINDING}`
-                : `globalThis.${BINDING}Cleanup?.(); delete globalThis.${BINDING}`,
+                ? `globalThis.${BINDING}Cleanup?.(); delete globalThis.${BINDING}; globalThis.__kiloOverscrollCleanup?.(); globalThis.${COPY_BINDING}Cleanup?.(); delete globalThis.${COPY_BINDING}`
+                : `globalThis.${BINDING}Cleanup?.(); delete globalThis.${BINDING}; globalThis.__kiloOverscrollCleanup?.()`,
             })
             .catch(() => this.report("cursor listener removal failed")),
         ),
@@ -601,8 +613,9 @@ export class BrowserStream {
   }
 
   // Only a new main-frame document releases held input. Same-document navigations, such as pushState, keep it.
-  private readonly navigated = (event: { frame: { parentId?: string } }): void => {
+  private readonly navigated = (event: { frame: { id?: string; parentId?: string } }): void => {
     if (this.closed || event.frame.parentId) return
+    if (event.frame.id) this.mainFrameId = event.frame.id
     this.scope = { ...this.identity() }
     this.reset()
     this.rebind()
@@ -668,6 +681,9 @@ export class BrowserStream {
         .then(async () => {
           if (this.cursor) await session.send("Runtime.addBinding", { name: BINDING, executionContextName: WORLD })
           if (this.copy) {
+            const tree = await session.send("Page.getFrameTree").catch(() => undefined)
+            const rootId = tree?.frameTree?.frame?.id
+            if (typeof rootId === "string") this.mainFrameId = rootId
             await session.send("Runtime.addBinding", { name: COPY_BINDING, executionContextName: WORLD })
             const added = await session.send("Page.addScriptToEvaluateOnNewDocument", {
               source: clipboardPageScript(this.copyChannel),
@@ -681,8 +697,8 @@ export class BrowserStream {
     return session
   }
 
-  private readonly created = (event: { context: { id: number; name: string } }): void => {
-    if (event.context.name === WORLD) this.contexts.add(event.context.id)
+  private readonly created = (event: { context: { id: number; name: string; auxData?: { frameId?: string } } }): void => {
+    if (event.context.name === WORLD) this.contexts.set(event.context.id, event.context.auxData?.frameId)
   }
 
   private readonly destroyed = (event: { executionContextId: number }): void => {
@@ -726,6 +742,8 @@ export class BrowserStream {
   private readonly pointed = (event: { name: string; payload: string; executionContextId: number }): void => {
     if (this.closed || !this.contexts.has(event.executionContextId)) return
     if (event.name === COPY_BINDING) {
+      const frameId = this.contexts.get(event.executionContextId)
+      if (this.mainFrameId && frameId && frameId !== this.mainFrameId) return
       this.copied(event.payload)
       return
     }
@@ -747,9 +765,10 @@ export class BrowserStream {
   }
 
   private armCopy(input: BrowserInteraction): void {
-    if ((input.kind === "pointer" && input.action !== "move") || (input.kind === "key" && input.action === "down")) {
-      this.copyArmedUntil = Date.now() + 1500
-    }
+    const click = input.kind === "pointer" && input.button === "left" && input.action !== "move"
+    const activate =
+      input.kind === "key" && input.action === "down" && !input.modifiers && (input.key === "Enter" || input.key === " ")
+    if (click || activate) this.copyArmedUntil = Date.now() + 1000
   }
 
   private copied(payload: string): void {

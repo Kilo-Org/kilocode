@@ -133,10 +133,12 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       sendResponse({ ok: false, error: "Unsupported captured dimensions" })
       return
     }
+    // Keep order aligned with STREAM_CODECS.slice(1) in src/shared/browser-stream.ts.
+    const codecIndex = CODECS.indexOf(actual.codec) + 1
     const emit = (kind, ts, data) => {
       if (activeEpoch !== epoch) return
       if (typeof globalThis.__kiloChunk === "function") {
-        globalThis.__kiloChunk(`${epoch}:${kind}:${w}x${h}:${Math.round(ts)}:${data}`)
+        globalThis.__kiloChunk(`${epoch}:${kind}:${codecIndex}:${w}x${h}:${Math.round(ts)}:${data}`)
       }
     }
     const encoder = new VideoEncoder({

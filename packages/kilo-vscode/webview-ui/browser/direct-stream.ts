@@ -235,9 +235,7 @@ export class DirectStream {
     }
     this.jpegDecoding = true
     const gen = this.decodeGen
-    const copy = new Uint8Array(packet.data.byteLength)
-    copy.set(packet.data)
-    void createImageBitmap(new Blob([copy], { type: "image/jpeg" }))
+    void createImageBitmap(new Blob([packet.data], { type: "image/jpeg" }))
       .then((bitmap) => {
         try {
           if (this.disposed || gen !== this.decodeGen || !this.isAccepted(packet)) return

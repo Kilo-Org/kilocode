@@ -142,7 +142,10 @@ describe("BrowserStream protocol lifecycle", () => {
     await fixture.stream.close()
     expect(fixture.calls).toContainEqual({
       method: "Runtime.evaluate",
-      params: { contextId: 9, expression: "globalThis.__kiloCursorCleanup?.(); delete globalThis.__kiloCursor" },
+      params: {
+        contextId: 9,
+        expression: "globalThis.__kiloCursorCleanup?.(); delete globalThis.__kiloCursor; globalThis.__kiloOverscrollCleanup?.()",
+      },
     })
     expect(fixture.calls).toContainEqual({ method: "Runtime.removeBinding", params: { name: "__kiloCursor" } })
     expect(fixture.calls.at(-2)?.method).toBe("Runtime.removeBinding")

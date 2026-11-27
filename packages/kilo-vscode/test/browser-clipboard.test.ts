@@ -18,6 +18,8 @@ describe("integrated browser hover cursor and copy-button clipboard bridge", () 
       <button id="b1" onclick="navigator.clipboard.writeText('COPIED_API')">Copy API</button>
       <button id="b2" onclick="const ta=document.createElement('textarea');ta.value='COPIED_EXEC';document.body.append(ta);ta.select();document.execCommand('copy');ta.remove()">Copy Exec</button>
       <button id="b3" onclick="navigator.clipboard.write([new ClipboardItem({'text/plain':new Blob(['COPIED_ITEM'],{type:'text/plain'})})])">Copy Item</button>
+      <button id="b4" onclick="const inp=document.createElement('input');inp.style.position='fixed';inp.value='CUT_EXEC';document.body.append(inp);inp.focus();inp.select();document.execCommand('cut');inp.remove()">Cut Exec</button>
+      <iframe id="sub" srcdoc="<script>window.tryHijack=()=>navigator.clipboard.writeText('IFRAME_HIJACK').catch(()=>{})</script>" style="width:1px;height:1px;border:0"></iframe>
       <a id="below" href="https://example.com">Link below fold</a>`
     server = createServer((_req, res) => {
       res.writeHead(200, { "content-type": "text/html" })
@@ -77,6 +79,26 @@ describe("integrated browser hover cursor and copy-button clipboard bridge", () 
       await new Promise((r) => setTimeout(r, 120))
       expect(copied).toEqual([])
 
+      // Non-activating keys (e.g. Meta before Cmd+V) and spoofed main-world userActivation must not bypass clipboard guard.
+      await broker.interact("s1", undefined, id, {
+        kind: "key",
+        action: "down",
+        key: "Meta",
+        code: "MetaLeft",
+        keyCode: 91,
+        modifiers: 4,
+        repeat: false,
+      })
+      await entry.page.evaluate(() => {
+        Object.defineProperty(navigator, "userActivation", { value: { isActive: true }, configurable: true })
+        return navigator.clipboard.writeText("SPOOFED_HIJACK").catch(() => {})
+      })
+      await new Promise((r) => setTimeout(r, 120))
+      expect(copied).toEqual([])
+      await entry.page.evaluate(() => {
+        delete (navigator as unknown as { userActivation?: unknown }).userActivation
+      })
+
       const click = async (px: number, py: number) => {
         await broker.interact("s1", undefined, id, {
           kind: "pointer",
@@ -104,15 +126,40 @@ describe("integrated browser hover cursor and copy-button clipboard bridge", () 
       await click(100, 30)
       await click(100, 90)
       await click(100, 150)
-      expect(copied).toEqual(["COPIED_API", "COPIED_EXEC", "COPIED_ITEM"])
+      await click(100, 210)
+      expect(copied).toEqual(["COPIED_API", "COPIED_EXEC", "COPIED_ITEM", "CUT_EXEC"])
+
+      // Clicking empty space arms the top-frame window, yet an embedded iframe must not hijack the clipboard.
+      await click(350, 30)
+      await entry.page.evaluate(() => {
+        const frame = document.getElementById("sub") as HTMLIFrameElement | null
+        const win = frame?.contentWindow as (Window & { tryHijack?: () => void }) | null
+        if (win) {
+          Object.defineProperty(win.navigator, "userActivation", { value: { isActive: true }, configurable: true })
+          win.tryHijack?.()
+        }
+      })
+      await new Promise((r) => setTimeout(r, 120))
+      expect(copied).toEqual(["COPIED_API", "COPIED_EXEC", "COPIED_ITEM", "CUT_EXEC"])
 
       // Revoking ownership blocks subsequent clipboard writes.
       allowed = false
       await click(100, 30)
-      expect(copied).toEqual(["COPIED_API", "COPIED_EXEC", "COPIED_ITEM"])
+      expect(copied).toEqual(["COPIED_API", "COPIED_EXEC", "COPIED_ITEM", "CUT_EXEC"])
       allowed = true
 
-      // Hovering empty space and scrolling a link beneath the stationary cursor switches cursor to pointer.
+      // Hovering button -> empty space -> scrolling a link beneath the stationary cursor switches cursor to pointer.
+      await broker.interact("s1", undefined, id, {
+        kind: "pointer",
+        action: "move",
+        x: 100 / 600,
+        y: 30 / 400,
+        button: "left",
+        buttons: 0,
+        clicks: 0,
+        modifiers: 0,
+      })
+      await new Promise((r) => setTimeout(r, 80))
       cursors.length = 0
       await broker.interact("s1", undefined, id, {
         kind: "pointer",
@@ -127,7 +174,7 @@ describe("integrated browser hover cursor and copy-button clipboard bridge", () 
       await new Promise((r) => setTimeout(r, 120))
       expect(cursors.at(-1)).toBe("default")
       cursors.length = 0
-      await entry.page.evaluate(() => window.scrollBy(0, 350))
+      await entry.page.evaluate(() => window.scrollBy(0, 450))
       await new Promise((r) => setTimeout(r, 150))
       expect(cursors).toContain("pointer")
     } finally {

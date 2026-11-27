@@ -7,6 +7,7 @@ import WebSocket, { WebSocketServer, type RawData } from "ws"
 import {
   decodeStreamInput,
   encodeStreamFrame,
+  STREAM_CODECS,
   STREAM_FRAME_H264_DELTA,
   STREAM_FRAME_H264_KEY,
   STREAM_FRAME_JPEG,
@@ -41,68 +42,21 @@ function rawBytes(data: RawData): Uint8Array {
 }
 
 function parseChunk(payload: string) {
-  const i1 = payload.indexOf(":")
-  const i2 = payload.indexOf(":", i1 + 1)
-  const i3 = payload.indexOf(":", i2 + 1)
-  const i4 = payload.indexOf(":", i3 + 1)
-  if (i1 < 1 || i2 < 0 || i3 < 0 || i4 < 0) return
-  const epoch = Number(payload.slice(0, i1))
-  const kind = payload.slice(i1 + 1, i2)
-  const size = payload.slice(i2 + 1, i3)
-  const cross = size.indexOf("x")
+  const parts = payload.split(":", 5)
+  if (parts.length !== 5) return
+  const prefix = parts[0].length + parts[1].length + parts[2].length + parts[3].length + parts[4].length + 5
+  if (prefix > payload.length) return
+  const epoch = Number(parts[0])
+  const kind = parts[1]
+  const codec = Number(parts[2])
+  const cross = parts[3].indexOf("x")
   if (cross < 1) return
-  const width = Number(size.slice(0, cross))
-  const height = Number(size.slice(cross + 1))
-  const timestamp = Number(payload.slice(i3 + 1, i4))
-  if (!Number.isSafeInteger(epoch) || !Number.isFinite(timestamp)) return
-  return { epoch, kind, width, height, timestamp, b64: payload.slice(i4 + 1) }
-}
-
-function legacyCapture(parent: MessagePort, options: Extract<Capture, { direct?: false }>) {
-  const socket = new WebSocket(`ws://127.0.0.1:${options.port}/devtools/page/${options.target}`, {
-    perMessageDeflate: false,
-  })
-  let id = 0
-  let start = 0
-  let pending: Pixels | undefined
-  let credit = true
-  const decode = orderedFrames()
-
-  const send = (method: string, params?: object) => {
-    socket.send(JSON.stringify({ id: ++id, method, params }))
-    return id
-  }
-  const drain = () => {
-    if (!pending || !credit) return
-    credit = false
-    parent.postMessage(pending, [pending.data])
-    pending = undefined
-  }
-  parent.on("message", () => {
-    credit = true
-    drain()
-  })
-  socket.on("open", () => {
-    send("Page.enable")
-    start = send("Page.startScreencast", screencast(options.view))
-  })
-  socket.on("message", (raw) => {
-    const message = JSON.parse(raw.toString()) as { id?: number; error?: unknown; method?: string; params: Cast }
-    if (message.id === start) {
-      if (message.error) return process.exit(1)
-      parent.postMessage("ready")
-      return
-    }
-    if (message.method === "Inspector.detached") return process.exit(0)
-    if (message.method !== "Page.screencastFrame") return
-    send("Page.screencastFrameAck", { sessionId: message.params.sessionId })
-    const frame = decode(message.params, options.view)
-    if (!frame) return
-    pending = frame
-    drain()
-  })
-  socket.on("error", () => process.exit(1))
-  socket.on("close", () => process.exit(0))
+  const width = Number(parts[3].slice(0, cross))
+  const height = Number(parts[3].slice(cross + 1))
+  const timestamp = Number(parts[4])
+  if (!Number.isSafeInteger(epoch) || !Number.isInteger(codec) || codec < 1 || codec >= STREAM_CODECS.length) return
+  if (!Number.isFinite(timestamp)) return
+  return { epoch, kind, codec, width, height, timestamp, b64: payload.slice(prefix) }
 }
 
 class DirectCapture {
@@ -128,7 +82,6 @@ class DirectCapture {
   private epoch = 0
   private navigation: number
   private committed?: number
-  private codec = 1
   private active = false
   private castingJpeg = false
   private forceJpeg = false
@@ -155,7 +108,7 @@ class DirectCapture {
 
   constructor(
     private readonly parent: MessagePort,
-    private readonly options: Extract<Capture, { direct: true }>,
+    private readonly options: Capture,
   ) {
     this.navigation = options.navigation
     this.committed = options.committed
@@ -237,7 +190,14 @@ class DirectCapture {
     this.startJpegCmd = this.sendTarget("Page.startScreencast", screencast(this.view))
   }
 
+  private clearClientTimer(): void {
+    if (!this.clientTimer) return
+    clearTimeout(this.clientTimer)
+    this.clientTimer = undefined
+  }
+
   private closeOffscreen(): void {
+    this.clearClientTimer()
     this.offscreenBound = false
     this.offscreenId = undefined
     const ws = this.offscreenWs
@@ -272,10 +232,7 @@ class DirectCapture {
   }
 
   private attachClient(ws: WebSocket): void {
-    if (this.clientTimer) {
-      clearTimeout(this.clientTimer)
-      this.clientTimer = undefined
-    }
+    this.clearClientTimer()
     if (this.clientWs && this.clientWs.readyState === WebSocket.OPEN) this.clientWs.close(1001, "Replaced")
     this.clientWs = ws
     this.dropping = false
@@ -343,19 +300,32 @@ class DirectCapture {
     }
   }
 
-  private queueWheel(input: { x: number; y: number; deltaX: number; deltaY: number; modifiers: number }): void {
-    const now = performance.now()
-    const reversedY = input.deltaY !== 0 && this.lastWheelSignY !== 0 && Math.sign(input.deltaY) !== this.lastWheelSignY
-    const reversedX =
+  private isWheelReversed(input: { deltaX: number; deltaY: number }): boolean {
+    if (input.deltaY !== 0 && this.lastWheelSignY !== 0 && Math.sign(input.deltaY) !== this.lastWheelSignY) return true
+    return (
       Math.abs(input.deltaX) >= 4 &&
       Math.abs(input.deltaX) >= Math.abs(input.deltaY) &&
       this.lastWheelSignX !== 0 &&
       Math.sign(input.deltaX) !== this.lastWheelSignX
+    )
+  }
+
+  private queueWheel(input: { x: number; y: number; deltaX: number; deltaY: number; modifiers: number }): void {
+    const now = performance.now()
     const modChanged = this.queuedWheel !== undefined && this.queuedWheel.modifiers !== input.modifiers
+    const posChanged =
+      this.queuedWheel !== undefined && (this.queuedWheel.x !== input.x || this.queuedWheel.y !== input.y)
     // Flush on onset, direction reversal, or modifier change so start/reversal latency stays zero.
-    if (reversedY || reversedX || modChanged) {
+    if (this.isWheelReversed(input) || modChanged) {
       this.flushWheel()
       this.dispatchWheel(input)
+      return
+    }
+    // Coordinates are an ordering barrier (matching mergeWheel), so flush the prior position before queuing the new one.
+    if (posChanged) {
+      this.flushWheel()
+      this.queuedWheel = { x: input.x, y: input.y, deltaX: input.deltaX, deltaY: input.deltaY, modifiers: input.modifiers }
+      this.wheelTimer = setTimeout(() => this.flushWheel(), WHEEL_INTERVAL)
       return
     }
     if (!this.queuedWheel && now - this.lastWheelSent >= WHEEL_INTERVAL) {
@@ -558,7 +528,7 @@ class DirectCapture {
     const packet = encodeStreamFrame(
       {
         kind,
-        codec: this.codec,
+        codec: parsed.codec,
         width: parsed.width,
         height: parsed.height,
         navigation: this.navigation,
@@ -602,7 +572,6 @@ class DirectCapture {
     this.navigation = command.navigation
     this.committed = command.committed
     this.epoch = command.epoch
-    this.codec = command.codec ?? 1
     this.active = true
     this.dropping = false
     this.cachedKey = undefined
@@ -611,20 +580,24 @@ class DirectCapture {
       this.stopJpeg()
       this.bindOffscreen(command.offscreen)
       if (!this.clientWs && !this.clientTimer) {
-        // Fall back to host postMessage JPEG if the webview cannot reach loopback WS (e.g. remote host).
+        // Start JPEG fallback after 800ms if direct WS hasn't attached; tear down unused H.264 if still unattached at 3s.
         this.clientTimer = setTimeout(() => {
           this.clientTimer = undefined
-          if (!this.clientWs && this.active) this.startJpeg()
+          if (this.clientWs || !this.active) return
+          this.startJpeg()
+          this.clientTimer = setTimeout(() => {
+            this.clientTimer = undefined
+            if (!this.clientWs && this.active) this.fallbackJpeg()
+          }, 2200)
         }, 800)
       }
       return
     }
+    this.closeOffscreen()
     this.startJpeg()
   }
 }
 
 if (parentPort) {
-  const options = workerData as Capture
-  if (options.direct) new DirectCapture(parentPort, options)
-  else legacyCapture(parentPort, options)
+  new DirectCapture(parentPort, workerData as Capture)
 }

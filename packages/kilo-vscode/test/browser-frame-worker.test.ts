@@ -21,7 +21,7 @@ test("the bundled Node capture worker preserves frame and stream lifecycle bound
     const output = await exec("node", ["--test-reporter=tap", join(dir, "browser-frame-lifecycle.js")], {
       timeout: 15_000,
     })
-    expect(output.stdout).toMatch(/^# pass 7$/m)
+    expect(output.stdout).toMatch(/^# pass 8$/m)
   } finally {
     await rm(dir, { recursive: true, force: true })
   }

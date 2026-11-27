@@ -156,7 +156,7 @@ export interface StreamPacketMeta {
 }
 
 export interface StreamPacket extends StreamPacketMeta {
-  data: Uint8Array
+  data: Uint8Array<ArrayBuffer>
 }
 
 export type StreamInputPacket =

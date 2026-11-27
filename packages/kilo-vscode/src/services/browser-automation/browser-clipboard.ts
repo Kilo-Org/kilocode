@@ -1,16 +1,28 @@
 export const COPY_BINDING = "__kiloCopy"
 
 // Main-world hook that forwards user-initiated page clipboard copies (navigator.clipboard.writeText,
-// navigator.clipboard.write, and document.execCommand("copy")) to the isolated-world bridge via a per-stream
-// CustomEvent channel. Leaks no globals to window; the Extension Host enforces its own gesture window and ownership.
+// navigator.clipboard.write, and document.execCommand("copy" | "cut")) to the isolated-world bridge via a per-stream
+// CustomEvent channel. Runs only in the top frame and leaks no globals to window; the isolated world verifies real
+// Blink userActivation and the Extension Host enforces its own gesture window, frame identity, and ownership.
 export function clipboardPageScript(channel: string): string {
   return `(() => {
+    if (window !== window.top) return
     const CH = ${JSON.stringify(channel)}
-    const LIMIT = 1048576
+    const LIMIT = 65536
     const emit = (text) => {
       if (typeof text !== "string" || !text.length || text.length > LIMIT) return
       if (navigator.userActivation && !navigator.userActivation.isActive) return
       window.dispatchEvent(new CustomEvent(CH, { detail: text }))
+    }
+    const readSelection = () => {
+      const el = document.activeElement
+      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+        if (el instanceof HTMLInputElement && el.type === "password") return ""
+        const start = el.selectionStart ?? 0
+        const end = el.selectionEnd ?? 0
+        return end > start ? el.value.slice(start, end) : ""
+      }
+      return window.getSelection()?.toString() ?? ""
     }
     if (typeof Clipboard !== "undefined" && Clipboard.prototype) {
       const origWriteText = Clipboard.prototype.writeText
@@ -47,6 +59,8 @@ export function clipboardPageScript(channel: string): string {
         const lower = String(command).toLowerCase()
         const active = (lower === "copy" || lower === "cut") && (!navigator.userActivation || navigator.userActivation.isActive)
         if (!active) return origExec.call(this, command, showUI, value)
+        // Snapshot selection before execCommand("cut") deletes and collapses it.
+        const before = readSelection()
         let captured = ""
         if (origSetData) {
           DataTransfer.prototype.setData = function (format, data) {
@@ -60,16 +74,7 @@ export function clipboardPageScript(channel: string): string {
         } finally {
           if (origSetData) DataTransfer.prototype.setData = origSetData
         }
-        if (!captured) {
-          const el = document.activeElement
-          if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
-            const start = el.selectionStart ?? 0
-            const end = el.selectionEnd ?? 0
-            if (end > start) captured = el.value.slice(start, end)
-          } else {
-            captured = window.getSelection()?.toString() ?? ""
-          }
-        }
+        if (!captured && (lower === "copy" || ok)) captured = before || readSelection()
         if (captured) emit(captured)
         return ok || !!captured
       }
@@ -79,9 +84,12 @@ export function clipboardPageScript(channel: string): string {
 
 export function clipboardBridgeScript(channel: string, binding: string, epoch: number): string {
   return `(() => {
+    if (window !== window.top) return
     const key = "${binding}Cleanup"
     if (typeof globalThis[key] === "function") globalThis[key]()
     const onCopy = (event) => {
+      // Read native userActivation from the isolated world so main-world property tampering cannot bypass it.
+      if (navigator.userActivation && !navigator.userActivation.isActive) return
       if (typeof event.detail === "string" && typeof globalThis[${JSON.stringify(binding)}] === "function") {
         globalThis[${JSON.stringify(binding)}](${JSON.stringify(`${epoch}:`)} + event.detail)
       }

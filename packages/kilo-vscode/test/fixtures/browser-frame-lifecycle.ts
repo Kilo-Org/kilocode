@@ -5,7 +5,13 @@ import { Worker } from "node:worker_threads"
 import type { Page } from "playwright-core"
 import WebSocket, { WebSocketServer } from "ws"
 import { BrowserStream } from "../../src/services/browser-automation/browser-stream"
-import { decodeStreamFrame, encodeStreamWheel, STREAM_FRAME_JPEG, type BrowserFrame } from "../../src/shared/browser-stream"
+import {
+  decodeStreamFrame,
+  encodeStreamWheel,
+  STREAM_FRAME_H264_KEY,
+  STREAM_FRAME_JPEG,
+  type BrowserFrame,
+} from "../../src/shared/browser-stream"
 
 const view = { width: 320, height: 200, scale: 2, active: true, revision: 1 }
 const target = "A17CD2"
@@ -96,17 +102,20 @@ function send(socket: WebSocket, params: ReturnType<typeof frame>) {
 test("ACKs invalid frames, transfers exact JPEGs, and retains only the newest frame behind credit", async (t) => {
   const f = await fixture(t)
   const resolve = require.resolve
-  const start = once(f.events, "start")
   const worker = new Worker(resolve("./browser-frame-worker.js"), {
     execArgv: [],
-    workerData: { port: f.port, target, view },
+    workerData: { port: f.port, target, navigation: 1, committed: 1 },
   })
   t.after(() => worker.terminate())
   const messages: unknown[] = []
   worker.on("message", (message) => messages.push(message))
-  const ready = once(worker, "message")
+  const [readyMsg] = await once(worker, "message")
+  assert.equal(readyMsg.type, "ready")
+  const start = once(f.events, "start")
+  const started = once(worker, "message")
+  worker.postMessage({ type: "start", view, navigation: 1, committed: 1, epoch: 1 })
   const [socket] = await start
-  assert.deepEqual(await ready, ["ready"])
+  assert.deepEqual(await started, [{ type: "started", epoch: 1 }])
   send(socket, frame(1, 638))
   send(socket, { ...frame(2), data: "data:image/png;base64,cG5n" })
   const wrongSize = frame(3)
@@ -127,7 +136,7 @@ test("ACKs invalid frames, transfers exact JPEGs, and retains only the newest fr
   worker.postMessage("credit")
   const [last] = await latest
   assert.equal(Buffer.from(last.data).at(-1), 6)
-  assert.equal(messages.length, 3)
+  assert.equal(messages.length, 4)
   const exit = once(worker, "exit")
   socket.close()
   assert.deepEqual(await exit, [0])
@@ -245,4 +254,108 @@ test("direct binary WS enforces origin and token auth, streams frames without ho
   client.send(encodeStreamWheel({ navigation: 1, revision: 1, x: 0.5, y: 0.25, deltaX: 0, deltaY: 50, modifiers: 2 }))
   const [params] = await receivedWheel
   assert.deepEqual(params, { type: "mouseWheel", x: 160, y: 50, modifiers: 2, buttons: 0, deltaX: 0, deltaY: 50 })
+
+  // Same-position wheels coalesce within the window, while different pointer positions flush separately.
+  const wheels: Array<{ x: number; y: number; deltaY: number }> = []
+  const twoWheels = new Promise<void>((resolve) => {
+    const onWheel = (item: { x: number; y: number; deltaY: number }) => {
+      wheels.push(item)
+      if (wheels.length === 2) {
+        f.events.off("wheel", onWheel)
+        resolve()
+      }
+    }
+    f.events.on("wheel", onWheel)
+  })
+  client.send(encodeStreamWheel({ navigation: 1, revision: 1, x: 0.25, y: 0.5, deltaX: 0, deltaY: 10, modifiers: 0 }))
+  client.send(encodeStreamWheel({ navigation: 1, revision: 1, x: 0.25, y: 0.5, deltaX: 0, deltaY: 15, modifiers: 0 }))
+  client.send(encodeStreamWheel({ navigation: 1, revision: 1, x: 0.75, y: 0.5, deltaX: 0, deltaY: 25, modifiers: 0 }))
+  await twoWheels
+  assert.deepEqual(
+    wheels.map((item) => [item.x, item.deltaY]),
+    [
+      [80, 25],
+      [240, 25],
+    ],
+  )
+})
+
+test("carries negotiated H.264 codec index and clears offscreen binding on fallback to JPEG", async (t) => {
+  const offscreen = "OFF01"
+  const server = new WebSocketServer({ port: 0, host: "127.0.0.1" })
+  await once(server, "listening")
+  const address = server.address()
+  assert(address && typeof address !== "string")
+  const events = new EventEmitter()
+  let targetSocket: WebSocket | undefined
+  let offscreenSocket: WebSocket | undefined
+  let stoppedJpeg = 0
+  server.on("connection", (socket, req) => {
+    const isOffscreen = req.url === `/devtools/page/${offscreen}`
+    if (isOffscreen) offscreenSocket = socket
+    else targetSocket = socket
+    socket.on("message", (raw) => {
+      const command = JSON.parse(raw.toString())
+      if (command.method === "Page.startScreencast") events.emit("startJpeg")
+      if (command.method === "Page.stopScreencast") stoppedJpeg++
+      socket.send(JSON.stringify({ id: command.id, result: {} }))
+    })
+  })
+  t.after(async () => {
+    for (const socket of server.clients) socket.terminate()
+    await new Promise<void>((done) => server.close(() => done()))
+  })
+
+  const resolve = require.resolve
+  const worker = new Worker(resolve("./browser-frame-worker.js"), {
+    execArgv: [],
+    workerData: { port: address.port, target, navigation: 1, committed: 1 },
+  })
+  t.after(() => worker.terminate())
+  const [readyMsg] = await once(worker, "message")
+  assert.equal(readyMsg.type, "ready")
+
+  // Bind offscreen and emit an H.264 keyframe using fallback codec index 2 (avc1.640028).
+  const bound = once(worker, "message")
+  worker.postMessage({ type: "start", view, navigation: 1, committed: 1, epoch: 1, offscreen })
+  assert.deepEqual(await bound, [{ type: "bound", epoch: 1 }])
+
+  const client1 = new WebSocket(readyMsg.url, { headers: { Origin: "vscode-webview://test-id" } })
+  t.after(() => client1.close())
+  await once(client1, "open")
+  const h264Frame = once(client1, "message")
+  const payload = Buffer.from([0, 0, 0, 1, 0x67, 0x64]).toString("base64")
+  offscreenSocket?.send(
+    JSON.stringify({
+      method: "Runtime.bindingCalled",
+      params: { name: "__kiloChunk", payload: `1:k:2:640x400:100:${payload}` },
+    }),
+  )
+  const [rawH264] = await h264Frame
+  const bufH264 = Buffer.isBuffer(rawH264)
+    ? rawH264.buffer.slice(rawH264.byteOffset, rawH264.byteOffset + rawH264.byteLength)
+    : rawH264
+  const decodedH264 = decodeStreamFrame(bufH264 as ArrayBuffer)
+  assert(decodedH264 && decodedH264.kind === STREAM_FRAME_H264_KEY && decodedH264.codec === 2)
+  client1.close()
+
+  // Simulate H.264 start failure falling back to JPEG start without offscreen; reconnecting must NOT stop JPEG.
+  const startedJpeg = once(worker, "message")
+  worker.postMessage({ type: "start", view, navigation: 1, committed: 1, epoch: 2 })
+  assert.deepEqual(await startedJpeg, [{ type: "started", epoch: 2 }])
+  const stopsBeforeAttach = stoppedJpeg
+
+  const client2 = new WebSocket(readyMsg.url, { headers: { Origin: "vscode-webview://test-id" } })
+  t.after(() => client2.close())
+  await once(client2, "open")
+  const jpegFrame = once(client2, "message")
+  assert(targetSocket)
+  send(targetSocket, frame(21))
+  const [rawJpeg] = await jpegFrame
+  const bufJpeg = Buffer.isBuffer(rawJpeg)
+    ? rawJpeg.buffer.slice(rawJpeg.byteOffset, rawJpeg.byteOffset + rawJpeg.byteLength)
+    : rawJpeg
+  const decodedJpeg = decodeStreamFrame(bufJpeg as ArrayBuffer)
+  assert(decodedJpeg && decodedJpeg.kind === STREAM_FRAME_JPEG && decodedJpeg.data.at(-1) === 21)
+  assert.equal(stoppedJpeg, stopsBeforeAttach, "attaching after fallback to JPEG must not stop JPEG screencast")
 })

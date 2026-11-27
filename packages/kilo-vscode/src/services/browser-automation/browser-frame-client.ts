@@ -90,7 +90,6 @@ export class BrowserFrameClient {
     const options: Capture = {
       port: this.port,
       target: targetInfo.targetId,
-      direct: true,
       navigation: identity.navigation,
       committed: identity.committed,
     }
@@ -144,7 +143,6 @@ export class BrowserFrameClient {
     workerReady: ReturnType<typeof Promise.withResolvers<string>>,
   ): void {
     if (this.worker !== worker) return
-    if (message === "ready") return
     if ("data" in message) {
       receive(message)
       if (this.worker === worker) worker.postMessage("credit")
@@ -195,7 +193,6 @@ export class BrowserFrameClient {
       committed: identity.committed,
       epoch,
       offscreen: handle.offscreenTargetId,
-      codec: 1,
     } satisfies WorkerCommand)
     if (!(await bound.promise) || this.worker !== worker || generation !== this.generation) return false
     const result = await ext.start(handle, epoch)

@@ -6,9 +6,12 @@ export type Cast = {
   data: string
   metadata: { deviceWidth: number; deviceHeight: number; monotonicTimestamp?: number }
 }
-export type Capture =
-  | { port: number; target: string; view: BrowserViewport; direct?: false }
-  | { port: number; target: string; direct: true; navigation: number; committed?: number }
+export type Capture = {
+  port: number
+  target: string
+  navigation: number
+  committed?: number
+}
 
 export type WorkerCommand =
   | "credit"
@@ -19,11 +22,9 @@ export type WorkerCommand =
       committed?: number
       epoch: number
       offscreen?: string
-      codec?: number
     }
 
 export type CaptureMessage =
-  | "ready"
   | Pixels
   | { type: "ready"; url: string }
   | { type: "bound"; epoch: number }
