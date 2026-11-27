@@ -16,6 +16,7 @@ import type { ReviewComposer } from "../diff-viewer/review-annotations"
 import type { PRComment } from "./pr/pr-types"
 import type { PRDiffSnapshot, PRTarget } from "../../src/shared/pr-comment-actions"
 import { DiffPanel } from "./DiffPanel"
+import { retainReviewedFiles } from "../diff-viewer/diff-state"
 import { diffDataKey } from "./worktree-diffs"
 import { ViewActiveProvider, blurOnHide, freezeValue, pinHiddenSlot, skipInactiveFocus } from "../src/v2/view-active"
 
@@ -219,6 +220,7 @@ export const DiffPanelCache: Component<Props> = (props) => {
   return (
     <For each={entries()}>
       {(entry) => {
+        const composer = props.composer(entry.cacheKey)
         const active = createMemo(() => activeKey() === entry.cacheKey)
         const cold = createMemo(() => !active() && coldKeys().has(entry.cacheKey))
         const entryProject = entry.project === "single" ? undefined : entry.project
@@ -229,7 +231,11 @@ export const DiffPanelCache: Component<Props> = (props) => {
         })
 
         blurOnHide(active, () => slotEl)
-        pinHiddenSlot(active, () => slotEl, () => entry.size ?? (hostSize.width > 0 && hostSize.height > 0 ? hostSize : undefined))
+        pinHiddenSlot(
+          active,
+          () => slotEl,
+          () => entry.size ?? (hostSize.width > 0 && hostSize.height > 0 ? hostSize : undefined),
+        )
 
         // Freeze reactive inputs while hidden so switching worktrees or background
         // diff polls never trigger Solid reactive churn inside inactive diff panels.
@@ -249,6 +255,14 @@ export const DiffPanelCache: Component<Props> = (props) => {
         const revertingFiles = freezeValue(active, () => props.revertingFiles(entry.key))
         const activeTerminalId = freezeValue(active, () => props.activeTerminalId)
 
+        // A pending review keeps the revision that supplied its selected text, so a
+        // live update below cannot discard an open comment or its draft.
+        const reviewDiffs = createMemo<WorktreeFileDiff[]>((previous) => {
+          const files = new Set(comments().map((comment) => comment.file))
+          if (composer.draft) files.add(composer.draft.file)
+          return retainReviewedFiles(previous, diffs(), files)
+        }, [])
+
         return (
           <div
             ref={slotEl}
@@ -264,7 +278,7 @@ export const DiffPanelCache: Component<Props> = (props) => {
           >
             <ViewActiveProvider active={active}>
               <DiffPanel
-                diffs={diffs()}
+                diffs={reviewDiffs()}
                 loading={loading()}
                 active={active()}
                 loadingFiles={loadingFiles()}
@@ -291,7 +305,7 @@ export const DiffPanelCache: Component<Props> = (props) => {
                 prError={prError()}
                 focusedComment={active() ? props.focusedComment?.(entry.key) : undefined}
                 onCommentsChange={(next) => props.setComments(entry.key, next)}
-                composer={props.composer(entry.cacheKey)}
+                composer={composer}
                 onSendClick={props.onSendClick}
                 onClose={props.onClose}
                 onExpand={props.onExpand}

@@ -17,7 +17,7 @@ import type { PRComment } from "../agent-manager/pr/pr-types"
 import { useLanguage } from "../src/context/language"
 import { useBridge } from "../agent-manager/v2/vscode"
 import type { WorktreeFileDiff } from "../src/types/messages/agent-manager"
-import { lineCount, sanitizeReviewComments, type ReviewComment } from "./review-comments"
+import { hasReviewRange, sanitizeReviewComments, type ReviewComment } from "./review-comments"
 import {
   buildFileAnnotations,
   buildReviewAnnotation,
@@ -121,13 +121,7 @@ export function createReviewController(props: Props) {
         const currentDraft = draft()
         if (!currentDraft) return
         const diff = diffs.find((item) => item.file === currentDraft.file)
-        if (!diff) return cancelDraft()
-        const max = lineCount(currentDraft.side === "deletions" ? diff.before : diff.after)
-        if (
-          currentDraft.line < 1 ||
-          currentDraft.line > max ||
-          (currentDraft.endLine !== undefined && currentDraft.endLine > max)
-        ) {
+        if (!diff || !hasReviewRange(diff, currentDraft.side, currentDraft.line, currentDraft.endLine)) {
           cancelDraft()
         }
       },

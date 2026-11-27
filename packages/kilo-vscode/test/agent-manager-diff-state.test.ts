@@ -1,5 +1,10 @@
 import { describe, expect, it } from "bun:test"
-import { diffSizeKey, mergeWorktreeDiffs, resolveDiffFile } from "../webview-ui/diff-viewer/diff-state"
+import {
+  diffSizeKey,
+  mergeWorktreeDiffs,
+  resolveDiffFile,
+  retainReviewedFiles,
+} from "../webview-ui/diff-viewer/diff-state"
 import {
   EXTREME_DIFF_CHANGED_LINES,
   allOpenFiles,
@@ -28,6 +33,17 @@ function diff(overrides: Partial<WorktreeFileDiff>): WorktreeFileDiff {
     ...overrides,
   }
 }
+
+it("keeps the commented revision through live edits and removal while other files update", () => {
+  const reviewed = diff({ after: "selected line", summarized: false })
+  const other = diff({ file: "other.ts" })
+  const latest = { ...reviewed, after: "" }
+  const files = new Set([reviewed.file])
+  const visible = retainReviewedFiles([reviewed], [latest, other], files)
+  expect(visible).toEqual([reviewed, other])
+  expect(retainReviewedFiles(visible, [other], files)).toContain(reviewed)
+  expect(retainReviewedFiles(visible, [latest, other], new Set())).toEqual([latest, other])
+})
 
 describe("diffSizeKey", () => {
   it("changes with rendered content, style, and review context", () => {

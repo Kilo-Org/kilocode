@@ -1,5 +1,6 @@
 import type { ReviewComment, WorktreeFileDiff } from "../src/types/messages/agent-manager"
 import { formatReviewCommentsMarkdown } from "../src/utils/review-comment-markdown"
+import { parsePatch } from "../../src/shared/pr-patch"
 
 export type { ReviewComment }
 export { formatReviewCommentsMarkdown }
@@ -39,16 +40,25 @@ export function extractLines(content: string, start: number, end: number): strin
   return content.slice(begin, i)
 }
 
+export function hasReviewRange(diff: WorktreeFileDiff, side: ReviewComment["side"], start: number, end = start) {
+  if (start < 1) return false
+  if (diff.summarized) return true
+  if (Math.max(start, end) <= lineCount(side === "deletions" ? diff.before : diff.after)) return true
+  // Session and turn diffs carry hunk text, but the gutter uses absolute file line numbers.
+  return (
+    !!diff.patch &&
+    !!parsePatch(diff.patch, undefined, {
+      side: side === "deletions" ? "LEFT" : "RIGHT",
+      start: Math.min(start, end),
+      end: Math.max(start, end),
+    })
+  )
+}
+
 export function sanitizeReviewComments(comments: ReviewComment[], diffs: WorktreeFileDiff[]): ReviewComment[] {
   const map = new Map(diffs.map((diff) => [diff.file, diff]))
   return comments.filter((comment) => {
     const diff = map.get(comment.file)
-    if (!diff) return false
-    const content = comment.side === "deletions" ? diff.before : diff.after
-    if (diff.summarized === true) return true
-    const max = lineCount(content)
-    if (comment.line < 1) return false
-    if (comment.line > max) return false
-    return true
+    return !!diff && hasReviewRange(diff, comment.side, comment.line)
   })
 }

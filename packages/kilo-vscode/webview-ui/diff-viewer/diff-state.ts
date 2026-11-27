@@ -104,6 +104,21 @@ export interface MergeResult {
   stale: Set<string>
 }
 
+// A review belongs to the version that supplied its selected text. Keep just those files
+// on screen until their comments are sent or discarded, even if a live update removes one.
+export function retainReviewedFiles(previous: WorktreeFileDiff[], live: WorktreeFileDiff[], files: Set<string>) {
+  if (!files.size) return live
+  const held = new Map(
+    previous.filter((diff) => files.has(diff.file) && !diff.summarized).map((diff) => [diff.file, diff]),
+  )
+  const rows = live.map((diff) => {
+    const snapshot = held.get(diff.file)
+    held.delete(diff.file)
+    return snapshot ?? diff
+  })
+  return [...rows, ...held.values()]
+}
+
 export function mergeWorktreeDiffs(prev: WorktreeFileDiff[], next: WorktreeFileDiff[]): MergeResult {
   const map = new Map(prev.map((diff) => [diff.file, diff]))
   const stale = new Set<string>()
