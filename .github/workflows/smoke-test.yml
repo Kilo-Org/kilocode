@@ -31,7 +31,7 @@ on:
         required: false
         type: string
       waive_bench:
-        description: "Skip the bench tests and record the prerelease exception."
+        description: "Skip the bench tests and record the release exception."
         type: boolean
         default: false
     secrets:
@@ -57,7 +57,7 @@ jobs:
     if: inputs.waive_bench
     runs-on: ubuntu-latest
     steps:
-      - run: echo 'The kilo-bench end-to-end tests are paused for prereleases until the release runner can access the bench repo.' >> "$GITHUB_STEP_SUMMARY"
+      - run: echo "The kilo-bench end-to-end tests are paused for stable and prerelease v1 releases until the release runner's BENCH_GITHUB_TOKEN access is approved. Run this workflow manually to verify access, then remove the waiver." >> "$GITHUB_STEP_SUMMARY"
 
   smoke-test:
     name: Smoke Test
