@@ -1,5 +1,13 @@
 import { describe, expect, test } from "bun:test"
-import { mergeWheel } from "../src/shared/browser-stream"
+import {
+  decodeStreamFrame,
+  decodeStreamInput,
+  encodeStreamFrame,
+  encodeStreamWheel,
+  mergeWheel,
+  STREAM_FRAME_H264_KEY,
+  STREAM_INPUT_WHEEL,
+} from "../src/shared/browser-stream"
 import {
   clicks,
   clipboard,
@@ -251,5 +259,78 @@ describe("browser stream text composition", () => {
     expect(text.active()).toBe(false)
     expect(text.end("discard")).toBeUndefined()
     expect(text.reset()).toBeUndefined()
+  })
+})
+
+describe("direct binary stream wire protocol", () => {
+  test("round-trips frame packets with full 53-bit revision integers and rejects malformed payloads", () => {
+    const rev = 1795774880123
+    const encoded = encodeStreamFrame(
+      {
+        kind: STREAM_FRAME_H264_KEY,
+        codec: 1,
+        width: 786,
+        height: 1378,
+        navigation: 7,
+        revision: rev,
+        sequence: 42,
+        timestamp: 123456.5,
+      },
+      new Uint8Array([0, 0, 0, 1, 0x67, 0x64]),
+    )
+    const decoded = decodeStreamFrame(encoded.buffer as ArrayBuffer)
+    expect(decoded).toBeDefined()
+    expect(decoded!.kind).toBe(STREAM_FRAME_H264_KEY)
+    expect(decoded!.width).toBe(786)
+    expect(decoded!.height).toBe(1378)
+    expect(decoded!.navigation).toBe(7)
+    expect(decoded!.revision).toBe(rev)
+    expect(decoded!.sequence).toBe(42)
+    expect(decoded!.timestamp).toBe(123456.5)
+    expect([...decoded!.data]).toEqual([0, 0, 0, 1, 0x67, 0x64])
+    expect(decodeStreamFrame(new ArrayBuffer(12))).toBeUndefined()
+  })
+
+  test("round-trips binary wheel inputs and rejects out-of-bounds coordinates or deltas", () => {
+    const rev = 1795774880456
+    const valid = encodeStreamWheel({
+      navigation: 3,
+      revision: rev,
+      x: 0.5,
+      y: 0.25,
+      deltaX: -12.5,
+      deltaY: 50,
+      modifiers: 2,
+    })
+    expect(decodeStreamInput(new Uint8Array(valid))).toEqual({
+      kind: STREAM_INPUT_WHEEL,
+      navigation: 3,
+      revision: rev,
+      x: 0.5,
+      y: 0.25,
+      deltaX: -12.5,
+      deltaY: 50,
+      modifiers: 2,
+    })
+    const badCoord = encodeStreamWheel({
+      navigation: 3,
+      revision: rev,
+      x: 1.5,
+      y: 0.25,
+      deltaX: 0,
+      deltaY: 50,
+      modifiers: 0,
+    })
+    const badDelta = encodeStreamWheel({
+      navigation: 3,
+      revision: rev,
+      x: 0.5,
+      y: 0.25,
+      deltaX: 0,
+      deltaY: 20000,
+      modifiers: 0,
+    })
+    expect(decodeStreamInput(new Uint8Array(badCoord))).toBeUndefined()
+    expect(decodeStreamInput(new Uint8Array(badDelta))).toBeUndefined()
   })
 })

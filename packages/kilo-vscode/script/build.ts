@@ -126,7 +126,13 @@ async function buildHost() {
   // `playwright-core` stays external: the host bundle requires it at runtime from `dist/node_modules`, because it
   // carries the Chromium launcher and its protocol generated code, which compile slowly and would be minified away.
   const result = await Bun.build({
-    entrypoints: [path.join(root, "src/extension.ts")],
+    entrypoints: [
+      path.join(root, "src/extension.ts"),
+      path.join(root, "src/services/browser-automation/browser-frame-worker.ts"),
+      path.join(root, "src/services/browser-automation/browser-proxy-worker.ts"),
+    ],
+    // The host starts its Node workers by filename beside extension.js.
+    naming: "[name].[ext]",
     outdir: dist,
     target: "node",
     format: "cjs",
@@ -142,13 +148,25 @@ async function buildHost() {
   if ((await Bun.file(path.join(dist, "extension.js")).text()).includes("import.meta"))
     throw new Error("extension host bundle contains import.meta and would fail to activate")
 
+  // Copy the split-incognito tabCapture helper beside extension.js so Chrome loads it directly from dist/.
+  const captureSource = path.join(root, "assets/browser-capture-ext")
+  const captureDest = path.join(dist, "browser-capture-ext")
+  await rm(captureDest, { recursive: true, force: true })
+  await cp(captureSource, captureDest, { recursive: true })
+  const captureInputs = collectRelativeFiles(captureSource).map((rel) => path.join(captureSource, rel))
+  const captureOutputs = collectRelativeFiles(captureDest).map((rel) => `browser-capture-ext/${rel}`)
+
   const inputs = [
     ...resolveMetaInputs(result.metafile?.inputs, process.cwd()),
     ...listDirFiles(macroLocaleDirs),
+    ...captureInputs,
     path.join(root, "tsconfig.json"),
     ...buildScripts,
   ]
-  const outputs = result.outputs.map((item) => path.relative(dist, item.path).split(path.sep).join("/"))
+  const outputs = [
+    ...result.outputs.map((item) => path.relative(dist, item.path).split(path.sep).join("/")),
+    ...captureOutputs,
+  ]
   return {
     state: {
       version: 1 as const,

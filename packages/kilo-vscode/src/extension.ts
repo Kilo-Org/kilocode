@@ -578,7 +578,10 @@ export function activate(context: ExtensionContext) {
         event.affectsConfiguration("kilo-code.v2.experimental.nativeNotebookTools")
       )
         void server.stop()
-      if (event.affectsConfiguration("kilo-code.v2.integratedBrowser")) agentManager.browserAutomationChanged()
+      if (event.affectsConfiguration("kilo-code.v2.integratedBrowser")) {
+        if (!integratedBrowserEnabled()) broker.suspend()
+        agentManager.browserAutomationChanged()
+      }
     }),
     window.registerWebviewPanelSerializer(PANEL_TYPE, {
       deserializeWebviewPanel: async (restored) => agentManager.deserializePanel(restored),

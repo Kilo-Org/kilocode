@@ -720,7 +720,7 @@ describe("BrowserBroker", () => {
     expect(broker.sessions()).toEqual([])
   })
 
-  test("falls back from missing Chrome without changing sandbox or network options", async () => {
+  test("preserves sandbox, network and high-refresh defaults on fallback", async () => {
     const configs: Array<Parameters<NonNullable<BrowserBrokerOptions["launch"]>>[0]> = []
     const broker = makeBroker({
       log: () => {},
@@ -742,6 +742,7 @@ describe("BrowserBroker", () => {
     ).rejects.toThrow("Chromium launched")
     expect(configs).toHaveLength(2)
     expect(configs.at(0)?.channel).toBe("chrome")
+    expect(configs.at(0)?.args).not.toContain("--disable-frame-rate-limit")
     expect(configs.at(1)).toEqual({ ...configs.at(0), channel: undefined })
     expect(configs.at(1)).toMatchObject({ chromiumSandbox: true, headless: true })
   })

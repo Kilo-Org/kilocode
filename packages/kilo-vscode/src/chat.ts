@@ -657,7 +657,7 @@ export function html(input: {
     // Worker scripts must be same-origin, so the webview starts them from blob URLs of the fetched scripts.
     `worker-src ${input.csp} blob:`,
     `font-src ${input.csp}`,
-    `connect-src ${input.csp}`,
+    `connect-src ${input.csp}${input.view === "agentManager" ? " ws://127.0.0.1:*" : ""}`,
     `img-src ${input.csp} data: https:`,
     // The Agent Manager browser panel embeds DevTools for the open page.
     ...(input.view === "agentManager" ? [`frame-src ${DEVTOOLS}`] : []),

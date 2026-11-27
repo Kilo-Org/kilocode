@@ -197,6 +197,7 @@ export type BrowserStatePayload = BrowserScopeMessage<"browserTab.state"> & {
   frameError?: string
   back?: boolean
   forward?: boolean
+  streamUrl?: string
 }
 
 export type BrowserElementPayload = {

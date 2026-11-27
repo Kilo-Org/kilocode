@@ -1,5 +1,8 @@
 import { setTimeout as wait } from "node:timers/promises"
 import type { CDPSession, Page } from "playwright-core"
+import { orderedFrames, screencast, type Cast, type Pixels } from "./browser-frame"
+import type { BrowserCaptureExtension } from "./browser-capture-ext"
+import { BrowserFrameClient } from "./browser-frame-client"
 import {
   CURSORS,
   mergeWheel,
@@ -11,18 +14,11 @@ import {
   type WheelInteraction,
 } from "../../shared/browser-stream"
 
-type Scope = { browserId: string; navigation: number }
+type Scope = { browserId: string; navigation: number; committed?: number }
 type Key = Extract<BrowserInteraction, { kind: "key" }>
 type Pointer = Extract<BrowserInteraction, { kind: "pointer" }>
 type Wheel = WheelInteraction
 type Clipboard = Extract<BrowserInteraction, { kind: "clipboard" }>["action"]
-type Cast = {
-  sessionId: number
-  data: string
-  metadata: { deviceWidth: number; deviceHeight: number }
-}
-
-const PAYLOAD = 2 * 1024 * 1024
 const TEXT = 64 * 1024
 const SETTLE = 250
 const BINDING = "__kiloCursor"
@@ -61,30 +57,6 @@ function range(value: number, min: number, max: number, integer = false): boolea
 
 function text(value: string, limit: number): boolean {
   return typeof value === "string" && value.length <= limit
-}
-
-function dimensions(value: string): { width: number; height: number } | undefined {
-  // The JPEG frame header is near the start of a Chromium screencast frame. Decode a prefix first so a frame does not
-  // allocate its full payload on this thread, and fall back to the whole frame when the header is not in the prefix.
-  const prefix = value.length > 65536 ? value.slice(0, 65536) : value
-  const size = scan(Buffer.from(prefix, "base64"))
-  if (size || prefix.length === value.length) return size
-  return scan(Buffer.from(value, "base64"))
-}
-
-function scan(data: Buffer): { width: number; height: number } | undefined {
-  if (data.length < 4 || data.readUInt16BE(0) !== 0xffd8) return
-  for (let offset = 2; offset + 4 <= data.length; ) {
-    const marker = data.readUInt16BE(offset)
-    if ((marker & 0xff00) !== 0xff00 || marker === 0xffda || marker === 0xffd9) return
-    const length = data.readUInt16BE(offset + 2)
-    if (length < 2 || offset + 2 + length > data.length) return
-    if (marker >= 0xffc0 && marker <= 0xffcf && ![0xffc4, 0xffc8, 0xffcc].includes(marker)) {
-      if (length < 8) return
-      return { width: data.readUInt16BE(offset + 7), height: data.readUInt16BE(offset + 5) }
-    }
-    offset += length + 2
-  }
 }
 
 function position(event: { x: number; y: number; modifiers: number }): boolean {
@@ -213,6 +185,26 @@ function kept(current: BrowserViewport | undefined, next: BrowserViewport) {
   )
 }
 
+// Discrete CDP wheel events lack trackpad phases, so macOS Chrome stretches and snaps elastic overscroll on every tick
+// at the top or bottom of a page. Suppress root elastic bounce when the page uses the browser default.
+function suppressOverscroll() {
+  const apply = () => {
+    const root = document.documentElement
+    if (root instanceof HTMLElement && getComputedStyle(root).overscrollBehavior === "auto") {
+      root.style.overscrollBehavior = "none"
+    }
+  }
+  const watch = () => {
+    apply()
+    if (document.documentElement) {
+      new MutationObserver(apply).observe(document.documentElement, { attributes: true, attributeFilter: ["style"] })
+    }
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", watch, { once: true })
+  else watch()
+  apply()
+}
+
 // Runs only in an isolated world. Read the hovered element, not the page's full text or layout.
 function reporter(name: string, epoch: number, keywords: string[]) {
   const globals = globalThis as unknown as Record<string, unknown>
@@ -301,11 +293,13 @@ function reporter(name: string, epoch: number, keywords: string[]) {
 
 export class BrowserStream {
   private session?: CDPSession
+  private readonly capture?: BrowserFrameClient
   private view?: BrowserViewport
   private casting?: BrowserViewport
   private scope: Scope
   private epoch = 0
   private sequence = 0
+  private decode = orderedFrames()
   private outstanding?: number
   private buffered?: BrowserFrame
   private pending: Promise<void> = Promise.resolve()
@@ -313,7 +307,7 @@ export class BrowserStream {
   private wheel?: { event: Wheel; result: Promise<string | undefined> }
   private closing?: Promise<void>
   private closed = false
-  private started = false
+  private started = false // Only the host CDP session needs an explicit Page.stopScreencast.
   private buttons = 0
   private modifiers = 0
   private x = 0
@@ -331,8 +325,12 @@ export class BrowserStream {
     private readonly emit: (frame: BrowserFrame) => void,
     private readonly log: (...args: unknown[]) => void,
     private readonly cursor?: (value: BrowserCursor) => void,
+    port?: number,
+    endpoint?: (url: string | undefined) => void,
+    extension?: () => BrowserCaptureExtension | undefined,
   ) {
     this.scope = { ...identity() }
+    if (port !== undefined) this.capture = new BrowserFrameClient(port, () => this.rebind(), endpoint, extension)
     page.on("close", this.ended)
   }
 
@@ -367,10 +365,11 @@ export class BrowserStream {
         }
     this.view = next
     this.reset()
-    // The screencast continues across navigations. A new document with the same size only needs the new identity, so
-    // the preview does not wait for a stream restart and a resize settle on each page load.
+    this.scope = { ...this.identity() }
+    // Same size: no resize or paint settle. A worker still needs a fresh binding to discard transferred old frames.
     if (this.casting === current && kept(current, next)) {
       this.casting = next
+      if (this.capture) await this.serial(() => this.start(next))
       await this.install()
       return
     }
@@ -401,14 +400,7 @@ export class BrowserStream {
         .catch(() => this.report("visible size failed"))
       if (this.closed || this.view !== next) return
       this.casting = next
-      this.started = true
-      await session.send("Page.startScreencast", {
-        format: "jpeg",
-        quality: 90,
-        maxWidth: Math.round(next.width * (next.scale ?? 1)),
-        maxHeight: Math.round(next.height * (next.scale ?? 1)),
-        everyNthFrame: 1,
-      })
+      await this.start(next)
       await this.install()
     }).catch((error: unknown) => {
       this.casting = undefined
@@ -586,8 +578,9 @@ export class BrowserStream {
   // Only a new main-frame document releases held input. Same-document navigations, such as pushState, keep it.
   private readonly navigated = (event: { frame: { parentId?: string } }): void => {
     if (this.closed || event.frame.parentId) return
-    this.synchronize()
+    this.scope = { ...this.identity() }
     this.reset()
+    this.rebind()
     void this.install()
     void this.serial(() => this.release()).catch(() => this.report("navigation release failed"))
   }
@@ -607,6 +600,8 @@ export class BrowserStream {
 
   private reset(): void {
     this.epoch++
+    this.decode = orderedFrames()
+    void this.capture?.stop()
     this.cancel?.()
     this.cancel = undefined
     this.wheel = undefined
@@ -615,11 +610,19 @@ export class BrowserStream {
     this.keyword = undefined
   }
 
-  private synchronize(): void {
+  // A same-document commit need not paint again. The broker also calls this when it advances the committed identity.
+  synchronize(): void {
     const scope = this.identity()
-    if (scope.browserId === this.scope.browserId && scope.navigation === this.scope.navigation) return
+    if (
+      scope.browserId === this.scope.browserId &&
+      scope.navigation === this.scope.navigation &&
+      scope.committed === this.scope.committed
+    )
+      return
     this.scope = { ...scope }
     this.reset()
+    this.rebind()
+    if (this.capture) void this.install()
   }
 
   private async connect(): Promise<CDPSession> {
@@ -656,7 +659,6 @@ export class BrowserStream {
 
   private install(): Promise<void> {
     if (!this.cursor || this.closed || !this.session) return Promise.resolve()
-    this.synchronize()
     const view = this.view
     const epoch = this.epoch
     this.reporter = this.reporter
@@ -665,7 +667,7 @@ export class BrowserStream {
         if (this.closed || !session || !view?.active || this.view !== view || this.epoch !== epoch) return
         if (this.script) await session.send("Page.removeScriptToEvaluateOnNewDocument", { identifier: this.script })
         const result = await session.send("Page.addScriptToEvaluateOnNewDocument", {
-          source: `(${reporter.toString()})(${JSON.stringify(BINDING)}, ${epoch}, ${JSON.stringify([...CURSORS])})`,
+          source: `(${reporter.toString()})(${JSON.stringify(BINDING)}, ${epoch}, ${JSON.stringify([...CURSORS])});(${suppressOverscroll.toString()})()`,
           worldName: WORLD,
           runImmediately: true,
         })
@@ -685,14 +687,45 @@ export class BrowserStream {
     const cursor = event.payload.slice(prefix.length)
     if (!CURSORS.has(cursor) || cursor === this.keyword) return
     this.keyword = cursor
-    this.cursor?.({ ...this.scope, revision: view.revision, cursor })
+    this.cursor?.({
+      browserId: this.scope.browserId,
+      navigation: this.scope.navigation,
+      revision: view.revision,
+      cursor,
+    })
   }
 
   private async stop(): Promise<void> {
     this.casting = undefined
+    await this.capture?.stop()
     if (!this.started || !this.session) return
     this.started = false
     await this.session.send("Page.stopScreencast")
+  }
+
+  private rebind(): void {
+    const view = this.casting
+    if (!this.capture || this.started || !view || this.view !== view || this.closed) return
+    const epoch = this.epoch
+    void this.serial(async () => {
+      if (this.epoch === epoch) await this.start(view)
+    }).catch(() => this.report("capture restart failed"))
+  }
+
+  private async start(view: BrowserViewport): Promise<void> {
+    const session = this.session
+    if (!session || this.closed || this.view !== view || this.casting !== view || this.started) return
+    const epoch = this.epoch
+    if (this.capture?.enabled) {
+      const handled = await this.capture.start(session, view, this.scope, (pixels) => {
+        this.synchronize()
+        if (this.epoch === epoch) this.frame(pixels, view)
+      })
+      if (handled || this.epoch !== epoch) return
+    }
+    if (this.capture) this.report("using host capture")
+    this.started = true
+    await session.send("Page.startScreencast", screencast(view))
   }
 
   private readonly receive = (event: Cast): void => {
@@ -702,33 +735,21 @@ export class BrowserStream {
       if (!this.closed) this.report("frame acknowledgement failed")
     })
     const view = this.casting
-    if (this.closed || !view || this.view !== view) return
+    if (!this.started || this.closed || !view || this.view !== view) return
     this.synchronize()
-    if (
-      typeof event.data !== "string" ||
-      !event.data.length ||
-      event.data.length > Math.ceil(PAYLOAD / 3) * 4 ||
-      Buffer.byteLength(event.data, "base64") > PAYLOAD ||
-      event.metadata.deviceWidth !== view.width ||
-      event.metadata.deviceHeight !== view.height
-    )
-      return
-    const size = dimensions(event.data)
-    if (
-      !size ||
-      !size.width ||
-      !size.height ||
-      Math.abs(size.width - Math.round(view.width * (view.scale ?? 1))) > 1 ||
-      Math.abs(size.height - Math.round(view.height * (view.scale ?? 1))) > 1
-    )
-      return
+    const pixels = this.decode(event, view)
+    if (pixels) this.frame(pixels, view)
+  }
+
+  private frame(pixels: Pixels, view: BrowserViewport): void {
+    // Explicit navigation announces its identity before the new document commits.
+    if (this.scope.committed !== undefined && this.scope.committed !== this.scope.navigation) return
     const frame: BrowserFrame = {
-      ...this.scope,
+      browserId: this.scope.browserId,
+      navigation: this.scope.navigation,
       revision: view.revision,
       sequence: ++this.sequence,
-      width: size.width,
-      height: size.height,
-      data: event.data,
+      ...pixels,
     }
     if (this.outstanding !== undefined) {
       this.buffered = frame
