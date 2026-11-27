@@ -14,6 +14,7 @@
 
 import { type Component, Show, createEffect, createSignal, on, onCleanup, onMount } from "solid-js"
 import { TextShimmer } from "@kilocode/kilo-ui/text-shimmer"
+import { useViewActive } from "../../v2/view-active"
 
 /** Outlasts the width spring in chat-layout.css so the lock is released last. */
 const SWAP = 520
@@ -21,6 +22,7 @@ const SWAP = 520
 const measure = (el: HTMLElement | undefined) => (el ? `${Math.ceil(el.getBoundingClientRect().width)}px` : undefined)
 
 export const StatusText: Component<{ text: string }> = (props) => {
+  const viewActive = useViewActive()
   const [label, setLabel] = createSignal(props.text)
   const [old, setOld] = createSignal<string>()
   const [width, setWidth] = createSignal<string>()
@@ -107,6 +109,7 @@ export const StatusText: Component<{ text: string }> = (props) => {
     const el = box
     if (!el || typeof ResizeObserver === "undefined") return
     const observer = new ResizeObserver((entries) => {
+      if (!viewActive()) return
       const width = entries.at(-1)?.borderBoxSize?.[0]?.inlineSize
       size = width === undefined ? undefined : `${Math.ceil(width)}px`
       check()

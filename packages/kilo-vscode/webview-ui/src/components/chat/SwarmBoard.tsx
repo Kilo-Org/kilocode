@@ -35,6 +35,7 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { useLanguage } from "../../context/language"
 import { useV2 } from "../../v2/client"
+import { useViewActive } from "../../v2/view-active"
 import { mergeBoard, usesBoard, type SwarmBoard } from "./swarm-board"
 
 /** Posts shown in the dock panel. Older posts are in the full board. */
@@ -53,6 +54,7 @@ export function useSwarmBoard(input: {
   open?: (sessionID: string, title?: string) => void
 }) {
   const v2 = useV2()
+  const viewActive = useViewActive()
   const language = useLanguage()
   const dialog = useDialog()
   const rpc = v2.api.rpc(KiloBoardRpc.Definition)
@@ -426,7 +428,7 @@ export function useSwarmBoard(input: {
                 if (!el) return
                 scroll.contentRef(el)
                 resize = new ResizeObserver(() => {
-                  if (viewport && viewport.scrollHeight <= viewport.clientHeight) more()
+                  if (viewActive() && viewport && viewport.scrollHeight <= viewport.clientHeight) more()
                 })
                 resize.observe(el)
               }}

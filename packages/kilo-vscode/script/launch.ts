@@ -7,6 +7,7 @@ import { existsSync } from "node:fs"
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
+import { buildExtension } from "./build"
 import { reuse } from "./cli-login"
 import { launchProfile } from "./launch-profile"
 
@@ -31,23 +32,31 @@ await writeFile(
   JSON.stringify({ "chat.disableAIFeatures": true, "security.workspace.trust.enabled": false }, null, 2) + "\n",
 )
 
-const build = Bun.spawn([process.execPath, path.join(root, "script/build.ts")], { stdout: "inherit", stderr: "inherit" })
-if ((await build.exited) !== 0) process.exit(1)
-
 const profile = launchProfile({ root, state, env: process.env, fresh, isolated })
 await mkdir(profile, { recursive: true })
-try {
-  if (await reuse({ profile, workspace, script: path.resolve(root, "..", "..", "script", "dev-isolated.ts") }))
-    console.log("auth: reusing the installed Kilo CLI login")
-} catch (error) {
-  console.warn(`auth: could not reuse the Kilo CLI login: ${error instanceof Error ? error.message : String(error)}`)
-}
+// Build the extension in-process and seed the CLI login concurrently; they touch disjoint directories.
+const [, reused] = await Promise.all([
+  buildExtension().catch((error: unknown) => {
+    console.error(error)
+    process.exit(1)
+  }),
+  reuse({ profile, workspace, script: path.resolve(root, "..", "..", "script", "dev-isolated.ts") }).catch(
+    (error: unknown) => {
+      console.warn(
+        `auth: could not reuse the Kilo CLI login: ${error instanceof Error ? error.message : String(error)}`,
+      )
+      return false
+    },
+  ),
+])
+if (reused) console.log("auth: reusing the installed Kilo CLI login")
 
-const code = [
-  process.env.VSCODE_EXEC_PATH,
-  "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code",
-  "/Applications/Visual Studio Code - Insiders.app/Contents/Resources/app/bin/code-insiders",
-].find((file) => file && existsSync(file)) ?? "code"
+const code =
+  [
+    process.env.VSCODE_EXEC_PATH,
+    "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code",
+    "/Applications/Visual Studio Code - Insiders.app/Contents/Resources/app/bin/code-insiders",
+  ].find((file) => file && existsSync(file)) ?? "code"
 
 console.log(`workspace: ${workspace}\nstate: ${state}\nprofile: ${profile}`)
 // Strip Electron/VS Code variables so the new instance does not attach to the process that started it, for example a

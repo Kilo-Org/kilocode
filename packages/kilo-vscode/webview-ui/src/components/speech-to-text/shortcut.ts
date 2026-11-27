@@ -83,8 +83,11 @@ export function createSpeechShortcut(opts: ShortcutOptions) {
     if (state === "idle" && opts.disabled()) return false
     press = { state, time: event.timeStamp, mac }
     if (typeof window !== "undefined") {
+      // oxlint-disable-next-line kilo-vscode/require-view-active-guard -- Armed only during an active hold started from the focused active composer
       window.addEventListener("keyup", release, true)
+      // oxlint-disable-next-line kilo-vscode/require-view-active-guard -- Armed only during an active hold started from the focused active composer
       window.addEventListener("blur", loseFocus)
+      // oxlint-disable-next-line kilo-vscode/require-view-active-guard -- Armed only during an active hold started from the focused active composer
       document.addEventListener("visibilitychange", hide, true)
     }
 

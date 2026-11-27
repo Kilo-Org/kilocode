@@ -9,8 +9,7 @@
  * binding in v2/selectors.tsx.
  */
 
-import { createSignal, createMemo, createEffect, createUniqueId, onCleanup, Show } from "solid-js"
-import type { Component } from "solid-js"
+import { createSignal, createMemo, createEffect, createUniqueId, onCleanup, Show, type Component } from "solid-js"
 import type { ModelInfo, ProviderInfo } from "@opencode/client"
 import { Virtualizer } from "virtua/solid"
 import { PopupSelector } from "./PopupSelector"
@@ -22,6 +21,7 @@ import { useLanguage } from "../../context/language"
 import { useModelPreferences } from "../../context/model-preferences"
 import { useVSCode } from "../../context/vscode"
 import type { KiloModelEntry } from "../../v2/kilo-models"
+import { useViewActive } from "../../v2/view-active"
 import { pickerModels } from "./model-selector-filter"
 import { isDataCollectedModel, freeDataLabel, buildTriggerLabel, toPickerModels } from "./model-selector-utils"
 import { createModelTree, dragSplitter } from "./model-selector-state"
@@ -151,8 +151,9 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     e.stopImmediatePropagation()
     cancel()
   }
+  const viewActive = useViewActive()
   createEffect(() => {
-    if (props.blocked) {
+    if (props.blocked || !viewActive()) {
       setOpen(false)
       return
     }

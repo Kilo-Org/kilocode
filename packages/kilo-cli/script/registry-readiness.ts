@@ -46,6 +46,24 @@ const defaults = {
   registry: "https://registry.npmjs.org",
 }
 
+// A retry may skip an immutable version only if npm received these exact bytes. A 404 is the only miss;
+// malformed metadata, missing integrity and transient registry errors must not turn into publish attempts.
+export async function alreadyPublished(pkg: Package & { integrity: string }, options: Options = {}) {
+  const registry = base(options.registry ?? defaults.registry)
+  const id = `${pkg.name}@${pkg.version}`
+  const response = await fetch(`${registry}/${encodeURIComponent(pkg.name)}/${encodeURIComponent(pkg.version)}`, {
+    headers: { accept: "application/json", "cache-control": "no-cache" },
+    redirect: "error",
+    signal: AbortSignal.timeout(options.timeout ?? defaults.timeout),
+  })
+  if (response.status === 404) return false
+  if (!response.ok) throw new Error(`${id}: HTTP ${response.status}`)
+  const manifest = await response.json()
+  if (manifest.name !== pkg.name || manifest.version !== pkg.version || manifest.dist?.integrity !== pkg.integrity)
+    throw new Error(`${id}: registry identity or dist.integrity does not match the packed release`)
+  return true
+}
+
 export async function waitForRegistry(packages: Package[], options: Options = {}) {
   const attempts = options.attempts ?? defaults.attempts
   const delay = options.delay ?? defaults.delay

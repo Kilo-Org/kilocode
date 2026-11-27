@@ -8,13 +8,16 @@ const read = (path: string) => readFileSync(resolve(import.meta.dir, path), "utf
 
 test("the Agent Manager chat wires the shared worktree actions row", () => {
   const app = read("../webview-ui/agent-manager/AgentManagerApp.tsx")
+  const actions = read("../webview-ui/agent-manager/session-actions.tsx")
 
   expect(app).toContain("row={sessionActions}")
-  expect(app).toContain("rowWhenEmpty={!!transfer.branch() || (!!selection() && selection() !== LOCAL)}")
-  expect(app).toContain("onNewWorktree={handleCreateWorktree}")
-  expect(app).toContain("onMoveToWorktree=")
-  expect(app).toContain("onConfigureWorktree={() => showNewWorktreeDialog()}")
-  expect(app).toContain("onNewWorktreeFromBranch={(branch) => createWorktreeNow(branch)}")
+  expect(app).toContain("rowWhenEmpty={() => !!transfer.branch() || (!!selection() && selection() !== LOCAL)}")
+  expect(app).toContain("onNewWorktree: handleCreateWorktree")
+  expect(app).toContain("onMoveToWorktree:")
+  expect(app).toContain("onConfigureWorktree: () => showNewWorktreeDialog()")
+  expect(app).toContain("onNewWorktreeFromBranch: (branch) => createWorktreeNow(branch)")
+  expect(actions).toContain("<SessionActionsRow")
+  expect(actions).toContain("onMoveToWorktree=")
 })
 
 test("the shared row shows Move to Worktree only with a known branch", () => {
@@ -25,8 +28,9 @@ test("the shared row shows Move to Worktree only with a known branch", () => {
 
 test("the Agent Manager row needs a git repository and clears a stale branch on a project switch", () => {
   const app = read("../webview-ui/agent-manager/AgentManagerApp.tsx")
+  const actions = read("../webview-ui/agent-manager/session-actions.tsx")
 
-  expect(app).toContain("branch={isGitRepo() ? transfer.branch() : undefined}")
+  expect(actions).toContain("deps.isGitRepo() ? deps.branch() : undefined")
   expect(app).toContain("transfer.clear()")
 })
 

@@ -9,6 +9,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../../context/language"
 import type { GoalSource } from "../../../v2/goal"
+import { useViewActive } from "../../../v2/view-active"
 
 interface GoalDockProps {
   source: GoalSource
@@ -22,6 +23,7 @@ interface GoalDockProps {
 
 export function useGoalDock(props: GoalDockProps) {
   const language = useLanguage()
+  const viewActive = useViewActive()
   const goal = props.source.goal
   const working = props.working
   const actions = props.actions
@@ -56,6 +58,7 @@ export function useGoalDock(props: GoalDockProps) {
     const caption = text()
     if (!running() || !container || !content || !control || !caption || typeof ResizeObserver === "undefined") return
     const measure = () => {
+      if (!viewActive()) return
       const icon = control.querySelector('[data-component="icon"]')
       if (!icon) return
       const css = getComputedStyle(control)

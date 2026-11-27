@@ -16,10 +16,14 @@ concurrency:
 permissions:
   contents: read
 
+# Push and manual runs restore no cache: `install:alpha` installs the `build` artifact of a push run. Pull request
+# runs keep the caches; what they save stays in the pull request's own cache scope. `macos` saves the macOS Bun
+# dependency cache on push (`cache: save`, a fresh install); check.yml `check` saves the Linux one.
+
 jobs:
   workflows:
     name: workflow allowlist
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 5
     steps:
       - name: Checkout repository
@@ -29,6 +33,7 @@ jobs:
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: package.json
+          no-cache: ${{ github.event_name != 'pull_request' }}
 
       - name: Check workflow allowlist
         run: bun script/check-workflows.ts
@@ -44,28 +49,25 @@ jobs:
       matrix:
         include:
           - target: linux-x64
-            host: ubuntu-24.04
+            host: blacksmith-4vcpu-ubuntu-2404
           - target: darwin-arm64
-            host: macos-15
+            host: blacksmith-6vcpu-macos-15
     runs-on: ${{ matrix.host }}
     timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      # Push and manual runs build from a clean state (see the note at the top).
       - name: Setup Bun and install dependencies
         uses: ./.github/actions/setup-bun
+        with:
+          cache: ${{ github.event_name == 'pull_request' }}
 
       # Linux targets compile the bundled Bubblewrap sandbox helper with Zig.
       - name: Setup Zig for Linux sandbox helpers
         if: runner.os == 'Linux'
-        run: |
-          curl --fail --location --retry 3 \
-            https://ziglang.org/download/0.14.0/zig-linux-x86_64-0.14.0.tar.xz \
-            --output "$RUNNER_TEMP/zig.tar.xz"
-          echo "473ec26806133cf4d1918caf1a410f8403a13d979726a9045b421b685031a982  $RUNNER_TEMP/zig.tar.xz" | sha256sum --check --status
-          tar -xJf "$RUNNER_TEMP/zig.tar.xz" -C "$RUNNER_TEMP"
-          echo "$RUNNER_TEMP/zig-linux-x86_64-0.14.0" >> "$GITHUB_PATH"
+        uses: ./.github/actions/setup-zig
 
       - name: Build the Kilo host
         working-directory: packages/kilo-cli
@@ -98,7 +100,7 @@ jobs:
   # Linux and Windows, where they already run, and cost about 3x more on the macOS runner.
   macos:
     name: macOS platform tests
-    runs-on: macos-15
+    runs-on: blacksmith-6vcpu-macos-15
     timeout-minutes: 15
     defaults:
       run:
@@ -109,6 +111,8 @@ jobs:
 
       - name: Setup Bun and install dependencies
         uses: ./.github/actions/setup-bun
+        with:
+          cache: ${{ github.event_name == 'pull_request' && 'true' || 'save' }}
 
       # macOS ships Bash 3.2, but some upstream shell fixtures use process substitution and function
       # compound syntax that need Bash 5, which the Linux runners have. Install it and use it for the
@@ -142,7 +146,7 @@ jobs:
 
   shared:
     name: shared upstream patches
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 10
     steps:
       - name: Checkout repository
@@ -157,6 +161,7 @@ jobs:
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: package.json
+          no-cache: ${{ github.event_name != 'pull_request' }}
 
       - name: Check kilocode_change markers in shared upstream files
         run: bun script/check-opencode-annotations.ts
@@ -174,7 +179,7 @@ jobs:
   # `progress-commit` regenerates the map on v2 and opens or updates the bot PR.
   progress:
     name: migration progress map
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 10
     steps:
       - name: Checkout repository
@@ -192,6 +197,7 @@ jobs:
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: package.json
+          no-cache: ${{ github.event_name != 'pull_request' }}
 
       - name: Check generated map files in the PR
         if: github.event_name == 'pull_request'
@@ -221,7 +227,7 @@ jobs:
     name: migration progress map commit
     if: github.event_name == 'push' && github.ref == 'refs/heads/v2'
     needs: progress
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 10
     concurrency:
       group: kilo-v2-progress-map
@@ -245,11 +251,15 @@ jobs:
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: package.json
+          no-cache: true # job holds write scopes and the maintainer app secrets
 
       # A PR created with the workflow GITHUB_TOKEN does not start its own checks. When the Kilo maintainer
       # app secrets are present, this step makes the bot PR an app-authored PR so the `progress` guard runs
       # on it. Without them the job falls back to the workflow token and the bot PR stays unvalidated. The
-      # action keeps its upstream input names; the values are the Kilo maintainer app secrets.
+      # action keeps its upstream input names; the values are the Kilo maintainer app secrets. The token covers
+      # only this repository: contents to push the bot branch, pull requests to open, edit, close, review-dismiss
+      # and auto-merge the bot PR, workflows because the force-push moves the branch onto a v2 tip whose commits
+      # can change workflow files, which GitHub refuses for an app token without it.
       - name: Setup Git Committer
         id: committer
         if: env.HAS_MAINTAINER_APP == 'true'
@@ -257,6 +267,10 @@ jobs:
         with:
           opencode-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
           opencode-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
+          repositories: kilocode
+          permission-contents: write
+          permission-pull-requests: write
+          permission-workflows: write
 
       - name: Open or update the progress map PR
         env:
@@ -359,17 +373,20 @@ jobs:
     # Same-repository feature pull requests only: a fork PR gets a read-only token and cannot comment,
     # and the map bot PR's own body already carries the delta.
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref != 'progress-map-update'
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 10
     permissions:
       contents: read
       pull-requests: write
     steps:
+      # The steps below need no git credentials: fetches of this public repository work without them, and the
+      # comment uses the workflow token through GH_TOKEN.
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           filter: blob:none
+          persist-credentials: false
 
       - name: Fetch the pinned v1 target
         run: git fetch --filter=blob:none --no-tags origin main
@@ -378,6 +395,7 @@ jobs:
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: package.json
+          no-cache: true # job holds pull-requests: write
 
       - name: Compare the progress map with the base branch
         env:
@@ -412,7 +430,7 @@ jobs:
 
   upstream-tooling:
     name: upstream sync tooling tests
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 10
     defaults:
       run:
@@ -429,6 +447,7 @@ jobs:
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: package.json
+          no-cache: ${{ github.event_name != 'pull_request' }}
 
       - name: Install
         run: bun install --frozen-lockfile
@@ -445,7 +464,7 @@ jobs:
 
   kilo-packages:
     name: kilo packages
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
     steps:
       - name: Checkout repository
@@ -455,6 +474,8 @@ jobs:
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
+        with:
+          cache: ${{ github.event_name == 'pull_request' }}
 
       - name: Test Kilo metric gates
         working-directory: script/kilocode/metrics
@@ -475,20 +496,17 @@ jobs:
       # The Linux sandbox tests need Bubblewrap and unprivileged user namespaces, which Ubuntu 24.04 restricts with
       # AppArmor by default. Build the same static Bubblewrap the release ships and point the sandbox at it.
       - name: Setup Zig for the Linux sandbox helper
-        run: |
-          curl --fail --location --retry 3 \
-            https://ziglang.org/download/0.14.0/zig-linux-x86_64-0.14.0.tar.xz \
-            --output "$RUNNER_TEMP/zig.tar.xz"
-          echo "473ec26806133cf4d1918caf1a410f8403a13d979726a9045b421b685031a982  $RUNNER_TEMP/zig.tar.xz" | sha256sum --check --status
-          tar -xJf "$RUNNER_TEMP/zig.tar.xz" -C "$RUNNER_TEMP"
-          echo "$RUNNER_TEMP/zig-linux-x86_64-0.14.0" >> "$GITHUB_PATH"
+        uses: ./.github/actions/setup-zig
 
       - name: Build Bubblewrap and allow user namespaces
         run: |
           bun packages/kilo-cli/script/kilocode/bubblewrap.ts --arch x64 --output "$RUNNER_TEMP/bwrap"
           echo "KILO_BWRAP_PATH=$RUNNER_TEMP/bwrap" >> "$GITHUB_ENV"
           echo "KILO_REQUIRE_LINUX_SANDBOX=1" >> "$GITHUB_ENV"
-          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          # Only kernels with Ubuntu's AppArmor user namespace restriction expose this switch.
+          if [[ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]]; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
 
       - name: Test the Kilo sandbox engine
         working-directory: packages/kilo-sandbox
@@ -559,7 +577,7 @@ jobs:
       - upstream-tooling
       - kilo-packages
     if: always()
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 5
     steps:
       - name: Verify the Kilo v2 jobs passed

@@ -2,7 +2,7 @@
 // install-chromium` for the Chromium the bundled Playwright backend drives.
 import { Argument, Flag } from "effect/cli"
 import { Spec } from "@opencode/cli/framework/spec"
-import { DefaultPort } from "./protocol"
+import { DefaultPort } from "./defaults"
 
 export const KiloBrowserCommands = Spec.make("browser", {
   description: "Browser bridge utilities",

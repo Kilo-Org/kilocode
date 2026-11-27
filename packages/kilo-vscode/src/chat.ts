@@ -649,13 +649,11 @@ export function html(input: {
   globals?: Record<string, unknown>
 }) {
   const nonce = randomBytes(16).toString("hex")
-  // The Settings, Profile and Marketplace panels load an ES module that imports its lazy tab chunks from the webview
-  // origin.
-  const module = input.view === "settings" || input.view === "profile" || input.view === "marketplace"
+  // Every webview bundle is an ES module that loads its shared and lazy chunks from the webview origin.
   const policy = [
     "default-src 'none'",
     `style-src 'unsafe-inline' ${input.csp}`,
-    `script-src 'nonce-${nonce}'${module ? " 'strict-dynamic'" : ""} 'wasm-unsafe-eval'`,
+    `script-src 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'`,
     // Worker scripts must be same-origin, so the webview starts them from blob URLs of the fetched scripts.
     `worker-src ${input.csp} blob:`,
     `font-src ${input.csp}`,
@@ -712,7 +710,7 @@ export function html(input: {
 <body>
 <div id="root" data-directory="${escape(input.directory)}" data-view="${input.view ?? "chat"}"></div>
 <script nonce="${nonce}">${script}</script>
-<script nonce="${nonce}"${module ? ' type="module"' : ""} src="${input.script}"></script>
+<script nonce="${nonce}" type="module" src="${input.script}"></script>
 </body>
 </html>`
 }

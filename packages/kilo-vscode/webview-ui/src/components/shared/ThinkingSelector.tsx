@@ -14,6 +14,7 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../context/language"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 import { createTypeahead, isTypeaheadChar } from "../../utils/typeahead"
+import { useViewActive } from "../../v2/view-active"
 
 // ---------------------------------------------------------------------------
 // Reusable base component
@@ -109,8 +110,9 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
     if (rows().length === 0) return
     onOpen(true)
   }
+  const viewActive = useViewActive()
   createEffect(() => {
-    if (props.blocked) {
+    if (props.blocked || !viewActive()) {
       setOpen(false)
       return
     }

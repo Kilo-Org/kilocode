@@ -85,7 +85,11 @@ const move = (event: PointerEvent) => {
 export function registerPromptMentionDrop(
   element: HTMLElement | undefined,
   insert: ((drop: PromptMentionDrop) => boolean) | undefined,
+  expected?: HTMLElement,
 ) {
+  // When cached views swap active state, cleanup of the outgoing view may run
+  // after the incoming view has already registered. Only clear if still owning.
+  if (!element && expected && target && target.element !== expected) return
   target = element && insert ? { element, insert } : undefined
   if (target) return
   // Unmounting mid-drag must not leak the pointer listener or the active drop.

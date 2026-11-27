@@ -244,8 +244,10 @@
   text-align: center;
 }
 
-/* One stacked browser panel per scope. Inactive scopes stay mounted but hidden
-   so their iframe keeps the loaded page across context switches. */
+/* One stacked browser panel per scope. Scopes stay stacked in place behind
+   the opaque active panel (non-inherited opacity + z-index only) so switching
+   avoids style/AX reserialization and keeps the last painted frame; StreamViewport
+   detects opacity:0 via checkVisibility({ checkOpacity: true }) to pause streaming. */
 .am-browser-cache {
   position: absolute;
   inset: 0;
@@ -253,16 +255,13 @@
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+  contain: strict;
   opacity: 0;
-  content-visibility: hidden;
-  pointer-events: none;
   z-index: 0;
   background: var(--surface-base);
 }
 
 .am-browser-cache-active {
   opacity: 1;
-  content-visibility: visible;
-  pointer-events: auto;
   z-index: 2;
 }

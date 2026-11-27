@@ -22,10 +22,12 @@ export function promptFocusAllowed(input: {
   return !((!input.force && input.ownsRegion) || input.popup || input.textControl || input.selection)
 }
 
+const HIDDEN_SLOT = "[inert], .am-chat-wrapper-hidden, .am-side-host-hidden"
+
 /** Return whether the visible question dock has an enabled option to focus. */
 export function hasQuestionOption(root: ParentNode = document): boolean {
   for (const option of root.querySelectorAll<HTMLButtonElement>(QUESTION_OPTION)) {
-    if (!option.disabled && !option.closest("[inert]")) return true
+    if (!option.disabled && !option.closest(HIDDEN_SLOT)) return true
   }
   return false
 }
@@ -33,7 +35,7 @@ export function hasQuestionOption(root: ParentNode = document): boolean {
 /** Focus the first enabled option in the visible question dock, if one exists. */
 export function focusQuestionOption(root: ParentNode = document): boolean {
   const options = [...root.querySelectorAll<HTMLButtonElement>(QUESTION_OPTION)].filter(
-    (option) => !option.disabled && !option.closest("[inert]"),
+    (option) => !option.disabled && !option.closest(HIDDEN_SLOT),
   )
   const option = options.find((item) => item.dataset.picked === "true") ?? options.at(0)
   if (!option) return false
@@ -81,7 +83,7 @@ export const isWritablePrompt = (prompt: HTMLTextAreaElement | undefined): promp
  * inert or aria-hidden prompt stays unreachable and must not be revealed.
  */
 export const isReachablePrompt = (prompt: HTMLTextAreaElement | undefined): prompt is HTMLTextAreaElement =>
-  isWritablePrompt(prompt) && prompt.closest('[inert], [aria-hidden="true"]') === null
+  isWritablePrompt(prompt) && prompt.closest('[inert], [aria-hidden="true"], .am-chat-wrapper-hidden') === null
 
 /**
  * Whether the user holds a text selection outside any text control. Focusing

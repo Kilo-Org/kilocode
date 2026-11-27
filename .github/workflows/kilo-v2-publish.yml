@@ -1,5 +1,5 @@
 name: kilo-v2-publish
-run-name: "${{ github.event_name == 'workflow_dispatch' && (inputs.dry_run && 'publish v2 (dry run)' || 'publish v2') || github.event.pull_request.title }}"
+run-name: "${{ github.event_name == 'workflow_dispatch' && (inputs.oidc_check && 'v2 trusted publishing check' || (inputs.dry_run && 'publish v2 (dry run)' || 'publish v2')) || github.event.pull_request.title }}"
 
 # Publishes the Kilo v2 CLI (packages/kilo-cli) to npm as `@kilocode/cli` with the `kilo-v2` dist-tag. v1 owns the
 # `latest` and `rc` dist-tags of the same packages. The build channel stays `v2` (npm rejects `v2` as a dist-tag because
@@ -23,14 +23,32 @@ run-name: "${{ github.event_name == 'workflow_dispatch' && (inputs.dry_run && 'p
 # package (a second trusted publisher next to v1's `publish.yml`) and the three client packages. Trusted publishing
 # needs an existing package, so the client packages need one first publish with a local npm login.
 #
+# The three publish jobs run in the `release-v2` environment, which accepts only the `v2` branch. Each one also checks
+# the branch in its first step, before it publishes anything. The npm, VS Code Marketplace and Open VSX trusted
+# publishers must be bound to this workflow file and the `release-v2` environment; the binding is done after this
+# change merges.
+#
+# `gh workflow run kilo-v2-publish.yml --ref v2 -f oidc_check=true` only checks VS Code Marketplace trusted publishing
+# from the `release-v2` environment (the `oidc-check` job). It builds and publishes nothing.
+#
 # Pull requests that change the publish flow build every target, smoke test the executables and run a dry-run publish.
 # Pull requests that change the extension publish flow also package and upload the preview VSIXs, without publishing.
+#
+# No job of this workflow restores a cache: setup-bun gets `cache: false` and oven-sh/setup-bun `no-cache: true`, so
+# no job restores a dependency or Bun executable cache that another job saved. Any job of a run can replace one of
+# its artifacts. `build` records the SHA-256 of the transport archive and the exact name, version, filename and
+# npm SHA-512 integrity of every packed file as job outputs. `package-vscode` records the SHA-256 of each VSIX.
 
 on:
   workflow_dispatch:
     inputs:
       dry_run:
         description: "Build, test and pack, but do not publish"
+        required: false
+        type: boolean
+        default: false
+      oidc_check:
+        description: "Only check VS Code Marketplace trusted publishing (no build, no publish)"
         required: false
         type: boolean
         default: false
@@ -47,6 +65,10 @@ on:
       - packages/cli/script/postinstall.mjs
       - script/kilocode/smoke-host.ts
       - script/kilocode/publish-client.ts
+      - script/kilocode/publish-npm.ts
+      - script/kilocode/pack-npm.ts
+      - script/kilocode/npm-tarballs.ts
+      - packages/kilo-cli/test/publish-npm.test.ts
       - script/kilocode/client-manifest.ts
       - script/kilocode/release-env.ts
       - packages/kilo-vscode/package.json
@@ -62,7 +84,7 @@ on:
       - packages/client/package.json
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}${{ inputs.oidc_check && '-oidc-check' || '' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
@@ -75,6 +97,8 @@ env:
 jobs:
   build:
     name: build
+    # Every other job needs this one, so an OIDC check dispatch skips them all.
+    if: ${{ !inputs.oidc_check }}
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 60
     steps:
@@ -83,17 +107,13 @@ jobs:
 
       - name: Setup Bun and install dependencies
         uses: ./.github/actions/setup-bun
+        with:
+          cache: false # the artifact and version feed the publish jobs
 
       # Linux targets compile the bundled Bubblewrap sandbox helper with Zig.
       - name: Setup Zig for Linux sandbox helpers
         if: runner.os == 'Linux'
-        run: |
-          curl --fail --location --retry 3 \
-            https://ziglang.org/download/0.14.0/zig-linux-x86_64-0.14.0.tar.xz \
-            --output "$RUNNER_TEMP/zig.tar.xz"
-          echo "473ec26806133cf4d1918caf1a410f8403a13d979726a9045b421b685031a982  $RUNNER_TEMP/zig.tar.xz" | sha256sum --check --status
-          tar -xJf "$RUNNER_TEMP/zig.tar.xz" -C "$RUNNER_TEMP"
-          echo "$RUNNER_TEMP/zig-linux-x86_64-0.14.0" >> "$GITHUB_PATH"
+        uses: ./.github/actions/setup-zig
 
       # All targets on one runner. Bun cross-compiles, and the build installs the native packages of every target.
       # The version is 0.0.0-v2-<run number>.
@@ -105,32 +125,20 @@ jobs:
         id: version
         run: echo "version=$(jq -r .version packages/kilo-cli/dist/cli-linux-x64/package.json)" >> "$GITHUB_OUTPUT"
 
-      # A tarball keeps the executable bit, which a zipped artifact loses.
-      - name: Archive CLI
-        working-directory: packages/kilo-cli/dist
-        run: tar -czf "$GITHUB_WORKSPACE/kilo-v2-npm.tar.gz" cli-*
-
-      - name: Upload CLI artifact
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          path: kilo-v2-npm.tar.gz
-          archive: false
-          if-no-files-found: error
-          retention-days: 7
-
-      # Checks the npm package contents on every run. It comes after the upload, so the artifact has no tarballs.
-      - name: Pack (dry run)
-        working-directory: packages/kilo-cli
-        run: bun run script/publish.ts --dry-run
+      - name: Pack and dry-run the final npm files
         env:
           KILO_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          mkdir npm-release
+          bun packages/kilo-cli/script/publish.ts npm-release
+          bun script/kilocode/publish-client.ts npm-release
 
       # The launcher's postinstall script comes from upstream (packages/cli/script/postinstall.mjs). Installing the packed
       # packages with npm fails here when an upstream sync changes how it finds the binary.
       - name: Install the packed CLI with npm
         run: |
           prefix="$(mktemp -d)"
-          npm install --prefix "$prefix" --no-audit --no-fund packages/kilo-cli/dist/cli-linux-x64/*.tgz packages/kilo-cli/dist/cli/*.tgz
+          npm install --prefix "$prefix" --no-audit --no-fund "$PWD/npm-release/kilocode-cli-linux-x64-$KILO_VERSION.tgz" "$PWD/npm-release/kilocode-cli-$KILO_VERSION.tgz"
           test "$("$prefix/node_modules/.bin/kilo2" --version)" = "kilo2 v$KILO_VERSION"
           # v2 must not install a `kilo` command, which would start v2 for v1 users.
           test ! -e "$prefix/node_modules/.bin/kilo"
@@ -139,12 +147,28 @@ jobs:
         env:
           KILO_VERSION: ${{ steps.version.outputs.version }}
 
-      - name: Pack client packages (dry run)
-        run: bun script/kilocode/publish-client.ts --dry-run
+      - name: Bind the tested files to build outputs
+        id: archive
         env:
           KILO_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          inventory="$(bun script/kilocode/npm-tarballs.ts npm-release "$KILO_VERSION")"
+          echo "inventory=$inventory" >> "$GITHUB_OUTPUT"
+          tar -cf kilo-v2-npm.tar -C npm-release .
+          echo "sha256=$(shasum -a 256 kilo-v2-npm.tar | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload npm tarballs
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: kilo-v2-npm.tar
+          archive: false
+          overwrite: true
+          if-no-files-found: error
+          retention-days: 7
     outputs:
       version: ${{ steps.version.outputs.version }}
+      npm_sha256: ${{ steps.archive.outputs.sha256 }}
+      npm_inventory: ${{ steps.archive.outputs.inventory }}
 
   smoke:
     name: smoke (${{ matrix.target }})
@@ -154,11 +178,11 @@ jobs:
       matrix:
         include:
           - target: linux-x64
-            host: ubuntu-24.04
+            host: blacksmith-4vcpu-ubuntu-2404
           - target: linux-arm64
-            host: ubuntu-24.04-arm
+            host: blacksmith-4vcpu-ubuntu-2404-arm
           - target: darwin-arm64
-            host: macos-15
+            host: blacksmith-6vcpu-macos-15
           - target: darwin-x64
             host: macos-15-intel
     runs-on: ${{ matrix.host }}
@@ -167,44 +191,68 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Setup Bun
+      - &setup-bun-only
+        name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: package.json
+          no-cache: true # a job of the publish run restores no cache
 
-      - name: Download CLI artifact
+      - &download-npm
+        name: Download packed npm release
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: kilo-v2-npm.tar.gz
+          name: kilo-v2-npm.tar
           path: ${{ runner.temp }}
           skip-decompress: true
 
-      - name: Unpack CLI
-        run: mkdir -p dist && tar -xzf "$RUNNER_TEMP/kilo-v2-npm.tar.gz" -C dist
+      - &verify-npm-archive
+        name: Verify npm archive before extraction
+        env:
+          EXPECTED: ${{ needs.build.outputs.npm_sha256 }}
+        run: |
+          actual="$(shasum -a 256 "$RUNNER_TEMP/kilo-v2-npm.tar" | cut -d ' ' -f 1)"
+          if [ -z "$EXPECTED" ] || [ "$actual" != "$EXPECTED" ]; then
+            echo "::error::kilo-v2-npm.tar has digest $actual; the build job recorded ${EXPECTED:-none}"
+            exit 1
+          fi
+
+      - name: Unpack the target's npm file
+        env:
+          KILO_VERSION: ${{ needs.build.outputs.version }}
+        run: tar -xOf "$RUNNER_TEMP/kilo-v2-npm.tar" "./kilocode-cli-${{ matrix.target }}-$KILO_VERSION.tgz" | tar -xz
 
       - name: Check the Kilo host
-        run: bun script/kilocode/smoke-host.ts dist/cli-${{ matrix.target }}/bin/kilo2
+        run: bun script/kilocode/smoke-host.ts package/bin/kilo2
 
   smoke-windows:
     name: smoke (windows-x64)
     needs: build
-    runs-on: windows-2025
+    runs-on: blacksmith-4vcpu-windows-2025
     timeout-minutes: 15
     steps:
-      - name: Download CLI artifact
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: kilo-v2-npm.tar.gz
-          path: ${{ runner.temp }}
-          skip-decompress: true
+      - *download-npm
+
+      - name: Verify CLI artifact
+        shell: pwsh
+        env:
+          EXPECTED: ${{ needs.build.outputs.npm_sha256 }}
+        run: |
+          $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $env:RUNNER_TEMP 'kilo-v2-npm.tar')).Hash.ToLowerInvariant()
+          if (-not $env:EXPECTED -or $actual -cne $env:EXPECTED) {
+            Write-Output "::error::kilo-v2-npm.tar has digest $actual; the build job recorded $env:EXPECTED"
+            exit 1
+          }
 
       - name: Unpack CLI
         shell: bash
-        run: mkdir -p dist && tar --force-local -xzf "$RUNNER_TEMP/kilo-v2-npm.tar.gz" -C dist
+        env:
+          KILO_VERSION: ${{ needs.build.outputs.version }}
+        run: tar --force-local -xOf "$RUNNER_TEMP/kilo-v2-npm.tar" "./kilocode-cli-windows-x64-$KILO_VERSION.tgz" | tar -xz
 
       - name: Check the Kilo host version
         shell: bash
-        run: test "$(dist/cli-windows-x64/bin/kilo2.exe --version)" = "kilo2 v${{ needs.build.outputs.version }}"
+        run: test "$(package/bin/kilo2.exe --version)" = "kilo2 v${{ needs.build.outputs.version }}"
 
   publish:
     name: publish to npm
@@ -214,6 +262,7 @@ jobs:
       - smoke-windows
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/v2'
     runs-on: ubuntu-24.04
+    environment: release-v2
     timeout-minutes: 30
     concurrency:
       group: kilo-v2-publish-npm
@@ -222,13 +271,19 @@ jobs:
       contents: read
       id-token: write
     steps:
+      - name: Require v2
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/v2" ]; then
+            echo "::error::Run the v2 publish workflow from v2 (got $GITHUB_REF). Nothing was published."
+            exit 1
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - name: Setup Bun and install dependencies
-        uses: ./.github/actions/setup-bun
+      - *setup-bun-only
 
       # npm trusted publishing needs npm 11.5.1 or later, which Node 24 includes.
       - name: Setup Node for npm
@@ -238,21 +293,17 @@ jobs:
           registry-url: "https://registry.npmjs.org"
           package-manager-cache: false
 
-      - name: Download CLI artifact
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: kilo-v2-npm.tar.gz
-          path: ${{ runner.temp }}
-          skip-decompress: true
-
-      - name: Unpack CLI
-        run: mkdir -p packages/kilo-cli/dist && tar -xzf "$RUNNER_TEMP/kilo-v2-npm.tar.gz" -C packages/kilo-cli/dist
+      - *download-npm
+      - *verify-npm-archive
+      - &unpack-npm
+        name: Unpack npm release
+        run: mkdir npm-release && tar -xf "$RUNNER_TEMP/kilo-v2-npm.tar" -C npm-release
 
       - name: Publish
-        working-directory: packages/kilo-cli
-        run: bun run script/publish.ts ${{ inputs.dry_run && '--dry-run' || '' }}
-        env:
+        run: bun script/kilocode/publish-npm.ts cli npm-release ${{ inputs.dry_run && '--dry-run' || '' }}
+        env: &publish-npm-env
           KILO_VERSION: ${{ needs.build.outputs.version }}
+          NPM_INVENTORY: ${{ needs.build.outputs.npm_inventory }}
           NPM_CONFIG_PROVENANCE: true
 
       - name: Summary
@@ -274,6 +325,7 @@ jobs:
       - smoke-windows
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/v2'
     runs-on: ubuntu-24.04
+    environment: release-v2
     timeout-minutes: 20
     concurrency:
       group: kilo-v2-publish-npm-client
@@ -282,13 +334,19 @@ jobs:
       contents: read
       id-token: write
     steps:
+      - name: Require v2
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/v2" ]; then
+            echo "::error::Run the v2 publish workflow from v2 (got $GITHUB_REF). Nothing was published."
+            exit 1
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - name: Setup Bun and install dependencies
-        uses: ./.github/actions/setup-bun
+      - *setup-bun-only
 
       - name: Setup Node for npm
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -297,11 +355,13 @@ jobs:
           registry-url: "https://registry.npmjs.org"
           package-manager-cache: false
 
+      - *download-npm
+      - *verify-npm-archive
+      - *unpack-npm
+
       - name: Publish
-        run: bun script/kilocode/publish-client.ts ${{ inputs.dry_run && '--dry-run' || '' }}
-        env:
-          KILO_VERSION: ${{ needs.build.outputs.version }}
-          NPM_CONFIG_PROVENANCE: true
+        run: bun script/kilocode/publish-npm.ts client npm-release ${{ inputs.dry_run && '--dry-run' || '' }}
+        env: *publish-npm-env
 
       - name: Summary
         if: ${{ !inputs.dry_run }}
@@ -318,11 +378,8 @@ jobs:
     name: package VS Code extension
     needs: build
     if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/v2')
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 45
-    concurrency:
-      group: kilo-v2-package-vscode
-      cancel-in-progress: false
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -331,6 +388,8 @@ jobs:
 
       - name: Setup Bun and install dependencies
         uses: ./.github/actions/setup-bun
+        with:
+          cache: false # the VSIX artifacts feed publish-vscode
 
       - name: Verify the extension
         working-directory: packages/kilo-vscode
@@ -338,17 +397,20 @@ jobs:
           bun run typecheck
           bun run lint
 
-      - name: Download CLI artifact
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: kilo-v2-npm.tar.gz
-          path: ${{ runner.temp }}
-          skip-decompress: true
+      - *download-npm
+      - *verify-npm-archive
+      - *unpack-npm
 
       - name: Unpack CLI
+        env:
+          KILO_VERSION: ${{ needs.build.outputs.version }}
         run: |
-          mkdir -p packages/kilo-cli/dist
-          tar -xzf "$RUNNER_TEMP/kilo-v2-npm.tar.gz" -C packages/kilo-cli/dist
+          for target in $VSIX_TARGETS; do
+            pkg="cli-${target/win32/windows}"
+            dest="packages/kilo-cli/dist/$pkg"
+            mkdir -p "$dest"
+            tar -xzf "npm-release/kilocode-$pkg-$KILO_VERSION.tgz" -C "$dest" --strip-components=1
+          done
 
       - name: Package preview VSIXs
         working-directory: packages/kilo-vscode
@@ -363,6 +425,18 @@ jobs:
             unzip -tq "out/kilo-vscode-$target.vsix" extension/bin/tree-sitter/tree-sitter.wasm
           done
 
+      # One `<sha256>  <file>` line per VSIX, sorted by file name. publish-vscode compares its download with it.
+      - name: Record VSIX digests
+        id: vsix-digest
+        working-directory: packages/kilo-vscode/out
+        run: |
+          set -euo pipefail
+          {
+            echo "sha256<<KILO_VSIX_SHA256"
+            shasum -a 256 -- *.vsix | LC_ALL=C sort -k 2
+            echo "KILO_VSIX_SHA256"
+          } >> "$GITHUB_OUTPUT"
+
       # Keep the packages for the publish job and for inspection when a later publish fails.
       - name: Upload VSIX artifacts
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -372,6 +446,8 @@ jobs:
           if-no-files-found: error
           overwrite: true
           retention-days: 7
+    outputs:
+      vsix_sha256: ${{ steps.vsix-digest.outputs.sha256 }}
 
   # Publishes the packaged VSIXs on a `v2` dispatch after the CLI smoke tests pass. The extension is a separate
   # id from v1, so users keep Kilo Code v1 installed and opt into the preview. Windows and macOS binary signing
@@ -384,11 +460,22 @@ jobs:
       - smoke-windows
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/v2'
     runs-on: ubuntu-24.04
+    environment: release-v2
     timeout-minutes: 20
     concurrency:
       group: kilo-v2-publish-vscode
       cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
     steps:
+      - name: Require v2
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/v2" ]; then
+            echo "::error::Run the v2 publish workflow from v2 (got $GITHUB_REF). Nothing was published."
+            exit 1
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -396,6 +483,8 @@ jobs:
 
       - name: Setup Bun and install dependencies
         uses: ./.github/actions/setup-bun
+        with:
+          cache: false # job holds id-token: write
 
       - name: Download VSIX artifacts
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -403,26 +492,34 @@ jobs:
           name: kilo-vscode-preview
           path: packages/kilo-vscode/out
 
+      - name: Verify VSIX artifacts
+        working-directory: packages/kilo-vscode/out
+        env:
+          EXPECTED: ${{ needs.package-vscode.outputs.vsix_sha256 }}
+        run: |
+          actual="$(shasum -a 256 -- *.vsix | LC_ALL=C sort -k 2)"
+          if [ -z "$EXPECTED" ] || [ "$actual" != "$EXPECTED" ]; then
+            echo "::error::The downloaded VSIXs do not match the digests package-vscode recorded. Nothing was published."
+            printf 'expected:\n%s\nactual:\n%s\n' "$EXPECTED" "$actual"
+            exit 1
+          fi
+
       - name: Publish to VS Code Marketplace
         if: ${{ !inputs.dry_run }}
         working-directory: packages/kilo-vscode
-        env:
-          VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
         run: |
           set -euo pipefail
           for target in $VSIX_TARGETS; do
-            npx --no-install @vscode/vsce publish --pre-release --skip-duplicate --packagePath "out/kilo-vscode-$target.vsix"
+            npx --no-install @vscode/vsce publish --oidc --pre-release --skip-duplicate --packagePath "out/kilo-vscode-$target.vsix"
           done
 
       - name: Publish to Open VSX
         if: ${{ !inputs.dry_run }}
         working-directory: packages/kilo-vscode
-        env:
-          OVSX_PAT: ${{ secrets.OVSX_TOKEN }}
         run: |
           set -euo pipefail
           for target in $VSIX_TARGETS; do
-            npx --no-install ovsx publish --pre-release --skip-duplicate --packagePath "out/kilo-vscode-$target.vsix"
+            npx --no-install ovsx publish --trusted-publishing --pre-release --skip-duplicate --packagePath "out/kilo-vscode-$target.vsix"
           done
 
       - name: Summary
@@ -433,3 +530,85 @@ jobs:
             echo ""
             echo "Install: \`code --install-extension kilocode.kilo-code-v2 --pre-release\`"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # Checks the VS Code Marketplace trusted publishing policy from the `release-v2` environment without building or
+  # publishing: it exchanges the job's OIDC token for a Marketplace credential and checks that the credential may
+  # publish as `kilocode`. It runs only curl and jq from the runner image, no third-party packages.
+  oidc-check:
+    name: check Marketplace trusted publishing
+    if: inputs.oidc_check && github.repository == 'Kilo-Org/kilocode'
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    environment: release-v2
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Require v2
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/v2" ]; then
+            echo "::error::Run the v2 publish workflow from v2 (got $GITHUB_REF). Nothing was published."
+            exit 1
+          fi
+
+      - name: Exchange OIDC token and verify publisher access
+        run: |
+          set -euo pipefail
+          umask 077
+          # Tokens go to curl through --config on stdin, never on its command line.
+          oidc="$(curl --fail --silent --show-error --get --config - \
+            --header "Accept: application/json" \
+            --data-urlencode "audience=marketplace.visualstudio.com" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL" <<EOF | jq -r '.value // empty'
+          header = "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN"
+          EOF
+          )"
+          if [ -z "$oidc" ]; then
+            echo "::error::GitHub returned no OIDC token"
+            exit 1
+          fi
+          echo "::add-mask::$oidc"
+          echo "OIDC token received"
+
+          body="$RUNNER_TEMP/marketplace-token.json"
+          status="$(curl --silent --show-error --output "$body" --write-out '%{http_code}' \
+            --request POST --config - \
+            --header "Accept: application/json" \
+            --header "Content-Type: application/json" \
+            --header "User-Agent: vsce" \
+            --data '{"publisherName":"kilocode"}' \
+            "https://marketplace.visualstudio.com/_apis/gallery/token?api-version=7.2-preview.1" <<EOF
+          header = "Authorization: FederatedToken $oidc"
+          EOF
+          )"
+          echo "Marketplace token exchange: HTTP $status"
+          credential="$(jq -r '.credential // empty' "$body" 2>/dev/null || true)"
+          if [ "$status" != "200" ] || [ -z "$credential" ]; then
+            message="$(jq -j '.message // empty' "$body" 2>/dev/null | tr '\r\n' '  ' | cut -c1-300 || true)"
+            rm -f "$body"
+            echo "::error::Marketplace returned no credential${message:+: $message}"
+            exit 1
+          fi
+          rm -f "$body"
+          echo "::add-mask::$credential"
+          echo "credential received"
+
+          # The same request as `vsce verify-pat kilocode` (vsce 4.1.0): the publisher's role assignments answer 200
+          # when the credential holds any role on it (Creator, Owner, Contributor, Reader) and 403 otherwise.
+          roles="$RUNNER_TEMP/marketplace-roles.json"
+          status="$(curl --silent --show-error --output "$roles" --write-out '%{http_code}' --config - \
+            --header "Accept: application/json;api-version=3.2-preview.1" \
+            --header "User-Agent: vsce" \
+            "https://marketplace.visualstudio.com/_apis/securityroles/scopes/gallery.publisher/roleassignments/resources/kilocode" <<EOF
+          user = "OAuth:$credential"
+          EOF
+          )"
+          echo "Marketplace publisher role check: HTTP $status"
+          if [ "$status" != "200" ]; then
+            message="$(jq -j '.message // empty' "$roles" 2>/dev/null | tr '\r\n' '  ' | cut -c1-300 || true)"
+            rm -f "$roles"
+            echo "::error::The Marketplace credential has no role on publisher kilocode${message:+: $message}"
+            exit 1
+          fi
+          rm -f "$roles"
+          echo "The Marketplace credential may publish as kilocode"

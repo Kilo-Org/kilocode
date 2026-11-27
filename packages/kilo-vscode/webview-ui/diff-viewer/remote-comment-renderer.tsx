@@ -20,6 +20,7 @@ import type { PRComment, PRReactionContent } from "../agent-manager/pr/pr-types"
 import type { PRTarget } from "../../src/shared/pr-comment-actions"
 import { useBridge } from "../agent-manager/v2/vscode"
 import { useLanguage } from "../src/context/language"
+import { useViewActive } from "../src/v2/view-active"
 import { sendPRComment } from "../agent-manager/pr/pr-actions"
 import type { AnnotationMeta } from "./review-annotations"
 import type { WorktreeFileDiff } from "../src/types/messages/agent-manager"
@@ -383,6 +384,7 @@ export function createRemoteFocus(
   pending?: (file?: string) => void,
   scroll?: { root: () => HTMLElement | undefined; to: (offset: number) => void },
 ) {
+  const viewActive = useViewActive()
   let observer: MutationObserver | undefined
   let resize: ResizeObserver | undefined
   let frame: number | undefined
@@ -454,10 +456,11 @@ export function createRemoteFocus(
     }
 
     const update = () => {
-      if (frame !== undefined) return
+      if (!viewActive() || frame !== undefined) return
       frame = requestAnimationFrame(() => {
         frame = requestAnimationFrame(() => {
           frame = undefined
+          if (!viewActive()) return
           settle()
         })
       })

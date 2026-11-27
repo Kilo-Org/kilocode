@@ -1,4 +1,7 @@
 # Source, tests and build tooling are not part of the extension package.
+# `.kilo-dev` holds the `bun run extension` dev server profile: credentials, the session database and browser pairing
+# keys. It sits inside the package root, so vsce would ship it without this rule.
+.kilo-dev/**
 .vscode/**
 .github/**
 node_modules/**
