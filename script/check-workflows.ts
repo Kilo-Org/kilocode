@@ -37,6 +37,7 @@ const active = new Set([
   "community-sweep.yml",
   "community-triage-test.yml",
   "containers.yml",
+  "copy-secrets-to-infisical.yml",
   "dependabot-auto-merge.yml",
   "dependency-submission.yml",
   "docs-build.yml",
