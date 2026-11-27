@@ -57,7 +57,7 @@ The `publish.yml` workflow starts with `version`, which creates the draft releas
 
 ### 4. Publish (`publish`)
 
-Downloads all build artifacts and publishes to every distribution channel, in this order. Every write to the GitHub Release and the checks before publishing it address it by the release id the `version` job recorded; the smoke test and the conda build download assets by tag.
+Downloads all build artifacts and publishes to every distribution channel, in this order. Every write to the GitHub Release and the checks before publishing it address it by the release id the `version` job recorded; the smoke test downloads assets by tag.
 
 #### Release Assets on the Draft
 
@@ -97,10 +97,6 @@ Downloads all build artifacts and publishes to every distribution channel, in th
 
 - Publishes platform-specific VSIX packages to the **VS Code Marketplace** via `vsce publish --oidc`. The `publish` job runs in the `release` GitHub Actions environment, and the `kilocode` publisher trusts `Kilo-Org/kilocode`'s `publish.yml` workflow in that environment, so no Marketplace token is stored.
 - Publishes the same packages to **Open VSX** via `ovsx publish --trusted-publishing`, using GitHub Actions OIDC instead of a PAT.
-
-#### Conda (stable releases and pre-releases)
-
-- **Conda (Anaconda.org)**: Uses [`rattler-build`](https://rattler.build) to repackage the released CLI archives (no compilation) into a `kilo-cli` conda package for `linux-64`, `linux-aarch64`, `osx-64`, `osx-arm64`, and `win-64`, all built from the single Linux publish runner (see the `Build conda package` step in `publish.yml` and the recipe in `packages/opencode/script/kilocode/conda-recipe/`). The built `.conda` files are then uploaded to Anaconda.org via the [`anaconda/actions/upload-package`](https://github.com/anaconda/actions) action, publishing under the `anaconda-cloud` org (same as ana-cli). Runs for both stable releases (`main` label, installed with `conda install -c anaconda-cloud kilo-cli`) and pre-releases (`rc` label, installed with `-c anaconda-cloud/label/rc`; the version is sanitized for conda, e.g. `0.0.0-rc-202609221200` → `0.0.0.rc.202609221200`).
 
 ### Recovering from a Failed `publish` Job
 
@@ -147,7 +143,6 @@ The following secrets must be configured in the repository. The VS Code Marketpl
 | `KILO_MAINTAINER_APP_SECRET` | GitHub App secret for the kilo-maintainer bot |
 | `NPM_TOKEN` | npm authentication token for publishing packages |
 | `AUR_KEY` | SSH private key for pushing to the AUR |
-| `ANACONDA_API_KEY` | Anaconda.org API token for uploading the conda package |
 
 ### Concurrency
 
