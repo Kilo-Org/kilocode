@@ -42,6 +42,24 @@ interface ServerContextValue {
 export const ServerContext = createContext<ServerContextValue>()
 
 const initialDeviceAuth: DeviceAuthState = { status: "idle" }
+const LOGIN_EVENT = "kilo:login"
+
+/**
+ * Intercept `goToLogin()` calls in webviews that do not render ProfileView
+ * (such as Agent Manager), preventing an invisible device-auth flow and
+ * delegating sign-in to the Profile panel instead.
+ */
+export function interceptLogin(
+  handler: () => void,
+  target: Pick<Window, "addEventListener" | "removeEventListener"> = window,
+): () => void {
+  const listener = (event: Event) => {
+    event.preventDefault()
+    handler()
+  }
+  target.addEventListener(LOGIN_EVENT, listener)
+  return () => target.removeEventListener(LOGIN_EVENT, listener)
+}
 
 export const ServerProvider: ParentComponent = (props) => {
   const vscode = useVSCode()
@@ -209,11 +227,14 @@ export const ServerProvider: ParentComponent = (props) => {
    * Route any "Sign In" action through the Profile view so the user always
    * sees the device-auth UI (URL, QR, code, timer, cancel). Entry points
    * outside the Profile page — e.g. the Kilo Gateway card in the Providers
-   * settings tab, or the provider picker — must call this helper instead of
-   * `startLogin()` directly. Otherwise the login flow runs silently and the
-   * user has no way to see the code or cancel if the browser is dismissed.
+   * settings tab, the provider picker, or chat auth errors — must call this
+   * helper instead of `startLogin()` directly. Webviews without an inline
+   * Profile view (such as Agent Manager) intercept `LOGIN_EVENT` via
+   * `interceptLogin()` to open the Profile panel and trigger login there.
    */
   const goToLogin = () => {
+    const event = new CustomEvent(LOGIN_EVENT, { cancelable: true })
+    if (!window.dispatchEvent(event)) return
     window.postMessage({ type: "navigate", view: "profile" }, window.origin)
     startLogin()
   }

@@ -57,6 +57,8 @@ function setup(list: () => Promise<ReturnType<typeof catalog>>, org: () => strin
     fetchAndSendCommands: async () => {},
     fetchAndSendIndexingStatus: async () => {},
     fetchAndSendNotifications: async () => {},
+    seedSessionStatusMap: async () => {},
+    seedSessionWakeups: async () => {},
   })
   const reloads: Promise<void>[] = []
   const reload = internal.reloadAfterAuthChange.bind(internal)
