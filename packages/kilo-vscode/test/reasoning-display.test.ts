@@ -2,8 +2,8 @@ import { describe, expect, test } from "bun:test"
 import { resolveReasoningDisplay } from "../webview-ui/src/v2/reasoning-display"
 
 describe("resolveReasoningDisplay", () => {
-  test("defaults to expanded when no mode is configured", () => {
-    expect(resolveReasoningDisplay({}, undefined)).toBe("expanded")
+  test("defaults to preview when no mode is configured", () => {
+    expect(resolveReasoningDisplay({}, undefined)).toBe("preview")
   })
 
   test("maps the legacy auto_collapse_reasoning boolean", () => {

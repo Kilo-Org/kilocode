@@ -2,21 +2,11 @@
 // a terminal block follows the terminal layout, edit and write follow the code edit layout, a builtin tool with no
 // block of its own stays closed, a Code Mode script follows its own layout, and every other tool (MCP or a plugin
 // tool) follows the MCP layout.
-export type ToolDisplayLayout = "expanded" | "collapsed"
+import { DISPLAY_DEFAULTS, type DisplaySettings } from "../../../src/protocol"
 
-export type ToolDisplaySettings = {
-  terminalCommandDisplay: ToolDisplayLayout
-  codeEditDisplay: ToolDisplayLayout
-  mcpToolDisplay: ToolDisplayLayout
-  codeModeDisplay: ToolDisplayLayout
-}
+export type ToolDisplaySettings = Omit<DisplaySettings, "reasoningDisplay">
 
-export const DEFAULT_TOOL_DISPLAY: ToolDisplaySettings = {
-  terminalCommandDisplay: "expanded",
-  codeEditDisplay: "collapsed",
-  mcpToolDisplay: "collapsed",
-  codeModeDisplay: "collapsed",
-}
+export const DEFAULT_TOOL_DISPLAY: ToolDisplaySettings = DISPLAY_DEFAULTS
 
 const TERMINAL_TOOLS = new Set(["shell", "background_process"])
 const EDIT_TOOLS = new Set(["edit", "write", "patch", "apply_patch"])

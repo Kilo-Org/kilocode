@@ -336,7 +336,7 @@ export function wire(input: {
         })
       : undefined
   // The display layouts are Kilo-only config keys, so the chat reads them through the host when the webview asks,
-  // and again when the config changes. A failed read keeps the v1 defaults.
+  // and again when the config changes. A failed read keeps the built-in defaults.
   const postDisplaySettings = () => {
     void input.server
       .get()
