@@ -6,7 +6,7 @@ import { useLanguage } from "../context/language"
 import { isTextControl } from "../utils/focus"
 import { isEnterKeyCommitNotIme } from "../utils/ime-enter"
 import { useV2 } from "./client"
-import { type Draft, formAnswer } from "./form"
+import { type Draft, formAnswer, usesComposerReply } from "./form"
 import { registerQuestionAnswer } from "./question-answer"
 import { useViewActive } from "./view-active"
 
@@ -33,14 +33,10 @@ export function QuestionDock(props: { form: FormInfo }) {
     const current = field()
     return current?.type === "string" || current?.type === "multiselect" ? (current.options ?? []) : []
   }
-  const composerReply = () => {
-    const value = props.form.metadata?.kilocode
-    return !!value && typeof value === "object" && !Array.isArray(value) && value.composerReply === true
-  }
   const free = () => {
     const current = field()
     const offered = current?.type === "multiselect" || (current?.type === "string" && !!current.options?.length)
-    return !composerReply() && offered && current?.custom === true
+    return !usesComposerReply(props.form) && offered && current?.custom === true
   }
   const value = (current: FormField | undefined = field()) => {
     if (!current || current.type === "external") return undefined

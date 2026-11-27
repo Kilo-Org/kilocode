@@ -1,6 +1,12 @@
-import type { FormAnswer, FormField, FormIntegerField, FormNumberField, FormValue } from "@opencode/client"
+import type { FormAnswer, FormField, FormInfo, FormIntegerField, FormNumberField, FormValue } from "@opencode/client"
 
 export type Draft = Record<string, FormValue | undefined>
+
+/** Whether the form asks the client's main prompt to submit typed answers, hiding the dock's row. */
+export function usesComposerReply(info: FormInfo) {
+  const value = info.metadata?.kilocode
+  return !!value && typeof value === "object" && !Array.isArray(value) && value.composerReply === true
+}
 
 type ValidatedValue = { value: FormValue | undefined } | { error: string }
 
