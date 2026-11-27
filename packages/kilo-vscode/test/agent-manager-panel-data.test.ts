@@ -124,8 +124,10 @@ const server = Bun.serve({
         { _tag: "LocationNotFoundError", location: { directory: MISSING }, message: `Location not found: ${MISSING}` },
         404,
       )
-    if (url.pathname === "/api/location")
-      return json({ directory: ROOT, project: { id: "prj_1", directory: ROOT, canonical: ROOT } })
+    if (url.pathname === "/api/location") {
+      const directory = url.searchParams.get("location[directory]") ?? ROOT
+      return json({ directory, project: { id: "prj_1", directory: ROOT, canonical: ROOT } })
+    }
     if (url.pathname === "/api/vcs")
       return json({ location: { directory: ROOT }, data: { branch: { current: "main", default: "main" } } })
     if (url.pathname === "/api/project")
@@ -254,6 +256,22 @@ describe("targets", () => {
   test("ignores a trailing separator", () => {
     expect(targets(event("session.created", `${WORKTREE}/`), [ROOT, WORKTREE])).toEqual([WORKTREE])
     expect(key(`${ROOT}/`)).toBe(ROOT)
+  })
+
+  test("normalizes Windows backslashes, drive/case variants, and trailing slashes", () => {
+    const winRoot = "c:/users/alice/repo"
+    const winTree = "c:/users/alice/repo/.kilo/worktrees/one"
+    expect(key("C:\\Users\\Alice\\Repo\\")).toBe(winRoot)
+    expect(key("C:\\")).toBe("c:/")
+    expect(key("c:")).toBe("c:/")
+    expect(key("\\\\Server\\Share\\Repo\\")).toBe("//server/share/repo")
+    expect(targets(event("model.updated", "C:\\Users\\Alice\\Repo"), [winRoot, winTree])).toEqual([winRoot])
+    expect(targets(event("provider.updated", "C:\\Users\\Alice\\Repo\\.kilo\\worktrees\\one\\"), [winRoot, winTree])).toEqual([
+      winTree,
+    ])
+    expect(targets(event("model.updated", "c:/users/alice/repo"), ["C:\\Users\\Alice\\Repo"])).toEqual([
+      "C:\\Users\\Alice\\Repo",
+    ])
   })
 
   test("broadcasts events without a location and session moves", () => {
@@ -464,7 +482,7 @@ describe("createAppSession.sendInitial", () => {
 })
 
 describe("createPanelData", () => {
-  test("reads the handshake and catalog once for every store of one connection", async () => {
+  test("reads the handshake once for every store of one connection and catalog status per shown store", async () => {
     requests.length = 0
     const api = OpenCode.make({ baseUrl: `http://127.0.0.1:${server.port}` })
     await createRoot(async (dispose) => {
@@ -474,7 +492,19 @@ describe("createPanelData", () => {
       await until(() => requests.some((item) => item.path.includes("kilocode.handshake")))
       await Bun.sleep(50)
       expect(requests.filter((item) => item.path.includes("kilocode.handshake"))).toHaveLength(1)
+      expect(requests.filter((item) => item.path.includes("catalog.status"))).toHaveLength(0)
+
+      panel.show([ROOT])
+      await until(() => requests.some((item) => item.path.includes("catalog.status") && item.location === ROOT))
+      await Bun.sleep(50)
       expect(requests.filter((item) => item.path.includes("catalog.status"))).toHaveLength(1)
+
+      panel.show([WORKTREE])
+      await until(() => requests.some((item) => item.path.includes("catalog.status") && item.location === WORKTREE))
+      expect(requests.filter((item) => item.path.includes("kilocode.handshake"))).toHaveLength(1)
+      expect(requests.filter((item) => item.path.includes("catalog.status") && item.location === WORKTREE)).toHaveLength(
+        1,
+      )
       dispose()
     })
   })

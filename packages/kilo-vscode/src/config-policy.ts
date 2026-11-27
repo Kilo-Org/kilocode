@@ -49,7 +49,7 @@ function reasoning(value: unknown): ReasoningDisplay | undefined {
 export function displaySettings(documents: PolicyDocument[]): DisplaySettings {
   const result = { ...DISPLAY_DEFAULTS }
   let explicitReasoning: ReasoningDisplay | undefined
-  let autoCollapse: boolean | undefined
+  let legacyReasoning = DISPLAY_DEFAULTS.reasoningDisplay
   for (const document of documents) {
     const parsed: unknown = parse(document.text, [], { allowTrailingComma: true })
     if (!parsed || typeof parsed !== "object") continue
@@ -59,9 +59,11 @@ export function displaySettings(documents: PolicyDocument[]): DisplaySettings {
     result.mcpToolDisplay = layout(value.mcp_tool_display) ?? result.mcpToolDisplay
     result.codeModeDisplay = layout(value.code_mode_display) ?? result.codeModeDisplay
     explicitReasoning = reasoning(value.reasoning_display) ?? explicitReasoning
-    if (typeof value.auto_collapse_reasoning === "boolean") autoCollapse = value.auto_collapse_reasoning
+    if (typeof value.auto_collapse_reasoning === "boolean") {
+      legacyReasoning = value.auto_collapse_reasoning ? "preview" : "expanded"
+    }
   }
   // An explicit mode wins over the deprecated boolean, as the merged config does.
-  result.reasoningDisplay = explicitReasoning ?? (autoCollapse === true ? "preview" : "expanded")
+  result.reasoningDisplay = explicitReasoning ?? legacyReasoning
   return result
 }
