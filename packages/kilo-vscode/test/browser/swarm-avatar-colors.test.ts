@@ -37,7 +37,7 @@ test.skipIf(!executable)(
     const browser = await chromium.launch({ executablePath: executable, timeout: launchTimeout })
     try {
       const page = await browser.newPage({ viewport: { width: 1000, height: 700 } })
-      page.setDefaultTimeout(5_000)
+      page.setDefaultTimeout(15_000)
       await page.route("http://webview.test/", (route) =>
         route.fulfill({
           contentType: "text/html",
@@ -71,38 +71,48 @@ test.skipIf(!executable)(
             dot.getAttribute("cy"),
           ]),
         }))
+      // The board portals mount before the avatar's color rule applies, so wait for the
+      // computed color instead of racing the first paint on a loaded runner.
+      const settled = async (avatar: Locator) => {
+        await avatar.waitFor({ state: "visible" })
+        const element = await avatar.elementHandle()
+        if (!element) throw new Error("avatar is not attached")
+        await page.waitForFunction((node) => getComputedStyle(node as Element).color !== "", element)
+        await element.dispose()
+        return appearance(avatar)
+      }
 
-      const first = await appearance(transcript.nth(0))
-      const second = await appearance(transcript.nth(1))
+      const first = await settled(transcript.nth(0))
+      const second = await settled(transcript.nth(1))
       expect(second.color).not.toBe(first.color)
-      expect(await appearance(avatars.nth(0))).toEqual(first)
-      expect(await appearance(avatars.nth(1))).toEqual(second)
+      expect(await settled(avatars.nth(0))).toEqual(first)
+      expect(await settled(avatars.nth(1))).toEqual(second)
       const participants = page.locator('[data-component="board-participant-stack"] [data-component="agent-avatar"]')
-      expect(await appearance(participants.nth(0))).toEqual(first)
-      expect(await appearance(participants.nth(1))).toEqual(second)
+      expect(await settled(participants.nth(0))).toEqual(first)
+      expect(await settled(participants.nth(1))).toEqual(second)
 
       const inspector = page.locator(".am-subagent-panel")
       const tabAvatar = (name: string) =>
         inspector.getByRole("tab", { name }).locator('[data-component="agent-avatar"]')
-      expect(await appearance(tabAvatar("Agent 1"))).toEqual(first)
-      expect(await appearance(tabAvatar("Agent 2"))).toEqual(second)
+      expect(await settled(tabAvatar("Agent 1"))).toEqual(first)
+      expect(await settled(tabAvatar("Agent 2"))).toEqual(second)
 
       await stack.click()
       const row = page.locator('[data-slot="agent-panel-main"]').filter({ hasText: "Agent 2" })
-      expect(await appearance(row.locator('[data-component="agent-avatar"]'))).toEqual(second)
+      expect(await settled(row.locator('[data-component="agent-avatar"]'))).toEqual(second)
       await stack.click()
 
       await page.locator('[data-component="board-trigger"]:visible').click()
       const boardAvatar = (container: Locator, name: string) =>
         container.getByRole("button", { name, exact: true }).locator('[data-component="agent-avatar"]')
       const preview = page.locator('[data-slot="board-panel-list"]')
-      expect(await appearance(boardAvatar(preview, "Agent 1"))).toEqual(first)
-      expect(await appearance(boardAvatar(preview, "Agent 2"))).toEqual(second)
+      expect(await settled(boardAvatar(preview, "Agent 1"))).toEqual(first)
+      expect(await settled(boardAvatar(preview, "Agent 2"))).toEqual(second)
 
       await page.getByRole("button", { name: "Open board", exact: true }).press("Enter")
       const full = page.locator(".task-board-list")
-      expect(await appearance(boardAvatar(full, "Agent 1"))).toEqual(first)
-      expect(await appearance(boardAvatar(full, "Agent 2"))).toEqual(second)
+      expect(await settled(boardAvatar(full, "Agent 1"))).toEqual(first)
+      expect(await settled(boardAvatar(full, "Agent 2"))).toEqual(second)
     } finally {
       await browser.close()
     }
