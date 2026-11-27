@@ -73,6 +73,11 @@ test("an existing tag or release is refused", () => {
 test("a requested version must be valid, and a stable one above the highest version", () => {
   expect(decide({ ...base, requested: "7.12.0" }).version).toBe("7.12.0")
   expect(decide({ ...base, requested: "7.10.4-rc.2", prerelease: true }).version).toBe("7.10.4-rc.2")
+  // A release candidate's x.y.z must be above the highest plain version too.
+  expect(refusal({ ...base, requested: "7.10.2-rc.1", prerelease: true })).toContain(
+    "The requested version 7.10.2-rc.1 is not above the highest version 7.10.2",
+  )
+  expect(refusal({ ...base, requested: "7.9.0-rc.1", prerelease: true })).toContain("is not above the highest version")
   expect(refusal({ ...base, requested: "7.10.2" })).toContain("is not above the highest version 7.10.2")
   expect(refusal({ ...base, requested: "6.0.0" })).toContain("is not above the highest version 7.10.2")
   const orphan = [...base.releases, draft(5, "v7.11.0")]

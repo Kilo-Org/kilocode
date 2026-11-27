@@ -40,6 +40,15 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.oidc_check && '
 permissions:
   contents: read # kilocode_change
 
+# kilocode_change start - temporary: waive the private kilo-bench gate for stable and prerelease
+# v1 releases until BENCH_GITHUB_TOKEN access is approved. Standalone smoke-test dispatch still runs
+# the bench so access can be verified. While it is "true", smoke-cli is skipped and the smoke test
+# only records the exception. Job conditions and reusable-workflow inputs cannot read `env`, so
+# release-draft passes it on as its output `waive-bench`.
+env:
+  WAIVE_BENCH: "true"
+# kilocode_change end
+
 jobs:
   # kilocode_change start - the upstream `version` job is removed: release-draft decides the version
   # (the bump of the highest vx.y.z among origin's tags and every release, drafts included, or the
@@ -89,6 +98,7 @@ jobs:
       version: ${{ steps.draft.outputs.version }}
       release: ${{ steps.draft.outputs.release }}
       tag: ${{ steps.draft.outputs.tag }}
+      waive-bench: ${{ env.WAIVE_BENCH }}
   # kilocode_change end
 
   build-cli:
@@ -918,7 +928,7 @@ jobs:
   smoke-cli:
     name: Fetch CLI archive for the smoke test
     needs: [release-draft, sbom-cli-windows, upload-cli]
-    if: github.repository == 'Kilo-Org/kilocode' && needs.release-draft.outputs.release != ''
+    if: github.repository == 'Kilo-Org/kilocode' && needs.release-draft.outputs.release != '' && needs.release-draft.outputs.waive-bench != 'true'
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 10
     permissions:
@@ -970,11 +980,13 @@ jobs:
           path: ${{ runner.temp }}/smoke-cli
           if-no-files-found: error
           compression-level: 0
+          retention-days: 1
     outputs:
       sha256: ${{ steps.archive.outputs.sha256 }}
 
   # Run smoke tests against the CLI archive smoke-cli took from the draft GitHub release and
-  # checked, before publishing the release and package artifacts.
+  # checked, before publishing the release and package artifacts. It also runs when smoke-cli was
+  # skipped (bench waived), but not after a failure.
   smoke-test:
     name: Smoke Test (pre-publish gate)
     permissions:
@@ -984,15 +996,12 @@ jobs:
       - build-cli
       - upload-cli
       - smoke-cli
-    if: github.repository == 'Kilo-Org/kilocode'
+    if: always() && !failure() && !cancelled() && github.repository == 'Kilo-Org/kilocode' && needs.release-draft.outputs.release != ''
     uses: ./.github/workflows/smoke-test.yml
     with:
-      cli_artifact: smoke-cli
-      cli_sha256: ${{ needs.smoke-cli.outputs.sha256 }}
-      # Temporary: waive the private kilo-bench gate for stable and prerelease v1
-      # releases until BENCH_GITHUB_TOKEN access is approved. Standalone
-      # smoke-test dispatch still runs the bench so access can be verified.
-      waive_bench: true
+      waive_bench: ${{ needs.release-draft.outputs.waive-bench == 'true' }}
+      cli_artifact: ${{ needs.release-draft.outputs.waive-bench != 'true' && 'smoke-cli' || '' }}
+      cli_sha256: ${{ needs.release-draft.outputs.waive-bench != 'true' && needs.smoke-cli.outputs.sha256 || '' }}
     secrets:
       KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
       KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}

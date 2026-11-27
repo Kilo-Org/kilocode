@@ -27,13 +27,15 @@ on:
   workflow_call:
     inputs:
       cli_artifact:
-        description: "Artifact of the calling run that holds kilo-linux-x64.tar.gz."
-        required: true
+        description: "Artifact of the calling run that holds kilo-linux-x64.tar.gz (empty while the bench is waived)."
+        required: false
         type: string
+        default: ""
       cli_sha256:
-        description: "SHA-256 the archive must have."
-        required: true
+        description: "SHA-256 the archive must have (empty while the bench is waived)."
+        required: false
         type: string
+        default: ""
       waive_bench:
         description: "Skip the bench tests and record the release exception."
         type: boolean

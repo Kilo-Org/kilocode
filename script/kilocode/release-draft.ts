@@ -18,7 +18,7 @@
  * (default patch) of the highest plain version among those tags and release tag names, leaving out
  * this run's own draft: an orphan draft of an earlier run counts. A requested version must be
  * `x.y.z` or `x.y.z-rc.n` (`-rc.n` only for a pre-release), must not be a tag or a release yet,
- * and a requested `x.y.z` must be above the highest version. Only a re-run of this job in the same
+ * and the `x.y.z` of a requested version must be above the highest version. Only a re-run of this job in the same
  * workflow run reuses the draft its first attempt created (marked with the run id); any other
  * existing release of that version stops the run before any build, image or upload. Right before
  * the draft is created the tag is looked up once more, and anything but "not found" stops the run.
@@ -76,7 +76,8 @@ export function decide(input: { tags: string[]; releases: Release[]; marker: str
     if (requested.includes("-rc.") && !input.prerelease) {
       throw new Error(`The requested version ${requested} is a release candidate, but pre_release is false`)
     }
-    const plain = parse(`v${requested}`)
+    // A release candidate's x.y.z too must be above the highest plain version.
+    const plain = parse(`v${requested.replace(/-rc\.\d+$/, "")}`)
     if (plain && compare(plain, highest(names)) <= 0) {
       throw new Error(`The requested version ${requested} is not above the highest version ${highest(names).join(".")}`)
     }
@@ -138,7 +139,8 @@ if (import.meta.main) {
         .filter(Boolean),
     releases: async () => {
       // Interpolated, so that the shell does not read `[]` and `?` as globs.
-      const [jq, list] = [".[]", `repos/${repo}/releases?per_page=100`]
+      // Only the fields decide() reads; assets, authors and the rest stay out of the output.
+      const [jq, list] = [".[] | {id, tag_name, draft, body}", `repos/${repo}/releases?per_page=100`]
       return (await $`gh api --paginate --jq ${jq} ${list}`.text())
         .split("\n")
         .filter((line) => line.trim() !== "")

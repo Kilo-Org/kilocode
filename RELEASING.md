@@ -25,7 +25,7 @@ The `publish.yml` workflow starts with `release-draft`, which decides the versio
 
 - `release-draft` is the only job that decides the version. It holds the job token with `contents: write`, installs nothing and stops first unless the workflow runs on `main`.
 - Without a `version` input, `script/kilocode/release-draft.ts` takes the `bump` (default patch) of the highest `vx.y.z` among origin's tags and the tag names of every release, drafts included. The one exception is the draft this workflow run created on an earlier attempt, which a re-run of the job reuses. An orphan draft of an earlier run therefore counts: the next run bumps past it.
-- A `version` input must be `x.y.z` or `x.y.z-rc.n` (`-rc.n` only with `pre_release`), must not be a tag or a release yet, and an `x.y.z` must be above the highest version.
+- A `version` input must be `x.y.z` or `x.y.z-rc.n` (`-rc.n` only with `pre_release`), must not be a tag or a release yet, and its `x.y.z` must be above the highest version.
 - It looks the tag up once more and then creates the **draft** GitHub Release with the tag name (e.g. `v1.2.3`); the notes are written when the release is published. Any doubt (an existing tag or release, an error other than "not found") stops here, before any build.
 - `release-draft` outputs the `version`, `release` (database ID), and `tag` for every later job.
 
@@ -46,7 +46,7 @@ The `publish.yml` workflow starts with `release-draft`, which decides the versio
 - `sbom-cli-windows` describes the signed zips again: new SBOM sidecars, manifest entries and checksum lines. Every other evidence file stays as `build-cli` wrote it.
 - `upload-cli` checks every archive and evidence file against the digests recorded by the job that produced it, then uploads them to the draft GitHub Release.
 - `attest-cli` attests each archive's SBOM under the digest of the uploaded bytes (the signed digest for the Windows zips).
-- `smoke-cli` (job token `contents: write`, nothing checked out or installed) downloads `kilo-linux-x64.tar.gz` from the draft by its release id, checks it against the digest the CLI evidence manifest records and hands it to the smoke test (`smoke-test.yml`, read access only) as an artifact with that digest, which the smoke test checks again.
+- `smoke-cli` (job token `contents: write`, nothing checked out or installed) downloads `kilo-linux-x64.tar.gz` from the draft by its release id, checks it against the digest the CLI evidence manifest records and hands it to the smoke test (`smoke-test.yml`, read access only) as an artifact with that digest, which the smoke test checks again. While the bench is waived (`WAIVE_BENCH` at the top of `publish.yml`), `smoke-cli` is skipped and the smoke test only records the exception.
 
 ### 3. Build VS Code Extension (`build-vscode`)
 
@@ -63,7 +63,7 @@ The `publish.yml` workflow starts with `release-draft`, which decides the versio
 
 ### 5. Release Assets (`release-assets`)
 
-Runs before `release-push` with the job token (`contents: write`) and installs nothing. Checks the downloaded VS Code packages against the digests `build-vscode` recorded, uploads the VSIX files and their SBOM evidence to the draft GitHub Release, and checks that the draft holds exactly the CLI assets of the checked evidence manifest and those VS Code files. Distribution evidence that a failed earlier run left on the draft is removed first; it is uploaded again later. Every write to the GitHub Release and every check before publishing it address it by the release id `release-draft` recorded; the smoke test downloads assets by tag.
+Runs before `release-push` with the job token (`contents: write`) and installs nothing. Checks the downloaded VS Code packages against the digests `build-vscode` recorded, uploads the VSIX files and their SBOM evidence to the draft GitHub Release, and checks that the draft holds exactly the CLI assets of the checked evidence manifest and those VS Code files. Distribution evidence that a failed earlier run left on the draft is removed first; it is uploaded again later. Every write to the GitHub Release and every check before publishing it address it by the release id `release-draft` recorded; `smoke-cli` also downloads the CLI archive by release id.
 
 ### 6. Packages and Images (`publish-build`)
 
