@@ -407,11 +407,18 @@ export function createWorktreeActivity(opts: FactoryOptions) {
     if (state !== "connected") return activity.clear()
     void sync(true)
   })
+  const unsubDisposed = opts.connection.onGlobalDisposed?.(() => {
+    const event = { type: "global.disposed", properties: {} }
+    activity.event(event, "global")
+    opts.lifecycle(event, "global")
+    void sync()
+  })
   return {
     sync,
     dispose: () => {
       unsubEvent()
       unsubState()
+      unsubDisposed?.()
       activity.dispose()
     },
   }

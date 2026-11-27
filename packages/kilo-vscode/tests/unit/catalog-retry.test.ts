@@ -72,4 +72,34 @@ describe("createCatalogRetry", () => {
     state.retry.update(true)
     expect(state.pending).toEqual([])
   })
+
+  it("stops scheduling after reaching the configured limit until reset", () => {
+    const pending: Array<{ run: () => void; ms: number; cancelled: boolean }> = []
+    let refreshes = 0
+    const retry = createCatalogRetry({
+      refresh: () => refreshes++,
+      delays: [10, 20],
+      limit: 2,
+      schedule: (run, ms) => {
+        const entry = { run, ms, cancelled: false }
+        pending.push(entry)
+        return () => {
+          entry.cancelled = true
+        }
+      },
+    })
+
+    retry.update(true)
+    pending.at(-1)?.run()
+    retry.update(true)
+    pending.at(-1)?.run()
+    retry.update(true)
+    expect(pending).toHaveLength(2)
+    expect(refreshes).toBe(2)
+
+    retry.update(false)
+    retry.update(true)
+    expect(pending).toHaveLength(3)
+    expect(pending.at(-1)?.ms).toBe(10)
+  })
 })

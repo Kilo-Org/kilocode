@@ -7,11 +7,13 @@ export function createCatalogRetry(opts: {
   refresh: () => void
   schedule?: (run: () => void, ms: number) => () => void
   delays?: readonly number[]
+  limit?: number
 }) {
   const schedule =
     opts.schedule ??
     ((run: () => void, ms: number) => {
       const timer = setTimeout(run, ms)
+      timer.unref?.()
       return () => clearTimeout(timer)
     })
   // Matches the CLI's own catalog recovery backoff.
@@ -36,6 +38,7 @@ export function createCatalogRetry(opts: {
         return
       }
       if (cancel) return
+      if (opts.limit !== undefined && step >= opts.limit) return
       const delay = delays.at(Math.min(step, delays.length - 1)) ?? 300_000
       step++
       cancel = schedule(() => {

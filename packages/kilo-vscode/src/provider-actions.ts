@@ -62,7 +62,10 @@ export async function fetchProviderData(client: KiloClient, dir: string) {
   const kiloRequest = client.kilo
     .authStatus({ directory: dir }, { throwOnError: true })
     .then((r) => r.data)
-    .catch(() => undefined)
+    .catch((err: unknown) => {
+      console.warn("[Kilo New] fetchProviderData: kilo.authStatus failed:", err)
+      return undefined
+    })
 
   const [{ data: response }, authMethods, kiloAuth] = await Promise.all([
     client.provider.list({ directory: dir }, { throwOnError: true }),
@@ -150,20 +153,23 @@ export function buildActionContext(
   errFn: (err: unknown) => string,
   dir: string,
   refresh: () => Promise<void>,
+  dispose?: (reason: string) => Promise<void>,
 ): ActionContext {
   return {
     client,
     postMessage: post,
     getErrorMessage: errFn,
     workspaceDir: dir,
-    disposeGlobal: async (reason: string) => {
-      // Wait for the server to finish disposing before refreshing providers.
-      // Shared State.dispose() now has a hard per-disposer timeout, so this
-      // wait is bounded without needing a client-side timeout here.
-      await client.global.dispose().catch((error: unknown) => {
-        console.warn(`[Kilo New] KiloProvider: global.dispose() after ${reason} failed:`, error)
-      })
-    },
+    disposeGlobal:
+      dispose ??
+      (async (reason: string) => {
+        // Wait for the server to finish disposing before refreshing providers.
+        // Shared State.dispose() now has a hard per-disposer timeout, so this
+        // wait is bounded without needing a client-side timeout here.
+        await client.global.dispose({ throwOnError: true }).catch((error: unknown) => {
+          console.warn(`[Kilo New] KiloProvider: global.dispose() after ${reason} failed:`, error)
+        })
+      }),
     fetchAndSendProviders: refresh,
   }
 }

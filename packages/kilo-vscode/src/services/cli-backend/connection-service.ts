@@ -19,6 +19,7 @@ type ProfileChangeListener = (msg: unknown) => void
 type FavoritesChangeListener = (favorites: Array<{ providerID: string; modelID: string }>) => void
 type ModelSelectorExpandedListener = (value: boolean) => void
 type ClearPendingPromptsListener = () => void
+type GlobalDisposedListener = () => void
 type DirectoryProvider = () => string[]
 const DRAIN_CONCURRENCY = 4
 
@@ -110,6 +111,8 @@ export class KiloConnectionService {
   private readonly favoritesChangeListeners: Set<FavoritesChangeListener> = new Set()
   private readonly modelSelectorExpandedListeners: Set<ModelSelectorExpandedListener> = new Set()
   private readonly clearPendingPromptsListeners: Set<ClearPendingPromptsListener> = new Set()
+  private readonly globalDisposedListeners: Set<GlobalDisposedListener> = new Set()
+  private disposals = 0
   private readonly directoryProviders: Set<DirectoryProvider> = new Set()
   private rootDirectory: string | undefined = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
   private currentDirectory: string | undefined
@@ -586,6 +589,45 @@ export class KiloConnectionService {
   }
 
   /**
+   * Subscribe to fallback global-disposal notifications when /global/dispose
+   * fails or SSE does not deliver global.disposed.
+   */
+  onGlobalDisposed(listener: GlobalDisposedListener): () => void {
+    this.globalDisposedListeners.add(listener)
+    return () => {
+      this.globalDisposedListeners.delete(listener)
+    }
+  }
+
+  /**
+   * Dispose all backend instances and guarantee every mounted KiloProvider is
+   * notified, even if /global/dispose fails or SSE misses global.disposed.
+   */
+  async disposeGlobal(reason: string, wait = 50): Promise<void> {
+    const client = this.client
+    if (!client) return
+    const before = this.disposals
+    const ok = await client.global.dispose({ throwOnError: true }).then(
+      () => true,
+      (err: unknown) => {
+        console.warn(`[Kilo New] ConnectionService: global.dispose() after ${reason} failed:`, err)
+        return false
+      },
+    )
+    if (this.disposals !== before) return
+    if (ok && wait > 0) {
+      await new Promise((resolve) => {
+        const timer = setTimeout(resolve, wait)
+        timer.unref?.()
+      })
+    }
+    if (this.disposals !== before) return
+    for (const listener of this.globalDisposedListeners) {
+      listener()
+    }
+  }
+
+  /**
    * Subscribe to profile change events broadcast from any KiloProvider. Returns unsubscribe function.
    */
   onProfileChanged(listener: ProfileChangeListener): () => void {
@@ -839,6 +881,7 @@ export class KiloConnectionService {
     this.profileChangeListeners.clear()
     this.favoritesChangeListeners.clear()
     this.clearPendingPromptsListeners.clear()
+    this.globalDisposedListeners.clear()
     this.directoryProviders.clear()
     this.rootDirectory = undefined
     this.currentDirectory = undefined
@@ -1046,6 +1089,7 @@ export class KiloConnectionService {
   }
 
   private broadcast(event: SSEPayload, directory?: string): void {
+    if (event.type === "global.disposed") this.disposals += 1
     if (event.type === "session.turn.close") {
       const sid = event.properties.sessionID
       const state = this.completions.get(sid)
