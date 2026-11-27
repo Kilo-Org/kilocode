@@ -27,7 +27,7 @@ export function browserTabHtml(input: {
   const policy = [
     "default-src 'none'",
     `style-src 'unsafe-inline' ${csp}`,
-    `script-src 'nonce-${nonce}'`,
+    `script-src 'nonce-${nonce}' 'strict-dynamic'`,
     `worker-src ${csp}`,
     `font-src ${csp}`,
     `img-src ${csp} data: https:`,
@@ -60,7 +60,7 @@ export function browserTabHtml(input: {
 <body>
 <div id="root" data-view="browser"></div>
 <script nonce="${nonce}">${script}</script>
-<script nonce="${nonce}" src="${input.script}"></script>
+<script nonce="${nonce}" type="module" src="${input.script}"></script>
 </body>
 </html>`
 }

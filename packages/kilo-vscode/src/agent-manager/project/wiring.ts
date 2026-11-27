@@ -50,7 +50,7 @@ export function createProjectWiring(opts: {
   changed: () => void
   removed?: (id: string) => void
   /** Acknowledge an atomically validated sidebar selection. */
-  selected: (target: SidebarTarget) => void
+  selected: (target: SidebarTarget, seq?: number) => void
   /** Post an outbound message to the webview. */
   post: (message: AgentManagerOutMessage) => void
   /** Route one session to a directory inside a project, and report a move that waits for a step boundary. */

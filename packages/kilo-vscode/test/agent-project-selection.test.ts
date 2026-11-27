@@ -1,5 +1,6 @@
 import { describe, it, expect } from "bun:test"
 import { handleProjectMessage, type ProjectMessageDeps } from "../src/agent-manager/project/messages"
+import { canOptimisticTarget, createSelectionController } from "../webview-ui/agent-manager/project/selection"
 import type { ProjectContext, ProjectInitResult } from "../src/agent-manager/project/context"
 import { ProjectContexts } from "../src/agent-manager/project/contexts"
 import { canonicalizePath, projectIdFor } from "../src/agent-manager/project/paths"
@@ -338,5 +339,129 @@ describe("activateSelection — cross-project selection", () => {
 
     expect(calls.selected).toEqual([extra])
     expect(calls.error).toEqual([])
+  })
+
+  it("skips redundant project catalog pushes on same-project worktree switches and echoes seq", async () => {
+    const { contexts, deps, calls, extra } = setup()
+    const ctx = contexts.expand(extra)!
+    ctx.stateManager()
+    await ctx.ensureReady(async () => ({ ok: true, refsFixed: 0 }))
+    contexts.activate(extra)
+
+    const seqs: Array<number | undefined> = []
+    deps.selected = (_target, seq) => seqs.push(seq)
+    calls.push = 0
+
+    await handleProjectMessage(
+      {
+        type: "agentManager.activateSelection",
+        target: { projectId: extra, kind: "worktree", worktreeId: "wt1" },
+        seq: 7,
+      } as never,
+      deps,
+    )
+
+    expect(calls.push).toBe(0)
+    expect(calls.activate).toEqual([])
+    expect(seqs).toEqual([7])
+  })
+})
+
+describe("createSelectionController - optimistic same-project switching", () => {
+  function setupController(opts: { activeId?: string; appliedId?: string; known?: Set<string> } = {}) {
+    const activeId = opts.activeId ?? "prj-1"
+    const appliedId = opts.appliedId ?? "prj-1"
+    const known = opts.known ?? new Set(["wt-1", "wt-2"])
+    const events: string[] = []
+    const posted: Array<{ target: unknown; restore?: boolean; seq: number }> = []
+    const ctl = createSelectionController({
+      beforeActivate: () => events.push("before"),
+      post: (msg) => {
+        events.push(`post:${msg.seq}`)
+        posted.push({ target: msg.target, restore: msg.restore, seq: msg.seq })
+      },
+      active: (id) => id === activeId,
+      applied: (id) => id === appliedId,
+      managed: () => [],
+      canOptimistic: (target) => target.kind === "local" || (target.kind === "worktree" && known.has(target.worktreeId)),
+      local: (pid) => events.push(`local:${pid}`),
+      worktree: (_pid, id) => events.push(`wt:${id}`),
+      focusLocal: (id) => events.push(`focusLocal:${id}`),
+      managedSession: (wt, id) => events.push(`managed:${wt}:${id}`),
+    })
+    return { ctl, events, posted }
+  }
+
+  it("applies known same-project targets immediately after posting and skips matching ack", () => {
+    const { ctl, events, posted } = setupController()
+    const target = { projectId: "prj-1", kind: "worktree" as const, worktreeId: "wt-1" }
+
+    ctl.activate(target)
+    expect(events).toEqual(["before", "post:1", "wt:wt-1"])
+    expect(posted).toHaveLength(1)
+
+    // Matching host confirmation is a no-op so worktree selection never runs twice.
+    expect(ctl.receive({ type: "agentManager.selectionActivated", target, seq: 1 } as never)).toBe(true)
+    expect(events).toEqual(["before", "post:1", "wt:wt-1"])
+  })
+
+  it("reconciles when host falls back to local for a stale worktree", () => {
+    const { ctl, events } = setupController()
+    ctl.activate({ projectId: "prj-1", kind: "worktree", worktreeId: "wt-1" })
+    expect(events).toEqual(["before", "post:1", "wt:wt-1"])
+
+    ctl.receive({
+      type: "agentManager.selectionActivated",
+      target: { projectId: "prj-1", kind: "local" },
+      seq: 1,
+    } as never)
+    expect(events).toEqual(["before", "post:1", "wt:wt-1", "local:prj-1"])
+  })
+
+  it("ignores stale out-of-order acknowledgements during rapid consecutive clicks", () => {
+    const { ctl, events } = setupController()
+    ctl.activate({ projectId: "prj-1", kind: "worktree", worktreeId: "wt-1" })
+    ctl.activate({ projectId: "prj-1", kind: "worktree", worktreeId: "wt-2" })
+
+    // Stale ack for seq 1 arrives after seq 2 was already applied optimistically.
+    ctl.receive({
+      type: "agentManager.selectionActivated",
+      target: { projectId: "prj-1", kind: "worktree", worktreeId: "wt-1" },
+      seq: 1,
+    } as never)
+    expect(events).toEqual(["before", "post:1", "wt:wt-1", "before", "post:2", "wt:wt-2"])
+
+    // Matching ack for seq 2 is ignored cleanly.
+    ctl.receive({
+      type: "agentManager.selectionActivated",
+      target: { projectId: "prj-1", kind: "worktree", worktreeId: "wt-2" },
+      seq: 2,
+    } as never)
+    expect(events).toEqual(["before", "post:1", "wt:wt-1", "before", "post:2", "wt:wt-2"])
+  })
+
+  it("waits for host confirmation on cross-project switches and restore requests", () => {
+    const { ctl, events } = setupController()
+    ctl.activate({ projectId: "prj-2", kind: "local" })
+    ctl.activate({ projectId: "prj-1", kind: "local" }, true)
+    expect(events).toEqual(["before", "post:1", "before", "post:2"])
+
+    ctl.receive({
+      type: "agentManager.selectionActivated",
+      target: { projectId: "prj-1", kind: "worktree", worktreeId: "wt-2" },
+      seq: 2,
+    } as never)
+    expect(events).toEqual(["before", "post:1", "before", "post:2", "wt:wt-2"])
+  })
+
+  it("does not treat unfiled live sessions as optimistic so the host files them under their worktree first", () => {
+    expect(canOptimisticTarget({ projectId: "prj-1", kind: "local" }, [], [])).toBe(true)
+    expect(canOptimisticTarget({ projectId: "prj-1", kind: "worktree", worktreeId: "wt-1" }, [{ id: "wt-1" }], [])).toBe(
+      true,
+    )
+    expect(canOptimisticTarget({ projectId: "prj-1", kind: "session", sessionId: "ses_unfiled" }, [], [])).toBe(false)
+    expect(
+      canOptimisticTarget({ projectId: "prj-1", kind: "session", sessionId: "ses_filed" }, [], [{ id: "ses_filed" }]),
+    ).toBe(true)
   })
 })

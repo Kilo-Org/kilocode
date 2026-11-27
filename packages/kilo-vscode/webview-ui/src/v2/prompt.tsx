@@ -28,14 +28,6 @@ import { useSpeechToText } from "../components/speech-to-text/useSpeechToText"
 import { useLanguage } from "../context/language"
 import { useIndexing } from "../context/indexing"
 import { useVSCode } from "../context/vscode"
-import {
-  hasPopup,
-  hasQuestionOption,
-  hasTextSelection,
-  isTextControl,
-  ownsFocusRegion,
-  promptFocusAllowed,
-} from "../utils/focus"
 import { isEnterKeyCommitNotIme } from "../utils/ime-enter"
 import {
   browserPrompt,
@@ -77,6 +69,8 @@ import { insertSpacedText } from "./prompt-speech"
 import { PromptOverflow, type OverflowItem } from "./prompt-overflow"
 import { kiloSettings, runningDelivery } from "./kilo-settings"
 import { composeReviewPrompt, mergePromptMetadata, mergeReviewComments } from "./review-drafts"
+import { bindPromptFocus } from "./prompt-focus"
+import { useViewActive } from "./view-active"
 import { other, sendMode, sendShortcuts, type SendMode } from "./pending-actions"
 import { PromptHint } from "./prompt-hint"
 import { recommend, type ManagerContext } from "./shortcut-hint"
@@ -252,6 +246,7 @@ export function PromptInput(props: {
   onFocusChange?: (focused: boolean) => void
 }) {
   const v2 = useV2()
+  const viewActive = useViewActive()
   const language = useLanguage()
   const indexing = useIndexing()
   const [text, setText] = createSignal(promptDrafts.get(props.draftKey))
@@ -471,9 +466,16 @@ export function PromptInput(props: {
           : !!text().trim() || attachments().length > 0 || browsers().length > 0 || comments().length > 0)))
   // Keep the modifiers rather than the action so the preview also follows changes to the Enter preference.
   const [held, setHeld] = createSignal<Pick<KeyboardEvent, "altKey" | "ctrlKey" | "metaKey">>(NO_KEYS)
-  const hold = (event: KeyboardEvent) =>
+  const hold = (event: KeyboardEvent) => {
+    if (!viewActive()) return
     setHeld({ altKey: event.altKey, ctrlKey: event.ctrlKey, metaKey: event.metaKey })
-  const release = () => setHeld(NO_KEYS)
+  }
+  const release = () => {
+    if (viewActive()) setHeld(NO_KEYS)
+  }
+  createEffect(() => {
+    if (!viewActive()) setHeld(NO_KEYS)
+  })
   onMount(() => {
     window.addEventListener("keydown", hold)
     window.addEventListener("keyup", hold)
@@ -489,8 +491,12 @@ export function PromptInput(props: {
   const [focused, setFocused] = createSignal(false)
   // Focus away in an editor or terminal is what makes "add the selection" and "type here" the useful hints.
   const [away, setAway] = createSignal(!document.hasFocus())
-  const onWindowFocus = () => setAway(false)
-  const onWindowBlur = () => setAway(true)
+  const onWindowFocus = () => {
+    if (viewActive()) setAway(false)
+  }
+  const onWindowBlur = () => {
+    if (viewActive()) setAway(true)
+  }
   window.addEventListener("focus", onWindowFocus)
   window.addEventListener("blur", onWindowBlur)
   onCleanup(() => {
@@ -699,87 +705,28 @@ export function PromptInput(props: {
     input.setSelectionRange(cursor, cursor)
     focusInput()
   }
-  // The restore chain outlives the event that started it, so every handle is tracked and dropped on unmount.
-  const frames = new Set<number>()
-  const timers = new Set<ReturnType<typeof setTimeout>>()
-  let disposed = false
-  const frame = (run: () => void) => {
-    const id = requestAnimationFrame(() => {
-      frames.delete(id)
-      if (!disposed) run()
-    })
-    frames.add(id)
-  }
-  const timer = (run: () => void, delay: number) => {
-    const id = setTimeout(() => {
-      timers.delete(id)
-      if (!disposed) run()
-    }, delay)
-    timers.add(id)
-  }
-  // A restore retries after the dialog, menu or question that owned focus closes, but never takes focus from
-  // another text control, a popup or a selection.
-  const onFocusPrompt = (event: Event) => {
-    const detail = event instanceof CustomEvent ? (event.detail as Record<string, unknown> | undefined) : undefined
-    const force = detail?.force === true
-    const allowed = () =>
-      !disposed &&
-      !!refs.input?.isConnected &&
-      promptFocusAllowed({
-        force,
-        deferToQuestion: detail?.deferFocusToQuestion === true,
-        questionOption: hasQuestionOption(),
-        ownsRegion: ownsFocusRegion(document.activeElement),
-        popup: hasPopup(),
-        textControl: document.activeElement !== refs.input && isTextControl(document.activeElement),
-        selection: hasTextSelection(),
-      })
-    const focus = () => {
-      if (!allowed()) return
-      focusInput()
-    }
-    focus()
-    if (detail?.restore !== true) return
-    const restore = () => {
-      if (!allowed()) return
-      window.focus()
-      focus()
-    }
-    queueMicrotask(restore)
-    frame(() => {
-      restore()
-      frame(restore)
-      timer(restore, 0)
-      timer(restore, 50)
-    })
-  }
-  onMount(() => window.addEventListener("focusPrompt", onFocusPrompt))
-  // v1 focused the prompt from its draft-change effect. This composer is remounted per draft instead, so mounting for
-  // a switched worktree or session is that event: ask the owner whether this context keeps focus, for example on a
-  // visible terminal, then take it once this composer exists. Like v1, this is one immediate attempt with no restore
-  // chain, so a surface that moves focus on purpose afterwards, such as the tab strip under arrow keys, keeps it.
-  // The request runs after the listener above so the new composer receives it, and only while its window has focus.
-  onMount(() => {
-    if (!document.hasFocus() || hasQuestionOption()) return
-    if (props.focusOnDraftChange?.() !== true) return
-    window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { deferFocusToQuestion: true } }))
+  bindPromptFocus({
+    input: () => refs.input,
+    viewActive,
+    focusInput,
+    focusOnDraftChange: props.focusOnDraftChange,
+    onDeactivate: () => {
+      setHeld(NO_KEYS)
+      speech.cancel()
+    },
+    onActivate: () => setAway(!document.hasFocus()),
   })
   // Session tabs, worktree cards, terminal tabs, diff headers and document tabs drop as a mention at the caret.
-  onMount(() => {
-    registerPromptMentionDrop(refs.container, (drop) => {
+  // Only the active view registers as the global drop target when cached chat views stay mounted.
+  createEffect(() => {
+    if (!viewActive()) return
+    const container = refs.container
+    registerPromptMentionDrop(container, (drop) => {
       const ref = refs.input
       if (!ref || !ref.isConnected || props.disabled) return false
       return mention.insertDrop(drop, ref, setText, v2.directory)
     })
-    onCleanup(() => registerPromptMentionDrop(undefined, undefined))
-  })
-  onCleanup(() => {
-    disposed = true
-    for (const id of frames) cancelAnimationFrame(id)
-    for (const id of timers) clearTimeout(id)
-    frames.clear()
-    timers.clear()
-    window.removeEventListener("focusPrompt", onFocusPrompt)
+    onCleanup(() => registerPromptMentionDrop(undefined, undefined, container))
   })
 
   const insertSpeechText = (value: string) => {
@@ -795,7 +742,7 @@ export function PromptInput(props: {
     if (!ref) return
     ref.value = result.text
     ref.setSelectionRange(result.pos, result.pos)
-    ref.focus()
+    if (viewActive()) ref.focus()
   }
 
   const startSpeech = () => {
@@ -1129,7 +1076,7 @@ export function PromptInput(props: {
         setText(next)
         paste.load(next, [])
         mention.seedFromText(next)
-        focusInput()
+        if (viewActive()) focusInput()
       })
       .catch((err: unknown) => {
         if (token !== enhanceToken) return
@@ -1227,7 +1174,9 @@ export function PromptInput(props: {
     // Measure once before the first paint. The observer only reports after it, which would expand the actions the
     // cached fold held back and animate them into the overflow menu on every switch.
     measure()
-    const observer = new ResizeObserver(measure)
+    const observer = new ResizeObserver(() => {
+      if (viewActive()) measure()
+    })
     if (hintRef) observer.observe(hintRef)
     if (pinnedRef) observer.observe(pinnedRef)
     onCleanup(() => observer.disconnect())

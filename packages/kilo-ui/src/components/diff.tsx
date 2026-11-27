@@ -32,6 +32,48 @@ type Job = { run: () => void; cancelled: boolean }
 const sizes = new WeakMap<object, Map<number, number>>()
 const WIDTH_LIMIT = 8
 
+// Shared stylesheet (per Document so multi-document/test environments never hit
+// NotAllowedError) and color-scheme watcher across all mounted Diff instances.
+const separatorPatchSheets = new WeakMap<Document, CSSStyleSheet>()
+const schemeListeners = new Set<() => void>()
+let schemeObserver: MutationObserver | undefined
+
+function getSeparatorPatchSheet(doc: Document) {
+  let sheet = separatorPatchSheets.get(doc)
+  if (!sheet) {
+    const SheetCtor = doc.defaultView?.CSSStyleSheet ?? CSSStyleSheet
+    sheet = new SheetCtor()
+    sheet.replaceSync(
+      `@layer unsafe { @media (pointer: fine) { [data-separator='line-info-basic'][data-expand-index] [data-separator-wrapper] { grid-template-columns: 34px auto; } } [data-utility-button] { background-color: var(--vscode-button-background, var(--button-primary-base, var(--icon-interactive-base))); color: var(--vscode-button-foreground, var(--icon-invert-base, #fff)); } }`,
+    )
+    separatorPatchSheets.set(doc, sheet)
+  }
+  return sheet
+}
+
+function subscribeColorScheme(cb: () => void): () => void {
+  if (typeof document === "undefined" || typeof MutationObserver === "undefined") return () => {}
+  schemeListeners.add(cb)
+  if (!schemeObserver) {
+    schemeObserver = new MutationObserver(() => {
+      for (const listener of schemeListeners) {
+        try {
+          listener()
+        } catch {
+          // Isolate one failing instance so other mounted diffs still update theme.
+        }
+      }
+    })
+    schemeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-color-scheme"] })
+  }
+  return () => {
+    schemeListeners.delete(cb)
+    if (schemeListeners.size > 0 || !schemeObserver) return
+    schemeObserver.disconnect()
+    schemeObserver = undefined
+  }
+}
+
 // Mirrors the session-diff fallback for a patch that `processFile` rejects.
 function fallbackDiff(patch: string) {
   const [file] = parsePatch(patch)
@@ -387,18 +429,11 @@ export function Diff<T>(props: DiffProps<T>) {
   }
 
   // Patch Pierre shadow styles for Kilo-specific layout and contrast tweaks.
-  let separatorPatchSheet: CSSStyleSheet | null = null
   const patchSeparatorLayout = () => {
     const root = getRoot()
     if (!root) return
-    if (!separatorPatchSheet) {
-      separatorPatchSheet = new CSSStyleSheet()
-      separatorPatchSheet.replaceSync(
-        `@layer unsafe { @media (pointer: fine) { [data-separator='line-info-basic'][data-expand-index] [data-separator-wrapper] { grid-template-columns: 34px auto; } } [data-utility-button] { background-color: var(--vscode-button-background, var(--button-primary-base, var(--icon-interactive-base))); color: var(--vscode-button-foreground, var(--icon-invert-base, #fff)); } }`,
-      )
-    }
-    if (!root.adoptedStyleSheets.includes(separatorPatchSheet))
-      root.adoptedStyleSheets = [...root.adoptedStyleSheets, separatorPatchSheet]
+    const sheet = getSeparatorPatchSheet(container.ownerDocument)
+    if (!root.adoptedStyleSheets.includes(sheet)) root.adoptedStyleSheets = [...root.adoptedStyleSheets, sheet]
   }
 
   const fixSelection = (range: SelectedLineRange | null) => {
@@ -737,9 +772,24 @@ export function Diff<T>(props: DiffProps<T>) {
   })
 
   let restore: { instance: FileDiff<T>; apply: () => void } | undefined
+  // Memoize annotations with structural equality so a parent creating a fresh
+  // empty array (or identical annotation items) on a worktree switch never
+  // triggers Pierre's expensive setLineAnnotations + rerender + applyHunksToDOM.
+  const annotations = createMemo(() => local.annotations ?? [], undefined, {
+    equals: (prev, next) => {
+      if (prev === next) return true
+      if (prev.length !== next.length) return false
+      for (let i = 0; i < prev.length; i++) {
+        const a = prev[i]!
+        const b = next[i]!
+        if (a !== b && (a.side !== b.side || a.lineNumber !== b.lineNumber || a.metadata !== b.metadata)) return false
+      }
+      return true
+    },
+  })
   createComputed(
     on(
-      () => local.annotations,
+      annotations,
       () => {
         restore = undefined
         if (!instance || instance instanceof VirtualizedFileDiff) return
@@ -759,12 +809,12 @@ export function Diff<T>(props: DiffProps<T>) {
   // defer: true skips the initial run (the main effect already passed annotations).
   createEffect(
     on(
-      () => local.annotations,
-      (annotations) => {
+      annotations,
+      (list) => {
         const saved = restore
         restore = undefined
         if (!instance) return
-        instance.setLineAnnotations(annotations ?? [])
+        instance.setLineAnnotations(list)
         instance.rerender()
         if (saved) {
           requestAnimationFrame(() => {
@@ -778,15 +828,9 @@ export function Diff<T>(props: DiffProps<T>) {
   )
 
   createEffect(() => {
-    if (typeof document === "undefined") return
-    if (typeof MutationObserver === "undefined") return
-
-    const root = document.documentElement
-    const monitor = new MutationObserver(() => applyScheme())
-    monitor.observe(root, { attributes: true, attributeFilter: ["data-color-scheme"] })
+    const unsubscribe = subscribeColorScheme(applyScheme)
     applyScheme()
-
-    onCleanup(() => monitor.disconnect())
+    onCleanup(unsubscribe)
   })
 
   createEffect(() => {
