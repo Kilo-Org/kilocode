@@ -185,18 +185,36 @@ export default Plugin.define({
   },
 })
 
+function profileErrorMessage(error: unknown, surface: "profile" | "teams") {
+  if (typeof error === "object" && error !== null && "type" in error && error.type === "unauthorized") {
+    return "Kilo did not accept your login. It may have expired or been revoked. Run /connect or `kilo auth login` to sign in again."
+  }
+  return surface === "profile"
+    ? "Could not load your Kilo profile. Kilo may be unreachable, try again later."
+    : "Could not load your Kilo teams. Kilo may be unreachable, try again later."
+}
+
 async function accountStatus(context: Plugin.Context) {
   const rpc = context.client.rpc(KiloGatewayRpc.Definition)
   const location = context.location ?? context.data.location.default()
   const options = { location: { directory: location.directory } }
   const [status, privacy] = await Promise.all([
-    rpc.authStatus({}, options).catch(() => undefined),
+    rpc.authStatus({}, options).then(
+      (value) => ({ ok: true as const, value }),
+      (error: unknown) => ({ ok: false as const, error }),
+    ),
     privacyMode(context.client, location),
   ])
-  if (!status?.authenticated) {
+  if (!status.ok) {
+    return context.ui.dialog.alert({
+      title: "Error",
+      message: profileErrorMessage(status.error, "profile"),
+    })
+  }
+  if (!status.value.authenticated) {
     return context.ui.dialog.alert({
       title: "Kilo Gateway (Signed Out)",
-      message: `Server: ${status?.server ?? "https://api.kilo.ai"}\nUse /connect to sign in to Kilo Gateway.`,
+      message: `Server: ${status.value.server}\nUse /connect to sign in to Kilo Gateway.`,
     })
   }
   // In privacy mode the profile loads only after the user agrees to show it.
@@ -209,26 +227,35 @@ async function accountStatus(context: Plugin.Context) {
     if (confirmed !== true) return
   }
   const [profile, balance, pass, modes] = await Promise.all([
-    rpc.profile({}, options).catch(() => undefined),
+    rpc.profile({}, options).then(
+      (value) => ({ ok: true as const, value }),
+      (error: unknown) => ({ ok: false as const, error }),
+    ),
     rpc.balance({}, options).catch(() => undefined),
     rpc.kiloPass({}, options).catch(() => null),
     rpc.modes({}, options).catch(() => []),
   ])
+  if (!profile.ok) {
+    return context.ui.dialog.alert({
+      title: "Error",
+      message: profileErrorMessage(profile.error, "profile"),
+    })
+  }
   return context.ui.dialog.show(() => (
-    <DialogKiloProfile profile={profile} balance={balance} pass={pass} modes={modes} />
+    <DialogKiloProfile profile={profile.value} balance={balance} pass={pass} modes={modes} />
   ))
 }
 
 function DialogKiloProfile(props: {
-  profile: Profile | undefined
+  profile: Profile
   balance: Balance | undefined
   pass: KiloPass
   modes: readonly Mode[]
 }) {
   const dialog = useDialog()
   const theme = useTheme().surface("dialog")
-  const organization = props.profile?.organizationID
-    ? props.profile.organizations.find((item) => item.id === props.profile?.organizationID)
+  const organization = props.profile.organizationID
+    ? props.profile.organizations.find((item) => item.id === props.profile.organizationID)
     : undefined
   const team = organization
     ? organization.role
@@ -239,7 +266,7 @@ function DialogKiloProfile(props: {
     const value = props.balance?.balance
     return value == null ? undefined : `Balance: $${value.toFixed(2)}`
   }
-  const usage = () => usageDetailsUrl(props.profile?.organizationID)
+  const usage = () => usageDetailsUrl(props.profile.organizationID)
 
   Keymap.createLayer(() => ({
     mode: "modal",
@@ -252,8 +279,8 @@ function DialogKiloProfile(props: {
       footer={{ actions: { primary: [{ title: "ok", key: "enter", onTrigger: () => dialog.clear() }] } }}
     >
       <box>
-        <Show when={props.profile?.name}>{(name) => <text fg={theme.text.base}>Name: {name()}</text>}</Show>
-        <Show when={props.profile?.email}>{(email) => <text fg={theme.text.base}>Account: {email()}</text>}</Show>
+        <Show when={props.profile.name}>{(name) => <text fg={theme.text.base}>Name: {name()}</text>}</Show>
+        <Show when={props.profile.email}>{(email) => <text fg={theme.text.base}>Account: {email()}</text>}</Show>
         <text fg={theme.text.base}>Team: {team}</text>
         <Show when={balance()}>{(line) => <text fg={theme.text.base}>{line()}</text>}</Show>
         <Show when={props.pass}>
@@ -280,12 +307,16 @@ function DialogKiloProfile(props: {
 async function teams(context: Plugin.Context) {
   const rpc = context.client.rpc(KiloGatewayRpc.Definition)
   const options = { location: { directory: (context.location ?? context.data.location.default()).directory } }
-  const profile = await rpc.profile({}, options).catch(() => undefined)
-  if (!profile)
+  const result = await rpc.profile({}, options).then(
+    (value) => ({ ok: true as const, value }),
+    (error: unknown) => ({ ok: false as const, error }),
+  )
+  if (!result.ok)
     return context.ui.dialog.alert({
       title: "Error",
-      message: "Failed to fetch teams. Please ensure you're authenticated with Kilo Gateway.",
+      message: profileErrorMessage(result.error, "teams"),
     })
+  const profile = result.value
   if (profile.organizations.length === 0)
     return context.ui.dialog.alert({
       title: "No Teams Available",

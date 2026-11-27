@@ -657,6 +657,9 @@ export const dict = {
 
   "profile.title": "Профіль",
   "profile.notLoggedIn": "Не увійшов",
+  "profile.expired": "Термін дії входу в Kilo минув або вхід було відкликано. Увійдіть знову, щоб продовжити.",
+  "profile.unavailable": "Не вдалося завантажити ваш профіль Kilo. Можливо, Kilo зараз недоступний.",
+  "profile.stale": "Не вдалося оновити ваш профіль. Показано останні завантажені дані.",
   "profile.action.login": "Увійти через Kilo Code",
   "profile.balance.title": "Баланс",
   "profile.balance.refresh": "Оновити баланс",

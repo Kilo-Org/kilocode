@@ -700,6 +700,9 @@ export const dict = {
 
   "profile.title": "プロフィール",
   "profile.notLoggedIn": "ログインしていません",
+  "profile.expired": "Kilo のログインの有効期限が切れたか、取り消されました。続行するには再度サインインしてください。",
+  "profile.unavailable": "Kilo プロフィールを読み込めませんでした。現在 Kilo に接続できない可能性があります。",
+  "profile.stale": "プロフィールを更新できませんでした。最後に読み込んだ情報を表示しています。",
   "profile.action.login": "Kilo Codeでログイン",
   "profile.balance.title": "残高",
   "profile.balance.refresh": "残高を更新",

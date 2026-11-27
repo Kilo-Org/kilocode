@@ -943,24 +943,22 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
             }).pipe(Effect.orElseSucceed(() => undefined)),
         }),
         authStatus: () =>
-          Effect.sync(() => {
-            const account = scopeCompatible() ? catalog.account : undefined
-            const organizationID = account?.organizationID ?? catalog.organizationID ?? null
-            return {
-              authenticated: Boolean(account?.token),
-              organizationID,
-              server: catalog.account?.server ?? server,
-              ...(account?.token && organizationID === null
-                ? { identity: GatewayCatalog.snapshotKey(account.server ?? server, account.token) }
-                : {}),
-            }
-          }),
+          Effect.sync(() =>
+            GatewayAccountSelection.authStatus(
+              scopeCompatible() ? catalog.account : undefined,
+              catalog.organizationID,
+              catalog.connection,
+              catalog.account?.server ?? server,
+            ),
+          ),
         profile: (_input, context) =>
           Effect.gen(function* () {
             const account = activeAccount()
             if (!account) return yield* Effect.fail(context.error("unauthorized", "Not signed in to Kilo Gateway"))
             const profile = yield* KiloProfile.get(account.server, account.token).pipe(
-              Effect.mapError((error) => context.error("failed", error.message)),
+              Effect.mapError((error) =>
+                context.error(error.reason.kind === "unauthorized" ? "unauthorized" : "failed", error.message),
+              ),
             )
             return {
               email: profile.email,

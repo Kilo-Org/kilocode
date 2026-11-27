@@ -656,6 +656,9 @@ export const dict = {
 
   "profile.title": "Profil",
   "profile.notLoggedIn": "Giriş yapılmadı",
+  "profile.expired": "Kilo oturumunuzun süresi doldu veya iptal edildi. Devam etmek için yeniden giriş yapın.",
+  "profile.unavailable": "Kilo profiliniz yüklenemedi. Kilo şu anda erişilemez durumda olabilir.",
+  "profile.stale": "Profiliniz yenilenemedi. En son yüklenen bilgiler gösteriliyor.",
   "profile.action.login": "Kilo Code ile giriş yap",
   "profile.balance.title": "Bakiye",
   "profile.balance.refresh": "Bakiyeyi yenile",
