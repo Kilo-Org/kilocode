@@ -30,10 +30,6 @@ The extension includes the matching `kilo2` server binary for its platform. It s
 
 A VSIX installed with **Install from VSIX** or `code --install-extension <file>.vsix` is not updated automatically by default. Install a newer VSIX or the gallery version to update it.
 
-## High-refresh Integrated Browser
-
-The Integrated Browser streams at a paced 60 fps in both the editor tab and the Agent Manager browser panel. When hardware H.264 encode/decode and loopback WebSockets are available, a split-incognito tab-capture helper streams hardware-encoded H.264 frames and wheel input directly between Chrome, a dedicated Node worker, and the webview, bypassing Extension Host IPC. When hardware video or loopback WebSockets are unavailable (for example on remote hosts or systems without a hardware encoder), it falls back automatically to JPEG frames over the worker or Extension Host. Actual frame delivery depends on the page, Chrome, the webview, and the display.
-
 ## Webview accessibility checks
 
 From `packages/kilo-vscode`, run `bun run playwright-core install --no-shell chromium` once, then `bun run test:accessibility`. The CI gate runs the Agent Manager sidebar search in Chromium with the production webview component and styles. It fails on axe WCAG violations or broken keyboard selection and dismissal. It does not require VS Code, a server, or an account.

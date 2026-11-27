@@ -21,9 +21,6 @@ export type WorkerCommand =
       offscreen?: string
       codec?: number
     }
-  | { type: "gate"; navigation: number; committed?: number; epoch: number }
-  | { type: "stop"; epoch: number }
-  | { type: "close" }
 
 export type CaptureMessage =
   | "ready"
@@ -31,8 +28,6 @@ export type CaptureMessage =
   | { type: "ready"; url: string }
   | { type: "bound"; epoch: number }
   | { type: "started"; epoch: number }
-  | { type: "client"; connected: boolean }
-  | { type: "keyframe" }
   | { type: "fallback-jpeg" }
 
 const PAYLOAD = 2 * 1024 * 1024

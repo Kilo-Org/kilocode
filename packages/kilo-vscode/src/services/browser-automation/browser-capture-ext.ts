@@ -149,14 +149,6 @@ export class BrowserCaptureExtension {
     if (offscreen) await this.evaluate(offscreen.targetId, "__kiloStop()").catch(() => {})
   }
 
-  async keyFrame(browserContextId: string): Promise<void> {
-    if (this.disposed) return
-    const offscreen = (await this.targets()).find(
-      (item) => item.browserContextId === browserContextId && item.url.includes(`${this.id}/offscreen.html`),
-    )
-    if (offscreen) await this.evaluate(offscreen.targetId, "__kiloKeyFrame()").catch(() => {})
-  }
-
   dispose(): void {
     if (this.disposed) return
     this.disposed = true

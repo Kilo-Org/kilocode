@@ -41,10 +41,6 @@ export class DirectStream {
     private readonly onFrame: (source: CanvasImageSource, meta: DirectFrameMeta) => void,
   ) {}
 
-  get open(): boolean {
-    return this.ws?.readyState === WebSocket.OPEN
-  }
-
   connect(url: string | undefined): void {
     if (this.disposed || url === this.url) return
     this.closeSocket()

@@ -54,11 +54,6 @@ export class BrowserFrameClient {
     }
   }
 
-  gate(navigation: number, committed?: number): void {
-    const command: WorkerCommand = { type: "gate", navigation, committed, epoch: this.captureEpoch }
-    this.worker?.postMessage(command)
-  }
-
   stop(): Promise<void> {
     this.generation++
     this.h264Active = false
@@ -169,10 +164,6 @@ export class BrowserFrameClient {
       const deferred = this.pendingStarted.deferred
       this.pendingStarted = undefined
       deferred.resolve(true)
-      return
-    }
-    if (message.type === "keyframe" && ctxId) {
-      void this.extension?.()?.keyFrame(ctxId)
       return
     }
     if (message.type === "fallback-jpeg") {

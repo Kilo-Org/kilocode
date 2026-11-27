@@ -279,14 +279,11 @@ class DirectCapture {
     if (this.clientWs && this.clientWs.readyState === WebSocket.OPEN) this.clientWs.close(1001, "Replaced")
     this.clientWs = ws
     this.dropping = false
-    this.parent.postMessage({ type: "client", connected: true })
     if (this.offscreenBound && !this.forceJpeg) this.stopJpeg()
     this.sendInitialKey(ws)
     ws.on("message", (raw) => this.handleClientInput(raw))
     ws.on("close", () => {
-      if (this.clientWs !== ws) return
-      this.clientWs = undefined
-      this.parent.postMessage({ type: "client", connected: false })
+      if (this.clientWs === ws) this.clientWs = undefined
     })
     ws.on("error", () => {
       if (this.clientWs === ws) ws.close()
@@ -296,14 +293,6 @@ class DirectCapture {
   private requestKeyFrame(): void {
     if (!this.offscreenWs || this.offscreenWs.readyState !== WebSocket.OPEN) return
     this.sendOffscreen("Runtime.evaluate", { expression: "globalThis.__kiloKeyFrame?.()" })
-  }
-
-  private clearWheel(): void {
-    if (this.wheelTimer) {
-      clearTimeout(this.wheelTimer)
-      this.wheelTimer = undefined
-    }
-    this.queuedWheel = undefined
   }
 
   private flushWheel(): void {
@@ -605,25 +594,6 @@ class DirectCapture {
       this.drainHost()
       return
     }
-    if (command.type === "close") return this.shutdown()
-    if (command.type === "stop") {
-      this.active = false
-      this.epoch = command.epoch
-      this.cachedKey = undefined
-      this.pendingHost = undefined
-      this.clearWheel()
-      this.stopJpeg()
-      return
-    }
-    if (command.type === "gate") {
-      this.navigation = command.navigation
-      this.committed = command.committed
-      this.epoch = command.epoch
-      this.cachedKey = undefined
-      this.pendingHost = undefined
-      this.clearWheel()
-      return
-    }
     this.startStream(command)
   }
 
@@ -650,18 +620,6 @@ class DirectCapture {
       return
     }
     this.startJpeg()
-  }
-
-  private shutdown(): void {
-    if (this.clientTimer) clearTimeout(this.clientTimer)
-    this.clearWheel()
-    this.clientWs?.close(1001, "Closed")
-    this.closeOffscreen()
-    this.stopJpeg()
-    this.targetWs.close()
-    this.wss.close()
-    this.server.close()
-    process.exit(0)
   }
 }
 
