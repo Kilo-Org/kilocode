@@ -41,8 +41,8 @@ type FactoryOptions = {
   connection: KiloConnectionService
   paths: () => string[]
   post: (active: string[]) => void
-  status: (event: unknown) => void
-  lifecycle: (event: unknown) => void
+  status: (event: unknown, directory?: string) => void
+  lifecycle: (event: unknown, directory?: string) => void
   log: (err: unknown) => void
 }
 
@@ -56,6 +56,7 @@ const TYPES = new Set([
   "question.replied",
   "question.rejected",
   "server.instance.disposed",
+  "global.disposed",
 ])
 
 function normalize(dir: string): string {
@@ -125,6 +126,11 @@ export class WorktreeActivity {
     if (!value) return
 
     const type = value.type
+    if (type === "global.disposed") {
+      for (const state of this.states) this.invalidate(state)
+      this.publish()
+      return
+    }
     if (type === "server.instance.disposed") {
       const props = record(value.properties)
       const dir = string(props?.directory) ?? directory
@@ -132,7 +138,6 @@ export class WorktreeActivity {
       const state = this.states.find((item) => matches(item.dir, dir))
       if (!state) return
       this.invalidate(state)
-      state.loaded = false
       this.publish()
       return
     }
@@ -378,14 +383,19 @@ export function createWorktreeActivity(opts: FactoryOptions) {
   const unsubEvent = opts.connection.onEventFiltered(filter, (event, directory) => {
     activity.event(event, directory)
     const type = record(event)?.type
-    if (type === "session.status") opts.status(event)
+    if (type === "session.status") opts.status(event, directory)
+    if (type === "server.instance.disposed" || type === "global.disposed") {
+      opts.lifecycle(event, directory)
+      void sync()
+      return
+    }
     if (
       type === "session.created" ||
       type === "session.updated" ||
       type === "session.deleted" ||
       type === "session.error"
     )
-      opts.lifecycle(event)
+      opts.lifecycle(event, directory)
   })
   const sync = (force = false) => {
     if (force) activity.replay()

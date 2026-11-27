@@ -62,6 +62,7 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
   const [attempt, setAttempt] = createSignal<Attempt>({ kind: "idle" })
 
   const personal = createMemo(() => props.profileData?.profile.hasPersonalAccount !== false)
+  const signed = createMemo(() => (props.deviceAuth.status === "idle" ? props.profileData : null))
 
   // Load current profile and usage when navigating to this view.
   onMount(() => {
@@ -234,7 +235,7 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
         }}
       >
         <Show
-          when={props.profileData}
+          when={signed()}
           fallback={
             <div style={{ display: "flex", "flex-direction": "column", gap: "12px" }}>
               <Show
@@ -428,7 +429,7 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
           )}
         </Show>
 
-        <Show when={!props.profileData}>{usage()}</Show>
+        <Show when={!signed()}>{usage()}</Show>
       </div>
     </div>
   )
