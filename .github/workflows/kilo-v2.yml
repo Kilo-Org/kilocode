@@ -231,24 +231,27 @@ jobs:
   # Writes the bot branch and PR on pushes to v2, never on pull requests.
   progress-commit:
     name: migration progress map commit
-    if: github.event_name == 'push' && github.ref == 'refs/heads/v2'
+    if: github.repository == 'Kilo-Org/kilocode' && github.event_name == 'push' && github.ref == 'refs/heads/v2'
     needs: progress
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    timeout-minutes: 10
+    timeout-minutes: 15
     concurrency:
       group: kilo-v2-progress-map
       cancel-in-progress: false
+    # Rollout requires the automation environment to admit v2 and the external ci-kilocode-app-key
+    # policy to admit Kilo-Org/kilocode/.github/workflows/kilo-v2.yml@refs/heads/v2 for push.
+    # Every step can request OIDC: run only trusted code, without PR artifacts, caches or package installs.
+    environment: automation
     permissions:
-      contents: write
-      pull-requests: write
-    env:
-      HAS_MAINTAINER_APP: ${{ secrets.KILO_MAINTAINER_APP_ID != '' && secrets.KILO_MAINTAINER_APP_SECRET != '' }}
+      contents: read
+      id-token: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           filter: blob:none
+          persist-credentials: false
 
       - name: Fetch the pinned v1 target
         run: git fetch --filter=blob:none --no-tags origin main
@@ -257,22 +260,24 @@ jobs:
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: package.json
-          no-cache: true # job holds write scopes and the maintainer app secrets
+          no-cache: true
 
-      # A PR created with the workflow GITHUB_TOKEN does not start its own checks. When the Kilo maintainer
-      # app secrets are present, this step makes the bot PR an app-authored PR so the `progress` guard runs
-      # on it. Without them the job falls back to the workflow token and the bot PR stays unvalidated. The
-      # action keeps its upstream input names; the values are the Kilo maintainer app secrets. The token covers
-      # only this repository: contents to push the bot branch, pull requests to open, edit, close, review-dismiss
-      # and auto-merge the bot PR, workflows because the force-push moves the branch onto a v2 tip whose commits
-      # can change workflow files, which GitHub refuses for an app token without it.
+      - name: Read the maintainer App key from STS
+        id: creds
+        uses: Kilo-Org/kilocode/.github/actions/kilo-credentials@4a92556e45fa5173f2bbead33cdd010a21554502 # reviewed in #16629
+        with:
+          workload: ci-kilocode-app-key
+          secrets: KILOCODE_MAINTAINER_APP_KEY
+
+      # Use the App for both git and gh so the bot PR starts its checks. Contents writes the branch;
+      # pull requests manages the PR, approvals and auto-merge; workflows lets a force-push carry
+      # workflow changes from the v2 tip. Limit all three grants to kilocode.
       - name: Setup Git Committer
         id: committer
-        if: env.HAS_MAINTAINER_APP == 'true'
         uses: ./.github/actions/setup-git-committer
         with:
           opencode-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
-          opencode-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
+          opencode-app-secret: ${{ steps.creds.outputs.KILOCODE_MAINTAINER_APP_KEY }}
           repositories: kilocode
           permission-contents: write
           permission-pull-requests: write
@@ -280,13 +285,9 @@ jobs:
 
       - name: Open or update the progress map PR
         env:
-          GH_TOKEN: ${{ steps.committer.outputs.token || github.token }}
+          GH_TOKEN: ${{ steps.committer.outputs.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          if [ "$HAS_MAINTAINER_APP" != "true" ]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          fi
           bot_prs() {
             gh api -X GET "repos/$GITHUB_REPOSITORY/pulls" \
               -f state=open -f base=v2 -f "head=$GITHUB_REPOSITORY_OWNER:progress-map-update" \
@@ -307,8 +308,8 @@ jobs:
             git reset --hard origin/v2
             base_sha=$(git rev-parse HEAD)
             cp migration-tracking/progress/progress.json base.json
-            bun script/upstream/progress.ts
-            read -r -a paths <<< "$(bun script/upstream/progress.ts --outputs)"
+            bun --no-install script/upstream/progress.ts
+            read -r -a paths <<< "$(bun --no-install script/upstream/progress.ts --outputs)"
             git add -- "${paths[@]}"
             if git diff --cached --quiet; then
               # A queued run can find the map already current. Close every older bot PR and leave none open.
@@ -329,7 +330,7 @@ jobs:
             {
               echo "Regenerated from \`v2\` at \`$base_sha\`."
               echo
-              bun script/upstream/progress.ts --compare base.json migration-tracking/progress/progress.json
+              bun --no-install script/upstream/progress.ts --compare base.json migration-tracking/progress/progress.json
             } > body.md
             if [ -n "$pr" ]; then
               close_stale_prs "$pr"
