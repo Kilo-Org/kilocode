@@ -23,12 +23,9 @@ import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { apply } from "./changeset-version"
-import { check, rule, shape } from "./release-check"
+import { check, IDENTITY, rule, shape } from "./release-check"
 
 const root = fileURLToPath(new URL("../../", import.meta.url))
-
-/** The git identity of release commits, the one setup-git-committer gives the Kilo Maintainer app. */
-export const IDENTITY = { name: "kilo-maintainer[bot]", email: "kilo-maintainer[bot]@users.noreply.github.com" }
 
 /**
  * Sets `version` everywhere a release records it and consumes the pending changesets into the
@@ -91,6 +88,8 @@ export async function pack(input: { cwd: string; version: string; out: string })
     await git`git add -A -- ${file}`
     paths.push({ status, path: file })
   }
+  const untracked = (await git`git ls-files --others --exclude-standard -z`.text()).split("\0").filter(Boolean)
+  for (const file of untracked) console.log(`::warning::The release commit leaves out the new file ${file}`)
   const who = ["-c", `user.name=${IDENTITY.name}`, "-c", `user.email=${IDENTITY.email}`]
   await git`git ${who} commit --quiet --no-verify -m ${`release: ${tag}`}`
   await git`git tag ${tag}`
@@ -99,8 +98,22 @@ export async function pack(input: { cwd: string; version: string; out: string })
     ...shape({ cwd, commit, parents: [base], subject: `release: ${tag}` }),
     ...check({ cwd, from: base, to: commit, version }),
   ]
-  if (problems.length > 0)
+  if (problems.some((problem) => problem.startsWith("bun.lock:") && !problem.includes(": mode "))) {
+    throw new Error(
+      `bun.lock on main is not in Bun's canonical form; merge the \`bun install\` output and dispatch again.\n${problems.join("\n")}`,
+    )
+  }
+  const reformatted = problems
+    .filter((problem) => problem.endsWith(": the old text must stay unchanged after the new block"))
+    .map((problem) => problem.split(":")[0])
+  if (reformatted.length > 0) {
+    throw new Error(
+      `${reformatted.join(", ")} on main is not in the form changesets writes (it reformats old sections with prettier); format it with prettier on main and dispatch again.\n${problems.join("\n")}`,
+    )
+  }
+  if (problems.length > 0) {
     throw new Error(`The release commit is not one the release-push job accepts:\n${problems.join("\n")}`)
+  }
   await mkdir(out, { recursive: true })
   const bundle = path.join(out, "release.bundle")
   await git`git bundle create ${bundle} ${`refs/tags/${tag}`} ${`^${base}`}`.quiet()

@@ -6,9 +6,8 @@ import { fileURLToPath } from "url"
 // kilocode_change start
 import fs from "node:fs"
 import path from "node:path"
-import { NpmPublish } from "./kilocode/npm-publish"
 import * as KiloSbom from "./kilocode/sbom"
-import * as KiloDraft from "../../../script/kilocode/draft-assets"
+import * as Stage from "../../../script/kilocode/publish-stage"
 import * as Artifact from "../../../script/kilocode/sbom/artifact"
 import type { Manifest } from "../../../script/kilocode/sbom/index"
 // kilocode_change end
@@ -19,10 +18,11 @@ process.chdir(dir)
 // kilocode_change start
 const evidence: Manifest.Entry[] = []
 /**
- * npm publishes of the packed tarballs, run after the GitHub release is public: the CLI installer
- * and `kilo upgrade` take the version from npm and download the archives from the release.
+ * The packed npm tarballs. The publish job publishes them (kilocode/publish-npm.ts) after the
+ * release-undraft job published the GitHub release: the CLI installer and `kilo upgrade` take the
+ * version from npm and download the archives from the release.
  */
-const pending: { name: string; run: () => Promise<unknown> }[] = []
+const pending: { name: string; version: string; path: string }[] = []
 
 /** Record SBOM evidence for one npm tarball, or an explicit failure entry that keeps its digest. */
 async function describe(file: string | undefined, name: string, version: string) {
@@ -96,16 +96,7 @@ async function publish(dir: string, name: string, version: string) {
   const tarball = packed[0]
   await describe(path.join(dir, tarball), name, version)
 
-  pending.push({
-    name,
-    run: () =>
-      NpmPublish.retry({
-        name,
-        version,
-        run: () => $`npm publish ${tarball} --access public --tag ${Script.channel} --provenance`.cwd(dir),
-        exists: () => published(name, version),
-      }),
-  })
+  pending.push({ name, version, path: path.resolve(dir, tarball) })
   // kilocode_change end
 }
 
@@ -169,8 +160,11 @@ const tags = [`${image}:${version}`, `${image}:${Script.channel}`]
 const tagFlags = tags.flatMap((t) => ["-t", t])
 
 // kilocode_change start - a re-run after the release was published only finishes what the first
-// run left: the images were pushed and described before the release was published.
-const live = Script.release && !(await KiloDraft.open(Script.version)).draft
+// run left: the images were pushed and described before the release was published. This job's
+// token may not read drafts, so a release it can read by its tag is a published one.
+const live =
+  Script.release &&
+  (await $`gh api ${`repos/${process.env.GH_REPO}/releases/tags/v${Script.version}`}`.quiet().nothrow()).exitCode === 0
 // kilocode_change end
 // registries
 if (!Script.preview && !live) {
@@ -187,46 +181,54 @@ if (!Script.preview && !live) {
   await $`docker buildx build --platform ${platforms} ${variantTagFlags} --target openshell --provenance=mode=max --sbom=true --metadata-file ${variantMetadata} --push .`
   evidence.push(...(await describeImages(variantMetadata)))
   // kilocode_change end
-  // kilocode_change start - every asset reaches the draft and the draft is checked and published
-  // here, after the image digests are known; the npm packages follow. The package-managers job of
-  // publish.yml updates AUR and Homebrew after this job (script/kilocode/package-managers.ts).
+  // kilocode_change start - every asset reaches the draft and the draft is checked and published by
+  // the release-undraft job, after the image digests are known; the npm packages follow in the
+  // publish job. The package-managers job of publish.yml updates AUR and Homebrew after that.
 }
-await release()
-await publishNpm()
+await stage()
 // kilocode_change end
 
 // kilocode_change start - record which npm tarballs and container manifests this
-// release produced, put that evidence on the draft, check the complete draft and
-// publish the release. AUR and Homebrew redistribute the archives described by the
-// archive manifest, so they need no separate evidence. A failure leaves the
-// release a draft: published assets cannot be added or replaced later. On a re-run
-// after the release was published, nothing is uploaded: the published assets are
-// checked, and every npm tarball must be the one the published evidence names.
-async function release() {
-  if (!Script.release) return
-  if (live) return KiloDraft.recheck({ version: Script.version, entries: evidence })
+// release produced and hand them to the next jobs (script/kilocode/publish-stage.ts):
+// release-undraft puts the evidence on the draft, checks the complete draft and
+// publishes the release, and publish puts the tarballs on npm. AUR and Homebrew
+// redistribute the archives described by the archive manifest, so they need no
+// separate evidence. On a re-run after the release was published, no evidence is
+// written: release-undraft checks the published assets, and every npm tarball must
+// be the one the published evidence names.
+async function stage() {
+  const out = process.env.KILO_PUBLISH_DIR
+  if (!out) throw new Error("KILO_PUBLISH_DIR (the publish-build artifact directory) is required")
   // Expected coverage is derived from what this release had to produce, not from
   // what happened to be recorded, so a missing package or image is a shortfall.
   const packages = Object.keys(binaries).length + 1
   const images = Script.preview ? 0 : 2 * (platforms.split(",").length + 1) // main image and OpenShell variant
-  const described = await KiloSbom.distribution({
-    dir: path.resolve("dist"),
-    release: { version, channel: Script.channel },
-    entries: evidence,
-    expected: packages + images,
-  })
-  await KiloDraft.publish({
+  const described =
+    Script.release && !live
+      ? await KiloSbom.distribution({
+          dir: path.resolve("dist"),
+          release: { version, channel: Script.channel },
+          entries: evidence,
+          expected: packages + images,
+        })
+      : undefined
+  const missing = (described?.manifest.entries ?? []).filter((entry) => !/^[0-9a-f]{64}$/.test(entry.sha256))
+  if (missing.length) {
+    throw new Error(`No digest for ${missing.map((entry) => entry.artifact).join(", ")}. Nothing was handed over.`)
+  }
+  // The platform packages first, then the launcher that depends on them.
+  const ordered = [
+    ...pending.filter((item) => item.name !== pkg.name),
+    ...pending.filter((item) => item.name === pkg.name),
+  ]
+  const sha256 = await Stage.write(out, {
     version: Script.version,
-    prerelease: Script.preview,
-    files: described.files,
-    entries: described.manifest.entries,
+    tarballs: ordered,
+    files: described?.files ?? [],
+    entries: described?.manifest.entries ?? evidence,
   })
-}
-
-/** Publish the packed npm tarballs: the platform packages, then the launcher that depends on them. */
-async function publishNpm() {
-  await Promise.all(pending.filter((item) => item.name !== pkg.name).map((item) => item.run()))
-  await Promise.all(pending.filter((item) => item.name === pkg.name).map((item) => item.run()))
+  console.log(`handed over ${ordered.length} npm tarball(s) and ${described?.files.length ?? 0} evidence file(s)`)
+  if (process.env.GITHUB_OUTPUT) fs.appendFileSync(process.env.GITHUB_OUTPUT, `stage-sha256=${sha256}\n`)
 }
 
 /**

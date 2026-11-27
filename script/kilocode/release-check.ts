@@ -9,12 +9,17 @@
  * Imports only Node built-ins, so the release-push job runs it without installing packages.
  *
  * Allowed changes (README of .github/actions/kilo-credentials lists the same):
- * - `package.json` files (modified): only `"version"` lines, from the previous release version to
- *   the new one; same line count. Not `packages/kilo-jetbrains/package.json` (the JetBrains CLI pin).
+ * - `package.json` files (modified): only `"version"` lines change, from any version to the release
+ *   version; same line count. Not `packages/kilo-jetbrains/package.json` (the JetBrains CLI pin).
  * - `bun.lock` (modified): the same `"version"` line rule.
  * - `packages/extensions/zed/extension.toml` (modified): only its `version = "..."` line and the
- *   `releases/download/v<version>/` part of its archive URLs.
- * - `CHANGELOG.md` files (modified): any text.
+ *   `releases/download/v<version>/` part of its archive URLs, to the release version.
+ * - The changelogs of `packages/opencode`, `packages/kilo-vscode` and `packages/kilo-jetbrains`
+ *   (modified): the old text stays an exact suffix after the `# title` line, and the one block
+ *   prepended before it (at most 64 KiB) holds only changesets output: a `## <version>` header
+ *   (the release version, any version for JetBrains), `### Major|Minor|Patch Changes`, blank
+ *   lines, bullets whose text is a line of a `.changeset/*.md` file the commit deletes (read from
+ *   the parent tree), and changesets' "Updated dependencies" lines.
  * - `.changeset/<name>.md` (deleted), except `.changeset/README.md`.
  * Refused even where a pattern above matches: `.github/`, `script/`, `bin/`, `nix/`, every other
  * lockfile, added files, renames, every mode change (an executable bit set or cleared, a file
@@ -30,12 +35,33 @@ const LOCKFILE =
   /(^|\/)(bun\.lockb?|package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-lock\.yaml|Cargo\.lock|Gemfile\.lock|poetry\.lock|uv\.lock|go\.sum|gradle\.lockfile|flake\.lock)$/
 const PIN = "packages/kilo-jetbrains/package.json"
 const EXTENSION = "packages/extensions/zed/extension.toml"
+/** Each changelog with whether its block header must be the release version. */
+const CHANGELOGS: Record<string, "release" | "any"> = {
+  "packages/opencode/CHANGELOG.md": "release",
+  "packages/kilo-vscode/CHANGELOG.md": "release",
+  "packages/kilo-jetbrains/CHANGELOG.md": "any",
+}
+const CHANGELOG_LIMIT = 64 * 1024
 const FILE_MODES = ["100644", "100755"]
-const VERSION = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/
-const JSON_VERSION = /^(\s*)"version": "([^"]*)"(,?)$/
-const TOML_VERSION = /^version = "([^"]*)"$/
+const SEMVER = String.raw`\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?`
+const VERSION = new RegExp(`^${SEMVER}$`)
+const JSON_VERSION = new RegExp(`^(\\s*)"version": "(${SEMVER})"(,?)$`)
+const TOML_VERSION = new RegExp(`^version = "${SEMVER}"$`)
+const DOWNLOAD = new RegExp(`/releases/download/v${SEMVER}/`, "g")
+const COMMIT_LINK = String.raw`\[\x60[0-9a-f]{7,40}\x60\]\(https://github\.com/Kilo-Org/kilocode/commit/[0-9a-f]{40}\)`
+const USER_LINK = String.raw`\[@[\w.-]+(?:\[bot\])?\]\(https://github\.com/[\w.-]+(?:\[bot\])?\)`
+const DOWNLOAD_ONE = new RegExp(DOWNLOAD.source)
+/** The link prefix changesets (script/changelog-github.cjs) writes before a summary's first line. */
+const PREFIX = new RegExp(
+  String.raw`^(?:\[#\d+\]\(https://github\.com/Kilo-Org/kilocode/pull/\d+\) )?(?:${COMMIT_LINK} )?(?:Thanks ${USER_LINK}(?:(?:, | and )${USER_LINK})*! )?- `,
+)
+const DEPENDENCIES = new RegExp(String.raw`^Updated dependencies \[${COMMIT_LINK}(?:, ${COMMIT_LINK})*\]:$`)
+const DEPENDENCY = new RegExp(`^- (?:@[a-z0-9-]+/)?[a-z0-9._-]+@${SEMVER}$`)
 
-export type Rule = { kind: "json" | "toml" | "text" | "delete" } | { refused: string }
+/** The identity of release commits and merges, the one setup-git-committer gives the Kilo Maintainer app. */
+export const IDENTITY = { name: "kilo-maintainer[bot]", email: "kilo-maintainer[bot]@users.noreply.github.com" }
+
+export type Rule = { kind: "json" | "toml" | "changelog" | "delete" } | { refused: string }
 
 /** What the release commit may change at `path` with git status `status`. */
 export function rule(path: string, status: string): Rule {
@@ -47,9 +73,7 @@ export function rule(path: string, status: string): Rule {
     return status === "M" ? { kind: "json" } : { refused: "package.json files may only be modified" }
   }
   if (path === EXTENSION) return status === "M" ? { kind: "toml" } : { refused: "extension.toml may only be modified" }
-  if (/(^|\/)CHANGELOG\.md$/.test(path)) {
-    return status === "M" ? { kind: "text" } : { refused: "changelogs may only be modified" }
-  }
+  if (path in CHANGELOGS) return status === "M" ? { kind: "changelog" } : { refused: "changelogs may only be modified" }
   if (/^\.changeset\/[^/]+\.md$/.test(path) && path !== ".changeset/README.md") {
     return status === "D" ? { kind: "delete" } : { refused: "changesets may only be deleted" }
   }
@@ -77,15 +101,8 @@ function changes(cwd: string, from: string, to: string): Entry[] {
 const show = (cwd: string, commit: string, path: string) =>
   execFileSync("git", ["show", `${commit}:${path}`], { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 })
 
-/** Line problems of one modified file: only version lines may change, from `previous` to `version`. */
-export function lines(
-  kind: "json" | "toml",
-  path: string,
-  old: string,
-  next: string,
-  previous: string,
-  version: string,
-) {
+/** Line problems of one modified file: only version lines may change, from any version to `version`. */
+export function lines(kind: "json" | "toml", path: string, old: string, next: string, version: string) {
   const before = old.split("\n")
   const after = next.split("\n")
   if (before.length !== after.length) return [`${path}: the line count changed`]
@@ -98,21 +115,69 @@ export function lines(
     if (kind === "json") {
       const match = JSON_VERSION.exec(a)
       if (!match) problems.push(`${where}: only "version" lines may change`)
-      else if (match[2] !== previous) problems.push(`${where}: the old version is ${match[2]}, not ${previous}`)
-      else if (b !== `${match[1]}"version": "${version}"${match[3]}`)
+      else if (b !== `${match[1]}"version": "${version}"${match[3]}`) {
         problems.push(`${where}: the new line is not version ${version}`)
+      }
       continue
     }
-    const match = TOML_VERSION.exec(a)
-    if (match) {
-      if (match[1] !== previous) problems.push(`${where}: the old version is ${match[1]}, not ${previous}`)
-      else if (b !== `version = "${version}"`) problems.push(`${where}: the new line is not version ${version}`)
+    if (TOML_VERSION.test(a)) {
+      if (b !== `version = "${version}"`) problems.push(`${where}: the new line is not version ${version}`)
       continue
     }
-    const from = `/releases/download/v${previous}/`
-    if (!a.includes(from) || b !== a.replaceAll(from, `/releases/download/v${version}/`)) {
+    if (!DOWNLOAD_ONE.test(a) || b !== a.replaceAll(DOWNLOAD, `/releases/download/v${version}/`)) {
       problems.push(`${where}: only the version line and release download URLs may change`)
     }
+  }
+  return problems
+}
+
+/** The body lines of a changeset file: the text after its front matter, without trailing spaces. */
+export function body(text: string) {
+  // changesets reads front matter after a byte order mark too (seen in .changeset/fix-windows-arm64-error.md).
+  const match = /^---\n[\s\S]*?\n---\n([\s\S]*)$/.exec(text.replace(/^\uFEFF/, "").replaceAll("\r\n", "\n"))
+  return (match?.[1] ?? "")
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .filter((line) => line !== "")
+}
+
+/**
+ * Problems of one changelog change: `next` must be `old` with one block of changesets output
+ * inserted after the `# title` line. `header` is the version the block's `## ` header must name,
+ * or undefined for any version. `summaries` are the body lines of the changesets the commit deletes.
+ */
+export function changelog(path: string, old: string, next: string, header: string | undefined, summaries: Set<string>) {
+  const title = /^# [^\n]*\n\n/.exec(old)?.[0]
+  if (!title || !next.startsWith(title)) return [`${path}: the "# title" line and the blank line after it must stay`]
+  const rest = old.slice(title.length)
+  const updated = next.slice(title.length)
+  if (!updated.endsWith(rest)) return [`${path}: the old text must stay unchanged after the new block`]
+  const block = updated.slice(0, updated.length - rest.length)
+  if (block === "") return [`${path}: no block was added`]
+  if (Buffer.byteLength(block) > CHANGELOG_LIMIT) return [`${path}: the new block is larger than 64 KiB`]
+  if (!block.endsWith("\n")) return [`${path}: the new block must end with a newline`]
+  const added = block.slice(0, -1).split("\n")
+  const problems: string[] = []
+  const want = header === undefined ? new RegExp(`^## ${SEMVER}$`) : undefined
+  const first = added[0] ?? ""
+  if (want ? !want.test(first) : first !== `## ${header}`) {
+    problems.push(
+      `${path}: the new block must start with "## ${header ?? "<version>"}", found ${JSON.stringify(first)}`,
+    )
+  }
+  for (const [i, line] of added.slice(1).entries()) {
+    if (line === "" || /^### (?:Major|Minor|Patch) Changes$/.test(line)) continue
+    if (line.startsWith("- ")) {
+      const text = line.slice(2).trimEnd()
+      const summary = text.replace(PREFIX, "")
+      if (DEPENDENCIES.test(text) || summaries.has(summary) || summaries.has(text)) continue
+    } else if (line.startsWith("  ")) {
+      const text = line.slice(2).trimEnd()
+      if (DEPENDENCY.test(text) || summaries.has(text)) continue
+    }
+    problems.push(
+      `${path}: line ${i + 2} of the new block is not changesets output of a deleted changeset: ${JSON.stringify(line.slice(0, 120))}`,
+    )
   }
   return problems
 }
@@ -124,12 +189,14 @@ export function lines(
 export function check(input: { cwd: string; from: string; to: string; version: string }) {
   const { cwd, from, to, version } = input
   if (!VERSION.test(version)) return [`invalid release version ${JSON.stringify(version)}`]
-  const previous: unknown = JSON.parse(show(cwd, from, "packages/opencode/package.json")).version
-  if (typeof previous !== "string" || !VERSION.test(previous))
-    return [`invalid previous version ${JSON.stringify(previous)}`]
   const problems: string[] = []
   const entries = changes(cwd, from, to)
   if (entries.length === 0) problems.push("the commit changes nothing")
+  const summaries = new Set(
+    entries
+      .filter((entry) => entry.status === "D" && "kind" in rule(entry.path, entry.status))
+      .flatMap((entry) => (entry.path.startsWith(".changeset/") ? body(show(cwd, from, entry.path)) : [])),
+  )
   for (const entry of entries) {
     const allowed = rule(entry.path, entry.status)
     const kept = FILE_MODES.includes(entry.from) && (entry.status === "D" || entry.to === entry.from)
@@ -139,9 +206,11 @@ export function check(input: { cwd: string; from: string; to: string; version: s
     }
     if ("refused" in allowed || !kept) continue
     if (allowed.kind === "json" || allowed.kind === "toml") {
-      problems.push(
-        ...lines(allowed.kind, entry.path, show(cwd, from, entry.path), show(cwd, to, entry.path), previous, version),
-      )
+      problems.push(...lines(allowed.kind, entry.path, show(cwd, from, entry.path), show(cwd, to, entry.path), version))
+    }
+    if (allowed.kind === "changelog") {
+      const header = CHANGELOGS[entry.path] === "release" ? version : undefined
+      problems.push(...changelog(entry.path, show(cwd, from, entry.path), show(cwd, to, entry.path), header, summaries))
     }
   }
   return problems
@@ -162,8 +231,9 @@ export function shape(input: { cwd: string; commit: string; parents: string[]; s
   }
   if (subject !== undefined) {
     const found = execFileSync("git", ["log", "-1", "--format=%s", commit], { cwd, encoding: "utf8" }).trim()
-    if (found !== subject)
+    if (found !== subject) {
       problems.push(`commit subject is ${JSON.stringify(found)}, expected ${JSON.stringify(subject)}`)
+    }
   }
   return problems
 }

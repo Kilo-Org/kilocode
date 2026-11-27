@@ -4,13 +4,12 @@ import { createHash } from "node:crypto"
 import { chmod, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
-import { check, lines, rule, shape } from "./release-check"
+import { body, changelog, check, lines, rule, shape } from "./release-check"
 import { pack } from "./release-bundle"
 import { push } from "./release-push"
 
 // A throwaway "origin" stands in for GitHub: the release-commit side writes the bundle with pack(),
-// the release-push side runs script/kilocode/release-push.ts against the bare repository. A stand-in
-// `gh` answers the two read-only lookups of release-commit.ts from the same repository.
+// the release-push side runs script/kilocode/release-push.ts (or push()) against the bare repository.
 
 const roots: string[] = []
 afterEach(async () => {
@@ -25,48 +24,11 @@ async function temp() {
 
 const saved = { ...process.env }
 let tools = ""
-let config = ""
 beforeAll(async () => {
   tools = await mkdtemp(path.join(os.tmpdir(), "release-push-tools-"))
-  config = path.join(tools, "gitconfig")
+  const config = path.join(tools, "gitconfig")
   await writeFile(config, "[user]\n\tname = test\n\temail = test@example.com\n[init]\n\tdefaultBranch = main\n")
-  const gh = path.join(tools, "gh")
-  await writeFile(
-    gh,
-    [
-      "#!/usr/bin/env bun",
-      'import { execFileSync } from "node:child_process"',
-      "const origin = process.env.STUB_ORIGIN",
-      'const endpoint = process.argv.slice(2).find((arg) => arg.startsWith("repos/")) ?? ""',
-      'const git = (...args) => execFileSync("git", ["-C", origin, ...args], { encoding: "utf8" })',
-      'if (endpoint.includes("/commits?")) {',
-      '  for (const item of git("log", "main", "-n", "100", "--format=%H%x00%B%x01").split("\\x01")) {',
-      '    const [sha, message] = item.replace(/^\\n/, "").split("\\0")',
-      "    if (sha) console.log(JSON.stringify({ sha, commit: { message } }))",
-      "  }",
-      '} else if (endpoint.includes("/compare/")) {',
-      '  const from = endpoint.split("/compare/")[1].split("...")[0]',
-      '  const main = git("rev-parse", "main").trim()',
-      '  let status = "diverged"',
-      '  if (from === main) status = "identical"',
-      "  else {",
-      "    try {",
-      '      git("merge-base", "--is-ancestor", from, "main")',
-      '      status = "ahead"',
-      "    } catch {}",
-      "  }",
-      "  console.log(status)",
-      "} else process.exit(1)",
-      "",
-    ].join("\n"),
-  )
-  await chmod(gh, 0o755)
-  Object.assign(process.env, {
-    PATH: `${tools}${path.delimiter}${process.env.PATH}`,
-    GIT_CONFIG_GLOBAL: config,
-    GIT_CONFIG_NOSYSTEM: "1",
-    GH_REPO: "test/kilocode",
-  })
+  Object.assign(process.env, { GIT_CONFIG_GLOBAL: config, GIT_CONFIG_NOSYSTEM: "1" })
 })
 afterAll(async () => {
   for (const key of Object.keys(process.env)) if (!(key in saved)) delete process.env[key]
@@ -76,10 +38,14 @@ afterAll(async () => {
 
 const git = (cwd: string, ...args: string[]) =>
   execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim()
+const digest = async (file: string) =>
+  createHash("sha256")
+    .update(await readFile(file))
+    .digest("hex")
 
 const json = (name: string, version: string) =>
   `{\n  "name": "${name}",\n  "version": "${version}",\n  "private": true\n}\n`
-const lock = (cli: string, pin: string) =>
+const lock = (cli: string, pin: string, other = cli) =>
   [
     "{",
     '  "lockfileVersion": 1,',
@@ -92,21 +58,29 @@ const lock = (cli: string, pin: string) =>
     '      "name": "@kilocode/cli",',
     `      "version": "${cli}",`,
     "    },",
+    '    "packages/other": {',
+    '      "name": "@kilocode/other",',
+    `      "version": "${other}",`,
+    "    },",
     "  },",
     "}",
     "",
   ].join("\n")
 const toml = (version: string) =>
   `id = "kilo"\nversion = "${version}"\n\n[targets]\narchive = "https://github.com/Kilo-Org/kilocode/releases/download/v${version}/kilo-linux-x64.tar.gz"\n`
+const sha40 = "0123456789abcdef0123456789abcdef01234567"
+const entry = `- [#12](https://github.com/Kilo-Org/kilocode/pull/12) [\`0123456\`](https://github.com/Kilo-Org/kilocode/commit/${sha40}) - A change`
+const cli = (sections: string) => `# @kilocode/cli\n\n${sections}`
 
-/** Writes the release files of `version` the way the version bump does. */
+/** Writes the release files of `version` the way the version bump and `changeset version` do. */
 async function release(dir: string, version: string) {
   await writeFile(path.join(dir, "package.json"), json("kilo", version))
   await writeFile(path.join(dir, "packages/opencode/package.json"), json("@kilocode/cli", version))
   await writeFile(path.join(dir, "bun.lock"), lock(version, "0.9.0"))
   await writeFile(path.join(dir, "packages/extensions/zed/extension.toml"), toml(version))
-  const changelog = path.join(dir, "packages/opencode/CHANGELOG.md")
-  await writeFile(changelog, `# @kilocode/cli\n\n## ${version}\n\n- A change\n${await readFile(changelog, "utf8")}`)
+  const file = path.join(dir, "packages/opencode/CHANGELOG.md")
+  const old = await readFile(file, "utf8")
+  await writeFile(file, old.replace("\n\n", `\n\n## ${version}\n\n### Patch Changes\n\n${entry}\n\n`))
   await rm(path.join(dir, ".changeset/one.md"))
 }
 
@@ -118,6 +92,8 @@ async function fixture(): Promise<Fixture> {
   const origin = path.join(root, "origin.git")
   const work = path.join(root, "work")
   git(root, "init", "--bare", "--quiet", origin)
+  git(origin, "config", "uploadpack.allowFilter", "true")
+  git(origin, "config", "uploadpack.allowAnySHA1InWant", "true")
   git(root, "clone", "--quiet", origin, work)
   for (const dir of [
     "packages/opencode",
@@ -126,14 +102,13 @@ async function fixture(): Promise<Fixture> {
     ".changeset",
     ".github/workflows",
     "script",
-    "bin",
   ]) {
     await mkdir(path.join(work, dir), { recursive: true })
   }
   await writeFile(path.join(work, "package.json"), json("kilo", "1.0.0"))
   await writeFile(path.join(work, "packages/opencode/package.json"), json("@kilocode/cli", "1.0.0"))
   await writeFile(path.join(work, "packages/kilo-jetbrains/package.json"), json("@kilocode/kilo-jetbrains", "0.9.0"))
-  await writeFile(path.join(work, "packages/opencode/CHANGELOG.md"), "## 1.0.0\n\n- First\n")
+  await writeFile(path.join(work, "packages/opencode/CHANGELOG.md"), cli("## 1.0.0\n\n- First\n"))
   await writeFile(path.join(work, "bun.lock"), lock("1.0.0", "0.9.0"))
   await writeFile(path.join(work, "packages/extensions/zed/extension.toml"), toml("1.0.0"))
   await writeFile(path.join(work, ".changeset/one.md"), "---\n'@kilocode/cli': patch\n---\n\nA change\n")
@@ -144,9 +119,15 @@ async function fixture(): Promise<Fixture> {
   git(work, "add", "-A")
   git(work, "commit", "--quiet", "-m", "release: v1.0.0")
   git(work, "push", "--quiet", "origin", "HEAD:main")
-  const base = git(work, "rev-parse", "HEAD")
-  process.env.STUB_ORIGIN = origin
-  return { root, origin, work, base }
+  return { root, origin, work, base: git(work, "rev-parse", "HEAD") }
+}
+
+/** Packs the release commit the way the release-commit job does. */
+async function packed(f: Fixture) {
+  await release(f.work, "1.0.1")
+  const out = path.join(f.root, "out")
+  const result = await pack({ cwd: f.work, version: "1.0.1", out })
+  return { ...result, bundle: path.join(out, "release.bundle") }
 }
 
 /** A bundle of tag v1.0.1 on a commit made by `edit`, without the checks pack() runs. */
@@ -161,23 +142,28 @@ async function forge(f: Fixture, edit: (dir: string) => Promise<void>, parents?:
   git(f.work, "tag", "v1.0.1")
   const bundle = path.join(f.root, "forged.bundle")
   git(f.work, "bundle", "create", "--quiet", bundle, "refs/tags/v1.0.1", `^${f.base}`)
-  const sha256 = createHash("sha256")
-    .update(await readFile(bundle))
-    .digest("hex")
-  return { bundle, sha256, commit: git(f.work, "rev-parse", "HEAD") }
+  return { bundle, sha256: await digest(bundle), commit: git(f.work, "rev-parse", "HEAD") }
 }
 
-/** The release-push job: a fresh clone of origin at the dispatch commit, running the script. */
+/** A clone of origin at the dispatch commit: a plain clone, or the CI checkout shape. */
+async function keys(f: Fixture, shape: "plain" | "ci" = "plain") {
+  const dir = path.join(f.root, `keys-${Date.now()}-${Math.random()}`)
+  if (shape === "ci") {
+    git(f.root, "clone", "--quiet", "--depth=1", "--filter=blob:none", "--sparse", `file://${f.origin}`, dir)
+  } else git(f.root, "clone", "--quiet", f.origin, dir)
+  git(dir, "checkout", "--quiet", "--detach", f.base)
+  return dir
+}
+
+/** The release-push job: the script in a fresh clone of origin at the dispatch commit. */
 async function run(f: Fixture, bundle: string, sha256: string) {
-  const keys = path.join(f.root, `keys-${Date.now()}-${Math.random()}`)
-  git(f.root, "clone", "--quiet", f.origin, keys)
-  git(keys, "checkout", "--quiet", "--detach", f.base)
+  const cwd = await keys(f)
   const result = spawnSync("bun", [path.join(import.meta.dir, "release-push.ts"), bundle], {
-    cwd: keys,
+    cwd,
     env: { ...process.env, BUNDLE_SHA256: sha256, VERSION: "1.0.1", BASE: f.base },
     encoding: "utf8",
   })
-  return { code: result.status, output: `${result.stdout}${result.stderr}`, keys }
+  return { code: result.status, output: `${result.stdout}${result.stderr}` }
 }
 
 /** Moves origin's main by one commit that writes `files`. */
@@ -201,6 +187,8 @@ const refs = (origin: string) => ({
     encoding: "utf8",
   }).stdout.trim(),
 })
+const parents = (origin: string, ref: string) =>
+  git(origin, "rev-list", "--parents", "-n", "1", ref).split(" ").slice(1)
 
 describe("release-check", () => {
   test("rules: version and changelog paths only, and never the denied paths", () => {
@@ -212,7 +200,9 @@ describe("release-check", () => {
     expect(kind("packages/sdk/js/package.json")).toBe("json")
     expect(kind("bun.lock")).toBe("json")
     expect(kind("packages/extensions/zed/extension.toml")).toBe("toml")
-    expect(kind("packages/opencode/CHANGELOG.md")).toBe("text")
+    expect(kind("packages/opencode/CHANGELOG.md")).toBe("changelog")
+    expect(kind("packages/kilo-vscode/CHANGELOG.md")).toBe("changelog")
+    expect(kind("packages/kilo-jetbrains/CHANGELOG.md")).toBe("changelog")
     expect(kind(".changeset/one.md", "D")).toBe("delete")
     for (const [file, status] of [
       [".github/workflows/publish.yml", "M"],
@@ -224,6 +214,8 @@ describe("release-check", () => {
       ["package-lock.json", "M"],
       ["packages/kilo-jetbrains/package.json", "M"],
       ["packages/new/package.json", "A"],
+      ["packages/sdk/js/CHANGELOG.md", "M"],
+      ["CHANGELOG.md", "M"],
       [".changeset/one.md", "M"],
       [".changeset/README.md", "D"],
       ["bun.lock", "D"],
@@ -233,31 +225,80 @@ describe("release-check", () => {
     }
   })
 
-  test("lines: only version lines from the previous to the release version", () => {
+  test("lines: only version lines, from any version to the release version", () => {
     const old = json("a", "1.0.0")
-    expect(lines("json", "p", old, json("a", "1.0.1"), "1.0.0", "1.0.1")).toEqual([])
-    expect(lines("json", "p", old, json("a", "1.0.2"), "1.0.0", "1.0.1")).toEqual([
-      "p:3: the new line is not version 1.0.1",
+    expect(lines("json", "p", old, json("a", "1.0.1"), "1.0.1")).toEqual([])
+    expect(lines("json", "p", json("a", "0.1.0"), json("a", "1.0.1"), "1.0.1")).toEqual([])
+    expect(lines("json", "p", old, json("a", "1.0.2"), "1.0.1")).toEqual(["p:3: the new line is not version 1.0.1"])
+    expect(lines("json", "p", json("a", "latest"), json("a", "1.0.1"), "1.0.1")).toEqual([
+      'p:3: only "version" lines may change',
     ])
-    expect(lines("json", "p", json("a", "0.1.0"), json("a", "1.0.1"), "1.0.0", "1.0.1")).toEqual([
-      "p:3: the old version is 0.1.0, not 1.0.0",
-    ])
-    expect(lines("json", "p", old, old.replace('"private": true', '"private": false'), "1.0.0", "1.0.1")).toEqual([
+    expect(lines("json", "p", old, old.replace('"private": true', '"private": false'), "1.0.1")).toEqual([
       'p:4: only "version" lines may change',
     ])
-    expect(lines("json", "p", old, `${old}\n`, "1.0.0", "1.0.1")).toEqual(["p: the line count changed"])
-    expect(lines("toml", "t", toml("1.0.0"), toml("1.0.1"), "1.0.0", "1.0.1")).toEqual([])
-    expect(
-      lines("toml", "t", toml("1.0.0"), toml("1.0.0").replace("kilo-linux-x64", "evil"), "1.0.0", "1.0.1"),
-    ).toEqual(["t:5: only the version line and release download URLs may change"])
+    expect(lines("json", "p", old, `${old}\n`, "1.0.1")).toEqual(["p: the line count changed"])
+    expect(lines("toml", "t", toml("1.0.0"), toml("1.0.1"), "1.0.1")).toEqual([])
+    expect(lines("toml", "t", toml("1.0.0"), toml("1.0.0").replace("kilo-linux-x64", "evil"), "1.0.1")).toEqual([
+      "t:5: only the version line and release download URLs may change",
+    ])
   })
+
+  test("changelog: one prepended block of changesets output for deleted changesets", () => {
+    const summaries = new Set(body("---\n'@kilocode/cli': patch\n---\n\nA change\n\nSecond paragraph\n"))
+    // A changeset saved with a byte order mark (as .changeset/fix-windows-arm64-error.md was) and CRLF line ends.
+    expect(body("\uFEFF---\r\n'@kilocode/cli': patch\r\n---\r\n\r\nA change  \r\n")).toEqual(["A change"])
+    const old = cli("## 1.0.0\n\n- First\n")
+    const block = `## 1.0.1\n\n### Patch Changes\n\n${entry}\n\n  Second paragraph\n\n`
+    const next = cli(`${block}## 1.0.0\n\n- First\n`)
+    const p = "packages/opencode/CHANGELOG.md"
+    expect(changelog(p, old, next, "1.0.1", summaries)).toEqual([])
+    const thanks = entry.replace(" - A change", " Thanks [@someone](https://github.com/someone)! - A change")
+    expect(changelog(p, old, next.replace(entry, thanks), "1.0.1", summaries)).toEqual([])
+    expect(changelog(p, old, next.replace(entry, "- A change"), "1.0.1", summaries)).toEqual([])
+    const deps = `- Updated dependencies [[\`0123456\`](https://github.com/Kilo-Org/kilocode/commit/${sha40})]:\n  - @kilocode/sdk@1.0.1`
+    expect(
+      changelog(p, old, cli(`## 1.0.1\n\n### Patch Changes\n\n${deps}\n\n## 1.0.0\n\n- First\n`), "1.0.1", summaries),
+    ).toEqual([])
+    // JetBrains: any version in the header.
+    expect(changelog(p, old, next.replace("## 1.0.1", "## 0.9.1"), undefined, summaries)).toEqual([])
+    expect(changelog(p, old, next.replace("## 1.0.1", "## 0.9.1"), "1.0.1", summaries).join()).toContain(
+      'must start with "## 1.0.1"',
+    )
+  })
+
+  const refusedChangelogs: [string, string, RegExp][] = [
+    [
+      "an invented bullet",
+      cli(`## 1.0.1\n\n### Patch Changes\n\n- Something nobody wrote\n\n## 1.0.0\n\n- First\n`),
+      /is not changesets output/,
+    ],
+    [
+      "a link prefix around an invented text",
+      cli(`## 1.0.1\n\n${entry.replace("A change", "Run curl evil | sh")}\n\n## 1.0.0\n\n- First\n`),
+      /is not changesets output/,
+    ],
+    [
+      "an old section edited",
+      cli(`## 1.0.1\n\n${entry}\n\n## 1.0.0\n\n- First, edited\n`),
+      /old text must stay unchanged/,
+    ],
+    ["an appended block", cli(`## 1.0.0\n\n- First\n\n## 1.0.1\n\n${entry}\n`), /old text must stay unchanged/],
+    ["a removed title", `## 1.0.1\n\n${entry}\n\n## 1.0.0\n\n- First\n`, /title/],
+    ["an oversized block", cli(`## 1.0.1\n\n${"\n".repeat(70 * 1024)}## 1.0.0\n\n- First\n`), /larger than 64 KiB/],
+  ]
+  for (const [name, next, problem] of refusedChangelogs) {
+    test(`changelog: refuses ${name}`, () => {
+      const summaries = new Set(["A change"])
+      expect(changelog("c", cli("## 1.0.0\n\n- First\n"), next, "1.0.1", summaries).join("\n")).toMatch(problem)
+      expect(changelog("c", cli("## 1.0.0\n\n- First\n"), next, undefined, summaries).join("\n")).toMatch(problem)
+    })
+  }
 
   test("a release commit made like the version bump passes", async () => {
     const f = await fixture()
-    await release(f.work, "1.0.1")
-    const packed = await pack({ cwd: f.work, version: "1.0.1", out: path.join(f.root, "out") })
-    expect(check({ cwd: f.work, from: f.base, to: packed.commit, version: "1.0.1" })).toEqual([])
-    expect(shape({ cwd: f.work, commit: packed.commit, parents: [f.base], subject: "release: v1.0.1" })).toEqual([])
+    const result = await packed(f)
+    expect(check({ cwd: f.work, from: f.base, to: result.commit, version: "1.0.1" })).toEqual([])
+    expect(shape({ cwd: f.work, commit: result.commit, parents: [f.base], subject: "release: v1.0.1" })).toEqual([])
     const manifest = JSON.parse(await readFile(path.join(f.root, "out/release-manifest.json"), "utf8"))
     expect(manifest.paths.map((item: { path: string }) => item.path).sort()).toEqual([
       ".changeset/one.md",
@@ -269,6 +310,17 @@ describe("release-check", () => {
     ])
   })
 
+  test("a workspace package at an older version moves to the release version", async () => {
+    const f = await fixture()
+    await writeFile(path.join(f.work, "bun.lock"), lock("1.0.0", "0.9.0", "0.3.2"))
+    git(f.work, "commit", "--quiet", "-am", "older workspace package")
+    const base = git(f.work, "rev-parse", "HEAD")
+    await release(f.work, "1.0.1")
+    await writeFile(path.join(f.work, "bun.lock"), lock("1.0.1", "0.9.0", "1.0.1"))
+    const result = await pack({ cwd: f.work, version: "1.0.1", out: path.join(f.root, "out") })
+    expect(check({ cwd: f.work, from: base, to: result.commit, version: "1.0.1" })).toEqual([])
+  })
+
   test("a package.json that is executable on main may change while it keeps its mode", async () => {
     const f = await fixture()
     await chmod(path.join(f.work, "packages/opencode/package.json"), 0o755)
@@ -276,16 +328,31 @@ describe("release-check", () => {
     git(f.work, "commit", "--quiet", "-m", "executable package.json")
     const base = git(f.work, "rev-parse", "HEAD")
     await release(f.work, "1.0.1")
-    const packed = await pack({ cwd: f.work, version: "1.0.1", out: path.join(f.root, "out") })
-    expect(check({ cwd: f.work, from: base, to: packed.commit, version: "1.0.1" })).toEqual([])
+    const result = await pack({ cwd: f.work, version: "1.0.1", out: path.join(f.root, "out") })
+    expect(check({ cwd: f.work, from: base, to: result.commit, version: "1.0.1" })).toEqual([])
   })
 
   test("pack leaves out a change the release commit may not carry", async () => {
     const f = await fixture()
-    await release(f.work, "1.0.1")
     await writeFile(path.join(f.work, "script/tool.ts"), "export const drift = 1\n")
-    const packed = await pack({ cwd: f.work, version: "1.0.1", out: path.join(f.root, "out") })
-    expect(git(f.work, "show", `${packed.commit}:script/tool.ts`)).toBe("export {}")
+    await writeFile(path.join(f.work, "new.txt"), "untracked\n")
+    const result = await packed(f)
+    expect(git(f.work, "show", `${result.commit}:script/tool.ts`)).toBe("export {}")
+    expect(spawnSync("git", ["cat-file", "-e", `${result.commit}:new.txt`], { cwd: f.work }).status).not.toBe(0)
+  })
+
+  test("pack names bun.lock as the cause when it changes beyond version lines", async () => {
+    const f = await fixture()
+    await release(f.work, "1.0.1")
+    await writeFile(
+      path.join(f.work, "bun.lock"),
+      lock("1.0.1", "0.9.0").replace('"lockfileVersion": 1', '"lockfileVersion": 2'),
+    )
+    const error = await pack({ cwd: f.work, version: "1.0.1", out: path.join(f.root, "out") }).then(
+      () => undefined,
+      (err: unknown) => err,
+    )
+    expect(String(error)).toContain("bun.lock on main is not in Bun's canonical form")
   })
 
   const deny: [string, (dir: string) => Promise<void>, RegExp][] = [
@@ -319,15 +386,42 @@ describe("release-check", () => {
       /package\.json:4: only "version" lines may change/,
     ],
     ["an added file", (dir) => writeFile(path.join(dir, "packages/opencode/new.md"), "x\n"), /new\.md \(A\)/],
+    [
+      "an invented changelog bullet",
+      async (dir) => {
+        const file = path.join(dir, "packages/opencode/CHANGELOG.md")
+        await writeFile(file, (await readFile(file, "utf8")).replace(entry, "- Invented"))
+      },
+      /is not changesets output/,
+    ],
+    [
+      "an old changelog section edited",
+      async (dir) => {
+        const file = path.join(dir, "packages/opencode/CHANGELOG.md")
+        await writeFile(file, (await readFile(file, "utf8")).replace("- First", "- First, edited"))
+      },
+      /old text must stay unchanged/,
+    ],
+    [
+      "a JetBrains changelog edited outside a prepended block",
+      async (dir) => {
+        await writeFile(path.join(dir, "packages/kilo-jetbrains/CHANGELOG.md"), "# Changelog\n\n## 0.9.0\n\n- Edited\n")
+      },
+      /packages\/kilo-jetbrains\/CHANGELOG\.md: the old text must stay unchanged/,
+    ],
   ]
   for (const [name, edit, problem] of deny) {
     test(`refuses ${name}`, async () => {
       const f = await fixture()
+      await writeFile(path.join(f.work, "packages/kilo-jetbrains/CHANGELOG.md"), "# Changelog\n\n## 0.9.0\n\n- Pin\n")
+      git(f.work, "add", "-A")
+      git(f.work, "commit", "--quiet", "-m", "JetBrains changelog")
+      const base = git(f.work, "rev-parse", "HEAD")
       await release(f.work, "1.0.1")
       await edit(f.work)
       git(f.work, "add", "-A")
       git(f.work, "commit", "--quiet", "-m", "release: v1.0.1")
-      const problems = check({ cwd: f.work, from: f.base, to: "HEAD", version: "1.0.1" })
+      const problems = check({ cwd: f.work, from: base, to: "HEAD", version: "1.0.1" })
       expect(problems.join("\n")).toMatch(problem)
     })
   }
@@ -344,19 +438,33 @@ describe("release-check", () => {
 })
 
 describe("release-push", () => {
-  test("pushes a valid bundle, and a re-run verifies the tag and pushes nothing", async () => {
+  test("writes the release commit from the checked tree, pushes it, and a re-run pushes nothing", async () => {
     const f = await fixture()
-    await release(f.work, "1.0.1")
-    const packed = await pack({ cwd: f.work, version: "1.0.1", out: path.join(f.root, "out") })
-    const bundle = path.join(f.root, "out/release.bundle")
-    const first = await run(f, bundle, packed.sha256)
-    expect(first.output).toContain(`Pushed main ${packed.commit} and tag v1.0.1`)
+    const result = await packed(f)
+    const first = await run(f, result.bundle, result.sha256)
     expect(first.code).toBe(0)
-    expect(refs(f.origin)).toEqual({ main: packed.commit, tag: packed.commit })
-    const again = await run(f, bundle, packed.sha256)
+    const after = refs(f.origin)
+    expect(after.main).toBe(after.tag)
+    expect(first.output).toContain(`Pushed main ${after.tag} and tag v1.0.1`)
+    expect(git(f.origin, "rev-parse", "v1.0.1^{tree}")).toBe(git(f.work, "rev-parse", `${result.commit}^{tree}`))
+    expect(parents(f.origin, "v1.0.1")).toEqual([f.base])
+    expect(git(f.origin, "log", "-1", "--format=%s|%an|%ae|%cn|%ct", "v1.0.1")).toBe(
+      `release: v1.0.1|kilo-maintainer[bot]|kilo-maintainer[bot]@users.noreply.github.com|kilo-maintainer[bot]|${git(f.work, "log", "-1", "--format=%ct", result.commit)}`,
+    )
+    const again = await run(f, result.bundle, result.sha256)
     expect(again.code).toBe(0)
-    expect(again.output).toContain("already on main at the release commit")
-    expect(refs(f.origin)).toEqual({ main: packed.commit, tag: packed.commit })
+    expect(again.output).toContain("already names the release commit")
+    expect(refs(f.origin)).toEqual(after)
+  })
+
+  test("refuses a tag on origin that names another commit", async () => {
+    const f = await fixture()
+    const result = await packed(f)
+    git(f.work, "push", "--quiet", "origin", `${f.base}:refs/tags/v1.0.1`)
+    const outcome = await run(f, result.bundle, result.sha256)
+    expect(outcome.code).not.toBe(0)
+    expect(outcome.output).toContain(`Tag v1.0.1 on origin names ${f.base}, not the release commit`)
+    expect(refs(f.origin)).toEqual({ main: f.base, tag: f.base })
   })
 
   const refused: [string, (f: Fixture) => Promise<{ bundle: string; sha256: string }>, string][] = [
@@ -405,12 +513,7 @@ describe("release-push", () => {
         git(f.work, "tag", "-a", "-m", "tag", "v1.0.1")
         const bundle = path.join(f.root, "annotated.bundle")
         git(f.work, "bundle", "create", "--quiet", bundle, "refs/tags/v1.0.1", `^${f.base}`)
-        return {
-          bundle,
-          sha256: createHash("sha256")
-            .update(await readFile(bundle))
-            .digest("hex"),
-        }
+        return { bundle, sha256: await digest(bundle) }
       },
       "is a tag, not a commit",
     ],
@@ -430,25 +533,23 @@ describe("release-push", () => {
 
   test("merges when main moved without overlap; the tag stays on the release commit", async () => {
     const f = await fixture()
-    await release(f.work, "1.0.1")
-    const packed = await pack({ cwd: f.work, version: "1.0.1", out: path.join(f.root, "out") })
+    const result = await packed(f)
     const head = await move(f, { "docs/new.md": "New\n" })
-    const result = await run(f, path.join(f.root, "out/release.bundle"), packed.sha256)
-    expect(result.code).toBe(0)
+    const outcome = await run(f, result.bundle, result.sha256)
+    expect(outcome.code).toBe(0)
     const after = refs(f.origin)
-    expect(after.tag).toBe(packed.commit)
-    expect(git(f.origin, "rev-list", "--parents", "-n", "1", "main").split(" ").slice(1)).toEqual([head, packed.commit])
+    expect(parents(f.origin, "v1.0.1")).toEqual([f.base])
+    expect(parents(f.origin, "main")).toEqual([head, after.tag])
     expect(git(f.origin, "show", "main:docs/new.md")).toBe("New")
     expect(git(f.origin, "show", "main:packages/opencode/package.json")).toContain('"version": "1.0.1"')
   })
 
   test("merges when main changed .github; the second check stays clean", async () => {
     const f = await fixture()
-    await release(f.work, "1.0.1")
-    const packed = await pack({ cwd: f.work, version: "1.0.1", out: path.join(f.root, "out") })
+    const result = await packed(f)
     const head = await move(f, { ".github/workflows/ci.yml": "on: pull_request\n" })
-    const result = await run(f, path.join(f.root, "out/release.bundle"), packed.sha256)
-    expect(result.code).toBe(0)
+    const outcome = await run(f, result.bundle, result.sha256)
+    expect(outcome.code).toBe(0)
     expect(git(f.origin, "show", "main:.github/workflows/ci.yml")).toBe("on: pull_request")
     expect(git(f.origin, "diff", "--name-only", head, "main").split("\n").sort()).toEqual([
       ".changeset/one.md",
@@ -462,52 +563,61 @@ describe("release-push", () => {
 
   test("refuses a conflict with main and pushes nothing", async () => {
     const f = await fixture()
-    await release(f.work, "1.0.1")
-    const packed = await pack({ cwd: f.work, version: "1.0.1", out: path.join(f.root, "out") })
+    const result = await packed(f)
     const head = await move(f, { "packages/opencode/package.json": json("@kilocode/cli", "1.0.0-hotfix") })
-    const result = await run(f, path.join(f.root, "out/release.bundle"), packed.sha256)
-    expect(result.code).not.toBe(0)
-    expect(result.output).toContain("conflicts with main")
+    const outcome = await run(f, result.bundle, result.sha256)
+    expect(outcome.code).not.toBe(0)
+    expect(outcome.output).toContain("conflicts with main")
     expect(refs(f.origin)).toEqual({ main: head, tag: "" })
   })
 
-  test("merges again when main moves during the push (lease race)", async () => {
+  for (const shape of ["plain", "ci"] as const) {
+    test(`${shape} checkout: merges again when main moves during the push (lease race)`, async () => {
+      const f = await fixture()
+      const result = await packed(f)
+      const cwd = await keys(f, shape)
+      const head = await move(f, { "docs/before.md": "Before\n" })
+      let moved = ""
+      const outcome = await push({
+        cwd,
+        bundle: result.bundle,
+        sha256: result.sha256,
+        version: "1.0.1",
+        base: f.base,
+        before: async (attempt) => {
+          if (attempt === 0) moved = await move(f, { "docs/race.md": "Race\n" })
+        },
+      })
+      expect(outcome.skipped).toBe(false)
+      expect(head).not.toBe(moved)
+      expect(parents(f.origin, "main")).toEqual([moved, refs(f.origin).tag])
+      expect(git(f.origin, "show", "main:docs/before.md")).toBe("Before")
+      expect(parents(f.origin, "v1.0.1")).toEqual([f.base])
+    })
+  }
+
+  test("ci checkout: fast-forwards when main did not move", async () => {
     const f = await fixture()
-    await release(f.work, "1.0.1")
-    const packed = await pack({ cwd: f.work, version: "1.0.1", out: path.join(f.root, "out") })
-    const keys = path.join(f.root, "keys")
-    git(f.root, "clone", "--quiet", f.origin, keys)
-    let moved = ""
-    const result = await push({
-      cwd: keys,
-      bundle: path.join(f.root, "out/release.bundle"),
-      sha256: packed.sha256,
+    const result = await packed(f)
+    const outcome = await push({
+      cwd: await keys(f, "ci"),
+      bundle: result.bundle,
+      sha256: result.sha256,
       version: "1.0.1",
       base: f.base,
-      before: async (attempt) => {
-        if (attempt === 0) moved = await move(f, { "docs/race.md": "Race\n" })
-      },
     })
-    expect(result.skipped).toBe(false)
-    expect(git(f.origin, "rev-list", "--parents", "-n", "1", "main").split(" ").slice(1)).toEqual([
-      moved,
-      packed.commit,
-    ])
-    expect(refs(f.origin).tag).toBe(packed.commit)
+    expect(refs(f.origin)).toEqual({ main: outcome.commit, tag: outcome.commit })
   })
 
   test("refuses after two more merges when main keeps moving", async () => {
     const f = await fixture()
-    await release(f.work, "1.0.1")
-    const packed = await pack({ cwd: f.work, version: "1.0.1", out: path.join(f.root, "out") })
-    const keys = path.join(f.root, "keys")
-    git(f.root, "clone", "--quiet", f.origin, keys)
+    const result = await packed(f)
     let count = 0
     let last = ""
     const error = await push({
-      cwd: keys,
-      bundle: path.join(f.root, "out/release.bundle"),
-      sha256: packed.sha256,
+      cwd: await keys(f),
+      bundle: result.bundle,
+      sha256: result.sha256,
       version: "1.0.1",
       base: f.base,
       before: async () => {
@@ -521,5 +631,49 @@ describe("release-push", () => {
     expect(String(error)).toContain("main kept moving")
     expect(count).toBe(3)
     expect(refs(f.origin)).toEqual({ main: last, tag: "" })
+  })
+
+  test("pushes the same refs again when a push fails with main unchanged", async () => {
+    const f = await fixture()
+    const result = await packed(f)
+    const mark = path.join(f.root, "fail-once")
+    await writeFile(mark, "")
+    const hook = path.join(f.origin, "hooks", "pre-receive")
+    await writeFile(hook, `#!/bin/sh\nif [ -f '${mark}' ]; then rm -f '${mark}'; echo refused once >&2; exit 1; fi\n`)
+    await chmod(hook, 0o755)
+    let attempts = 0
+    const outcome = await push({
+      cwd: await keys(f),
+      bundle: result.bundle,
+      sha256: result.sha256,
+      version: "1.0.1",
+      base: f.base,
+      wait: 0,
+      before: async () => {
+        attempts++
+      },
+    })
+    expect(attempts).toBe(2)
+    expect(refs(f.origin)).toEqual({ main: outcome.commit, tag: outcome.commit })
+  })
+
+  test("counts a push as done when the refs are already where it was pushing them", async () => {
+    const f = await fixture()
+    const result = await packed(f)
+    const cwd = await keys(f)
+    const outcome = await push({
+      cwd,
+      bundle: result.bundle,
+      sha256: result.sha256,
+      version: "1.0.1",
+      base: f.base,
+      before: async (attempt, state) => {
+        // The refs land, but the reply is lost: this push sees a moved main and an existing tag.
+        if (attempt === 0)
+          git(cwd, "push", "--quiet", "origin", `${state.target}:refs/heads/main`, `${state.commit}:refs/tags/v1.0.1`)
+      },
+    })
+    expect(outcome.skipped).toBe(false)
+    expect(refs(f.origin)).toEqual({ main: outcome.commit, tag: outcome.commit })
   })
 })
