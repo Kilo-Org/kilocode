@@ -79,13 +79,13 @@ function dock(item: Parameters<typeof BrowserPermission.request>[0]) {
 
 const sensitive = dock({ class: "sensitive", origin: "http://127.0.0.2:48251", reason: "password field" })
 await wait(20)
-assert.deepEqual(sensitive.buttons(), ["Allow once", "Reject"], "a step that saves nothing offers no Allow always")
+assert.deepEqual(sensitive.buttons(), ["Allow once", "Deny"], "a step that saves nothing offers no Allow always")
 assert.ok(sensitive.host.textContent?.includes("Reason: password field"), "the dock says why the step asks")
 sensitive.dispose()
 
 const grant = dock({ class: "read", origin: "http://127.0.0.2:48251" })
 await wait(20)
-assert.deepEqual(grant.buttons(), ["Allow once", "Allow always", "Reject"], "a class grant offers Allow always")
+assert.deepEqual(grant.buttons(), ["Allow once", "Allow always", "Deny"], "a class grant offers Allow always")
 assert.ok(!grant.host.textContent?.includes("Reason:"), "a request without a reason shows none")
 grant.host.querySelectorAll("button")[1]?.click()
 await wait(20)
@@ -95,5 +95,26 @@ assert.deepEqual(
   "Allow always replies always",
 )
 grant.dispose()
+
+replies.length = 0
+const rejection = dock({ class: "sensitive", origin: "http://127.0.0.2:48251", reason: "password field" })
+await wait(20)
+const deny = () => rejection.host.querySelectorAll("button")[rejection.buttons().length - 1] as HTMLButtonElement
+deny().click()
+await wait(20)
+assert.deepEqual(rejection.buttons(), ["Reject", "Cancel"], "Deny opens the optional feedback flow")
+assert.equal(replies.length, 0, "opening the feedback flow must not answer the request")
+const field = rejection.host.querySelector<HTMLTextAreaElement>('[data-slot="permission-feedback-input"]')
+assert.ok(field, "Deny reveals a feedback field")
+field.value = "  Use spaces, not tabs  "
+field.dispatchEvent(new window.Event("input", { bubbles: true }))
+field.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }))
+await wait(20)
+assert.deepEqual(
+  replies,
+  [{ sessionID: "ses_1", requestID: "per_1", decision: "reject", message: "Use spaces, not tabs" }],
+  "Enter rejects with the trimmed reason",
+)
+rejection.dispose()
 
 await window.happyDOM.close()

@@ -8,7 +8,7 @@ const root = path.resolve(import.meta.dir, "..")
 const webview = path.join(root, "webview-ui")
 
 describe("permission dock", () => {
-  test("offers Allow always only for a request that saves a rule, and shows the reason a request gives", async () => {
+  test("offers Allow always only for a request that saves a rule, shows the reason a request gives, and sends rejection feedback", async () => {
     const solid = path.dirname(Bun.resolveSync("solid-js/package.json", webview))
     const aliases: Record<string, string> = {
       "solid-js": path.join(solid, "dist/solid.js"),
