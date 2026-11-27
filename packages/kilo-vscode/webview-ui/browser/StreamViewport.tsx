@@ -455,7 +455,8 @@ export const StreamViewport: Component<{
     if (action === "down") return down(event)
     if (action === "up") return up(event)
     clicker.move(event)
-    moving = pointer(event, canvas.getBoundingClientRect(), "move", 0)
+    const rect = canvasRect ?? (canvasRect = canvas.getBoundingClientRect())
+    moving = pointer(event, rect, "move", 0)
     if (!moving || scheduled !== undefined) return
     scheduled = requestAnimationFrame(flush)
   }
@@ -691,6 +692,7 @@ export const StreamViewport: Component<{
         }}
         onPointerDown={down}
         onPointerMove={move}
+        onPointerLeave={() => update("default")}
         onPointerUp={up}
         onPointerCancel={cancel}
         onLostPointerCapture={cancel}

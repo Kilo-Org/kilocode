@@ -147,6 +147,7 @@ export function activate(context: ExtensionContext) {
     useSystemChrome: integratedBrowserUseSystemChrome,
     fallback: () => process.platform === "linux" && integratedBrowserFallback(),
     theme: browserTheme,
+    writeClipboard: (text) => env.clipboard.writeText(text),
   })
   context.subscriptions.push(
     window.onDidChangeActiveColorTheme(() => broker.retheme()),

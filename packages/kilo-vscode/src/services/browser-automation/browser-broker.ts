@@ -81,6 +81,7 @@ export interface BrowserBrokerOptions {
   theme?: () => "dark" | "light"
   enabled?: () => boolean
   trusted?: () => boolean
+  writeClipboard?: (text: string) => void | PromiseLike<void>
   launch?: (options: LaunchOptions) => Promise<BrowserContextFactory>
   useSystemChrome?: () => boolean
   fallback?: () => boolean
@@ -416,6 +417,14 @@ export class BrowserBroker {
         this.emit(entry.state)
       },
       () => this.captureExt,
+      this.opts.writeClipboard
+        ? (identity, text) => {
+            if (!this.accepts(route.sessionId, route.projectId, identity)) return
+            void Promise.resolve(this.opts.writeClipboard?.(text)).catch((error: unknown) =>
+              this.opts.log("Browser clipboard write failed", error),
+            )
+          }
+        : undefined,
     )
     return entry.stream
   }

@@ -1,5 +1,7 @@
+import { randomBytes } from "node:crypto"
 import { setTimeout as wait } from "node:timers/promises"
 import type { CDPSession, Page } from "playwright-core"
+import { clipboardBridgeScript, clipboardPageScript, COPY_BINDING } from "./browser-clipboard"
 import { orderedFrames, screencast, type Cast, type Pixels } from "./browser-frame"
 import type { BrowserCaptureExtension } from "./browser-capture-ext"
 import { BrowserFrameClient } from "./browser-frame-client"
@@ -10,6 +12,7 @@ import {
   type BrowserCursor,
   type BrowserFrame,
   type BrowserInteraction,
+  type BrowserViewIdentity,
   type BrowserViewport,
   type WheelInteraction,
 } from "../../shared/browser-stream"
@@ -214,34 +217,31 @@ function reporter(name: string, epoch: number, keywords: string[]) {
   const report = globals[name]
   if (typeof report !== "function") return
   const fields = ["text", "search", "email", "url", "tel", "password", "number"]
-  const resolve = (event: MouseEvent, node: unknown = event.composedPath()[0]) => {
+  const resolve = (x: number, y: number, node: unknown) => {
     if (!(node instanceof Element)) return "default"
     const style = getComputedStyle(node)
     const keyword = style.cursor.slice(style.cursor.lastIndexOf(",") + 1).trim()
     if (keyword !== "auto") return keywords.includes(keyword) ? keyword : "default"
+    if (node.closest("a[href], area[href]")) return "pointer"
     if (node instanceof HTMLTextAreaElement) return node.disabled ? "default" : "text"
     if (node instanceof HTMLElement && node.isContentEditable) return "text"
     if (node instanceof HTMLInputElement) return !node.disabled && fields.includes(node.type) ? "text" : "default"
     if (node.closest("button, select")) return "default"
     if (style.userSelect === "none") return "default"
-    const caret = document.caretRangeFromPoint?.(event.clientX, event.clientY)
+    const caret = document.caretRangeFromPoint?.(x, y)
     const text = caret?.startContainer
     if (!caret || !(text instanceof Text) || !text.length) return "default"
     // Check only the characters next to the caret, which can fall on either side of the hovered glyph.
     const range = document.createRange()
     range.setStart(text, Math.max(0, caret.startOffset - 1))
     range.setEnd(text, Math.min(text.length, caret.startOffset + 1))
-    return [...range.getClientRects()].some(
-      (rect) =>
-        event.clientX >= rect.left &&
-        event.clientX <= rect.right &&
-        event.clientY >= rect.top &&
-        event.clientY <= rect.bottom,
-    )
+    return [...range.getClientRects()].some((rect) => x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom)
       ? "text"
       : "default"
   }
   let last = ""
+  let lastX = -1
+  let lastY = -1
   const emit = (value: string) => {
     if (value === last) return
     last = value
@@ -255,36 +255,46 @@ function reporter(name: string, epoch: number, keywords: string[]) {
       : (["mousedown", "mouseup"] as const)
   let scheduled = 0
   const move = (event: MouseEvent) => {
+    lastX = event.clientX
+    lastY = event.clientY
     if (event.type === enter) last = ""
-    emit(resolve(event))
+    emit(resolve(lastX, lastY, event.composedPath()[0]))
+  }
+  const onScroll = () => {
+    if (lastX < 0 || lastY < 0 || scheduled) return
+    scheduled = requestAnimationFrame(() => {
+      scheduled = 0
+      emit(resolve(lastX, lastY, document.elementFromPoint(lastX, lastY)))
+    })
   }
   const press = (event: MouseEvent) => {
+    lastX = event.clientX
+    lastY = event.clientY
     const node = event.composedPath()[0]
     cancelAnimationFrame(scheduled)
     // Read pressed styles after the page's event handlers, without observing or changing the document.
     scheduled = requestAnimationFrame(() => {
       scheduled = 0
-      emit(
-        resolve(
-          event,
-          node instanceof Element && node.isConnected ? node : document.elementFromPoint(event.clientX, event.clientY),
-        ),
-      )
+      emit(resolve(lastX, lastY, node instanceof Element && node.isConnected ? node : document.elementFromPoint(lastX, lastY)))
     })
   }
   const leave = () => {
+    lastX = -1
+    lastY = -1
     cancelAnimationFrame(scheduled)
     scheduled = 0
     emit("default")
   }
   addEventListener(event, move, { capture: true, passive: true })
   addEventListener(enter, move, { capture: true, passive: true })
+  addEventListener("scroll", onScroll, { capture: true, passive: true })
   for (const event of presses) addEventListener(event, press, { capture: true, passive: true })
   document.addEventListener("mouseleave", leave, { passive: true })
   globals[cleanup] = () => {
     cancelAnimationFrame(scheduled)
     removeEventListener(event, move, true)
     removeEventListener(enter, move, true)
+    removeEventListener("scroll", onScroll, true)
     for (const event of presses) removeEventListener(event, press, true)
     document.removeEventListener("mouseleave", leave)
     delete globals[cleanup]
@@ -317,6 +327,9 @@ export class BrowserStream {
   private readonly contexts = new Set<number>()
   private reporter: Promise<void> = Promise.resolve()
   private script?: string
+  private copyScript?: string
+  private readonly copyChannel = `__kilo_copy_${randomBytes(16).toString("hex")}`
+  private copyArmedUntil = 0
   private keyword?: string
 
   constructor(
@@ -328,6 +341,7 @@ export class BrowserStream {
     port?: number,
     endpoint?: (url: string | undefined) => void,
     extension?: () => BrowserCaptureExtension | undefined,
+    private readonly copy?: (identity: BrowserViewIdentity, text: string) => void,
   ) {
     this.scope = { ...identity() }
     if (port !== undefined) this.capture = new BrowserFrameClient(port, () => this.rebind(), endpoint, extension)
@@ -444,6 +458,7 @@ export class BrowserStream {
       if (!session) return
       switch (input.kind) {
         case "pointer":
+          this.armCopy(input)
           await this.point(session, input, view)
           return
         case "wheel":
@@ -461,6 +476,7 @@ export class BrowserStream {
           )
           return
         case "key":
+          this.armCopy(input)
           await this.keyboard(session, input)
           return
         case "text":
@@ -544,12 +560,20 @@ export class BrowserStream {
           .catch(() => this.report("cursor script removal failed"))
         this.script = undefined
       }
+      if (this.copyScript) {
+        await session
+          .send("Page.removeScriptToEvaluateOnNewDocument", { identifier: this.copyScript })
+          .catch(() => undefined)
+        this.copyScript = undefined
+      }
       await Promise.all(
         [...this.contexts].map((contextId) =>
           session
             .send("Runtime.evaluate", {
               contextId,
-              expression: `globalThis.${BINDING}Cleanup?.(); delete globalThis.${BINDING}`,
+              expression: this.copy
+                ? `globalThis.${BINDING}Cleanup?.(); delete globalThis.${BINDING}; globalThis.${COPY_BINDING}Cleanup?.(); delete globalThis.${COPY_BINDING}`
+                : `globalThis.${BINDING}Cleanup?.(); delete globalThis.${BINDING}`,
             })
             .catch(() => this.report("cursor listener removal failed")),
         ),
@@ -558,6 +582,7 @@ export class BrowserStream {
         await session
           .send("Runtime.removeBinding", { name: BINDING })
           .catch(() => this.report("cursor binding removal failed"))
+      if (this.copy) await session.send("Runtime.removeBinding", { name: COPY_BINDING }).catch(() => undefined)
       session.off("Page.screencastFrame", this.receive)
       session.off("Page.frameNavigated", this.navigated)
       session.off("Runtime.bindingCalled", this.pointed)
@@ -608,6 +633,7 @@ export class BrowserStream {
     this.outstanding = undefined
     this.buffered = undefined
     this.keyword = undefined
+    this.copyArmedUntil = 0
   }
 
   // A same-document commit need not paint again. The broker also calls this when it advances the committed identity.
@@ -632,14 +658,24 @@ export class BrowserStream {
     session.on("Page.screencastFrame", this.receive)
     session.on("Page.frameNavigated", this.navigated)
     if (!this.closed) await session.send("Page.enable")
-    if (!this.closed && this.cursor) {
+    if (!this.closed && (this.cursor || this.copy)) {
       session.on("Runtime.bindingCalled", this.pointed)
       session.on("Runtime.executionContextCreated", this.created)
       session.on("Runtime.executionContextDestroyed", this.destroyed)
       session.on("Runtime.executionContextsCleared", this.cleared)
       await session
         .send("Runtime.enable")
-        .then(() => session.send("Runtime.addBinding", { name: BINDING, executionContextName: WORLD }))
+        .then(async () => {
+          if (this.cursor) await session.send("Runtime.addBinding", { name: BINDING, executionContextName: WORLD })
+          if (this.copy) {
+            await session.send("Runtime.addBinding", { name: COPY_BINDING, executionContextName: WORLD })
+            const added = await session.send("Page.addScriptToEvaluateOnNewDocument", {
+              source: clipboardPageScript(this.copyChannel),
+              runImmediately: true,
+            })
+            this.copyScript = added.identifier
+          }
+        })
         .catch(() => this.report("cursor binding setup failed"))
     }
     return session
@@ -658,16 +694,26 @@ export class BrowserStream {
   }
 
   private install(): Promise<void> {
-    if (!this.cursor || this.closed || !this.session) return Promise.resolve()
+    if ((!this.cursor && !this.copy) || this.closed || !this.session) return Promise.resolve()
     const view = this.view
     const epoch = this.epoch
     this.reporter = this.reporter
       .then(async () => {
         const session = this.session
         if (this.closed || !session || !view?.active || this.view !== view || this.epoch !== epoch) return
-        if (this.script) await session.send("Page.removeScriptToEvaluateOnNewDocument", { identifier: this.script })
+        // Cross-origin navigations invalidate prior script IDs in Chromium; clear before removing so install recovers.
+        const previous = this.script
+        this.script = undefined
+        if (previous) {
+          await session.send("Page.removeScriptToEvaluateOnNewDocument", { identifier: previous }).catch(() => undefined)
+        }
+        const parts = [
+          `(${reporter.toString()})(${JSON.stringify(BINDING)}, ${epoch}, ${JSON.stringify([...CURSORS])})`,
+          `(${suppressOverscroll.toString()})()`,
+          ...(this.copy ? [clipboardBridgeScript(this.copyChannel, COPY_BINDING, epoch)] : []),
+        ]
         const result = await session.send("Page.addScriptToEvaluateOnNewDocument", {
-          source: `(${reporter.toString()})(${JSON.stringify(BINDING)}, ${epoch}, ${JSON.stringify([...CURSORS])});(${suppressOverscroll.toString()})()`,
+          source: parts.join(";"),
           worldName: WORLD,
           runImmediately: true,
         })
@@ -678,7 +724,12 @@ export class BrowserStream {
   }
 
   private readonly pointed = (event: { name: string; payload: string; executionContextId: number }): void => {
-    if (this.closed || event.name !== BINDING || !this.contexts.has(event.executionContextId)) return
+    if (this.closed || !this.contexts.has(event.executionContextId)) return
+    if (event.name === COPY_BINDING) {
+      this.copied(event.payload)
+      return
+    }
+    if (event.name !== BINDING) return
     this.synchronize()
     const view = this.casting
     if (!view?.active || this.view !== view || typeof event.payload !== "string" || event.payload.length > 64) return
@@ -693,6 +744,25 @@ export class BrowserStream {
       revision: view.revision,
       cursor,
     })
+  }
+
+  private armCopy(input: BrowserInteraction): void {
+    if ((input.kind === "pointer" && input.action !== "move") || (input.kind === "key" && input.action === "down")) {
+      this.copyArmedUntil = Date.now() + 1500
+    }
+  }
+
+  private copied(payload: string): void {
+    if (!this.copy || Date.now() > this.copyArmedUntil) return
+    this.synchronize()
+    const view = this.casting
+    if (!view?.active || this.view !== view || typeof payload !== "string") return
+    const prefix = `${this.epoch}:`
+    if (!payload.startsWith(prefix)) return
+    const value = payload.slice(prefix.length)
+    if (!value.length || !text(value, TEXT)) return
+    this.copyArmedUntil = 0
+    this.copy({ browserId: this.scope.browserId, navigation: this.scope.navigation, revision: view.revision }, value)
   }
 
   private async stop(): Promise<void> {
