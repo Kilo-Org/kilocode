@@ -52,7 +52,7 @@ import {
   type ReviewAppendHandler,
 } from "./append-ready"
 import { BrowserReferences } from "./browser-references"
-import type { PromptAttachment, SessionSearchItem } from "../../../src/protocol"
+import type { PromptAttachment } from "../../../src/protocol"
 import { CodeContextChips } from "../components/chat/CodeContextChips"
 import { ModelSelectorBase } from "../components/shared/ModelSelector"
 import type { MentionFile } from "../hooks/context-mention-utils"
@@ -72,6 +72,8 @@ import { registerComposer, type ComposerHandle } from "./composer"
 import { MentionMenu } from "./mention-menu"
 import { attachmentDrafts, imageAttachment, mergeAttachments, pasteDrafts } from "./prompt-attachments"
 import { type ComposerDraft, visibleMessages } from "./revert"
+import type { ComposerDraftState } from "./auto-model-preview-state"
+import { mentionDrafts, references, reviewDrafts, saveReviewDraft } from "./prompt-drafts"
 import { cleanEnhancedPrompt, enhancePromptRequest, normalizeEnhancePromptErrorMessage } from "./enhance-prompt"
 import { insertSpacedText } from "./prompt-speech"
 import { PromptOverflow, type OverflowItem } from "./prompt-overflow"
@@ -85,15 +87,8 @@ import { parseSlash, type SlashEntry } from "./slash"
 import { createSlashMenu, SlashMenu } from "./slash-menu"
 import { GoalHeader } from "../components/chat/goal/GoalHeader"
 
-// Drafts live outside the component so a composer remounted for another session restores its own text, as v1 did.
-// The key is the session id, or the pending tab id before a first prompt creates the session.
-const drafts = new Map<string, string>()
-
 // field-sizing grows the textarea from its content, so the composer needs no scrollHeight measurement.
 const fieldSizing = typeof CSS !== "undefined" && CSS.supports("field-sizing", "content")
-
-// Browser references picked for each draft, kept with the same key as the draft text.
-const references = new Map<string, BrowserReference[]>()
 
 // The toolbar fold measured by the last composer. A composer remounted for another session opens with it, so the
 // actions keep the fold they had instead of showing every one for a frame and folding them away again.
@@ -107,22 +102,11 @@ function injected(metadata: { [key: string]: JsonValue } | undefined): boolean {
   return typeof record(record(record(metadata)?.kilo)?.injected)?.title === "string"
 }
 
-// Pending review comments follow the same key as the text, so switching sessions neither loses nor mixes them.
-const reviewDrafts = new Map<string, ReviewCommentEntry[]>()
-
-// The exact `@` mentions of each draft. A path with spaces or a past-chat title cannot be found again from the text
-// alone, so a draft keeps the tokens it had, with the same key as the text.
-const mentionDrafts = new Map<string, { paths: string[]; sessions: SessionSearchItem[] }>()
-
 // The `@` model entry opens a hidden model selector through its programmatic-open event, keyed to this trigger so the
 // chat model selector and the slash command open are unaffected.
 const MENTION_MODEL_TRIGGER = "mention-model"
 
-function saveReviewDraft(key: string | undefined, comments: ReviewCommentEntry[]) {
-  if (!key) return
-  if (comments.length === 0) reviewDrafts.delete(key)
-  else reviewDrafts.set(key, comments)
-}
+const drafts = new Map<string, string>()
 
 export const promptDrafts = {
   get(key: string | undefined) {
@@ -143,6 +127,10 @@ export function setPromptDraft(key: string | undefined, next: ComposerDraft) {
   if (!key) return
   if (next.browsers.length > 0) references.set(key, [...next.browsers])
   else references.delete(key)
+}
+
+function emitDraft(cb: ((draft: ComposerDraftState) => void) | undefined, text: string, goal: boolean) {
+  if (cb) cb({ text, goal })
 }
 
 // Send keeps every icon it can show mounted and crossfades between them, so a modifier pressed and released quickly
@@ -192,6 +180,10 @@ export function PromptInput(props: {
   choice?: () => SendChoice
   /** Agent, model and variant controls, before the actions as in main's PromptInput. */
   selectors?: JSX.Element
+  /** Extra pinned action controls rendered in the footer right before voice and send. */
+  pinnedActions?: JSX.Element
+  /** Notifies callers whenever the composer's expanded draft text or goal mode changes. */
+  onDraftChange?: (draft: ComposerDraftState) => void
   /** Auto-approve for permission requests. The toggle folds into the overflow menu like edge actions. */
   autoApprove?: { enabled: boolean; onToggle: () => void }
   /** Per-session sandbox confinement, or the new-session default while this composer is a draft. */
@@ -288,6 +280,7 @@ export function PromptInput(props: {
   const [attachments, setAttachments] = createSignal<PromptAttachment[]>(attachmentDrafts.get(props.draftKey))
   const paste = usePasteCollapse({ enabled: () => !props.disabled, text })
   paste.load(untrack(text), pasteDrafts.get(props.draftKey))
+  createEffect(() => emitDraft(props.onDraftChange, paste.plainText(text()), goalMode()))
   // Shared across conversations unless the user opts in to a separate history per conversation.
   const scoped = () => kiloSettings()["experimental.conversationPromptHistory"] === true
   const history = usePromptHistory(
@@ -1606,6 +1599,7 @@ export function PromptInput(props: {
             )}
           </Show>
           <div class="prompt-input-hint-pinned" ref={(el) => (pinnedRef = el)}>
+            {props.pinnedActions}
             <Show when={canUseSpeech()}>
               <SpeechToTextButton speech={speech} disabled={props.disabled} start={startSpeech} label={language.t} />
             </Show>

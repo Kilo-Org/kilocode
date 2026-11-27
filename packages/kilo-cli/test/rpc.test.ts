@@ -447,6 +447,44 @@ test(
   30_000,
 )
 
+test(
+  "autoModel.preview returns an illustrative Auto Model routing preview and rejects empty prompts",
+  boot({}, async (gateway) => {
+    const preview = await gateway.rpc["autoModel.preview"](
+      {
+        prompt: "Refactor the authentication helper to handle expired tokens and add tests.",
+        agent: "code",
+        currentModel: { providerID: "kilo", id: "anthropic/claude-opus-4.6", name: "Claude Opus 4.6" },
+      },
+      gateway.options,
+    )
+    expect(preview.profile).toBe("efficient")
+    expect(preview.task.category).toBe("Code refactoring & tests")
+    expect(preview.attributes.risk).toEqual({ level: "high", detail: "authentication" })
+    expect(preview.selection.modelName).toBe("Claude Sonnet")
+    expect(preview.candidates.some((item) => item.predicted && item.modelName === "Claude Sonnet")).toBe(true)
+    expect(preview.candidates.some((item) => item.current && item.modelName === "Claude Opus")).toBe(true)
+    expect(preview.recommendation?.suggestedProfile).toBe("frontier")
+    expect(preview.illustrative).toBe(true)
+
+    // Repeating the same prompt + model returns the cached preview cleanly.
+    const repeated = await gateway.rpc["autoModel.preview"](
+      {
+        prompt: "  Refactor the authentication helper to handle expired tokens and add tests.  ",
+        agent: "code",
+        currentModel: { providerID: "kilo", id: "anthropic/claude-opus-4.6", name: "Claude Opus 4.6" },
+      },
+      gateway.options,
+    )
+    expect(repeated).toEqual(preview)
+
+    await expect(gateway.rpc["autoModel.preview"]({ prompt: "   " }, gateway.options)).rejects.toMatchObject({
+      type: "failed",
+    })
+  }),
+  30_000,
+)
+
 /** Waits for a condition, so a missing signal fails the test instead of passing every assertion. */
 async function until(condition: () => boolean, what: string, timeout = 5_000) {
   for (const start = Date.now(); Date.now() - start < timeout; await Bun.sleep(5)) {

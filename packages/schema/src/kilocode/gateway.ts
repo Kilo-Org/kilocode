@@ -343,6 +343,84 @@ export const RouterEvalConfig = Schema.Struct({
 })
 export type RouterEvalConfig = typeof RouterEvalConfig.Type
 
+export const AutoModelProfile = Schema.Literals(["efficient", "frontier"]).annotate({
+  identifier: "KiloGateway.AutoModelProfile",
+})
+export type AutoModelProfile = typeof AutoModelProfile.Type
+
+export const AutoModelRiskLevel = Schema.Literals(["low", "medium", "high"]).annotate({
+  identifier: "KiloGateway.AutoModelRiskLevel",
+})
+export type AutoModelRiskLevel = typeof AutoModelRiskLevel.Type
+
+export const AutoModelTaskFit = Schema.Literals(["low", "medium", "high", "very_high"]).annotate({
+  identifier: "KiloGateway.AutoModelTaskFit",
+})
+export type AutoModelTaskFit = typeof AutoModelTaskFit.Type
+
+export const AutoModelPreviewInput = Schema.Struct({
+  prompt: Schema.String,
+  agent: optional(Schema.String),
+  currentModel: optional(
+    Schema.Struct({
+      providerID: Schema.String,
+      id: Schema.String,
+      name: optional(Schema.String),
+    }),
+  ),
+  profile: optional(AutoModelProfile),
+}).annotate({ identifier: "KiloGateway.AutoModelPreviewInput" })
+export interface AutoModelPreviewInput extends Schema.Schema.Type<typeof AutoModelPreviewInput> {}
+
+export const AutoModelPreviewRisk = Schema.Struct({
+  level: AutoModelRiskLevel,
+  detail: optional(Schema.String),
+}).annotate({ identifier: "KiloGateway.AutoModelPreviewRisk" })
+export interface AutoModelPreviewRisk extends Schema.Schema.Type<typeof AutoModelPreviewRisk> {}
+
+export const AutoModelPreviewAttributes = Schema.Struct({
+  contextComplexity: Schema.NullOr(Schema.String),
+  reasoningComplexity: Schema.NullOr(Schema.String),
+  risk: Schema.NullOr(AutoModelPreviewRisk),
+  executionMode: Schema.NullOr(Schema.String),
+  toolsRequired: Schema.NullOr(Schema.Boolean),
+}).annotate({ identifier: "KiloGateway.AutoModelPreviewAttributes" })
+export interface AutoModelPreviewAttributes extends Schema.Schema.Type<typeof AutoModelPreviewAttributes> {}
+
+export const AutoModelPreviewCandidate = Schema.Struct({
+  modelID: Schema.String,
+  modelName: Schema.String,
+  estimatedCostUsd: Schema.NullOr(Schema.Finite),
+  taskFit: AutoModelTaskFit,
+  predicted: Schema.Boolean,
+  current: optional(Schema.Boolean),
+}).annotate({ identifier: "KiloGateway.AutoModelPreviewCandidate" })
+export interface AutoModelPreviewCandidate extends Schema.Schema.Type<typeof AutoModelPreviewCandidate> {}
+
+export const AutoModelPreviewRecommendation = Schema.Struct({
+  suggestedProfile: AutoModelProfile,
+  reason: Schema.String,
+}).annotate({ identifier: "KiloGateway.AutoModelPreviewRecommendation" })
+export interface AutoModelPreviewRecommendation extends Schema.Schema.Type<typeof AutoModelPreviewRecommendation> {}
+
+export const AutoModelPreviewResult = Schema.Struct({
+  profile: AutoModelProfile,
+  task: Schema.Struct({
+    category: Schema.String,
+    summary: Schema.String,
+  }),
+  attributes: AutoModelPreviewAttributes,
+  selection: Schema.Struct({
+    modelID: Schema.String,
+    modelName: Schema.String,
+    rationale: Schema.String,
+  }),
+  candidates: Schema.Array(AutoModelPreviewCandidate),
+  recommendation: Schema.NullOr(AutoModelPreviewRecommendation),
+  illustrative: Schema.Boolean,
+}).annotate({ identifier: "KiloGateway.AutoModelPreviewResult" })
+export interface AutoModelPreviewResult extends Schema.Schema.Type<typeof AutoModelPreviewResult> {}
+
 // The TUI, VS Code, and JetBrains clients use this contract for account/profile, balance, Kilo Pass,
 // BYOK, coding plans, team modes, notifications, the catalog failure reason, media and embedding models, and FIM
 // routing.
@@ -479,6 +557,11 @@ export const Definition = Rpc.define({
       input: portable(Schema.Struct({ result: Schema.Unknown })),
       output: portable(Schema.Unknown),
       errors: RouterFailure,
+    },
+    "autoModel.preview": {
+      input: portable(AutoModelPreviewInput),
+      output: portable(AutoModelPreviewResult),
+      errors: Failure,
     },
   },
   events: {

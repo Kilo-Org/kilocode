@@ -13,6 +13,7 @@ import {
 } from "vscode"
 import { getErrorMessage } from "./agent-manager/errors"
 import { createAutoApproveState } from "./auto-approve-state"
+import { captureAutoModelPreviewTelemetry } from "./services/auto-model-preview-telemetry"
 import { t } from "./services/i18n"
 import { notifyHostAutoApprove, setHostAutoApprove } from "./agent-manager/provider-auto-approve"
 import type { SettingsHandler } from "./agent-manager/project/settings"
@@ -518,6 +519,10 @@ export function wire(input: {
     }
     if (message.type === "setIndexingConsent") {
       void indexing.setConsent(message.projectId, message.enabled)
+      return true
+    }
+    if (message.type === "autoModelPreviewTelemetry") {
+      captureAutoModelPreviewTelemetry(message.event)
       return true
     }
     return false

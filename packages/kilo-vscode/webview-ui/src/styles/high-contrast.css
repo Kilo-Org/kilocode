@@ -51,7 +51,9 @@ body.vscode-high-contrast-light {
   }
 
   /* Notification card */
-  .kilo-notifications-card {
+  .kilo-notifications-card,
+  .auto-model-preview,
+  .auto-model-preview-trigger {
     border: 1px solid var(--vscode-contrastBorder, transparent);
   }
 

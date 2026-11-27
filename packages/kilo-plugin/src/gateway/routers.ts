@@ -8,6 +8,7 @@ import type { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
 import { Model } from "@opencode/schema/model"
 import type { Provider } from "@opencode/schema/provider"
 import { Effect, Schema } from "effect"
+import { GatewayAutoPreview } from "./auto-preview.js"
 
 // Custom auto routers (ADR 0005, v1 #15183 and #15245). The routing decision and the Cloud contract live in
 // KiloCustomRouter (@kilocode/gateway-core); this file maps v2 requests, catalog models, and credentials onto them.
@@ -133,7 +134,7 @@ function record(value: unknown): Record<string, unknown> | undefined {
 }
 
 type Methods = RpcHandlers<typeof KiloGatewayRpc.Definition>
-type RouterMethod = Extract<keyof Methods, `routers.${string}`>
+type RouterMethod = Extract<keyof Methods, `routers.${string}` | "autoModel.preview">
 // Every `routers.*` method has the same errors.
 type RouterContext = RpcCallContext<(typeof KiloGatewayRpc.Definition.methods)["routers.list"]>
 
@@ -215,6 +216,13 @@ export function handlers(input: HandlerInput): Pick<Methods, RouterMethod> {
       ),
     "routers.evalResult": (args, context) =>
       call(context, (account) => KiloCustomRouter.evalResult(account, args.result)),
+    ...GatewayAutoPreview.handlers({
+      models: input.models,
+      scope: () => {
+        const account = input.account()
+        return account ? `${account.server}:${account.organizationID ?? ""}:${account.token}` : "anonymous"
+      },
+    }),
   }
 }
 
