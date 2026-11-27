@@ -141,6 +141,7 @@ export type ToHost =
   | Mention
   | ({ type: "openSettingsTab" } & SettingsNavigation)
   | { type: "settingsReady" }
+  | { type: "profileReady" }
   | { type: "settingsTabChanged"; tab: string }
   | { type: "requestWorkStyle" }
   | { type: "applyWorkStyle"; style: WorkStyle }
@@ -306,7 +307,7 @@ export type Ui =
   | { type: "saveImage"; dataUrl: string; filename: string; sessionID?: string }
   | { type: "exportSessionTranscript"; sessionID: string }
   | { type: "previewImage"; dataUrl: string; filename: string }
-  | { type: "openProfile" }
+  | { type: "openProfile"; login?: boolean }
   | { type: "openMarketplace" }
   | { type: "openToolFile"; filePath: string; line?: number; column?: number; sessionID?: string }
   | { type: "openDiffVirtual"; diff: ToolActionDiff; initialDiffStyle?: "unified" | "split" }
@@ -542,6 +543,8 @@ export type ToWebview =
   /** Shows a session in the sidebar, for example the parent of a closed subagent tab. */
   | { type: "openSession"; sessionID: string }
   | ({ type: "navigate" } & SettingsNavigation)
+  /** Tells the Profile panel to start the Kilo Gateway device login immediately. */
+  | { type: "profileLogin" }
   | { type: "keybindings"; bindings: Record<string, string>; selection: boolean }
   | { type: "clipboardWriteResult"; id: string; ok: boolean; error?: string }
   | { type: "modelSelectorExpandedLoaded"; value: boolean }

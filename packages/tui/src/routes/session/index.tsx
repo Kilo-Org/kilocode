@@ -137,6 +137,7 @@ import { useEntryAnchor } from "./anchor-view"
 import { containsAnchor, createTimelineAnchors, groupID } from "./anchors"
 import { rowsAfter, rowsBefore, rowWeight } from "./mount-budget"
 import { RoutedModelBadge, RoutedStep, routedModelLabel } from "../../kilocode/routed-model" // kilocode_change(gateway)
+import { KiloErrorBlock, parseKiloErrorCode } from "../../kilocode/kilo-errors" // kilocode_change(gateway)
 import { BoardTool, boardTools } from "../../kilocode/board-tool" // kilocode_change(board)
 import { requiresPerson } from "../../kilocode/permission-mode" // kilocode_change(sandbox) - auto-approve leaves human-only requests to the prompt
 // kilocode_change start - browser: browser rows never show typed text
@@ -1989,6 +1990,7 @@ function SessionMessageView(props: { message: SessionMessageInfo }) {
       <Match when={props.message.type === "compaction"}>
         <CompactionMessage message={props.message as Extract<SessionMessageInfo, { type: "compaction" }>} />
       </Match>
+      <Match when={props.message.type === "idle" ? parseKiloErrorCode(props.message.error) : undefined}>{(code) => <KiloErrorBlock code={code()} />}</Match>{/* kilocode_change(gateway) */}
       <Match when={props.message.type === "idle" ? props.message.error : undefined}>
         {(error) => <ExecutionError error={error()} />}
       </Match>
@@ -2081,6 +2083,7 @@ function AssistantFooter(props: { message: SessionMessageAssistant }) {
             <FreeLimitNotice message={props.message} />
           </Match>
           <Match when={limitNotice()}>{(notice) => <UsageLimitNotice notice={notice()} />}</Match>
+          <Match when={parseKiloErrorCode(props.message.error)}>{(code) => <KiloErrorBlock code={code()} />}</Match>{/* kilocode_change(gateway) */}
         </Switch>
       </Show>
       <AssistantRetry retry={props.message.retry} />

@@ -16,6 +16,7 @@ import { SessionMessage } from "@opencode/schema/session-message"
 import { EOL } from "node:os"
 import { toolOutputText, type MiniToolPart } from "@opencode/tui/mini/tool"
 import { autoRejectedPermissionError } from "../kilocode/run-permission" // kilocode_change(autoreject)
+import { formatKiloRunError } from "../kilocode/run-error" // kilocode_change(gateway)
 import { UI } from "./ui"
 
 type Input = {
@@ -300,7 +301,7 @@ export async function runNonInteractivePrompt(input: Input) {
     }
     state.phase = "settled"
     await render.reconcile(settled.messages)
-    const error = autoRejectedPermissionError(autoRejected, finalError(settled, state)) // kilocode_change(autoreject) - a plain run that auto-rejected an ask fails
+    const error = autoRejectedPermissionError(autoRejected, formatKiloRunError(finalError(settled, state))) // kilocode_change(autoreject) - a plain run that auto-rejected an ask fails; gateway formats signed-out errors
     if (!error) return
     process.exitCode = 1
     render.error(error)

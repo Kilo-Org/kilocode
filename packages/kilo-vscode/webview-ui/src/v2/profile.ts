@@ -164,6 +164,9 @@ export function createProfile() {
     refreshUsage: () => loadUsage(true),
     login() {
       cancel()
+      // Drop any stale signed-in profile (and supersede an in-flight mount refresh) so DeviceAuthCard shows immediately.
+      ++state.profile
+      setData(null)
       setAuth({ status: "initiating" })
       void (async () => {
         await v2.data.location.integration.sync()

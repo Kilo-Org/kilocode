@@ -16,9 +16,9 @@ import { formatClock, formatDuration } from "../utils/message-time"
 import { color } from "../utils/timeline/colors"
 import type { TimelineHighlight } from "../utils/timeline/highlight"
 import { partKey, timelinePart } from "../utils/timeline/timeline-parts"
-import { useV2 } from "./client"
+import { useV2, useV2Optional } from "./client"
 import { displaySettings } from "./display-settings"
-import { readableMessage } from "./error"
+import { isSignedOutError, readableMessage } from "./error"
 import { tokenThroughputVisible } from "./kilo-settings"
 import { mcpServerFromError } from "./mcp-error"
 import { formatTokenThroughput, type TurnMetadata } from "./message-status"
@@ -240,23 +240,47 @@ export function AssistantMessage(props: {
 }
 
 /** The error card of an assistant step. The message list also uses it for a run that fails before a step. */
-export function ErrorCard(props: { error: { message: string } }) {
+export function ErrorCard(props: {
+  error: { message: string; status?: number; response?: { body: string } }
+}) {
   const language = useLanguage()
+  const vscode = useVSCode()
+  const v2 = useV2Optional()
+  const kilo = () => v2?.data.location.provider.list()?.find((item) => item.id === "kilo")?.name ?? "Kilo Gateway"
   return (
-    <Card variant="error" class="error-card" role="alert">
-      <div class="error-card-body">
-        <Icon name="warning" size="small" />
-        <div class="error-card-message">{readableMessage(props.error, language.t)}</div>
+    <Show
+      when={isSignedOutError(props.error)}
+      fallback={
+        <Card variant="error" class="error-card" role="alert">
+          <div class="error-card-body">
+            <Icon name="warning" size="small" />
+            <div class="error-card-message">{readableMessage(props.error, language.t)}</div>
+          </div>
+          <Collapsible variant="ghost">
+            <Collapsible.Trigger class="error-details-trigger">
+              <span>{language.t("error.details.show")}</span>
+              <Collapsible.Arrow />
+            </Collapsible.Trigger>
+            <Collapsible.Content>
+              <ErrorDetails error={props.error} />
+            </Collapsible.Content>
+          </Collapsible>
+        </Card>
+      }
+    >
+      <div data-component="auth-prompt" role="alert">
+        <div data-slot="auth-prompt-header">
+          <span data-slot="auth-prompt-icon">↻</span>
+          <span data-slot="auth-prompt-title">{language.t("error.providerAuth.title", { provider: kilo() })}</span>
+        </div>
+        <p data-slot="auth-prompt-description">{language.t("error.providerAuth.description", { provider: kilo() })}</p>
+        <Button
+          variant="primary"
+          onClick={() => vscode.postMessage({ type: "openProfile", login: true } satisfies ToHost as never)}
+        >
+          {language.t("common.signIn")}
+        </Button>
       </div>
-      <Collapsible variant="ghost">
-        <Collapsible.Trigger class="error-details-trigger">
-          <span>{language.t("error.details.show")}</span>
-          <Collapsible.Arrow />
-        </Collapsible.Trigger>
-        <Collapsible.Content>
-          <ErrorDetails error={props.error} />
-        </Collapsible.Content>
-      </Collapsible>
-    </Card>
+    </Show>
   )
 }

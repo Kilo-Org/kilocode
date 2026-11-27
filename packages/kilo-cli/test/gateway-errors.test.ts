@@ -87,6 +87,32 @@ describe("Kilo Gateway native error path", () => {
         }
       }),
     )
+    it.effect(`stops HTTP 401 INVALID_TOKEN as signed-out and preserves status and body through ${dialect.name}`, () =>
+      Effect.gen(function* () {
+        const body = {
+          error: { code: "INVALID_TOKEN", message: "Your authentication token is invalid. Please sign in again." },
+          error_type: "authentication_required",
+        }
+        const cause = yield* ai
+          .stream(request(dialect.model))
+          .pipe(Stream.runCollect, Effect.flip, Effect.provide(runtime(() => response(body, 401))))
+        const result = yield* decide(cause, dialect.model)
+        expect(result.decision).toEqual({ retry: false })
+        expect(result.error.type).toBe("provider.auth")
+        expect(result.error.status).toBe(401)
+        expect(result.error.message).toContain("You've been signed out of Kilo")
+        expect(KiloErrors.isSignedOut(result.error.response?.body, result.error.status)).toBe(true)
+        expect(cause.reason.http?.headers["x-should-retry"]).toBe("false")
+
+        const nonAuth = yield* ai
+          .stream(request(dialect.model))
+          .pipe(Stream.runCollect, Effect.flip, Effect.provide(runtime(() => response(body, 400))))
+        const nonAuthResult = yield* decide(nonAuth, dialect.model)
+        expect(nonAuthResult.error.status).toBe(400)
+        expect(KiloErrors.isSignedOut(nonAuthResult.error.response?.body, nonAuthResult.error.status)).toBe(false)
+        expect(nonAuth.reason.http?.headers["x-should-retry"]).toBeUndefined()
+      }),
+    )
   }
 
   it.effect("preserves numeric and string HTTP/SSE billing, throttle, and server codes", () =>

@@ -243,6 +243,53 @@ describe("KiloErrors", () => {
       })
     }
   })
+
+  test("recognizes INVALID_TOKEN as signed-out and non-retryable only on HTTP 401", async () => {
+    const body = JSON.stringify({
+      error: { code: "INVALID_TOKEN", message: "Your authentication token is invalid. Please sign in again." },
+      error_type: "authentication_required",
+    })
+
+    expect(KiloErrors.actionCode(body, 401)).toBe("INVALID_TOKEN")
+    expect(KiloErrors.isSignedOut(body, 401)).toBe(true)
+    expect(KiloErrors.actionTitle("INVALID_TOKEN")).toBe("You've been signed out of Kilo")
+    expect(KiloErrors.actionDescription("INVALID_TOKEN")).toContain("Sign in again")
+    expect(KiloErrors.actionLine(body, 401)).toBe(
+      "You've been signed out of Kilo. Run `kilo auth login` to connect to Kilo Gateway.",
+    )
+
+    const parsed401 = KiloErrors.parse(body, 401)
+    expect(parsed401).toMatchObject({
+      code: "INVALID_TOKEN",
+      message: "You've been signed out of Kilo. Your Kilo session is no longer valid. Sign in again, then resend your message.",
+      retryable: false,
+    })
+
+    const rewritten401 = await KiloErrors.rewriteHttpResponse(new Response(body, { status: 401 }))
+    expect(rewritten401.status).toBe(401)
+    expect(rewritten401.headers.get("x-should-retry")).toBe("false")
+    expect(await rewritten401.json()).toMatchObject({
+      error: {
+        code: "INVALID_TOKEN",
+        message: "You've been signed out of Kilo. Your Kilo session is no longer valid. Sign in again, then resend your message.",
+        retryable: false,
+      },
+    })
+
+    // INVALID_TOKEN is a generic name, so non-401 statuses must not be treated as a Kilo sign-out.
+    expect(KiloErrors.actionCode(body, 400)).toBeUndefined()
+    expect(KiloErrors.actionCode(body, 200)).toBeUndefined()
+    expect(KiloErrors.actionCode(body)).toBeUndefined()
+    expect(KiloErrors.isSignedOut(body, 400)).toBe(false)
+    expect(KiloErrors.actionLine(body, 400)).toBeUndefined()
+    expect(KiloErrors.parse(body, 400)).toMatchObject({
+      code: "INVALID_TOKEN",
+      message: "Your authentication token is invalid. Please sign in again.",
+      retryable: undefined,
+    })
+    const rewritten400 = await KiloErrors.rewriteHttpResponse(new Response(body, { status: 400 }))
+    expect(rewritten400.headers.has("x-should-retry")).toBe(false)
+  })
 })
 
 describe("KiloStream", () => {

@@ -495,7 +495,7 @@ export function wire(input: {
     if (routeWorktreeMessage(message, input.worktree, post)) return true
     // The Kilo Gateway sign-in runs in the Profile panel, as main opens its Profile tab.
     if (message.type === "openProfile") {
-      void commands.executeCommand("kilo-code.v2.profile")
+      void commands.executeCommand("kilo-code.v2.profile", message.login ? { login: true } : undefined)
       return true
     }
     if (message.type === "openMarketplace") {

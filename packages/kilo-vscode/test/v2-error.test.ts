@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { ClientError } from "@opencode/client"
 import { dict } from "../webview-ui/src/i18n/en"
-import { failureText, readableMessage, toFailure } from "../webview-ui/src/v2/error"
+import { failureText, isSignedOutError, readableMessage, toFailure } from "../webview-ui/src/v2/error"
 
 const t = (key: string, params?: Record<string, string | number | boolean>) =>
   (dict as Record<string, string>)[key]?.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(params?.[name] ?? "")) ??
@@ -68,5 +68,64 @@ describe("chat error text", () => {
     const failure = toFailure(new Error("boom"))
     expect(failure.message).toBe("boom")
     expect(failure.details).toContain("Error: boom")
+  })
+})
+
+describe("isSignedOutError", () => {
+  const rejected = JSON.stringify({
+    error: { code: "INVALID_TOKEN", message: "Your authentication token is invalid. Please sign in again." },
+    error_type: "authentication_required",
+  })
+
+  test("recognizes INVALID_TOKEN on HTTP 401 (nested and top-level)", () => {
+    expect(
+      isSignedOutError({ type: "provider.auth", message: "Unauthorized", status: 401, response: { body: rejected } }),
+    ).toBe(true)
+    expect(
+      isSignedOutError({
+        type: "provider.auth",
+        message: "Unauthorized",
+        status: 401,
+        response: { body: JSON.stringify({ code: "INVALID_TOKEN" }) },
+      }),
+    ).toBe(true)
+  })
+
+  test("returns false for INVALID_TOKEN on a status other than 401 or without status", () => {
+    expect(isSignedOutError({ type: "provider.invalid-request", message: "Bad", status: 400, response: { body: rejected } })).toBe(
+      false,
+    )
+    expect(isSignedOutError({ type: "provider.auth", message: "Forbidden", status: 403, response: { body: rejected } })).toBe(
+      false,
+    )
+    expect(isSignedOutError({ type: "provider.auth", message: "No status", response: { body: rejected } })).toBe(false)
+  })
+
+  test("returns false for PAID_MODEL_AUTH_REQUIRED and PROMOTION_MODEL_LIMIT_REACHED", () => {
+    expect(
+      isSignedOutError({
+        type: "provider.auth",
+        message: "Sign in",
+        status: 401,
+        response: { body: JSON.stringify({ error: { code: "PAID_MODEL_AUTH_REQUIRED" } }) },
+      }),
+    ).toBe(false)
+    expect(
+      isSignedOutError({
+        type: "provider.auth",
+        message: "Sign up",
+        status: 401,
+        response: { body: JSON.stringify({ error: { code: "PROMOTION_MODEL_LIMIT_REACHED" } }) },
+      }),
+    ).toBe(false)
+  })
+
+  test("returns false for null, undefined, plain messages, and malformed response bodies", () => {
+    expect(isSignedOutError(null)).toBe(false)
+    expect(isSignedOutError(undefined)).toBe(false)
+    expect(isSignedOutError({ message: "boom" })).toBe(false)
+    expect(isSignedOutError({ type: "provider.auth", message: "Bad", status: 401, response: { body: "not json {" } })).toBe(
+      false,
+    )
   })
 })
