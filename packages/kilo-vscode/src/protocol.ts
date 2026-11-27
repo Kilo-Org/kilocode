@@ -342,6 +342,14 @@ export type ModelPreferences = {
   variants: Record<string, string>
 }
 
+/** Persisted composer state injected into webview HTML so contexts hydrate synchronously on frame 0. */
+export type KiloInitialState = {
+  autoApprove: boolean
+  modelSelectorExpanded: boolean
+  modelPreferences: ModelPreferences
+  dismissedNotifications: string[]
+}
+
 export type ModelPreferenceMessage =
   | { type: "requestModelPreferences" }
   | ({ type: "toggleFavorite"; action: "add" | "remove" } & ModelPreferenceRef)

@@ -12,7 +12,6 @@ import {
 type WindowWithWasm = {
   KILO_GHOSTTY_WASM_URI?: string
   KILO_SHIKI_WORKER_URI?: string
-  __KILO_GHOSTTY_WASM_PROMISE?: Promise<WebAssembly.WebAssemblyInstantiatedSource | null>
 }
 
 /** Narrow runtime surface for ghostty-web internals that lack public methods. */
@@ -78,30 +77,25 @@ export function getLoadedGhostty(): Ghostty | undefined {
 }
 
 async function instantiateGhostty(wasmUrl: string | undefined): Promise<Ghostty> {
-  if (typeof window !== "undefined") {
-    const globals = window as unknown as WindowWithWasm
-    const boot = globals.__KILO_GHOSTTY_WASM_PROMISE
-    if (boot) {
-      globals.__KILO_GHOSTTY_WASM_PROMISE = undefined
-      const result = await boot
-      if (result?.instance) return new Ghostty(result.instance)
-    }
-    if (wasmUrl && typeof WebAssembly !== "undefined" && typeof WebAssembly.instantiateStreaming === "function") {
-      try {
-        const result = await WebAssembly.instantiateStreaming(fetch(wasmUrl), { env: { log: () => undefined } })
-        return new Ghostty(result.instance)
-      } catch {
-        // Fall through to Ghostty.load() when streaming compilation is unavailable.
-      }
+  if (
+    typeof window !== "undefined" &&
+    wasmUrl &&
+    typeof WebAssembly !== "undefined" &&
+    typeof WebAssembly.instantiateStreaming === "function"
+  ) {
+    try {
+      const result = await WebAssembly.instantiateStreaming(fetch(wasmUrl), { env: { log: () => undefined } })
+      return new Ghostty(result.instance)
+    } catch {
+      // Fall through to Ghostty.load() when streaming compilation is unavailable.
     }
   }
   return Ghostty.load(wasmUrl)
 }
 
 /**
- * Load one shared libghostty WASM instance for every terminal in the webview.
- * Consumes the inline HTML streaming-compile promise when available for near-0ms
- * cold start, and caches the resolved instance for synchronous hot starts.
+ * Load one shared libghostty WASM instance for every terminal in the webview,
+ * using streaming compilation when available and caching the resolved instance for hot starts.
  */
 export function loadGhostty(wasmUrl: string | undefined = resolveGhosttyWasmUrl()): Promise<Ghostty> {
   if (loaded) return Promise.resolve(loaded)

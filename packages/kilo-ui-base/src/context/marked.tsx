@@ -42,14 +42,13 @@ function hasMath(text: string): boolean {
   return text.includes("$$") || text.includes("\\(")
 }
 
-async function loadHighlighter() {
-  const [{ getSharedHighlighter }, { ensureKiloDiffTheme }, { bundledLanguages }] = await Promise.all([
-    import("@pierre/diffs"),
+async function loadHighlighter(options?: { preferredHighlighter?: "shiki-wasm" | "shiki-js" }) {
+  const [{ loadKiloHighlighter, KILO_DIFF_THEME }, { bundledLanguages }] = await Promise.all([
     import("../pierre/kilo-diff-theme"),
     import("shiki"),
   ])
-  ensureKiloDiffTheme()
-  return { getSharedHighlighter, bundledLanguages }
+  const highlighter = await loadKiloHighlighter(options)
+  return { highlighter, bundledLanguages, theme: KILO_DIFF_THEME }
 }
 
 // kilocode_change start: theme object consumed by the streaming Shiki worker
@@ -534,12 +533,7 @@ async function highlightCodeBlocks(html: string): Promise<string> {
   const matches = [...html.matchAll(codeBlockRegex)]
   if (matches.length === 0) return html
 
-  const { getSharedHighlighter, bundledLanguages } = await loadHighlighter()
-  const highlighter = await getSharedHighlighter({
-    themes: ["Kilo"],
-    langs: [],
-    preferredHighlighter: "shiki-wasm",
-  })
+  const { highlighter, bundledLanguages, theme } = await loadHighlighter({ preferredHighlighter: "shiki-wasm" })
 
   let result = html
   for (const match of matches) {
@@ -561,7 +555,7 @@ async function highlightCodeBlocks(html: string): Promise<string> {
 
     const highlighted = highlighter.codeToHtml(code, {
       lang: language,
-      theme: "Kilo",
+      theme,
       tabindex: false,
     })
     result = result.replace(fullMatch, () => highlighted)
@@ -650,12 +644,14 @@ export async function deferredHighlight(
     return
   }
 
-  let highlighter: Awaited<ReturnType<Awaited<ReturnType<typeof loadHighlighter>>["getSharedHighlighter"]>>
+  let highlighter: Awaited<ReturnType<typeof loadHighlighter>>["highlighter"]
   let bundledLanguages: Awaited<ReturnType<typeof loadHighlighter>>["bundledLanguages"]
+  let theme: string
   try {
     const loaded = await loadHighlighter()
     bundledLanguages = loaded.bundledLanguages
-    highlighter = await loaded.getSharedHighlighter({ themes: ["Kilo"], langs: [] })
+    highlighter = loaded.highlighter
+    theme = loaded.theme
   } catch {
     onComplete?.()
     return
@@ -696,7 +692,7 @@ export async function deferredHighlight(
               resolve()
               return
             }
-            const html = highlighter.codeToHtml(code, { lang: language, theme: "Kilo", tabindex: false })
+            const html = highlighter.codeToHtml(code, { lang: language, theme, tabindex: false })
             touchHighlightCache(cacheKey, html)
             // Note: data-highlighted is NOT set on `block` here because
             // replaceWithHighlighted replaces the parent <pre> entirely — the

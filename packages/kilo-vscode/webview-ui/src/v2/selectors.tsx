@@ -12,6 +12,7 @@ import { ModeSwitcherBase } from "../components/shared/ModeSwitcher"
 import { ThinkingSelectorBase } from "../components/shared/ThinkingSelector"
 import { useLanguage } from "../context/language"
 import { useModelPreferences } from "../context/model-preferences"
+import { syncAgentsOnColdActivation } from "./agent-sync"
 import { useV2, type V2 } from "./client"
 import { failureMessage } from "./kilo-catalog"
 import { shiftTabCyclesVariant } from "./kilo-settings"
@@ -49,18 +50,7 @@ export function createSelection(
       ]).catch(v2.report)
     }),
   )
-  // On a cold Location, the initial `agent.sync()` returns `[]` before plugins finish activating.
-  // `createData` debounces `agent.updated` by 150 ms (`settleMs`), so when the agent list is still
-  // empty, refetch immediately on the first `agent.updated` event instead of sleeping 150 ms.
-  onCleanup(
-    v2.data.on("agent.updated", (event) => {
-      if (event.location && event.location.directory !== v2.directory) return
-      if (v2.connection.status() !== "connected") return
-      if ((v2.data.location.agent.list()?.length ?? 0) > 0) return
-      v2.data.location.agent.invalidate()
-      void v2.data.location.agent.sync().catch(v2.report)
-    }),
-  )
+  onCleanup(syncAgentsOnColdActivation(v2))
   // Sign-in, sign-out and a team switch reload the catalog through createData, and can change the default model and
   // the models a draft may use. A draft model that left the catalog falls back to the default, as on v1.
   createEffect(

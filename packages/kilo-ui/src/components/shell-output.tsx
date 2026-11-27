@@ -34,26 +34,25 @@ function Copy(props: { value: () => string }) {
   )
 }
 
-const highlighter: { current?: ReturnType<typeof getSharedHighlighter> } = {}
+const highlighter: {
+  current?: Promise<{ value: Awaited<ReturnType<typeof getSharedHighlighter>>; theme: string }>
+} = {}
 
 async function highlight(text: string) {
   try {
-    highlighter.current ??= Promise.all([
-      import("@pierre/diffs"),
-      import("@opencode-ai/ui/pierre/kilo-diff-theme"),
-    ])
-      .then(([{ getSharedHighlighter }, { ensureKiloDiffTheme }]) => {
-        ensureKiloDiffTheme()
-        return getSharedHighlighter({ themes: ["Kilo"], langs: [] })
-      })
+    highlighter.current ??= import("@opencode-ai/ui/pierre/kilo-diff-theme")
+      .then(async ({ KILO_DIFF_THEME, loadKiloHighlighter }) => ({
+        value: await loadKiloHighlighter(),
+        theme: KILO_DIFF_THEME,
+      }))
       .catch((error: unknown) => {
         highlighter.current = undefined
         throw error
       })
-    const value = await highlighter.current
+    const { value, theme } = await highlighter.current
     if (!value.getLoadedLanguages().includes("log")) await value.loadLanguage("log")
     const node = document.createElement("div")
-    node.innerHTML = value.codeToHtml(text, { lang: "log", theme: "Kilo", tabindex: false })
+    node.innerHTML = value.codeToHtml(text, { lang: "log", theme, tabindex: false })
     return node.querySelector("code")?.innerHTML
   } catch (error) {
     console.warn("Shell output highlight failed", error)

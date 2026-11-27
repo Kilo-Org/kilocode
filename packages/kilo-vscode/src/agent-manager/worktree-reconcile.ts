@@ -15,6 +15,7 @@
 
 import * as path from "path"
 import { pathKey } from "./project/paths"
+import { Semaphore } from "./semaphore"
 
 export type WorktreeHealth =
   /** Directory exists and git still tracks it. The only state that gets polled. */
@@ -118,6 +119,7 @@ export async function reconcileWorktrees(deps: ReconcileDeps): Promise<WorktreeH
   }
 
   const claimed = new Set<string>()
+  const branchGate = new Semaphore(4)
   const entries: WorktreeHealthEntry[] = await Promise.all(
     rows.map(async (row) => {
       const abs = resolve(deps.root, row.path)
@@ -127,7 +129,7 @@ export async function reconcileWorktrees(deps: ReconcileDeps): Promise<WorktreeH
         ? registered.has(pathKey(abs))
           ? "ok"
           : "unregistered"
-        : (await deps.branchExists(row.branch))
+        : (await branchGate.run(() => deps.branchExists(row.branch)))
           ? "absent-restorable"
           : "absent-gone"
       return { id: row.id, path: abs, branch: row.branch, health, sessions: deps.sessions(row.id) }

@@ -58,15 +58,13 @@ let inProcessQueue: Promise<unknown> = Promise.resolve()
 export function highlightInProcess(text: string, language: string) {
   const run = inProcessQueue.then(async () => {
     await new Promise((resolve) => setTimeout(resolve, 0))
-    const [{ getSharedHighlighter }, { ensureKiloDiffTheme }, { highlightTokens }] = await Promise.all([
-      import("@pierre/diffs"),
+    const [{ KILO_DIFF_THEME, loadKiloHighlighter }, { highlightTokens }] = await Promise.all([
       import("../pierre/kilo-diff-theme"),
       import("./markdown-highlight-tokens"),
     ])
-    ensureKiloDiffTheme()
-    const highlighter = await getSharedHighlighter({ themes: ["Kilo"], langs: [] })
+    const highlighter = await loadKiloHighlighter()
     if (!highlighter.getLoadedLanguages().includes(language)) await highlighter.loadLanguage(language as BundledLanguage)
-    const result = highlighter.codeToTokens(text, { lang: language as BundledLanguage, theme: "Kilo" })
+    const result = highlighter.codeToTokens(text, { lang: language as BundledLanguage, theme: KILO_DIFF_THEME })
     return {
       language,
       generation: nextMarkdownGeneration(),

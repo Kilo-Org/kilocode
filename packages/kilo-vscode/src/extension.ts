@@ -200,12 +200,14 @@ export function activate(context: ExtensionContext) {
       connection.started(started)
       alerts.start(started)
       autocomplete.started()
-      // Boot the workspace Location's plugins immediately so catalogs and Kilo RPCs warm up before webviews ask.
-      void local(new URL(`/api/plugin?location%5Bdirectory%5D=${encodeURIComponent(directory)}`, started.url), {
-        headers: { authorization: started.authorization },
-      })
-        .then((response) => response.body?.cancel().catch(() => undefined))
-        .catch(() => undefined)
+      // Boot the workspace Location's plugins immediately in trusted workspaces so catalogs and Kilo RPCs warm up before webviews ask.
+      if (workspace.isTrusted) {
+        void local(new URL(`/api/plugin?location%5Bdirectory%5D=${encodeURIComponent(directory)}`, started.url), {
+          headers: { authorization: started.authorization },
+        })
+          .then((response) => response.body?.cancel().catch(() => undefined))
+          .catch(() => undefined)
+      }
       // Consent lives in globalState; a fresh server starts without it, so re-send it for the workspace project.
       void indexing?.sync()
     },
@@ -222,8 +224,8 @@ export function activate(context: ExtensionContext) {
       })
     },
   })
-  // Start booting the backend server immediately so it overlaps with extension setup and webview loading.
-  void server.get().catch(() => undefined)
+  // Start booting the backend server immediately in trusted workspaces so it overlaps with extension setup and webview loading.
+  if (workspace.isTrusted) void server.get().catch(() => undefined)
   const diffs = new DiffVirtualProvider(context.extensionUri)
   // The browser tools' settings: the `browser` config keys and the origin allowlist, plus the one-time move of the old
   // `kilo-code.v2.browserAutomation.*` settings into them.

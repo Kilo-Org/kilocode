@@ -15,6 +15,7 @@ import {
 import { useV2 } from "../v2/client"
 import { visibleNotifications } from "../v2/notification-list"
 import { useVSCode } from "./vscode"
+import { readKiloInitialState } from "../v2/initial-state"
 
 export interface NotificationsContextValue {
   notifications: Accessor<readonly KiloGatewayRpc.Notification[]>
@@ -24,16 +25,10 @@ export interface NotificationsContextValue {
 
 export const NotificationsContext = createContext<NotificationsContextValue>()
 
-function initialDismissedNotifications(): string[] | undefined {
-  if (typeof window === "undefined") return undefined
-  return (window as unknown as { KILO_INITIAL_STATE?: { dismissedNotifications?: string[] } }).KILO_INITIAL_STATE
-    ?.dismissedNotifications
-}
-
 export const NotificationsProvider: ParentComponent = (props) => {
   const v2 = useV2()
   const vscode = useVSCode()
-  const seeded = initialDismissedNotifications()
+  const seeded = readKiloInitialState()?.dismissedNotifications
   const [notifications, setNotifications] = createSignal<readonly KiloGatewayRpc.Notification[]>([])
   const [dismissedIds, setDismissedIds] = createSignal<string[]>(seeded ?? [])
   const location = { directory: v2.directory }

@@ -259,17 +259,13 @@ export async function repairSessionFilings(
   const generation = ctx.generation
   if (!ctx.peekState()) return false
   const home = homes(ctx)
-  const lists = await Promise.all(
-    projectDirectories(ctx).map((entry) =>
-      listAll(entry.directory).catch((err: unknown) => {
-        log(`Agent Manager: listing sessions for ${entry.directory} failed:`, err)
-        return [] as SessionInfo[]
-      }),
-    ),
-  )
-  if (!ctx.isCurrent(generation)) return false
   let changed = false
-  for (const sessions of lists) {
+  for (const entry of projectDirectories(ctx)) {
+    const sessions = await listAll(entry.directory).catch((err: unknown) => {
+      log(`Agent Manager: listing sessions for ${entry.directory} failed:`, err)
+      return [] as SessionInfo[]
+    })
+    if (!ctx.isCurrent(generation)) return false
     for (const session of sessions) {
       if (session.parentID !== undefined && session.parentID !== null) continue
       if (refile(ctx, session, home)) changed = true

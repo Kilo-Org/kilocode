@@ -16,18 +16,16 @@ function continues(before: string, after: string) {
 
 async function source(lang: string, code: string) {
   try {
-    const [{ getSharedHighlighter }, { ensureKiloDiffTheme }, { bundledLanguages }] = await Promise.all([
-      import("@pierre/diffs"),
+    const [{ KILO_DIFF_THEME, loadKiloHighlighter }, { bundledLanguages }] = await Promise.all([
       import("../pierre/kilo-diff-theme"),
       import("shiki"),
     ])
-    ensureKiloDiffTheme()
-    const highlighter = await getSharedHighlighter({ themes: ["Kilo"], langs: [] })
+    const highlighter = await loadKiloHighlighter()
     const language = lang in bundledLanguages ? lang : "text"
     if (!highlighter.getLoadedLanguages().includes(language)) {
       await highlighter.loadLanguage(language as BundledLanguage)
     }
-    return highlighter.codeToHtml(code, { lang: language, theme: "Kilo", tabindex: false })
+    return highlighter.codeToHtml(code, { lang: language, theme: KILO_DIFF_THEME, tabindex: false })
   } catch (err) {
     console.warn("Streaming code highlight failed", lang, err)
     return

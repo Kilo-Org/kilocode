@@ -13,6 +13,7 @@ import { sessionMissing, type V2 } from "../src/v2/scope"
 import type { VSCodeContext } from "./v2/bridge"
 import type { AppDirectories } from "./app-directories"
 import { reportFailure, type FailureToastDeps } from "./failure-toast"
+import { syncAgentsOnColdActivation } from "../src/v2/agent-sync"
 import { createPanelData } from "./v2/panel-data"
 import { createSessions } from "./v2/sessions"
 import { dispatchInitialPrompt, initialModel } from "./initial-message"
@@ -65,19 +66,10 @@ export function createAppSession(opts: {
       },
     ),
   )
-  // Skip createData's 150 ms `settleMs` debounce on initial cold-Location agent activation.
   createEffect(() => {
     const store = rootStore()
     if (!store) return
-    onCleanup(
-      store.data.on("agent.updated", (event) => {
-        if (event.location && event.location.directory !== store.directory) return
-        if (store.connection.status() !== "connected") return
-        if ((store.data.location.agent.list()?.length ?? 0) > 0) return
-        store.data.location.agent.invalidate()
-        void store.data.location.agent.sync().catch(store.report)
-      }),
-    )
+    onCleanup(syncAgentsOnColdActivation(store))
   })
 
   const commandStore = createMemo(() => {

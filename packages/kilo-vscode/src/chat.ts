@@ -24,6 +24,7 @@ import { applyModelPreference, readModelPreferences } from "./model-preferences"
 import {
   DISPLAY_DEFAULTS,
   type GitChangesStats,
+  type KiloInitialState,
   type ModelPreferenceMessage,
   type ToHost,
   type ToWebview,
@@ -205,7 +206,7 @@ function isWorkStyleMessage(message: ToHost) {
   return message.type === "requestWorkStyle" || message.type === "applyWorkStyle" || message.type === "setWorkStyle"
 }
 
-function readInitialState(context: ExtensionContext): Record<string, unknown> {
+function readInitialState(context: ExtensionContext): { KILO_INITIAL_STATE?: KiloInitialState } {
   if (!context.globalState) return {}
   return {
     KILO_INITIAL_STATE: {

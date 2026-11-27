@@ -8,6 +8,7 @@ import type { VSCodeAPI, WebviewMessage, ExtensionMessage } from "../types/messa
 import { ClipboardProvider } from "@kilocode/kilo-ui/context/clipboard"
 import { edge } from "../sidebar-position"
 import { protect } from "../utils/webview-message"
+import { readKiloInitialState } from "../v2/initial-state"
 
 // Get the VS Code API (only available in webview context)
 let vscodeApi: VSCodeAPI | undefined
@@ -95,11 +96,7 @@ export const VSCodeProvider: ParentComponent = (props) => {
   window.addEventListener("focus", reportFocus)
   window.addEventListener("blur", reportFocus)
   reportFocus()
-  const seededExpanded =
-    typeof window === "undefined"
-      ? undefined
-      : (window as unknown as { KILO_INITIAL_STATE?: { modelSelectorExpanded?: boolean } }).KILO_INITIAL_STATE
-          ?.modelSelectorExpanded
+  const seededExpanded = readKiloInitialState()?.modelSelectorExpanded
   if (seededExpanded !== undefined) setExpanded(seededExpanded)
   handlers.add((message) => {
     if (message?.type === "modelSelectorExpandedLoaded") setExpanded(message.value)

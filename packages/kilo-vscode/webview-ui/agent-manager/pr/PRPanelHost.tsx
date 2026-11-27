@@ -7,8 +7,6 @@ import type { PRComment } from "./pr-types"
 import { openFile, openUrl } from "./pr-panel-actions"
 import type { BaseUpdateTarget } from "../base-update-target"
 
-export { createPRNavigation } from "./navigation"
-
 interface Props {
   pr: PRStatus
   projectId?: string

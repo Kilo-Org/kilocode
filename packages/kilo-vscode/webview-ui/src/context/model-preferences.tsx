@@ -5,6 +5,7 @@
 import { createContext, createSignal, onCleanup, useContext, type Accessor, type ParentComponent } from "solid-js"
 import type { ModelPreferenceRef, ModelPreferences, ModelUsageMap } from "../../../src/protocol"
 import { useVSCode } from "./vscode"
+import { readKiloInitialState } from "../v2/initial-state"
 
 const RECENT_LIMIT = 5
 
@@ -43,21 +44,9 @@ export function variantKey(agent: string, providerID: string, modelID: string) {
 // The wait is bounded: if the host never answers, the picker still resolves a model instead of staying unsubmittable.
 const PREFERENCES_WAIT = 5000
 
-type InitialState = {
-  autoApprove?: boolean
-  modelSelectorExpanded?: boolean
-  modelPreferences?: ModelPreferences
-  dismissedNotifications?: string[]
-}
-
-function initialModelPreferences(): ModelPreferences | undefined {
-  if (typeof window === "undefined") return undefined
-  return (window as unknown as { KILO_INITIAL_STATE?: InitialState }).KILO_INITIAL_STATE?.modelPreferences
-}
-
 export const ModelPreferencesProvider: ParentComponent = (props) => {
   const vscode = useVSCode()
-  const seeded = initialModelPreferences()
+  const seeded = readKiloInitialState()?.modelPreferences
   const [state, setState] = createSignal<ModelPreferences>(seeded ?? { favorites: [], recents: [], usage: {}, variants: {} })
   const [loaded, setLoaded] = createSignal(seeded !== undefined)
   const [picks, setPicks] = createSignal<Record<string, { providerID: string; id: string }>>({})

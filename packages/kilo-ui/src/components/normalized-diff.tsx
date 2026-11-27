@@ -10,7 +10,6 @@ export function NormalizedDiff(props: {
   diff: DiffInput
   requireHunks?: boolean
   before?: JSX.Element
-  wrapperClass?: string
   wrapperComponent?: string
 }) {
   const component = useFileComponent()
