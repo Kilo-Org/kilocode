@@ -14,11 +14,17 @@ afterEach(async () => {
 async function release() {
   const dir = await mkdtemp(path.join(os.tmpdir(), "npm-release-"))
   cleanups.push(() => rm(dir, { recursive: true, force: true }))
+  // Consumer tests receive the inventory from a build. Derive it from the fixture bytes rather
+  // than starting a tar process for every package each time a consumer needs a clean directory.
+  const recorded: Awaited<ReturnType<typeof record>> = []
   for (const name of [...platforms, launcher, ...clients]) {
     const archive = new Bun.Archive({ "package/package.json": JSON.stringify({ name, version }) }, { compress: "gzip" })
-    await Bun.write(path.join(dir, filename(name, version)), await archive.bytes())
+    const bytes = await archive.bytes()
+    const file = filename(name, version)
+    const integrity = `sha512-${new Bun.CryptoHasher("sha512").update(bytes).digest("base64")}`
+    await Bun.write(path.join(dir, file), bytes)
+    recorded.push({ name, version, file, integrity })
   }
-  const recorded = await record(dir, version)
   const published = new Map<string, string>()
   const events: string[] = []
   const server = Bun.serve({
@@ -124,6 +130,7 @@ test("both publish jobs reject an incomplete, extra or altered file before conta
 
 test("the producer refuses an archive with the expected filename but different package identity", async () => {
   const r = await release()
+  expect(await record(r.dir, version)).toEqual(r.recorded)
   const file = path.join(r.dir, filename(launcher, version))
   await Bun.write(file, Bun.file(path.join(r.dir, filename(clients[0], version))))
   await expect(record(r.dir, version)).rejects.toThrow(`Expected ${launcher}@${version} inside`)

@@ -11,6 +11,7 @@ import {
   stoppedExitCode,
 } from "./fixture/service-fixture"
 import { accelerate } from "./fixture/service-timing"
+import { observeHealthProbes } from "./kilocode/health-probes" // kilocode_change(service-probes)
 
 const ensure = accelerate(Service.ensure)
 const stop = accelerate(Service.stop)
@@ -181,6 +182,7 @@ test("evicts an unresponsive registered service before starting its replacement"
   const existing = fixture.spawn("hanging")
   await fixture.waitForFile()
   const original = await Bun.file(registration).json()
+  using probes = observeHealthProbes(original.url) // kilocode_change(service-probes)
 
   const endpoint = await run(
     ensure({
@@ -192,7 +194,7 @@ test("evicts an unresponsive registered service before starting its replacement"
   const replacement = await Bun.file(registration).json()
   fixture.track(replacement.pid)
 
-  expect((await Bun.file(registration + ".requests").text()).trim().split("\n")).toHaveLength(3)
+  expect(probes.count()).toBe(3) // kilocode_change(service-probes)
   expect(await existing.exited).toBe(stoppedExitCode)
   expect(replacement.pid).not.toBe(original.pid)
   expect(endpoint.url).toBe(replacement.url)

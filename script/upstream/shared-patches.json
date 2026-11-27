@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 168,
-    "markedLines": 3134,
+    "files": 169,
+    "markedLines": 3140,
     "unmarkedLines": 560,
     "deletedFiles": 0
   },
@@ -644,7 +644,11 @@
     },
     "packages/client/test/promise-service.test.ts": {
       "rung": 4,
-      "seam": "Kilo CI stability: the handoff-recovery test probes the replacement with a 2 s health probe (`ensureReplacement`) instead of the accelerated 100 ms one. At 100 ms a loaded runner made a healthy replacement look unresponsive, recovery recruited a second contender that cannot adopt the single-use handoff, and the fixture was overwritten with a handoff it never received. The assertion is unchanged; only the probe budget is. No seam: the timing fixture is shared, and the test's own call site is the only place that can bound its probe (inline patch, option 4)."
+      "seam": "The handoff-recovery test uses a 2 s probe for a healthy replacement instead of the accelerated 100 ms budget. The eviction test counts probes at the calling client, because a deadline can expire before the child logs a request. Both are assertions about the real service lifecycle in the shared test."
+    },
+    "packages/client/test/service.test.ts": {
+      "rung": 4,
+      "seam": "The Effect eviction test asserts three probes from its own client. Its child process cannot count requests that time out before reaching the HTTP handler, so the shared test observes the caller via a Kilo test helper."
     },
     "packages/codemode/test/suspend.test.ts": {
       "rung": 4,

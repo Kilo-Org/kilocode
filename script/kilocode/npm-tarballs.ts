@@ -50,14 +50,13 @@ async function inventory(dir: string, version: string) {
 // Only the producer interprets tarball contents. Consumers compare all compressed bytes to this job output.
 export async function record(dir: string, version: string) {
   const entries = await inventory(dir, version)
-  await Promise.all(
-    entries.map(async (entry) => {
-      // GNU tar treats a Windows drive prefix as a remote host. Pass only the local archive name.
-      const manifest = await $`tar -xOf ${entry.file} package/package.json`.cwd(dir).json()
-      if (manifest.name !== entry.name || manifest.version !== version)
-        throw new Error(`Expected ${entry.name}@${version} inside ${entry.file}`)
-    }),
-  )
+  // Finish each tar reader before starting another or returning an identity error.
+  for (const entry of entries) {
+    // GNU tar treats a Windows drive prefix as a remote host. Pass only the local archive name.
+    const manifest = await $`tar -xOf ${entry.file} package/package.json`.cwd(dir).json()
+    if (manifest.name !== entry.name || manifest.version !== version)
+      throw new Error(`Expected ${entry.name}@${version} inside ${entry.file}`)
+  }
   return entries
 }
 
