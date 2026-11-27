@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-// Publishes Kilo's v2 client packages to npm with the `kilo-v2` dist-tag, next to the CLI from
+// Packs Kilo's v2 client packages for npm, next to the CLI from
 // packages/kilo-cli/script/publish.ts:
 //
 //   packages/schema   -> @kilocode/schema
@@ -15,13 +15,10 @@
 // The version is the CLI's version from the same build, so client N matches server N.
 //
 // Mirror of packages/{schema,protocol,client}/script/publish.ts (upstream): build, rewrite `exports` from `src/*.ts`
-// to `dist/`, pack with `bun pm pack` (it resolves `workspace:` and `catalog:`), publish. The package.json files are
+// to `dist/`, pack with `bun pm pack` (it resolves `workspace:` and `catalog:`). The package.json files are
 // restored afterwards.
 //
-// Usage: KILO_VERSION=<version> bun script/kilocode/publish-client.ts [--dry-run]
-// --dry-run packs every package and runs `npm publish --dry-run`. It publishes nothing.
-// Provenance comes from NPM_CONFIG_PROVENANCE, which the publish workflow sets. Without it the script also works
-// with a local npm login, for example for the first publish of a new package name.
+// Usage: KILO_VERSION=<version> bun script/kilocode/publish-client.ts <output directory> (or --dry-run).
 // release-env copies KILO_VERSION to OPENCODE_VERSION, which `@opencode/script` reads, so it is imported first.
 import "./release-env"
 import { $ } from "bun"
@@ -31,50 +28,36 @@ import os from "node:os"
 import path from "node:path"
 import { Script } from "@opencode/script"
 import { ClientManifest } from "./client-manifest"
+import { packNpm } from "./pack-npm"
 
 const root = path.resolve(import.meta.dirname, "..", "..")
-const tag = "kilo-v2"
-const dryRun = process.argv.includes("--dry-run")
-const packages = ClientManifest.packages
-
-const out = await mkdtemp(path.join(os.tmpdir(), "kilo-client-"))
+const output = process.argv[2]
+if (!output) throw new Error("Pass a tarball output directory or --dry-run")
+const dryRun = output === "--dry-run"
+const out = dryRun ? await mkdtemp(path.join(os.tmpdir(), "kilo-client-")) : path.resolve(output)
 try {
-  for (const name of packages) await publish(name)
+  for (const name of ClientManifest.packages) await pack(name)
 } finally {
-  await rm(out, { recursive: true, force: true })
+  if (dryRun) await rm(out, { recursive: true, force: true })
 }
-console.log(
-  `${dryRun ? "dry run: " : ""}${packages.map((name) => `@kilocode/${name}`).join(", ")}@${Script.version} published with dist-tag ${tag}`,
-)
 
-async function publish(name: string) {
+async function pack(name: string) {
   const dir = path.join(root, "packages", name)
   const file = path.join(dir, "package.json")
   const original = await Bun.file(file).text()
   const pkg: ClientManifest.Manifest = JSON.parse(original)
-  const target = ClientManifest.kilo(pkg.name)
   await $`bun run build`.cwd(dir)
   const license = path.join(dir, "LICENSE")
   await copyFile(path.join(root, "LICENSE"), license, constants.COPYFILE_EXCL)
   try {
-    await Bun.write(file, JSON.stringify(ClientManifest.manifest(pkg, name, Script.version), null, 2) + "\n")
-    const destination = path.join(out, name)
-    await $`bun pm pack --quiet --destination ${destination}`.cwd(dir)
-    const tarball = Array.from(new Bun.Glob("*.tgz").scanSync({ cwd: destination, absolute: true }))[0]
-    if (!tarball) throw new Error(`bun pm pack did not write a tarball for ${target}`)
-    const notice = (await $`tar -xOf ${tarball} package/LICENSE`.quiet()).text()
-    if (notice !== (await Bun.file(license).text()))
-      throw new Error(`${target} does not include the repository MIT license`)
-    if (dryRun) {
-      await $`npm publish ${tarball} --dry-run --access public --tag ${tag}`
-      return
+    const manifest = ClientManifest.manifest(pkg, name, Script.version)
+    await Bun.write(file, JSON.stringify(manifest, null, 2) + "\n")
+    const archive = await packNpm(dir, out, `@kilocode/${name}`, Script.version)
+    const files = (await $`tar -tzf ${archive}`.text()).split("\n")
+    for (const entry of Object.values(manifest.exports).flatMap(Object.values)) {
+      const pattern = new Bun.Glob(entry.replace(/^\.\//, "package/"))
+      if (!files.some((file) => pattern.match(file))) throw new Error(`${archive} has no export matching ${entry}`)
     }
-    // A rerun of the workflow publishes only the packages that are missing.
-    if ((await $`npm view ${target}@${Script.version} version`.quiet().nothrow()).exitCode === 0) {
-      console.log(`already published ${target}@${Script.version}`)
-      return
-    }
-    await $`npm publish ${tarball} --access public --tag ${tag}`
   } finally {
     await Promise.all([Bun.write(file, original), rm(license)])
   }

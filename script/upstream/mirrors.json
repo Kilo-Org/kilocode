@@ -91,7 +91,7 @@
       "invariants": [
         "The launcher publishes last, after the platform packages it depends on.",
         "The dist-tag is `kilo-v2`, never the build channel, so a v2 publish cannot replace v1's `latest` or `rc`.",
-        "`targets` matches the targets `script/build.ts` builds; a target upstream adds or removes changes both scripts.",
+        "`script/kilocode/npm-tarballs.ts` lists the full platform set that `script/build.ts` builds. Only the read-only producer packs; `script/kilocode/publish-npm.ts` publishes the verified files without repacking.",
         "The launcher exposes only `kilo2` with no `kilo` alias, and `release-env` is imported before `@opencode/script`.",
         "`script/postinstall.ts` asserts the copy anchor in upstream's `cli/script/postinstall.mjs`. Keep the sandbox helpers and the macOS renderer sidecar next to the launcher executable, copied from the selected platform package."
       ]
