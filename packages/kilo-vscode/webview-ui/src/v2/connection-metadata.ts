@@ -1,13 +1,10 @@
-// Server-wide metadata for one v2 connection: the handshake version, the Kilo Gateway catalog failure, and the Gateway
-// model metadata. None of these answers depends on the directory, so every store of the Agent Manager reads one copy
-// instead of repeating the requests for each directory.
+// Server-wide metadata for one v2 connection: the handshake version. It does not depend on the directory, so every
+// store of the Agent Manager shares one handshake read instead of repeating it for each directory.
 import type { OpenCodeClient } from "@opencode/client"
 import type { createClientConnection } from "@opencode/client/solid"
 import { KiloHandshakeRpc } from "@opencode/schema/kilocode/handshake"
 import { createEffect, createSignal, on, onCleanup } from "solid-js"
 import { toFailure, type Failure } from "./error"
-import { catalogEvent, createKiloCatalog } from "./kilo-catalog"
-import { createKiloModelsCache, type KiloModelsCache } from "./kilo-models"
 import { pluginsListed } from "../../../src/shared/plugin-inventory"
 
 type Connection = ReturnType<typeof createClientConnection>
@@ -20,34 +17,13 @@ export type ConnectionMetadata = ReturnType<typeof createConnectionMetadata>
  */
 const HANDSHAKE_RETRY = [500, 1_000, 2_000, 5_000, 10_000] as const
 
-/**
- * Call inside a reactive owner. `subscribe` reaches the catalog event: the panel routes it from its shared stream, and
- * a store created alone subscribes to its own event stream.
- */
-export function createConnectionMetadata(input: {
-  api: OpenCodeClient
-  connection: Connection
-  subscribe: (type: typeof catalogEvent, handler: () => void) => () => void
-  /**
-   * Reads the Kilo Gateway catalog status. The Settings and Profile panels pass false, because neither shows the
-   * catalog failure and Settings must not issue the request.
-   */
-  chat?: boolean
-}) {
+/** Call inside a reactive owner to share the server-wide handshake read across every store of one connection. */
+export function createConnectionMetadata(input: { api: OpenCodeClient; connection: Connection }) {
+  const active = new Set<string>()
   const [directory, setDirectory] = createSignal<string>()
   const [version, setVersion] = createSignal("")
   const [handshake, setHandshake] = createSignal<Failure>()
-  const models: KiloModelsCache = createKiloModelsCache()
-  const kiloFailure =
-    input.chat === false
-      ? () => undefined
-      : createKiloCatalog({
-          api: input.api,
-          directory,
-          status: input.connection.status,
-          on: input.subscribe,
-        })
-  const state = { handshake: 0, retry: undefined as ReturnType<typeof setTimeout> | undefined }
+  const state = { handshake: 0, verified: false, retry: undefined as ReturnType<typeof setTimeout> | undefined }
   onCleanup(() => clearTimeout(state.retry))
 
   // A Location that is still activating answers the handshake like a server without it, so the read waits for the
@@ -63,6 +39,7 @@ export function createConnectionMetadata(input: {
           .get({}, { location: { directory: dir } })
           .then((info) => {
             if (read !== state.handshake) return
+            state.verified = true
             setVersion(info.version)
             setHandshake(undefined)
           })
@@ -94,23 +71,29 @@ export function createConnectionMetadata(input: {
         if (status !== "connected" || !dir) {
           // A request that fails on a dropped connection says nothing about the server: end the running read. The
           // read starts again when the connection is back.
+          if (status !== "connected") state.verified = false
           state.handshake++
           return
         }
+        if (state.verified) return
         readHandshake(dir)
       },
     ),
   )
 
   return {
-    /** The directory used for the server-wide reads; the first store that needs them wins. */
+    /** Registers a live store directory for the server-wide handshake read; returns a detach cleanup. */
     attach(value: string) {
-      if (!value || directory()) return
-      setDirectory(value)
+      if (!value) return () => {}
+      active.add(value)
+      if (!directory()) setDirectory(value)
+      return () => {
+        active.delete(value)
+        if (directory() !== value) return
+        setDirectory(active.values().next().value)
+      }
     },
     version,
     handshake,
-    kiloFailure,
-    kiloModelsCache: models,
   }
 }
