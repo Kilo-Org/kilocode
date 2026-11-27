@@ -9,9 +9,15 @@ import { useVSCode } from "../context/vscode"
 // instead of dropping its on state until the next reply.
 let lastEnabled: boolean | undefined
 
+function initialAutoApprove(): boolean | undefined {
+  if (typeof window === "undefined") return undefined
+  return (window as unknown as { KILO_INITIAL_STATE?: { autoApprove?: boolean } }).KILO_INITIAL_STATE?.autoApprove
+}
+
 export function createAutoApprove() {
   const vscode = useVSCode()
-  const [enabled, setEnabled] = createSignal(lastEnabled ?? false)
+  const seeded = lastEnabled ?? initialAutoApprove()
+  const [enabled, setEnabled] = createSignal(seeded ?? false)
 
   onCleanup(
     vscode.onMessage((message) => {
@@ -20,7 +26,7 @@ export function createAutoApprove() {
       setEnabled(message.value)
     }),
   )
-  vscode.postMessage({ type: "requestAutoApproveState" })
+  if (seeded === undefined) vscode.postMessage({ type: "requestAutoApproveState" })
 
   return {
     enabled,

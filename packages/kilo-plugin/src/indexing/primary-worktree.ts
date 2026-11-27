@@ -1,12 +1,45 @@
+import { realpath, stat } from "node:fs/promises"
 import path from "path"
 import { FSUtil } from "@opencode/util/fs-util"
 import { Effect } from "effect"
+
+async function isGitDir(dir: string): Promise<boolean> {
+  const [head, objects] = await Promise.all([
+    stat(path.join(dir, "HEAD")).catch(() => undefined),
+    stat(path.join(dir, "objects")).catch(() => undefined),
+  ])
+  return Boolean(head?.isFile() && objects?.isDirectory())
+}
+
+async function fastPrimary(cwd: string): Promise<string | undefined | "fallback"> {
+  if (process.env.GIT_DIR || process.env.GIT_WORK_TREE || process.env.GIT_CEILING_DIRECTORIES) return "fallback"
+  if (cwd.split(path.sep).includes(".git")) return "fallback"
+  const resolved = await realpath(cwd).catch(() => undefined)
+  if (!resolved) return "fallback"
+  let current = resolved
+  while (true) {
+    const dotGit = path.join(current, ".git")
+    const info = await stat(dotGit).catch(() => undefined)
+    if (info?.isDirectory()) {
+      if (!(await isGitDir(dotGit))) return "fallback"
+      return FSUtil.normalizePath(current)
+    }
+    if (info?.isFile()) return "fallback"
+    // A bare repository nested inside a normal repository must return undefined, not the outer repo.
+    if (await isGitDir(current)) return "fallback"
+    const parent = path.dirname(current)
+    if (parent === current) return undefined
+    current = parent
+  }
+}
 
 // The primary checkout of the Git repository that contains `dir`. For a linked worktree it is the first entry of
 // `git worktree list`; for the primary checkout itself it is its top level. Outside Git, or for a bare repository,
 // it is undefined.
 export const primaryWorktree = Effect.fn("PrimaryWorktree.find")(function* (dir: string) {
   const cwd = FSUtil.normalizePath(path.resolve(dir))
+  const fast = yield* Effect.promise(() => fastPrimary(cwd))
+  if (fast !== "fallback") return fast
   const run = (args: string[]) =>
     Effect.promise(async () => {
       const proc = Bun.spawn(["git", ...args], { cwd, stdout: "pipe", stderr: "ignore", windowsHide: true })

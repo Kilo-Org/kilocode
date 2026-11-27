@@ -24,11 +24,18 @@ export interface NotificationsContextValue {
 
 export const NotificationsContext = createContext<NotificationsContextValue>()
 
+function initialDismissedNotifications(): string[] | undefined {
+  if (typeof window === "undefined") return undefined
+  return (window as unknown as { KILO_INITIAL_STATE?: { dismissedNotifications?: string[] } }).KILO_INITIAL_STATE
+    ?.dismissedNotifications
+}
+
 export const NotificationsProvider: ParentComponent = (props) => {
   const v2 = useV2()
   const vscode = useVSCode()
+  const seeded = initialDismissedNotifications()
   const [notifications, setNotifications] = createSignal<readonly KiloGatewayRpc.Notification[]>([])
-  const [dismissedIds, setDismissedIds] = createSignal<string[]>([])
+  const [dismissedIds, setDismissedIds] = createSignal<string[]>(seeded ?? [])
   const location = { directory: v2.directory }
   const rpc = v2.api.rpc(KiloGatewayRpc.Definition)
   let read = 0
@@ -63,7 +70,7 @@ export const NotificationsProvider: ParentComponent = (props) => {
       if (event.location?.directory === v2.directory) load()
     }),
   )
-  vscode.postMessage({ type: "requestDismissedNotifications" })
+  if (seeded === undefined) vscode.postMessage({ type: "requestDismissedNotifications" })
 
   const filteredNotifications = createMemo(() => visibleNotifications(notifications(), dismissedIds()))
 

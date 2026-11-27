@@ -95,11 +95,17 @@ export const VSCodeProvider: ParentComponent = (props) => {
   window.addEventListener("focus", reportFocus)
   window.addEventListener("blur", reportFocus)
   reportFocus()
+  const seededExpanded =
+    typeof window === "undefined"
+      ? undefined
+      : (window as unknown as { KILO_INITIAL_STATE?: { modelSelectorExpanded?: boolean } }).KILO_INITIAL_STATE
+          ?.modelSelectorExpanded
+  if (seededExpanded !== undefined) setExpanded(seededExpanded)
   handlers.add((message) => {
     if (message?.type === "modelSelectorExpandedLoaded") setExpanded(message.value)
     if (message?.type === "webviewActiveChanged") setActive(message.active)
   })
-  api.postMessage({ type: "requestModelSelectorExpanded" })
+  if (seededExpanded === undefined) api.postMessage({ type: "requestModelSelectorExpanded" })
 
   onCleanup(() => {
     release()

@@ -68,6 +68,11 @@ export async function requestState(p: ProviderStateHost): Promise<void> {
   await p.terminalRouter.dispose()
   await p.scripts.manager.snapshot()
   void p.activity.sync(true)
+  // If persisted state is already in memory while git discovery/reconciliation is still running, push it at once
+  // so the sidebar and tabs render immediately instead of waiting in a skeleton.
+  if (p.state && (p.state.getWorktrees().length > 0 || p.state.getSessions().length > 0) && p.context?.lifecycle === "initializing") {
+    pushState(p, undefined, { early: true })
+  }
   await p.stateReady?.catch((err) => p.log("requestState: stateReady rejected:", err))
   if (!p.state) {
     pushEmptyState(p)
@@ -196,7 +201,7 @@ function repairFilingsOnce(p: ProviderStateHost, ctx: ProjectContext, catalog: S
     .catch((err: unknown) => p.log("Agent Manager: repairing session filings failed:", err))
 }
 
-export function pushState(p: ProviderStateHost, ctx?: ProjectContext): void {
+export function pushState(p: ProviderStateHost, ctx?: ProjectContext, opts?: { early?: boolean }): void {
   const target = ctx ?? p.context
   const state = target?.peekState()
   if (!target || !state) {
@@ -228,17 +233,21 @@ export function pushState(p: ProviderStateHost, ctx?: ProjectContext): void {
     activeTarget: state.getActiveTarget(),
     ...(active ? runStateFor(p, target) : {}),
   })
+  if (opts?.early) return
   void p.activity.sync()
   const catalog = sessionCatalog(p)
   registerSessionCatalogHost(p.busySessions, catalog)
-  repairFilingsOnce(p, target, catalog)
   void pushProjectSessions(
     target,
     catalog.list,
     catalog.post,
     (...args) => p.log(...args),
     () => pushState(p, target),
-  )
+  ).finally(() => {
+    // Run the full-history filing repair after the initial newest-session catalog lands so it does not
+    // contend with startup listing and model/agent catalog requests.
+    repairFilingsOnce(p, target, catalog)
+  })
   if (!active) return
   syncPollerSkips(p)
   p.statsPoller.setEnabled(worktrees.length > 0 || p.panel !== undefined)

@@ -130,6 +130,7 @@ export type ToHost =
   | Request
   | BrowserTab
   | { type: "sidebar.session"; sessionId?: string }
+  | { type: "requestServerStatus" }
   | { type: "abort"; id: number }
   | { type: "open"; url: string; external?: boolean }
   | Ui
@@ -523,6 +524,7 @@ export type ToWebview =
   | { type: "chunk"; id: number; data: Uint8Array }
   | { type: "end"; id: number }
   | { type: "error"; id: number; message: string }
+  | { type: "serverStatus"; status: "ready" | "stopped" | "failed" }
   | {
       type: "command"
       name:

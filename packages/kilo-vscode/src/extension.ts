@@ -27,6 +27,7 @@ import { DiffViewerProvider } from "./diff/DiffViewerProvider"
 import { DiffSourceCatalog } from "./diff/sources/catalog"
 import { commitMessageCommand, commitMessageLanguage, connect, type GitExports } from "./commit-message"
 import { createCostAlerts } from "./cost-alert"
+import { local } from "./local"
 import { command, indexingEnvironment, manager, serverPlans, settingsEnvironment } from "./server"
 import { usePlanDir } from "./documents/document-reader"
 import { readKiloSettings } from "./settings-host"
@@ -157,19 +158,20 @@ export function activate(context: ExtensionContext) {
   // feature is enabled, so a session sees each tool exactly when the feature is on.
   const serverSettings = async () => {
     const values = readKiloSettings()
-    const browser =
+    const [browser, notebook] = await Promise.all([
       integratedBrowserEnabled() && workspace.isTrusted
-        ? await broker.env().catch((error: unknown) => {
+        ? broker.env().catch((error: unknown) => {
             output.appendLine(`Integrated Browser broker failed: ${String(error)}`)
             return {}
           })
-        : {}
-    const notebook = notebookToolsEnabled()
-      ? await notebooks.env().catch((error: unknown) => {
-          output.appendLine(`Notebook broker failed: ${String(error)}`)
-          return {}
-        })
-      : {}
+        : Promise.resolve({}),
+      notebookToolsEnabled()
+        ? notebooks.env().catch((error: unknown) => {
+            output.appendLine(`Notebook broker failed: ${String(error)}`)
+            return {}
+          })
+        : Promise.resolve({}),
+    ])
     return {
       ...settingsEnvironment({
         claudeCodeCompat: values.claudeCodeCompat === true,
@@ -192,12 +194,18 @@ export function activate(context: ExtensionContext) {
     env: process.env,
     settings: serverSettings,
     log: (text) => output.append(text),
-    // The autocomplete connection is declared below; the server starts only after activation returns.
+    // The autocomplete connection is declared below; the server starts asynchronously while activation finishes.
     onStart: (started) => {
       shutdown.started(started)
       connection.started(started)
       alerts.start(started)
       autocomplete.started()
+      // Boot the workspace Location's plugins immediately so catalogs and Kilo RPCs warm up before webviews ask.
+      void local(new URL(`/api/plugin?location%5Bdirectory%5D=${encodeURIComponent(directory)}`, started.url), {
+        headers: { authorization: started.authorization },
+      })
+        .then((response) => response.body?.cancel().catch(() => undefined))
+        .catch(() => undefined)
       // Consent lives in globalState; a fresh server starts without it, so re-send it for the workspace project.
       void indexing?.sync()
     },
@@ -214,6 +222,8 @@ export function activate(context: ExtensionContext) {
       })
     },
   })
+  // Start booting the backend server immediately so it overlaps with extension setup and webview loading.
+  void server.get().catch(() => undefined)
   const diffs = new DiffVirtualProvider(context.extensionUri)
   // The browser tools' settings: the `browser` config keys and the origin allowlist, plus the one-time move of the old
   // `kilo-code.v2.browserAutomation.*` settings into them.

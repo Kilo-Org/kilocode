@@ -43,23 +43,38 @@ export function variantKey(agent: string, providerID: string, modelID: string) {
 // The wait is bounded: if the host never answers, the picker still resolves a model instead of staying unsubmittable.
 const PREFERENCES_WAIT = 5000
 
+type InitialState = {
+  autoApprove?: boolean
+  modelSelectorExpanded?: boolean
+  modelPreferences?: ModelPreferences
+  dismissedNotifications?: string[]
+}
+
+function initialModelPreferences(): ModelPreferences | undefined {
+  if (typeof window === "undefined") return undefined
+  return (window as unknown as { KILO_INITIAL_STATE?: InitialState }).KILO_INITIAL_STATE?.modelPreferences
+}
+
 export const ModelPreferencesProvider: ParentComponent = (props) => {
   const vscode = useVSCode()
-  const [state, setState] = createSignal<ModelPreferences>({ favorites: [], recents: [], usage: {}, variants: {} })
-  const [loaded, setLoaded] = createSignal(false)
+  const seeded = initialModelPreferences()
+  const [state, setState] = createSignal<ModelPreferences>(seeded ?? { favorites: [], recents: [], usage: {}, variants: {} })
+  const [loaded, setLoaded] = createSignal(seeded !== undefined)
   const [picks, setPicks] = createSignal<Record<string, { providerID: string; id: string }>>({})
-  const answered = setTimeout(() => setLoaded(true), PREFERENCES_WAIT)
+  const answered = seeded !== undefined ? undefined : setTimeout(() => setLoaded(true), PREFERENCES_WAIT)
   onCleanup(
     vscode.onMessage((message) => {
       if (message.type !== "modelPreferencesLoaded") return
-      clearTimeout(answered)
+      if (answered) clearTimeout(answered)
       if (loaded() && message.value.recents.length === 0) setPicks({})
       setState(message.value)
       setLoaded(true)
     }),
   )
-  onCleanup(() => clearTimeout(answered))
-  vscode.postMessage({ type: "requestModelPreferences" })
+  onCleanup(() => {
+    if (answered) clearTimeout(answered)
+  })
+  if (seeded === undefined) vscode.postMessage({ type: "requestModelPreferences" })
 
   const pushRecent = (providerID: string, modelID: string) => {
     const recents = [

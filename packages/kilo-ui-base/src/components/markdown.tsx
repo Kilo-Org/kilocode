@@ -15,7 +15,6 @@ import {
   splitProps,
 } from "solid-js"
 import { isServer } from "solid-js/web"
-import { bundledLanguages } from "shiki"
 import { canReusePendingBlock, project, type Block, type Projection } from "./markdown-stream"
 import {
   disposeStreamingCode,
@@ -114,8 +113,13 @@ function fallback(markdown: string) {
   return escape(markdown).replace(/\r\n?/g, "\n").replace(/\n/g, "<br>")
 }
 
+let shikiLanguages: Promise<Record<string, unknown>> | undefined
+function getBundledLanguages() {
+  return (shikiLanguages ??= import("shiki").then((mod) => mod.bundledLanguages))
+}
+
 async function code(text: string, language: string | undefined, key: string, complete = false) {
-  const name = language && language in bundledLanguages ? language : "text"
+  const name = language && language in (await getBundledLanguages()) ? language : "text"
   try {
     const result = await highlightStreamingCode(key, text, name, complete)
     return { language: name, generation: result.generation, stable: result.stable, unstable: result.unstable }

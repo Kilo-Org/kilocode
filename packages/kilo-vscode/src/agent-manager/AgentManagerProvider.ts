@@ -558,7 +558,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       return
     }
     const state = ctx.stateManager()
-    const init = await initContextState(ctx, (...args) => this.log(...args))
+    const init = await initContextState(ctx, (...args) => this.log(...args), { onLoaded: () => this.contexts.active()?.id === ctx.id && pushState(this.stateHost(), ctx, { early: true }) })
     if (!init.ok) {
       this.postToWebview({ type: "error", message: "Agent Manager state could not be recovered." })
       this.pushState()

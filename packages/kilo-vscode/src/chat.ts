@@ -205,6 +205,18 @@ function isWorkStyleMessage(message: ToHost) {
   return message.type === "requestWorkStyle" || message.type === "applyWorkStyle" || message.type === "setWorkStyle"
 }
 
+function readInitialState(context: ExtensionContext): Record<string, unknown> {
+  if (!context.globalState) return {}
+  return {
+    KILO_INITIAL_STATE: {
+      autoApprove: context.globalState.get(AUTO_APPROVE, false),
+      modelSelectorExpanded: context.globalState.get(EXPANDED, true),
+      modelPreferences: readModelPreferences(context.globalState),
+      dismissedNotifications: dismissedNotifications(context),
+    },
+  }
+}
+
 export function wire(input: {
   context: ExtensionContext
   server: Manager
@@ -258,6 +270,10 @@ export function wire(input: {
     fetch: local,
   })
   const post = (message: ToWebview) => void webview.postMessage(message)
+  const stopServerStatus = input.server.onStatus?.((status) => {
+    if (status === "ready" || status === "failed") post({ type: "serverStatus", status })
+    else if (status === "idle") post({ type: "serverStatus", status: "stopped" })
+  })
   // The consent store is machine-local, so one host per extension answers every view.
   const indexing = indexingHost({
     context: input.context,
@@ -458,8 +474,17 @@ export function wire(input: {
         return false
     }
   }
+  const handleServerStatus = (message: ToHost): boolean => {
+    if (message.type !== "requestServerStatus") return false
+    const current = input.server.status?.()
+    if (current === "ready" || current === "failed") post({ type: "serverStatus", status: current })
+    else void input.server.get?.().catch(() => undefined)
+    return true
+  }
+
   // Leaf host actions that carry no state, kept together so the main handler stays within the complexity limit.
   const handleLeafMessage = (message: ToHost): boolean => {
+    if (handleServerStatus(message)) return true
     if (message.type === "exportSessionTranscript") {
       void exportTranscript(input.server, message.sessionID)
       return true
@@ -581,11 +606,16 @@ export function wire(input: {
     view: input.view,
     sidebar,
     settings: readKiloSettings(),
-    globals: input.globals,
+    globals: {
+      KILO_SERVER_READY: input.server.ready?.() ?? true,
+      ...readInitialState(input.context),
+      ...input.globals,
+    },
   })
   return {
     post,
     dispose() {
+      stopServerStatus?.()
       link.dispose()
       speech.dispose()
       surfaces.delete(post)
@@ -675,14 +705,9 @@ export function html(input: {
     KILO_EXTENSION_VERSION: input.version,
     ...input.globals,
   }
-  const preload =
-    typeof input.globals?.KILO_GHOSTTY_WASM_URI === "string"
-      ? ` if (typeof WebAssembly !== "undefined" && typeof WebAssembly.instantiateStreaming === "function") { window.__KILO_GHOSTTY_WASM_PROMISE = WebAssembly.instantiateStreaming(fetch(window.KILO_GHOSTTY_WASM_URI), { env: { log: function() {} } }).catch(function() { return null; }); }`
-      : ""
-  const script =
-    Object.entries(globals)
-      .map(([key, value]) => `window.${key} = ${JSON.stringify(value).replace(/</g, "\\u003c")};`)
-      .join(" ") + preload
+  const script = Object.entries(globals)
+    .map(([key, value]) => `window.${key} = ${JSON.stringify(value).replace(/</g, "\\u003c")};`)
+    .join(" ")
   return `<!DOCTYPE html>
 <html lang="${escape(input.language)}" data-theme="kilo-vscode" data-sidebar="${input.sidebar ?? ""}">
 <head>

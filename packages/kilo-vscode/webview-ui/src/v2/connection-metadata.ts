@@ -27,7 +27,7 @@ const HANDSHAKE_RETRY = [500, 1_000, 2_000, 5_000, 10_000] as const
 export function createConnectionMetadata(input: {
   api: OpenCodeClient
   connection: Connection
-  subscribe: (type: typeof catalogEvent, handler: () => void) => () => void
+  subscribe: (type: typeof catalogEvent | "plugin.updated", handler: () => void) => () => void
   /**
    * Reads the Kilo Gateway catalog status. The Settings and Profile panels pass false, because neither shows the
    * catalog failure and Settings must not issue the request.
@@ -51,11 +51,16 @@ export function createConnectionMetadata(input: {
   onCleanup(() => clearTimeout(state.retry))
 
   // A Location that is still activating answers the handshake like a server without it, so the read waits for the
-  // plugins of the Location first.
+  // plugins of the Location first (waking immediately on `plugin.updated` instead of waiting for the next poll).
   const readHandshake = (dir: string, attempt = 0) => {
     clearTimeout(state.retry)
     const read = ++state.handshake
-    void pluginsListed({ api: input.api, directory: dir, active: () => read === state.handshake })
+    void pluginsListed({
+      api: input.api,
+      directory: dir,
+      active: () => read === state.handshake,
+      onUpdated: (handler) => input.subscribe("plugin.updated", handler),
+    })
       .then(() => {
         if (read !== state.handshake) return
         return input.api

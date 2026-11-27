@@ -1,5 +1,4 @@
-import { getSharedHighlighter } from "@pierre/diffs"
-import { bundledLanguages, type BundledLanguage } from "shiki"
+import type { BundledLanguage } from "shiki"
 import { fnv1a } from "../context/marked"
 
 type Job = {
@@ -17,6 +16,12 @@ function continues(before: string, after: string) {
 
 async function source(lang: string, code: string) {
   try {
+    const [{ getSharedHighlighter }, { ensureKiloDiffTheme }, { bundledLanguages }] = await Promise.all([
+      import("@pierre/diffs"),
+      import("../pierre/kilo-diff-theme"),
+      import("shiki"),
+    ])
+    ensureKiloDiffTheme()
     const highlighter = await getSharedHighlighter({ themes: ["Kilo"], langs: [] })
     const language = lang in bundledLanguages ? lang : "text"
     if (!highlighter.getLoadedLanguages().includes(language)) {

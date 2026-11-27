@@ -1,7 +1,8 @@
 import type { Component, JSX } from "solid-js"
-import { createMemo, createUniqueId, splitProps, Show } from "solid-js"
+import { createEffect, createMemo, createUniqueId, splitProps, Show } from "solid-js"
 import sprite from "./file-icons/sprite.svg"
 import type { IconName } from "./file-icons/types"
+import { ensureSpriteSymbol } from "./sprite-registry"
 
 export type FileIconProps = JSX.GSVGAttributes<SVGSVGElement> & {
   node: { path: string; type: "file" | "directory" }
@@ -12,6 +13,7 @@ export type FileIconProps = JSX.GSVGAttributes<SVGSVGElement> & {
 export const FileIcon: Component<FileIconProps> = (props) => {
   const [local, rest] = splitProps(props, ["node", "class", "classList", "expanded", "mono"])
   const name = createMemo(() => chooseIconName(local.node.path, local.node.type, local.expanded || false))
+  createEffect(() => ensureSpriteSymbol("file-icons", name()))
   const id = `file-icon-mono-${createUniqueId()}`
   return (
     <svg

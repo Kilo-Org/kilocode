@@ -124,12 +124,16 @@ export const ChatViewCache: Component<ChatViewCacheProps> = (props) => {
   onMount(() => {
     const el = hostEl
     if (!el) return
-    if (el.clientWidth > 0 && el.clientHeight > 0) {
-      hostSize = { width: Math.round(el.clientWidth), height: Math.round(el.clientHeight) }
-      const current = untrack(activeEntry)
-      if (current && !current.size) current.size = { ...hostSize }
+    // Let ResizeObserver deliver the initial box size asynchronously after layout instead of
+    // forcing a synchronous reflow via `clientWidth` during initial state hydration.
+    if (typeof ResizeObserver === "undefined") {
+      if (el.clientWidth > 0 && el.clientHeight > 0) {
+        hostSize = { width: Math.round(el.clientWidth), height: Math.round(el.clientHeight) }
+        const current = untrack(activeEntry)
+        if (current && !current.size) current.size = { ...hostSize }
+      }
+      return
     }
-    if (typeof ResizeObserver === "undefined") return
     const observer = new ResizeObserver((entries) => {
       const box = entries[0]?.contentRect
       if (!box || box.width <= 0 || box.height <= 0) return

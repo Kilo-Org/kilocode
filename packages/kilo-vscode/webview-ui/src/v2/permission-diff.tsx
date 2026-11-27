@@ -1,9 +1,14 @@
 import type { FileDiffInfo } from "@opencode/client"
-import { Diff } from "@kilocode/kilo-ui/diff"
 import { DiffChanges } from "@kilocode/kilo-ui/diff-changes"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
-import { For, Show, createMemo } from "solid-js"
+import { For, lazy, Show, Suspense, createMemo, type Component } from "solid-js"
 import { useLanguage } from "../context/language"
+
+const LazyDiff = lazy(() =>
+  import("@kilocode/kilo-ui/diff").then((mod) => ({
+    default: mod.Diff as unknown as Component<{ patch: string; diffStyle: "unified" | "split"; hunkSeparators: "simple" }>,
+  })),
+)
 
 function splitPath(file: string) {
   const normalized = file.replaceAll("\\", "/")
@@ -45,7 +50,9 @@ export function PermissionDiff(props: { files: FileDiffInfo[] }) {
                   when={/^@@/m.test(patch())}
                   fallback={<div data-slot="permission-diff-empty">{language.t("ui.permission.noChanges")}</div>}
                 >
-                  <Diff patch={patch()} diffStyle="unified" hunkSeparators="simple" />
+                  <Suspense>
+                    <LazyDiff patch={patch()} diffStyle="unified" hunkSeparators="simple" />
+                  </Suspense>
                 </Show>
               </div>
             </div>

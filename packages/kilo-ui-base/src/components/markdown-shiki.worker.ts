@@ -2,12 +2,8 @@
 
 import { ShikiStreamTokenizer } from "@shikijs/stream"
 import { bundledLanguages, createHighlighter, type BundledLanguage } from "shiki"
-import {
-  highlightToken,
-  highlightTokens,
-  type MarkdownWorkerRequest,
-  type MarkdownWorkerResponse,
-} from "./markdown-worker-protocol"
+import { highlightToken, highlightTokens } from "./markdown-highlight-tokens"
+import type { MarkdownWorkerRequest, MarkdownWorkerResponse } from "./markdown-worker-protocol"
 import { createLatestWorkerQueue } from "./markdown-worker-queue"
 
 type Stream = {

@@ -65,6 +65,20 @@ export function createAppSession(opts: {
       },
     ),
   )
+  // Skip createData's 150 ms `settleMs` debounce on initial cold-Location agent activation.
+  createEffect(() => {
+    const store = rootStore()
+    if (!store) return
+    onCleanup(
+      store.data.on("agent.updated", (event) => {
+        if (event.location && event.location.directory !== store.directory) return
+        if (store.connection.status() !== "connected") return
+        if ((store.data.location.agent.list()?.length ?? 0) > 0) return
+        store.data.location.agent.invalidate()
+        void store.data.location.agent.sync().catch(store.report)
+      }),
+    )
+  })
 
   const commandStore = createMemo(() => {
     const directory = opts.directories.root(opts.commandProject())

@@ -253,6 +253,16 @@ export function SessionView(props: {
   // Only a pending permission changes the Send label. A pending question leaves Send in place instead of Stop.
   const questioning = () => !blocked() && forms().length > 0
   const selection = createSelection(session, draftKey)
+  // Emit one-shot startup marks when the composer becomes connected and its agent catalog lands
+  // so performance profiles capture exact time-to-interactive without polling jitter.
+  let markedInteractive = false
+  createEffect(() => {
+    if (markedInteractive) return
+    if (v2.connection.status() !== "connected" || v2.handshake()) return
+    if (selection.agents().length === 0) return
+    markedInteractive = true
+    if (typeof performance !== "undefined") performance.mark("kilo.startup.interactive")
+  })
   const preferences = useModelPreferences()
   const autoApprove = createAutoApprove()
   const visiblePermission = createPermissionPresentation({

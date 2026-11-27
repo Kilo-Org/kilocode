@@ -33,7 +33,7 @@ import { AgentAvatar, taskStatus } from "./agent-avatar"
 import { BasicTool, initialOpen, rememberOpen, useToolApprovalLine } from "./basic-tool"
 import { BoardTool } from "./board-tool"
 import { Card } from "./card"
-import { ChartTool } from "./chart"
+import { LazyChartTool, LazyNormalizedDiff, openFallbackDiff } from "./lazy-tools"
 import { attachmentUri, fileDiffs, relativizeProjectPath, toolOutput } from "./content-data"
 import { DiffChanges } from "./diff-changes"
 import { ExecuteTool } from "./execute-tool"
@@ -45,7 +45,6 @@ import { Markdown } from "./markdown"
 import { buildHighlightedTextSegments, type HighlightSegment } from "./message-highlight"
 import { ReasoningContent } from "./reasoning-content"
 import type { ReasoningDisplay } from "./reasoning-open"
-import { normalize } from "./session-diff"
 import { ShellOutput } from "./shell-output"
 import { StickyAccordionHeader } from "./sticky-accordion-header"
 import { TextShimmer } from "./text-shimmer"
@@ -1358,39 +1357,27 @@ ToolRegistry.register({
   name: "edit",
   render(props) {
     const i18n = useI18n()
-    const component = useFileComponent()
     const diff = () => fileDiffs(props.metadata.files)[0]
     const path = () => diff()?.file || string(props.input.path)
     const live = () => (busy(props.status) ? props.liveChanges : undefined)
     const changes = () => diff() ?? live()
-    // A plain function, not `createMemo`: a memo parses the patch with Pierre
-    // on render, even while the card stays collapsed. Only the deferred body
-    // and the diff action read it.
-    const view = () => {
+    const inputDiff = () => {
       const file = diff()
-      if (file) return normalize(file)
+      if (file) return file
       const before = string(props.input.oldString)
       const after = string(props.input.newString)
-      if (!before && !after) return
-      return normalize({ file: path(), before, after, additions: 0, deletions: 0 })
+      return before || after ? { file: path(), before, after, additions: 0, deletions: 0 } : undefined
     }
-    const canOpenDiff = () => {
-      if (!props.actions?.openDiff || !path()) return false
-      // Presence check instead of `view()` so the always-rendered trigger does
-      // not parse the patch while the card stays collapsed.
-      if (diff()?.patch) return true
-      return !!(string(props.input.oldString) || string(props.input.newString))
-    }
+    const canOpenDiff = () =>
+      !!props.actions?.openDiff && !!path() && (!!diff()?.patch || !!string(props.input.oldString) || !!string(props.input.newString))
     const openDiff = (event: MouseEvent) => {
       event.stopPropagation()
-      const value = view()
-      if (!canOpenDiff() || !value) return
-      props.actions?.openDiff?.({
-        file: path(),
-        patch: value.patch,
-        additions: value.additions,
-        deletions: value.deletions,
-      })
+      const open = props.actions?.openDiff
+      if (!canOpenDiff() || !open) return
+      const file = diff()
+      if (file?.patch) return open({ file: path(), patch: file.patch, additions: file.additions, deletions: file.deletions })
+      const fallback = inputDiff()
+      if (fallback && "before" in fallback) openFallbackDiff(fallback, path(), open)
     }
     const openFile = (event: MouseEvent) => {
       event.preventDefault()
@@ -1429,11 +1416,7 @@ ToolRegistry.register({
               onOpen={props.actions?.openFile ? openFile : undefined}
             >
               <div data-component="edit-content">
-                <Show when={view()}>
-                  {(value) => (
-                    <Dynamic component={component} mode="diff" hunkSeparators="simple" fileDiff={value().fileDiff} />
-                  )}
-                </Show>
+                <Show when={inputDiff()}>{(value) => <LazyNormalizedDiff diff={value()} />}</Show>
               </div>
             </ToolFileAccordion>
           </Show>
@@ -1457,16 +1440,15 @@ ToolRegistry.register({
       const file = diff()
       return !busy(props.status) && !!file && !file.additions && !file.deletions
     }
-    const view = () => {
+    const patchFile = () => {
       const file = diff()
       // A large write arrives without a patch: show the written content instead.
-      return file?.patch ? normalize(file) : undefined
+      return file?.patch ? file : undefined
     }
-    // Cheap presence check instead of `view()` so a collapsed card never
-    // parses its patch just to decide whether to show the button.
+    // Cheap presence check instead of parsing the patch just to decide whether to show the button.
     const canOpenDiff = () => !!props.actions?.openDiff && !!path() && !!diff()?.patch
     const openDiff = () => {
-      const value = view()
+      const value = patchFile()
       if (!props.actions?.openDiff || !value) return
       props.actions.openDiff({
         file: value.file || path(),
@@ -1518,7 +1500,7 @@ ToolRegistry.register({
             >
               <div data-component="write-content">
                 <Show
-                  when={view()}
+                  when={patchFile()}
                   fallback={
                     <Dynamic
                       component={component}
@@ -1532,9 +1514,7 @@ ToolRegistry.register({
                     />
                   }
                 >
-                  {(diff) => (
-                    <Dynamic component={component} mode="diff" hunkSeparators="simple" fileDiff={diff().fileDiff} />
-                  )}
+                  {(file) => <LazyNormalizedDiff diff={file()} />}
                 </Show>
               </div>
             </ToolFileAccordion>
@@ -1553,7 +1533,6 @@ ToolRegistry.register({
   name: "patch",
   render(props) {
     const i18n = useI18n()
-    const component = useFileComponent()
     const list = createMemo(() => fileDiffs(props.metadata.files))
     const single = () => (list().length === 1 ? list()[0] : undefined)
     // Before the final per-file diffs arrive, one provisional count covers the whole patch text.
@@ -1575,22 +1554,16 @@ ToolRegistry.register({
       if (!props.forceOpen) return
       setExpanded(list().map((file) => file.file))
     })
-    const view = (file: FileDiffInfo) => {
-      if (!file.patch) return
-      const value = normalize(file)
-      return value.fileDiff.hunks.length ? value : undefined
-    }
     const openFile = (file: FileDiffInfo) => (event: MouseEvent) => {
       event.preventDefault()
       event.stopPropagation()
       props.actions?.openFile?.(file.file)
     }
     const openDiff = (file: FileDiffInfo) => {
-      const diff = view(file)
-      if (!diff || !props.actions?.openDiff) return
+      if (!file.patch || !props.actions?.openDiff) return
       props.actions.openDiff({
         file: file.file,
-        patch: diff.patch,
+        patch: file.patch,
         additions: file.additions,
         deletions: file.deletions,
       })
@@ -1723,18 +1696,13 @@ ToolRegistry.register({
                           </Accordion.Trigger>
                         </StickyAccordionHeader>
                         <Accordion.Content>
-                          <Show when={expanded().includes(file.file) && view(file)}>
-                            {(diff) => (
-                              <div data-component="apply-patch-file-diff">
-                                {diffAction(file)}
-                                <Dynamic
-                                  component={component}
-                                  mode="diff"
-                                  hunkSeparators="simple"
-                                  fileDiff={diff().fileDiff}
-                                />
-                              </div>
-                            )}
+                          <Show when={expanded().includes(file.file) && file.patch}>
+                            <LazyNormalizedDiff
+                              diff={file}
+                              requireHunks
+                              wrapperComponent="apply-patch-file-diff"
+                              before={diffAction(file)}
+                            />
                           </Show>
                         </Accordion.Content>
                       </Accordion.Item>
@@ -1751,13 +1719,13 @@ ToolRegistry.register({
                 actions={changes(file())}
                 onOpen={props.actions?.openFile ? openFile(file()) : undefined}
               >
-                <Show when={view(file())}>
-                  {(diff) => (
-                    <div data-component="apply-patch-file-diff">
-                      {diffAction(file())}
-                      <Dynamic component={component} mode="diff" hunkSeparators="simple" fileDiff={diff().fileDiff} />
-                    </div>
-                  )}
+                <Show when={file().patch}>
+                  <LazyNormalizedDiff
+                    diff={file()}
+                    requireHunks
+                    wrapperComponent="apply-patch-file-diff"
+                    before={diffAction(file())}
+                  />
                 </Show>
               </ToolFileAccordion>
             )}
@@ -1931,7 +1899,7 @@ ToolRegistry.register({
 })
 
 // The chart tool result is a Chart.js config that its own card draws.
-ToolRegistry.register({ name: "chart", render: ChartTool })
+ToolRegistry.register({ name: "chart", render: LazyChartTool })
 
 // Kilo Swarm board calls draw the messages they stored or read, not the MCP input and output JSON.
 ToolRegistry.register({ name: "board_post", render: BoardTool })

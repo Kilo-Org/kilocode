@@ -6,11 +6,13 @@
  * be removed as one unit if the feature is ever retired.
  */
 
-import { For, Show } from "solid-js"
+import { For, lazy, Show, Suspense } from "solid-js"
 import type { Accessor, JSX } from "solid-js"
 import { SortableTerminalTab } from "./SortableTerminalTab"
-import { TerminalTab } from "./TerminalTab"
 import type { TerminalStateControls } from "./state"
+
+// Loaded on first terminal mount so `ghostty-web` stays out of initial Agent Manager startup.
+const TerminalTab = lazy(() => import("./TerminalTab").then((mod) => ({ default: mod.TerminalTab })))
 
 /** Serial of the latest focus request addressed to `id`, or 0. Read
  *  inside JSX so the effect re-runs when a request lands. */
@@ -118,17 +120,19 @@ export function renderTerminalLayer(props: {
             const visible = () => slotVisible(term.id, term.contextKey)
             return (
               <div class={`am-terminal-slot ${visible() ? "am-terminal-slot-visible" : ""}`} inert={!visible()}>
-                <TerminalTab
-                  terminalId={term.id}
-                  restartable={term.kind === undefined}
-                  active={visible()}
-                  focusSerial={focusSerial(props.state, term.id)}
-                  font={term.font}
-                  onFocusChange={focus(props.state, term.id, props.onFocusChange)}
-                  onFocusPrompt={props.onFocusPrompt}
-                  onTitleChange={(title) => props.state.setTitle(term.id, title)}
-                  onActivityChange={(state) => props.state.setActivity(term.id, state)}
-                />
+                <Suspense>
+                  <TerminalTab
+                    terminalId={term.id}
+                    restartable={term.kind === undefined}
+                    active={visible()}
+                    focusSerial={focusSerial(props.state, term.id)}
+                    font={term.font}
+                    onFocusChange={focus(props.state, term.id, props.onFocusChange)}
+                    onFocusPrompt={props.onFocusPrompt}
+                    onTitleChange={(title) => props.state.setTitle(term.id, title)}
+                    onActivityChange={(state) => props.state.setActivity(term.id, state)}
+                  />
+                </Suspense>
               </div>
             )
           }}
@@ -166,20 +170,22 @@ export function renderSideTerminalLayer(props: {
             props.state.sideActiveFor(term.contextKey) === term.id
           return (
             <div class={`am-terminal-slot ${active() ? "am-terminal-slot-visible" : ""}`} inert={!active()}>
-              <TerminalTab
-                terminalId={term.id}
-                active={active()}
-                focusOnActivate={false}
-                focusSerial={focusSerial(props.state, term.id)}
-                font={term.font}
-                status={() => props.state.scriptStatus(term.id)}
-                restartable={term.kind === undefined}
-                pending={term.pending === true}
-                onFocusChange={focus(props.state, term.id, props.onFocusChange)}
-                onFocusPrompt={props.onFocusPrompt}
-                onTitleChange={(title) => props.state.setTitle(term.id, title)}
-                onActivityChange={(state) => props.state.setActivity(term.id, state)}
-              />
+              <Suspense>
+                <TerminalTab
+                  terminalId={term.id}
+                  active={active()}
+                  focusOnActivate={false}
+                  focusSerial={focusSerial(props.state, term.id)}
+                  font={term.font}
+                  status={() => props.state.scriptStatus(term.id)}
+                  restartable={term.kind === undefined}
+                  pending={term.pending === true}
+                  onFocusChange={focus(props.state, term.id, props.onFocusChange)}
+                  onFocusPrompt={props.onFocusPrompt}
+                  onTitleChange={(title) => props.state.setTitle(term.id, title)}
+                  onActivityChange={(state) => props.state.setActivity(term.id, state)}
+                />
+              </Suspense>
             </div>
           )
         }}

@@ -8,7 +8,9 @@
  */
 
 import * as fs from "fs"
+import * as path from "path"
 import type { SessionInfo } from "@opencode/client"
+import { STATE_DIR } from "../constants"
 import type { AgentManagerOutMessage } from "../types"
 import { restoreWorktrees } from "../state-recovery"
 import { reconcileWorktrees, summarize, type WorktreeHealthReport } from "../worktree-reconcile"
@@ -17,10 +19,36 @@ import { pathKey, samePath } from "./paths"
 import type { ProjectSessionView } from "./session-view"
 import type { ProjectContext, ProjectInitResult } from "./context"
 
+async function loadPersistedState(
+  ctx: ProjectContext,
+  generation: number,
+  log: (...args: unknown[]) => void,
+  onLoaded?: () => void,
+) {
+  const manager = ctx.worktreeManager()
+  const state = ctx.stateManager()
+  const exclude = manager.ensureGitExclude().catch((err) => log("Failed to update git exclude:", err))
+  const hasStateFile = fs.existsSync(path.join(ctx.root, STATE_DIR, "agent-manager.json"))
+  if (!hasStateFile) {
+    await exclude
+    if (!ctx.isCurrent(generation)) return undefined
+  }
+  const loaded = await state.load()
+  if (!ctx.isCurrent(generation)) return undefined
+  if (loaded.status === "loaded" && (state.getWorktrees().length > 0 || state.getSessions().length > 0)) {
+    onLoaded?.()
+  }
+  if (hasStateFile) {
+    await exclude
+    if (!ctx.isCurrent(generation)) return undefined
+  }
+  return loaded
+}
+
 export async function initContextState(
   ctx: ProjectContext,
   log: (...args: unknown[]) => void,
-  opts?: { warm?: boolean },
+  opts?: { warm?: boolean; onLoaded?: () => void },
 ): Promise<ProjectInitResult> {
   // Cached hydration is read-only with respect to the pool. User activation can request warming explicitly.
   const warm = opts?.warm === true || (opts?.warm !== false && ctx.lifecycle === "cold")
@@ -28,33 +56,30 @@ export async function initContextState(
   const result = await ctx.ensureReady(async (generation) => {
     const manager = ctx.worktreeManager()
     const state = ctx.stateManager()
-    await manager.ensureGitExclude().catch((err) => log("Failed to update git exclude:", err))
-    if (!ctx.isCurrent(generation)) return { ok: false, refsFixed: 0 }
-    const loaded = await state.load()
-    if (!ctx.isCurrent(generation)) return { ok: false, refsFixed: 0 }
+    const loaded = await loadPersistedState(ctx, generation, log, opts?.onLoaded)
+    if (!loaded) return { ok: false, refsFixed: 0 }
     manager.cleanupOrphanedTempDirs()
 
-    if (loaded.status === "failed" && !(await state.prepareRecovery())) {
-      return { ok: false, refsFixed: 0 }
-    }
+    if (loaded.status === "failed" && !(await state.prepareRecovery())) return { ok: false, refsFixed: 0 }
     if (!ctx.isCurrent(generation)) return { ok: false, refsFixed: 0 }
 
-    const infos = await manager.discoverWorktrees().catch((err) => {
+    const registered = await manager.registeredWorktrees()
+    if (!ctx.isCurrent(generation)) return { ok: false, refsFixed: 0 }
+
+    const infos = await manager.discoverWorktrees({ registered }).catch((err) => {
       log("Failed to discover worktrees during state recovery:", err)
       return []
     })
     if (!ctx.isCurrent(generation)) return { ok: false, refsFixed: 0 }
     if (infos.length > 0) {
-      const result = restoreWorktrees(state, infos)
-      if (result.worktrees > 0 || result.sessions > 0) {
-        log(`Recovered ${result.worktrees} worktree(s) and ${result.sessions} session(s) from disk`)
+      const recovered = restoreWorktrees(state, infos)
+      if (recovered.worktrees > 0 || recovered.sessions > 0) {
+        log(`Recovered ${recovered.worktrees} worktree(s) and ${recovered.sessions} session(s) from disk`)
         await state.flush()
       }
     }
 
-    // Disk to state recovery above only ever adds rows. This pass is the other direction: classify
-    // what is already tracked, prune what git can drop, and clear rows that cannot lose anything.
-    const health = await reconcileProject(ctx, log)
+    const health = await reconcileProject(ctx, log, registered)
     if (!ctx.isCurrent(generation)) return { ok: false, refsFixed: 0 }
     if (health && health.dropped.length > 0) await state.flush()
     return { ok: true, refsFixed: loaded.refsFixed, health }
@@ -73,15 +98,24 @@ export async function initContextState(
 export async function reconcileProject(
   ctx: ProjectContext,
   log: (...args: unknown[]) => void,
+  initialRegistered?: Map<string, { branch: string; detached: boolean }>,
 ): Promise<WorktreeHealthReport | undefined> {
   const manager = ctx.worktreeManager()
   const state = ctx.stateManager()
+  let reused = initialRegistered ? new Set(initialRegistered.keys()) : undefined
   const report = await reconcileWorktrees({
     root: ctx.root,
     dir: manager.worktreesDir,
     rows: () => state.getWorktrees().map((wt) => ({ id: wt.id, path: wt.path, branch: wt.branch })),
     sessions: (id) => state.getSessions(id).length,
-    registered: () => manager.registeredPaths(),
+    registered: () => {
+      if (reused) {
+        const snapshot = reused
+        reused = undefined
+        return Promise.resolve(snapshot)
+      }
+      return manager.registeredPaths()
+    },
     dirs: () => manager.worktreeDirs(),
     exists: (target) =>
       fs.promises.access(target).then(
@@ -225,13 +259,17 @@ export async function repairSessionFilings(
   const generation = ctx.generation
   if (!ctx.peekState()) return false
   const home = homes(ctx)
+  const lists = await Promise.all(
+    projectDirectories(ctx).map((entry) =>
+      listAll(entry.directory).catch((err: unknown) => {
+        log(`Agent Manager: listing sessions for ${entry.directory} failed:`, err)
+        return [] as SessionInfo[]
+      }),
+    ),
+  )
+  if (!ctx.isCurrent(generation)) return false
   let changed = false
-  for (const entry of projectDirectories(ctx)) {
-    const sessions = await listAll(entry.directory).catch((err: unknown) => {
-      log(`Agent Manager: listing sessions for ${entry.directory} failed:`, err)
-      return [] as SessionInfo[]
-    })
-    if (!ctx.isCurrent(generation)) return changed
+  for (const sessions of lists) {
     for (const session of sessions) {
       if (session.parentID !== undefined && session.parentID !== null) continue
       if (refile(ctx, session, home)) changed = true
