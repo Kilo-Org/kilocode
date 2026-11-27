@@ -524,7 +524,9 @@ export function MessageList(props: {
     if (!viewActive()) return
     const el = scrollEl()
     if (!el || !search.active()) {
-      if (searchHighlightOwner === highlightToken || searchHighlightOwner !== undefined) {
+      // Only clear highlights this transcript owns: an always-active peer view
+      // (for example the subagent inspector) must not wipe the active chat's.
+      if (searchHighlightOwner === highlightToken) {
         searchHighlightOwner = undefined
         clearTranscriptHighlights()
       }

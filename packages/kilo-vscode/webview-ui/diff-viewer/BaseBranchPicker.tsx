@@ -29,10 +29,6 @@ export const BaseBranchPicker: Component<BaseBranchPickerProps> = (props) => {
   const [open, setOpen] = createSignal(false)
   const [search, setSearch] = createSignal("")
   const [highlight, setHighlight] = createSignal(0)
-  createEffect(() => {
-    if (!viewActive()) setOpen(false)
-  })
-
   const filtered = createMemo<BranchInfo[]>(() => {
     const q = search().trim().toLowerCase()
     if (!q) return props.branches
@@ -44,6 +40,12 @@ export const BaseBranchPicker: Component<BaseBranchPickerProps> = (props) => {
     setSearch("")
     setHighlight(0)
   }
+
+  createEffect(() => {
+    // Reset the filter as well as the popover, so a reopened picker cannot show a
+    // stale list that Enter would select from.
+    if (!viewActive()) close()
+  })
 
   const choose = (branch: string | undefined) => {
     props.onSelect(branch)
