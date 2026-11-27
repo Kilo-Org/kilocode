@@ -32,7 +32,8 @@ sealed class SessionState {
 
     data class TurnEnded(val outcome: Outcome, val finish: String? = null) : SessionState()
 
-    data class LoginRequired(val message: String) : SessionState()
+    /** [signedOut] is set when a stored login was rejected, rather than nobody being signed in. */
+    data class LoginRequired(val message: String, val signedOut: Boolean = false) : SessionState()
 
     fun isBusy(): Boolean = when (this) {
         is Idle, is Loading, is Error, is TurnEnded, is LoginRequired -> false

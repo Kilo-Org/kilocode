@@ -449,6 +449,15 @@ export interface ProfileDataMessage {
 }
 
 /**
+ * What the latest profile read means when it returned no profile: Kilo rejected
+ * the stored login, or the read could not complete. A later `profileData` clears it.
+ */
+export interface ProfileStatusMessage {
+  type: "profileStatus"
+  status: "expired" | "unavailable"
+}
+
+/**
  * Outcome of one `setOrganization` request, correlated by `requestID`.
  * `data` is the profile read after the attempt, when that read succeeded.
  */
@@ -1913,6 +1922,7 @@ export type ExtensionMessage =
   | GitRemoteUrlLoadedMessage
   | ActionMessage
   | ProfileDataMessage
+  | ProfileStatusMessage
   | OrganizationSwitchResultMessage
   | ProviderUsageLoadedMessage
   | DeviceAuthStartedMessage

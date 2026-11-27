@@ -606,6 +606,9 @@ export const dict = {
 
   "profile.title": "Profile",
   "profile.notLoggedIn": "Not logged in",
+  "profile.expired": "Your Kilo login has expired or was revoked. Sign in again to continue.",
+  "profile.unavailable": "Couldn't load your Kilo profile. Kilo may be unreachable right now.",
+  "profile.stale": "Couldn't refresh your profile. Showing the last loaded details.",
   "profile.action.login": "Login with Kilo Code",
   "profile.balance.title": "Balance",
   "profile.balance.refresh": "Refresh balance",

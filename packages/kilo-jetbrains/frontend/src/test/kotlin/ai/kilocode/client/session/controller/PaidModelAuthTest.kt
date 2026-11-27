@@ -84,4 +84,36 @@ class PaidModelAuthTest {
             ),
         )
     }
+
+    // ------ signed out ------
+
+    // The body the Kilo Gateway answers a rejected credential with.
+    private val rejected =
+        """{"error":{"code":"INVALID_TOKEN","message":"Your authentication token is invalid. Please sign in again."},"error_type":"authentication_required"}"""
+
+    @Test
+    fun `rejected credential is signed out`() {
+        assertTrue(isSignedOut(error(responseBody = rejected)))
+    }
+
+    @Test
+    fun `rejected credential is not a paid model prompt`() {
+        assertFalse(isPaidModelAuthRequired(error(responseBody = rejected)))
+    }
+
+    @Test
+    fun `paid model prompt is not signed out`() {
+        assertFalse(isSignedOut(error()))
+    }
+
+    @Test
+    fun `invalid token on another status is not signed out`() {
+        assertFalse(isSignedOut(error(statusCode = 400, responseBody = rejected)))
+    }
+
+    @Test
+    fun `signed out handles null and malformed errors`() {
+        assertFalse(isSignedOut(null))
+        assertFalse(isSignedOut(error(responseBody = "not json {")))
+    }
 }

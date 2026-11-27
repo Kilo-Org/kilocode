@@ -14,6 +14,8 @@ export type { ProfileData }
 
 export interface ProfileViewProps {
   profileData: ProfileData | null | undefined
+  /** Why the latest profile read returned no profile: a rejected login, or a read that could not complete. */
+  profileStatus?: "expired" | "unavailable"
   deviceAuth: DeviceAuthState
   providerUsage?: ProviderUsageData
   providerUsageLoading?: boolean
@@ -60,6 +62,7 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
   const [attempt, setAttempt] = createSignal<Attempt>({ kind: "idle" })
 
   const personal = createMemo(() => props.profileData?.profile.hasPersonalAccount !== false)
+  const signed = createMemo(() => (props.deviceAuth.status === "idle" ? props.profileData : null))
 
   // Load current profile and usage when navigating to this view.
   onMount(() => {
@@ -159,6 +162,12 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
     vscode.postMessage({ type: "refreshProfile" })
   }
 
+  const notice = () => {
+    if (props.profileStatus === "expired") return language.t("profile.expired")
+    if (props.profileStatus === "unavailable") return language.t("profile.unavailable")
+    return language.t("profile.notLoggedIn")
+  }
+
   const handleDashboard = () => {
     vscode.postMessage({ type: "openExternal", url: "https://app.kilo.ai/profile" })
   }
@@ -226,7 +235,7 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
         }}
       >
         <Show
-          when={props.profileData}
+          when={signed()}
           fallback={
             <div style={{ display: "flex", "flex-direction": "column", gap: "12px" }}>
               <Show
@@ -240,11 +249,20 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
                         margin: "0 0 8px 0",
                       }}
                     >
-                      {language.t("profile.notLoggedIn")}
+                      {notice()}
                     </p>
-                    <Button variant="primary" onClick={handleLogin}>
-                      {language.t("profile.action.login")}
-                    </Button>
+                    <Show
+                      when={props.profileStatus === "unavailable"}
+                      fallback={
+                        <Button variant="primary" onClick={handleLogin}>
+                          {language.t("profile.action.login")}
+                        </Button>
+                      }
+                    >
+                      <Button variant="secondary" onClick={handleRefresh}>
+                        {language.t("common.retry")}
+                      </Button>
+                    </Show>
                   </>
                 }
               >
@@ -263,6 +281,17 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
         >
           {(data) => (
             <div style={{ display: "flex", "flex-direction": "column", gap: "12px" }}>
+              <Show when={props.profileStatus === "unavailable"}>
+                <p
+                  style={{
+                    "font-size": "var(--kilo-font-size-12)",
+                    color: "var(--vscode-descriptionForeground)",
+                    margin: "0",
+                  }}
+                >
+                  {language.t("profile.stale")}
+                </p>
+              </Show>
               {/* User header */}
               <Card>
                 <p
@@ -400,7 +429,7 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
           )}
         </Show>
 
-        <Show when={!props.profileData}>{usage()}</Show>
+        <Show when={!signed()}>{usage()}</Show>
       </div>
     </div>
   )
