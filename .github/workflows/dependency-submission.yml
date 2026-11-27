@@ -132,6 +132,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         with:
           build-root-directory: packages/kilo-jetbrains
+          cache-disabled: true # job holds contents: write
           # The plugin's gradle.properties turns the configuration cache on,
           # which the dependency graph plugin cannot reuse without an
           # encryption key; a one-off resolution run does not need it.

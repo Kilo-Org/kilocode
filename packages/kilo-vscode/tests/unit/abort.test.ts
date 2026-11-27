@@ -62,6 +62,23 @@ describe("SessionAbort", () => {
     expect(await aborts.stop(client(calls), "session_1", "/repo/worktree/.")).toBe(true)
     expect(calls).toHaveLength(1)
   })
+
+  it("tracks active sessions across dispose and disposeAll", () => {
+    const aborts = new SessionAbort()
+    aborts.observe("s1", "busy", "/repo/wt1")
+    aborts.observe("s2", "busy", "/repo/wt1")
+    aborts.observe("s2", "busy", "/repo/wt2")
+    aborts.observe("s3", "busy", "/repo/wt2")
+
+    expect(aborts.has("s1")).toBe(true)
+    expect(aborts.dispose("/repo/wt1")).toEqual(["s1"])
+    expect(aborts.has("s1")).toBe(false)
+    expect(aborts.has("s2")).toBe(true)
+
+    expect(aborts.disposeAll()).toEqual(["s2", "s3"])
+    expect(aborts.has("s2")).toBe(false)
+    expect(aborts.has("s3")).toBe(false)
+  })
 })
 
 describe("abortSession", () => {
