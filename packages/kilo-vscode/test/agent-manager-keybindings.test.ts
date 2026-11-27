@@ -128,6 +128,13 @@ describe("extension manifest", () => {
     expect(manifest.scripts.package).toBe("bun script/package.ts")
   })
 
+  it("keeps the dev server profile out of the VSIX", () => {
+    // `.kilo-dev` sits inside the package root and holds dev credentials, the session database and browser pairing
+    // keys. vsce reads only `.vscodeignore`, so the package `.gitignore` entry does not keep it out.
+    const ignore = readFileSync(join(ROOT, ".vscodeignore"), "utf8").split(/\r?\n/)
+    expect(ignore).toContain(".kilo-dev/**")
+  })
+
   it("declares the repository the VSIX links to", () => {
     expect(manifest.repository).toEqual({
       type: "git",
