@@ -1377,7 +1377,7 @@ ToolRegistry.register({
       const file = diff()
       if (file?.patch) return open({ file: path(), patch: file.patch, additions: file.additions, deletions: file.deletions })
       const fallback = inputDiff()
-      if (fallback && "before" in fallback) openFallbackDiff(fallback, path(), open)
+      if (fallback) openFallbackDiff(fallback, path(), open)
     }
     const openFile = (event: MouseEvent) => {
       event.preventDefault()

@@ -27,10 +27,15 @@ let katexLoad: Promise<KatexModule> | undefined
 
 function loadKatex(): Promise<KatexModule> {
   if (katexModule) return Promise.resolve(katexModule)
-  return (katexLoad ??= import("katex").then((mod) => {
-    katexModule = mod.default
-    return katexModule
-  }))
+  return (katexLoad ??= import("katex")
+    .then((mod) => {
+      katexModule = mod.default
+      return katexModule
+    })
+    .catch((err) => {
+      katexLoad = undefined
+      throw err
+    }))
 }
 
 function hasMath(text: string): boolean {
@@ -645,8 +650,16 @@ export async function deferredHighlight(
     return
   }
 
-  const { getSharedHighlighter, bundledLanguages } = await loadHighlighter()
-  const highlighter = await getSharedHighlighter({ themes: ["Kilo"], langs: [] })
+  let highlighter: Awaited<ReturnType<Awaited<ReturnType<typeof loadHighlighter>>["getSharedHighlighter"]>>
+  let bundledLanguages: Awaited<ReturnType<typeof loadHighlighter>>["bundledLanguages"]
+  try {
+    const loaded = await loadHighlighter()
+    bundledLanguages = loaded.bundledLanguages
+    highlighter = await loaded.getSharedHighlighter({ themes: ["Kilo"], langs: [] })
+  } catch {
+    onComplete?.()
+    return
+  }
 
   for (const block of blocks) {
     // Short-circuit if the container is unmounted or the caller cancelled this run

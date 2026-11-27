@@ -115,12 +115,18 @@ function fallback(markdown: string) {
 
 let shikiLanguages: Promise<Record<string, unknown>> | undefined
 function getBundledLanguages() {
-  return (shikiLanguages ??= import("shiki").then((mod) => mod.bundledLanguages))
+  return (shikiLanguages ??= import("shiki")
+    .then((mod) => mod.bundledLanguages)
+    .catch((err) => {
+      shikiLanguages = undefined
+      throw err
+    }))
 }
 
 async function code(text: string, language: string | undefined, key: string, complete = false) {
-  const name = language && language in (await getBundledLanguages()) ? language : "text"
+  let name = "text"
   try {
+    name = language && language in (await getBundledLanguages()) ? language : "text"
     const result = await highlightStreamingCode(key, text, name, complete)
     return { language: name, generation: result.generation, stable: result.stable, unstable: result.unstable }
   } catch (error) {

@@ -1,5 +1,6 @@
 import { lazy, Suspense, type ComponentProps } from "solid-js"
 import type { ToolActionDiff } from "./message-part"
+import type { normalize } from "./session-diff"
 
 const RawNormalizedDiff = lazy(() =>
   import("./normalized-diff").then((mod) => ({ default: mod.NormalizedDiff })),
@@ -19,12 +20,14 @@ export const LazyChartTool = (props: ComponentProps<typeof RawChartTool>) => (
 )
 
 export function openFallbackDiff(
-  fallback: { file: string; before: string; after: string; additions: number; deletions: number },
+  fallback: Parameters<typeof normalize>[0],
   path: string,
   open: (diff: ToolActionDiff) => void,
 ) {
-  void import("./session-diff").then(({ normalize }) => {
-    const value = normalize(fallback)
-    open({ file: path, patch: value.patch, additions: value.additions, deletions: value.deletions })
-  })
+  void import("./session-diff")
+    .then((mod) => {
+      const value = mod.normalize(fallback)
+      open({ file: path, patch: value.patch, additions: value.additions, deletions: value.deletions })
+    })
+    .catch(() => undefined)
 }

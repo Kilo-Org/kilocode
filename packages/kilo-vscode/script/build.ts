@@ -436,7 +436,11 @@ function webviewPlugins(solid: Plugin): Plugin[] {
                 svg.id = id;
                 svg.setAttribute("width", "0");
                 svg.setAttribute("height", "0");
-                svg.style.display = "none";
+                svg.setAttribute("aria-hidden", "true");
+                // Keep out of layout without display:none so Chromium resolves <linearGradient>/<clipPath> in <use>.
+                svg.style.position = "absolute";
+                svg.style.overflow = "hidden";
+                svg.style.pointerEvents = "none";
                 defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
                 svg.appendChild(defs);
                 (document.body || document.documentElement).appendChild(svg);
@@ -444,6 +448,24 @@ function webviewPlugins(solid: Plugin): Plugin[] {
                 defs = svg.querySelector("defs") || svg;
               }
               return defs;
+            };
+            const scopeIds = (name, raw) => {
+              const openEnd = raw.indexOf(">");
+              if (openEnd === -1) return raw;
+              const head = raw.slice(0, openEnd + 1);
+              let body = raw.slice(openEnd + 1);
+              const ids = new Set();
+              body.replace(/\\bid="([^"]+)"/g, (_, id) => { ids.add(id); return ""; });
+              if (ids.size === 0) return raw;
+              const prefix = kind + "-" + name + "-";
+              for (const id of ids) {
+                const esc = id.replace(/[.*+?^$\{}()|[\\]\\\\]/g, "\\\\$&");
+                body = body
+                  .replace(new RegExp('\\\\bid="' + esc + '"', "g"), 'id="' + prefix + id + '"')
+                  .replace(new RegExp("url\\\\(#" + esc + "\\\\)", "g"), "url(#" + prefix + id + ")")
+                  .replace(new RegExp('\\\\b(xlink:)?href="#' + esc + '"', "g"), '$1href="#' + prefix + id + '"');
+              }
+              return head + body;
             };
             const flush = () => {
               if (!index || wanted.size === 0) return;
@@ -465,14 +487,18 @@ function webviewPlugins(solid: Plugin): Plugin[] {
               const base = typeof window !== "undefined" && typeof window.KILO_SHIKI_WORKER_URI === "string"
                 ? window.KILO_SHIKI_WORKER_URI.replace(/shiki-worker\\.js$/, "")
                 : "";
-              const url = base ? base + asset : new URL("./" + asset, import.meta.url).href;
+              const fallbackRel = /\\/chunks-[^/]+\\//.test(import.meta.url) ? "../" + asset : "./" + asset;
+              const url = base ? base + asset : new URL(fallbackRel, import.meta.url).href;
               loading = fetch(url)
-                .then((res) => (res.ok ? res.text() : ""))
+                .then((res) => {
+                  if (!res.ok) throw new Error("Sprite fetch failed: " + res.status);
+                  return res.text();
+                })
                 .then((text) => {
                   const map = new Map();
                   const re = /<symbol\\b[^>]*\\bid="([^"]+)"[^>]*>[\\s\\S]*?<\\/symbol>/g;
                   let m;
-                  while ((m = re.exec(text)) !== null) map.set(m[1], m[0]);
+                  while ((m = re.exec(text)) !== null) map.set(m[1], scopeIds(m[1], m[0]));
                   index = map;
                   flush();
                 })
