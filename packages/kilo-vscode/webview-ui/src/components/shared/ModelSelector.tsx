@@ -71,11 +71,9 @@ export interface ModelSelectorBaseProps {
   placeholder?: string
   /** Why the Kilo Gateway catalog failed to load, shown when no model is usable. */
   failure?: string
-  /**
-   * Force the compact list layout. Used by inline `@` model references, where
-   * there is no current model for the preview pane and picking is a one-click,
-   * insert-only action. The persisted chat-selector preference is not changed.
-   */
+  /** Called when activating the trigger while `failure` is shown with no usable model, e.g. Sign-In. */
+  onFailureAction?: () => void
+  /** Force compact layout (used by inline `@` model references without changing the saved preference). */
   collapsed?: boolean
 }
 
@@ -108,6 +106,13 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   const visibleModels = createMemo(() => (open() ? toPickerModels(usable(), props.providers, props.gateway) : []))
   const hasProviders = createMemo(() => usable().length > 0)
   const canOpen = () => hasProviders() || ((props.allowClear ?? false) && !!props.value)
+  // With no usable model, the catalog reason explains more than a selection that cannot resolve.
+  const failure = () => (!activeModel() && props.models && !hasProviders() ? props.failure : undefined)
+  const openOrAct = (value: boolean) => {
+    if (value && props.blocked) return
+    if (value && !canOpen() && failure() && props.onFailureAction) return props.onFailureAction()
+    setOpen(value)
+  }
 
   const tree = createModelTree({
     open,
@@ -143,7 +148,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   const onTrigger = (event: Event) => {
     const source = (event as CustomEvent<{ source?: string }>).detail?.source
     if (source !== props.trigger || props.blocked) return
-    setOpen(true)
+    openOrAct(true)
   }
   const onEscape = (e: KeyboardEvent) => {
     if (!open() || e.key !== "Escape") return
@@ -165,8 +170,6 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     })
   })
 
-  // With no usable model, the catalog reason explains more than a selection that cannot resolve.
-  const failure = () => (!activeModel() && props.models && !hasProviders() ? props.failure : undefined)
   const triggerLabel = () =>
     failure() ??
     buildTriggerLabel(
@@ -223,16 +226,13 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
           deferDismiss={props.deferDismiss}
           portal={props.portal}
           open={open()}
-          onOpenChange={(value) => {
-            if (value && props.blocked) return
-            setOpen(value)
-          }}
+          onOpenChange={openOrAct}
           triggerAs={Button}
           triggerProps={{
             variant: "secondary",
             size: "normal",
             get disabled() {
-              return props.blocked || !canOpen()
+              return props.blocked || (!canOpen() && !(failure() && props.onFailureAction))
             },
             get ["aria-label"]() {
               return controlLabel()

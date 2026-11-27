@@ -61,6 +61,20 @@ export function createModelDrafts() {
       if (current || !shown || drafts()[sessionID]) return
       write(setDrafts, sessionID, shown)
     },
+    /**
+     * Drops uncommitted drafts whose model is no longer usable in the catalog. Keeps drafts while a commit is in
+     * flight, because that request owns the draft's lifecycle until it echoes or fails.
+     */
+    prune(valid: (model: ModelRef) => boolean) {
+      setDrafts((all) => {
+        const entries = Object.entries(all)
+        const stale = entries.filter(([sessionID, draft]) => draft && !pending.has(sessionID) && !valid(draft))
+        if (stale.length === 0) return all
+        return Object.fromEntries(
+          entries.filter(([sessionID, draft]) => draft && (pending.has(sessionID) || valid(draft))),
+        )
+      })
+    },
   }
 }
 
