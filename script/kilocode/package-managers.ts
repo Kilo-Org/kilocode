@@ -16,7 +16,7 @@
  */
 
 import { execFileSync } from "node:child_process"
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
+import { appendFile, lstat, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { setTimeout as sleep } from "node:timers/promises"
@@ -52,7 +52,9 @@ export function digests(text: string, version: string): Digests {
   const field = (value: unknown, key: string): unknown =>
     typeof value === "object" && value !== null ? Reflect.get(value, key) : undefined
   const found = field(manifest, "version")
-  if (found !== version) throw new Error(`The CLI evidence manifest is for version ${String(found)}, not ${version}`)
+  if (found !== version) {
+    throw new Error(`The CLI evidence manifest is for version ${JSON.stringify(found)}, not ${JSON.stringify(version)}`)
+  }
   const list = field(manifest, "entries")
   const entries: unknown[] = Array.isArray(list) ? list : []
   const pick = (name: keyof Digests) => {
@@ -76,6 +78,8 @@ function split(version: string) {
   return dash < 0 ? { pkgver: version, subver: "" } : { pkgver: version.slice(0, dash), subver: version.slice(dash) }
 }
 
+// pkgbuild() and srcinfo() describe the same package: change both together (the .SRCINFO must be
+// what `makepkg --printsrcinfo` prints for the PKGBUILD).
 export function pkgbuild(version: string, digest: Digests) {
   const { pkgver, subver } = split(version)
   return [
@@ -224,7 +228,14 @@ export type Update = {
  */
 export async function update(input: Update): Promise<"pushed" | "unchanged"> {
   const attempts = input.attempts ?? 3
-  const env = { ...process.env, GIT_TERMINAL_PROMPT: "0", ...input.env }
+  const env = {
+    ...process.env,
+    GIT_TERMINAL_PROMPT: "0",
+    // Abort an HTTPS transfer that stays below 1000 bytes/s for 60 s instead of hanging.
+    GIT_HTTP_LOW_SPEED_LIMIT: "1000",
+    GIT_HTTP_LOW_SPEED_TIME: "60",
+    ...input.env,
+  }
   const git = (args: string[], cwd?: string) => execFileSync("git", args, { cwd, env, stdio: "inherit" })
   for (let attempt = 1; ; attempt++) {
     const root = await mkdtemp(path.join(process.env.RUNNER_TEMP || os.tmpdir(), "package-manager-"))
@@ -232,7 +243,7 @@ export async function update(input: Update): Promise<"pushed" | "unchanged"> {
     try {
       git(["clone", "--quiet", input.remote, dir])
       if (input.branch) git(["checkout", "--quiet", input.branch], dir)
-      for (const [name, text] of Object.entries(input.files)) await writeFile(path.join(dir, name), text)
+      for (const [name, text] of Object.entries(input.files)) await regular(path.join(dir, name), text)
       git(["add", "--", ...Object.keys(input.files)], dir)
       const diff = execFileSync("git", ["diff", "--cached", "--name-only"], { cwd: dir, env, encoding: "utf8" })
       if (diff.trim() === "") return "unchanged"
@@ -249,13 +260,24 @@ export async function update(input: Update): Promise<"pushed" | "unchanged"> {
   }
 }
 
-/** The ssh command for the AUR: only this key, only the pinned host keys, no agent and no prompt. */
+/** Writes `file` only if it is a regular file or absent, so a symlink in a clone cannot redirect the write. */
+export async function regular(file: string, text: string) {
+  const stat = await lstat(file).catch((err: NodeJS.ErrnoException) => {
+    if (err.code === "ENOENT") return undefined
+    throw err
+  })
+  if (stat && !stat.isFile()) throw new Error(`Refusing to write ${file}: it is not a regular file`)
+  await writeFile(file, text)
+}
+
+/** The ssh command for the AUR: only this key, only the pinned host keys, no config, agent or prompt. */
 export function sshCommand(key: string, known: string) {
   for (const file of [key, known]) {
     if (!path.isAbsolute(file) || /['"\\\s]/.test(file)) throw new Error(`Unsupported path for ssh: ${file}`)
   }
   return [
     "ssh",
+    "-F /dev/null",
     `-i '${key}'`,
     "-o IdentitiesOnly=yes",
     "-o IdentityAgent=none",
@@ -263,14 +285,19 @@ export function sshCommand(key: string, known: string) {
     "-o GlobalKnownHostsFile=/dev/null",
     "-o StrictHostKeyChecking=yes",
     "-o BatchMode=yes",
+    "-o ConnectTimeout=20",
+    "-o ServerAliveInterval=15",
+    "-o ServerAliveCountMax=4",
   ].join(" ")
 }
 
 export async function aur(version: string, digest: Digests, key: string, remote = AUR_REMOTE) {
+  // ssh rejects a private key without its final newline; the secret store may have dropped it.
+  if (!(await readFile(key, "utf8")).endsWith("\n")) await appendFile(key, "\n")
   const root = await mkdtemp(path.join(process.env.RUNNER_TEMP || os.tmpdir(), "aur-hosts-"))
   try {
     const known = path.join(root, "known_hosts")
-    await writeFile(known, `${AUR_KNOWN_HOSTS.join("\n")}\n`)
+    await regular(known, `${AUR_KNOWN_HOSTS.join("\n")}\n`)
     return await update({
       remote,
       branch: "master",
@@ -292,6 +319,7 @@ if (import.meta.main) {
   if ((target !== "aur" && target !== "homebrew") || !manifest || !version) {
     throw new Error("Usage: package-managers.ts aur|homebrew <cli-sbom-evidence.json> <version>")
   }
+  if (!VERSION.test(version)) throw new Error(`Invalid release version ${JSON.stringify(version)}`)
   const digest = digests(await readFile(manifest, "utf8"), version)
   if (target === "aur") {
     const key = process.env.AUR_KEY_FILE

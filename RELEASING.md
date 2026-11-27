@@ -107,7 +107,7 @@ Each update is retried from a new clone up to three times. A repository that alr
 Re-run the failed `publish` job (**Re-run failed jobs**); the build jobs and their recorded digests are reused.
 
 - **Failed before the release was published** (for example the evidence upload or the second draft check): the GitHub Release is still a draft. The Docker images may already be pushed. The re-run skips the version commit and tag if they were pushed, removes leftover distribution evidence from the draft, packs and describes the npm packages again, rebuilds and pushes the images, uploads the evidence, checks the draft and publishes it. npm has nothing yet: packages are published only after the release.
-- **Failed after the release was published** (for example an npm publish): the re-run uploads nothing and does not touch the release. It checks the published assets (the CLI and VS Code assets against their recorded digests, the distribution evidence against its own manifest), skips the Docker builds, skips npm packages that are already published, and packs the others again; each tarball must have the digest the published evidence names, or the run stops before publishing it. The `package-managers` job runs again after it.
+- **Failed after the release was published** (for example an npm publish): the re-run uploads nothing and does not touch the release. It checks the published assets (the CLI and VS Code assets against their recorded digests, the distribution evidence against its own manifest), skips the Docker builds, skips npm packages that are already published, and packs the others again; each tarball must have the digest the published evidence names, or the run stops before publishing it. AUR and Homebrew are updated only after a `publish` run succeeds: the `package-managers` job runs after the successful re-run.
 
 ### Fixing a Bad Release
 
@@ -124,7 +124,7 @@ Immutable releases are turned on for this repository: once a GitHub Release is p
 
 The workflow requires these GitHub token permissions:
 
-- `id-token: write` -- for VS Code Marketplace and Open VSX Trusted Publishing, and npm provenance attestation
+- `id-token: write` -- for VS Code Marketplace and Open VSX Trusted Publishing, npm provenance attestation, and the `package-managers` job's read of the STS bundle (`ci-kilocode-release`)
 - `contents: write` -- for creating releases, pushing tags, and uploading assets
 - `packages: write` -- for publishing Docker images to GHCR
 

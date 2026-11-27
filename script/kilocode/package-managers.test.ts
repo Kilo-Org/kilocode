@@ -1,12 +1,12 @@
 import { afterEach, expect, test } from "bun:test"
 import { execFileSync } from "node:child_process"
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
+import { mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import workflow from "../../.github/workflows/publish.yml"
 import * as Artifact from "./sbom/artifact"
 import * as Manifest from "./sbom/manifest"
-import { digests, formula, pkgbuild, srcinfo, sshCommand, update, type Digests } from "./package-managers"
+import { aur, digests, formula, pkgbuild, srcinfo, sshCommand, update, type Digests } from "./package-managers"
 
 // The files the release script published for v7.8.40: the AUR kilo-bin PKGBUILD and .SRCINFO, the
 // Homebrew kilo.rb, and the archive digests of that release's CLI evidence manifest.
@@ -55,7 +55,7 @@ test("only the manifest's own archive digests are used", () => {
   const entries = Object.entries(sample).map(([artifact, sha256]) => ({ artifact, sha256 }))
   const text = (version: string, list: unknown[]) => JSON.stringify({ version, entries: list })
   expect(digests(text("1.2.3", entries), "1.2.3")).toEqual(sample)
-  expect(() => digests(text("1.2.4", entries), "1.2.3")).toThrow("for version 1.2.4, not 1.2.3")
+  expect(() => digests(text("1.2.4", entries), "1.2.3")).toThrow('for version "1.2.4", not "1.2.3"')
   expect(() => digests(text("1.2.3", entries.slice(1)), "1.2.3")).toThrow("lists kilo-linux-arm64.tar.gz 0 times")
   expect(() => digests(text("1.2.3", [...entries, entries[0]]), "1.2.3")).toThrow("2 times")
   const bad = entries.map((entry, i) => (i === 3 ? { ...entry, sha256: "A".repeat(64) } : entry))
@@ -71,7 +71,7 @@ test("versions that are not release versions are refused", () => {
 
 test("the AUR ssh command uses only the given key and the pinned host keys", () => {
   expect(sshCommand("/tmp/k/key", "/tmp/h/known_hosts")).toBe(
-    "ssh -i '/tmp/k/key' -o IdentitiesOnly=yes -o IdentityAgent=none -o UserKnownHostsFile='/tmp/h/known_hosts' -o GlobalKnownHostsFile=/dev/null -o StrictHostKeyChecking=yes -o BatchMode=yes",
+    "ssh -F /dev/null -i '/tmp/k/key' -o IdentitiesOnly=yes -o IdentityAgent=none -o UserKnownHostsFile='/tmp/h/known_hosts' -o GlobalKnownHostsFile=/dev/null -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=4",
   )
   for (const key of ["key", "/tmp/a b", "/tmp/a'b", '/tmp/a"b', "/tmp/a\\b"]) {
     expect(() => sshCommand(key, "/tmp/known_hosts")).toThrow("Unsupported path for ssh")
@@ -130,6 +130,44 @@ test("update fails after its last attempt", async () => {
     (err: unknown) => err,
   )
   expect(error).toBeInstanceOf(Error)
+})
+
+test("update refuses to write through a symlink in the clone", async () => {
+  const repo = await remote("master")
+  const root = await temp()
+  const outside = path.join(root, "outside.txt")
+  await writeFile(outside, "original\n")
+  const env = { ...process.env, ...repo.env }
+  const work = path.join(root, "work")
+  execFileSync("git", ["clone", repo.bare, work], { env, stdio: "ignore" })
+  await symlink(outside, path.join(work, "PKGBUILD"))
+  execFileSync("git", ["add", "PKGBUILD"], { cwd: work, env, stdio: "ignore" })
+  execFileSync("git", ["commit", "-m", "link"], { cwd: work, env, stdio: "ignore" })
+  execFileSync("git", ["push", "origin", "HEAD"], { cwd: work, env, stdio: "ignore" })
+  const input = { remote: repo.bare, branch: "master", files: { PKGBUILD: "x" }, message: "m", env: repo.env }
+  const error = await update({ ...input, attempts: 1 }).then(
+    () => undefined,
+    (err: unknown) => err,
+  )
+  expect(String(error)).toContain("is not a regular file")
+  expect(await readFile(outside, "utf8")).toBe("original\n")
+  expect(repo.log()).toBe("link\nseed")
+})
+
+test("the AUR update adds the final newline a stored key lost", async () => {
+  const repo = await remote("master")
+  const key = path.join(await temp(), "aur_key")
+  await writeFile(key, "stand-in key without its final newline")
+  const saved = process.env.GIT_CONFIG_GLOBAL
+  process.env.GIT_CONFIG_GLOBAL = repo.env.GIT_CONFIG_GLOBAL
+  try {
+    expect(await aur("1.2.3", sample, key, repo.bare)).toBe("pushed")
+  } finally {
+    if (saved === undefined) delete process.env.GIT_CONFIG_GLOBAL
+    else process.env.GIT_CONFIG_GLOBAL = saved
+  }
+  expect(await readFile(key, "utf8")).toBe("stand-in key without its final newline\n")
+  expect(repo.show(".SRCINFO")).toBe(srcinfo("1.2.3", sample))
 })
 
 test("the package-managers job checks the manifest against the digest build-cli recorded", async () => {
