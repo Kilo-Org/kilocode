@@ -6,9 +6,12 @@ function repo() {
   return value
 }
 
-/** The version in packages/opencode/package.json at `sha`, fetching that commit if needed. */
+/** The version in packages/opencode/package.json at `sha`, fetching that commit if it is not here. */
 async function packaged(sha: string) {
-  await $`git fetch --no-tags --depth=1 origin ${sha}`.quiet()
+  const object = `${sha}^{commit}`
+  if ((await $`git cat-file -e ${object}`.quiet().nothrow()).exitCode !== 0) {
+    await $`git fetch --no-tags --depth=1 origin ${sha}`.quiet()
+  }
   return JSON.parse(await $`git show ${sha}:packages/opencode/package.json`.text()).version
 }
 
@@ -34,7 +37,8 @@ async function commit(tag: string) {
  * True when tag v<version> exists on origin, points at a commit reachable from main, and that
  * commit's packages/opencode/package.json has `version`; a tag that is anything else fails the
  * run. Also true when the tag is missing but the release commit (subject `release: v<version>`,
- * with that version) is on main: the tag is then created on that commit and pushed.
+ * with that version) is on main: the tag is then created on that commit and pushed. Fails when
+ * neither is found but main already has `version`.
  */
 export async function pushed(version: string) {
   const tag = `v${version}`
@@ -46,7 +50,18 @@ export async function pushed(version: string) {
 
   if (remote.exitCode === 2) {
     const sha = await commit(tag)
-    if (!sha) return false
+    if (!sha) {
+      // No tag and no release commit in the window. If main already carries the version, its release
+      // commit is older than the window: committing again would release the version twice.
+      await $`git fetch --no-tags --depth=1 origin +refs/heads/main:refs/remotes/origin/main`.quiet()
+      const main = await packaged("refs/remotes/origin/main")
+      if (main === version) {
+        throw new Error(
+          `main already has version ${version} but neither tag ${tag} nor a "release: ${tag}" commit among its last 100 commits. Tag the release commit by hand, then re-run. Nothing was pushed.`,
+        )
+      }
+      return false
+    }
     const found = await packaged(sha)
     if (found !== version) {
       throw new Error(`Commit ${sha} "release: ${tag}" on main has version ${found}. Nothing was pushed.`)

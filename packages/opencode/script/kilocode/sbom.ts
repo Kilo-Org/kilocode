@@ -509,7 +509,9 @@ export async function distribution(input: {
     ok: report.ok,
     missing: report.missing,
   })
-  Policy.gate({ label: `cli distribution evidence for ${manifest.version}`, issues: report.issues })
+  // The release is published right after this, so an exit code would come too late: stop now
+  // when enforcing. Advisory mode only reports.
+  Policy.block({ label: `cli distribution evidence for ${manifest.version}`, issues: report.issues })
 
   return {
     manifest,

@@ -70,7 +70,7 @@ Downloads all build artifacts and publishes to every distribution channel, in th
 - Updates the `version` field in all `package.json` files across the monorepo.
 - Updates the Zed extension manifest (`extension.toml`) with the new version.
 - Rebuilds the TypeScript SDK (`packages/sdk/js`).
-- Commits the version bump, tags the commit, and pushes to the repo. If an earlier run already pushed them (tag `v<version>` on origin, pointing at a commit on `main` whose `packages/opencode/package.json` has that version), this is skipped; any other existing tag fails the run. If only the tag is missing but the `release: v<version>` commit with that version is on `main`, that commit is tagged instead of committing again.
+- Commits the version bump, tags the commit, and pushes to the repo. If an earlier run already pushed them (tag `v<version>` on origin, pointing at a commit on `main` whose `packages/opencode/package.json` has that version), this is skipped; any other existing tag fails the run. If only the tag is missing but the `release: v<version>` commit with that version is among the last 100 commits on `main`, that commit is tagged instead of committing again. If neither is found but `main` already has the version, the run fails without committing.
 
 #### CLI (`@kilocode/cli`)
 

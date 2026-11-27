@@ -246,6 +246,12 @@ export async function recheck(input: { version: string; entries: Manifest["entri
   const recorded = new Map(own.manifest.entries.map((entry) => [entry.artifact, entry.sha256]))
   const problems: string[] = []
   for (const entry of input.entries.filter((item) => item.distribution === "npm")) {
+    // No digest here: the version is already on npm and its registry tarball could not be fetched,
+    // so this run publishes nothing for it (a tarball it packs always has a digest).
+    if (!entry.sha256) {
+      console.log(`::warning::${entry.artifact}: no digest for the published tarball; not compared`)
+      continue
+    }
     const want = recorded.get(entry.artifact)
     // A release published before every entry had to carry a digest can name a tarball without one.
     if (want !== undefined && !/^[0-9a-f]{64}$/.test(want)) {
@@ -253,8 +259,7 @@ export async function recheck(input: { version: string; entries: Manifest["entri
       continue
     }
     if (want === entry.sha256) continue
-    const got = entry.sha256 || "none"
-    problems.push(`${entry.artifact}: digest ${got}, the published evidence names ${want ?? "nothing"}`)
+    problems.push(`${entry.artifact}: digest ${entry.sha256}, the published evidence names ${want ?? "nothing"}`)
   }
   for (const problem of problems) console.log(`::error::${problem}`)
   if (problems.length) throw new Error(`The npm tarballs are not the ones the published release ${tag} describes.`)
