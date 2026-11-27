@@ -78,7 +78,7 @@ so a retry after a transport error can record two delivery audit rows for one ru
 | Input | Required | Description |
 |---|---|---|
 | `workload` | yes | The STS policy name of the job, for example `ci-kilocode-release` |
-| `secrets` | yes | One bundle key per line, spelled as the bundle returns it, for example `KILOCODE_ANACONDA_API_KEY` or `KILOCODE_AUR_KEY`. A key missing from the bundle fails the job |
+| `secrets` | yes | One bundle key per line, spelled as the bundle returns it, for example `KILOCODE_MAINTAINER_APP_KEY` or `KILOCODE_AUR_KEY`. A key missing from the bundle fails the job |
 | `sts-url` | no | `https://sts.kiloapps.io` (default) or `https://sts-staging.kiloapps.io`. Any other value fails the job, because that origin would receive the OIDC token |
 
 ## Outputs
