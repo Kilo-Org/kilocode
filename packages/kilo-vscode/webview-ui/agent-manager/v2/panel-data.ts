@@ -2,10 +2,10 @@
 // directory the panel shows (the pinned root, expanded projects and open worktrees). `createData` binds a single
 // directory, so the panel routes each event to the store of `event.location.directory`.
 import { OpenCode, type OpenCodeClient, type OpenCodeEvent } from "@opencode/client"
-import { createClientConnection } from "@opencode/client/solid"
 import { createRoot, createSignal, onCleanup } from "solid-js"
 import { createV2Scope, type V2 } from "../../src/v2/scope"
 import { createConnectionMetadata } from "../../src/v2/connection-metadata"
+import { createHostConnection } from "../../src/v2/host-connection"
 import { createWakeups } from "../../src/v2/wakeups"
 import { events } from "../../src/v2/events"
 import { transport } from "../../src/v2/transport"
@@ -60,8 +60,10 @@ export function createPanelData(input: {
   const [bindings, setBindings] = createSignal<Record<string, string>>({})
   const [selection, setSelection] = createSignal(false)
   const commands = new Set<(name: string) => void>()
+  const pluginHandlers = new Set<() => void>()
   let connected: OpenCodeEvent | undefined
   const route = (event: OpenCodeEvent) => {
+    if (event.type === "plugin.updated") pluginHandlers.forEach((handler) => handler())
     if (event.type === "server.connected") {
       // A store loads its directory's location, VCS and project when the server connects, and each of those loads
       // the whole Location on the server. A hidden store loads them once it is shown, so a reconnect with many
@@ -83,7 +85,8 @@ export function createPanelData(input: {
       if (id === target || key(entry.scope.data.location.default().directory) === target) entry.emit(event)
     })
   }
-  const connection = createClientConnection(api, { onEvent: route, pageLifecycle: true })
+  const host = createHostConnection({ api, onEvent: route, post: input.post, pageLifecycle: true })
+  const connection = host.connection
   // One pending-wakeup store for every directory the panel draws: a worktree row is scheduled even while another
   // worktree, or no worktree, is selected.
   const wakeups = createWakeups({
@@ -92,7 +95,16 @@ export function createPanelData(input: {
     connected: () => connection.status() === "connected",
     home: input.home,
   })
-  const metadata = createConnectionMetadata({ api, connection })
+  const metadata = createConnectionMetadata({
+    api,
+    connection,
+    onPluginUpdated: (handler) => {
+      pluginHandlers.add(handler)
+      return () => {
+        pluginHandlers.delete(handler)
+      }
+    },
+  })
   const open = (url: string, external?: boolean) => input.post({ type: "open", url, external })
   const onCommand = (handler: (name: string) => void) => {
     commands.add(handler)
@@ -189,6 +201,7 @@ export function createPanelData(input: {
     command: (name: string) => commands.forEach((handler) => handler(name)),
     /** Relay replies and host commands; returns true when the message was one of them. */
     receive(message: ToWebview) {
+      if (host.receive(message)) return true
       if (message.type === "command") {
         commands.forEach((handler) => handler(message.name))
         return true

@@ -4,6 +4,7 @@
 // webview only renders the toggle and persists the on/off state.
 import { createSignal, onCleanup } from "solid-js"
 import { useVSCode } from "../context/vscode"
+import { readKiloInitialState } from "./initial-state"
 
 // The last state the host sent. A composer remounted for another worktree shows the toggle as the user left it
 // instead of dropping its on state until the next reply.
@@ -11,7 +12,8 @@ let lastEnabled: boolean | undefined
 
 export function createAutoApprove() {
   const vscode = useVSCode()
-  const [enabled, setEnabled] = createSignal(lastEnabled ?? false)
+  const seeded = lastEnabled ?? readKiloInitialState()?.autoApprove
+  const [enabled, setEnabled] = createSignal(seeded ?? false)
 
   onCleanup(
     vscode.onMessage((message) => {
@@ -20,7 +22,7 @@ export function createAutoApprove() {
       setEnabled(message.value)
     }),
   )
-  vscode.postMessage({ type: "requestAutoApproveState" })
+  if (seeded === undefined) vscode.postMessage({ type: "requestAutoApproveState" })
 
   return {
     enabled,

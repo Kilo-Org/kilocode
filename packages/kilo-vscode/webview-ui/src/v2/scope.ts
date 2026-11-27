@@ -75,6 +75,7 @@ export function createV2Scope(input: {
     createConnectionMetadata({
       api,
       connection,
+      onPluginUpdated: (handler) => input.event.on("plugin.updated", handler),
     })
   onCleanup(metadata.attach(directory))
   const visible = input.visible ?? (() => true)

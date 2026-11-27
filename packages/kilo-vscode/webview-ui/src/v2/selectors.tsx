@@ -13,6 +13,7 @@ import { ThinkingSelectorBase } from "../components/shared/ThinkingSelector"
 import { useLanguage } from "../context/language"
 import { useModelPreferences } from "../context/model-preferences"
 import { useVSCode } from "../context/vscode"
+import { syncAgentsOnColdActivation } from "./agent-sync"
 import { useV2 } from "./client"
 import { failureMessage, signInAction } from "./kilo-catalog"
 import { shiftTabCyclesVariant } from "./kilo-settings"
@@ -50,6 +51,7 @@ export function createSelection(
       ]).catch(v2.report)
     }),
   )
+  onCleanup(syncAgentsOnColdActivation(v2))
   // Sign-in, sign-out and a team switch reload the catalog through createData, and can change the default model and
   // the models a draft may use. A draft model that left the catalog falls back to the default, as on v1. Skip empty
   // Wave-1 reloads so a draft survives until the replacement catalog lands.

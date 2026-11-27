@@ -14,6 +14,8 @@ type Inventory = {
   directory: string
   /** Ends the wait when it turns false: the owner was disposed, the connection dropped or a newer read started. */
   active: () => boolean
+  /** Optional `plugin.updated` event subscription to wake up immediately instead of waiting for the next poll. */
+  onUpdated?: (handler: () => void) => () => void
 }
 
 /**
@@ -28,7 +30,20 @@ export async function pluginsListed(input: Inventory) {
       () => true,
     )
     if (listed) return
-    await new Promise((resolve) => setTimeout(resolve, POLL))
+    await new Promise<void>((resolve) => {
+      let unsub: (() => void) | undefined
+      let settled = false
+      const done = () => {
+        if (settled) return
+        settled = true
+        clearTimeout(timer)
+        unsub?.()
+        resolve()
+      }
+      const timer = setTimeout(done, POLL)
+      unsub = input.onUpdated?.(done)
+      if (settled) unsub?.()
+    })
   }
 }
 

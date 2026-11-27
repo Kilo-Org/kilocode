@@ -5,8 +5,9 @@ import { marked, type MarkedExtension, type Tokens, type TokenizerAndRendererExt
 // and hand off to deferredHighlight() in markdown.tsx for progressive Shiki.
 // This import was re-added by an upstream merge; removing it restores the
 // two-pass rendering design.
-import katex from "katex"
-import { bundledLanguages, type BundledLanguage } from "shiki"
+import type { KatexOptions } from "katex"
+import type { BundledLanguage } from "shiki"
+import type { ThemeRegistrationResolved } from "@pierre/diffs"
 import {
   extractSuffix,
   normalizeCandidatePath,
@@ -17,24 +18,45 @@ import {
 } from "../file-path" // kilocode_change
 import { createSimpleContext } from "./helper"
 import { markedCodeSpanBoundary } from "./marked-code-span"
-import { getSharedHighlighter, type ThemeRegistrationResolved } from "@pierre/diffs" // kilocode_change
-import { ensureKiloDiffTheme, KILO_DIFF_THEME } from "../pierre/kilo-diff-theme" // kilocode_change
 
-// kilocode_change start: the "Kilo" diff/highlight theme registration moved to
-// ../pierre/kilo-diff-theme so the diff worker pool can register it without
-// importing this module's katex/marked dependencies. This call keeps the markdown
-// highlighter (getSharedHighlighter, below) working. Upstream keeps an inline
-// registerCustomTheme("OpenCode", …) block here — do not restore it on merges;
-// route registration through ensureKiloDiffTheme() instead.
-ensureKiloDiffTheme()
-// kilocode_change end
+// kilocode_change start: load katex, shiki, and @pierre/diffs lazily on first math/code render so
+// empty chats and initial webview startup do not parse ~2 MB of math/highlighting code upfront.
+type KatexModule = { renderToString: (text: string, options?: KatexOptions) => string }
+let katexModule: KatexModule | undefined
+let katexLoad: Promise<KatexModule> | undefined
+
+function loadKatex(): Promise<KatexModule> {
+  if (katexModule) return Promise.resolve(katexModule)
+  return (katexLoad ??= import("katex")
+    .then((mod) => {
+      katexModule = mod.default
+      return katexModule
+    })
+    .catch((err) => {
+      katexLoad = undefined
+      throw err
+    }))
+}
+
+function hasMath(text: string): boolean {
+  return text.includes("$$") || text.includes("\\(")
+}
+
+async function loadHighlighter(options?: { preferredHighlighter?: "shiki-wasm" | "shiki-js" }) {
+  const [{ loadKiloHighlighter, KILO_DIFF_THEME }, { bundledLanguages }] = await Promise.all([
+    import("../pierre/kilo-diff-theme"),
+    import("shiki"),
+  ])
+  const highlighter = await loadKiloHighlighter(options)
+  return { highlighter, bundledLanguages, theme: KILO_DIFF_THEME }
+}
 
 // kilocode_change start: theme object consumed by the streaming Shiki worker
 // (markdown-worker.ts sends it via postMessage on worker init). Registration
-// with Pierre is handled by ensureKiloDiffTheme() above; this export only
+// with Pierre is handled by ensureKiloDiffTheme() when highlighting runs; this export only
 // provides the raw theme data to the worker.
 export const KiloTheme = {
-  name: KILO_DIFF_THEME,
+  name: "Kilo",
   bg: "var(--color-background-stronger)",
   fg: "var(--text-base)",
   colors: {
@@ -411,8 +433,9 @@ const INLINE = /^\$\$(?!\$)((?:\\.|[^\\\n])*?(?:\\.|[^\\\n$]))\$\$/
 // kilocode_change end
 
 // kilocode_change start: isolate KaTeX from the markdown root dir=auto.
-function renderKatex(text: string, options: katex.KatexOptions): string {
-  const html = katex.renderToString(text, options)
+function renderKatex(text: string, options: KatexOptions): string {
+  if (!katexModule) return options.displayMode ? `$$${text}$$` : `\\(${text}\\)`
+  const html = katexModule.renderToString(text, options)
   return `<span dir="auto">${html}</span>`
 }
 // kilocode_change end
@@ -510,11 +533,7 @@ async function highlightCodeBlocks(html: string): Promise<string> {
   const matches = [...html.matchAll(codeBlockRegex)]
   if (matches.length === 0) return html
 
-  const highlighter = await getSharedHighlighter({
-    themes: ["Kilo"],
-    langs: [],
-    preferredHighlighter: "shiki-wasm",
-  })
+  const { highlighter, bundledLanguages, theme } = await loadHighlighter({ preferredHighlighter: "shiki-wasm" })
 
   let result = html
   for (const match of matches) {
@@ -536,7 +555,7 @@ async function highlightCodeBlocks(html: string): Promise<string> {
 
     const highlighted = highlighter.codeToHtml(code, {
       lang: language,
-      theme: "Kilo",
+      theme,
       tabindex: false,
     })
     result = result.replace(fullMatch, () => highlighted)
@@ -625,7 +644,18 @@ export async function deferredHighlight(
     return
   }
 
-  const highlighter = await getSharedHighlighter({ themes: ["Kilo"], langs: [] })
+  let highlighter: Awaited<ReturnType<typeof loadHighlighter>>["highlighter"]
+  let bundledLanguages: Awaited<ReturnType<typeof loadHighlighter>>["bundledLanguages"]
+  let theme: string
+  try {
+    const loaded = await loadHighlighter()
+    bundledLanguages = loaded.bundledLanguages
+    highlighter = loaded.highlighter
+    theme = loaded.theme
+  } catch {
+    onComplete?.()
+    return
+  }
 
   for (const block of blocks) {
     // Short-circuit if the container is unmounted or the caller cancelled this run
@@ -662,7 +692,7 @@ export async function deferredHighlight(
               resolve()
               return
             }
-            const html = highlighter.codeToHtml(code, { lang: language, theme: "Kilo", tabindex: false })
+            const html = highlighter.codeToHtml(code, { lang: language, theme, tabindex: false })
             touchHighlightCache(cacheKey, html)
             // Note: data-highlighted is NOT set on `block` here because
             // replaceWithHighlighted replaces the parent <pre> entirely — the
@@ -858,6 +888,7 @@ export const createMarkedParser = (props: { nativeParser?: NativeMarkdownParser 
     const nativeParser = props.nativeParser
     return {
       async parse(markdown: string): Promise<string> {
+        if (hasMath(markdown)) await loadKatex()
         const html = await nativeParser(markdown)
         const withMath = renderMathExpressions(html)
         return highlightCodeBlocks(withMath)
@@ -865,7 +896,14 @@ export const createMarkedParser = (props: { nativeParser?: NativeMarkdownParser 
     }
   }
 
-  return parser
+  return {
+    parse(markdown: string): Promise<string> | string {
+      if (hasMath(markdown) && !katexModule) {
+        return loadKatex().then(() => parser.parse(markdown))
+      }
+      return parser.parse(markdown)
+    },
+  }
 }
 
 export const { use: useMarked, provider: MarkedProvider } = createSimpleContext({

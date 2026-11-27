@@ -12,4 +12,16 @@ export { ensurePluginRuntime }
 const { KiloDatabase } = await import("./database")
 await KiloDatabase.select(process.env)
 
-await import("./main")
+if (process.argv[2] === "serve" && !process.env.OPENCODE_SSH_ASKPASS_PORT) {
+  const { parseStdioServeArgs, runStdioServe } = await import("./stdio-serve")
+  const parsed = parseStdioServeArgs(process.argv.slice(2))
+  if (parsed) {
+    await runStdioServe(parsed)
+  } else {
+    void import("./serve")
+    void import("@opencode/server/process")
+    await import("./main")
+  }
+} else {
+  await import("./main")
+}

@@ -15,6 +15,7 @@
 
 import * as path from "path"
 import { pathKey } from "./project/paths"
+import { Semaphore } from "./semaphore"
 
 export type WorktreeHealth =
   /** Directory exists and git still tracks it. The only state that gets polled. */
@@ -117,18 +118,23 @@ export async function reconcileWorktrees(deps: ReconcileDeps): Promise<WorktreeH
     return { entries: degraded(rows, deps.sessions), orphans: [], dropped: [], pruned: false, degraded: true }
   }
 
-  const entries: WorktreeHealthEntry[] = []
   const claimed = new Set<string>()
-  for (const row of rows) {
-    const abs = resolve(deps.root, row.path)
-    claimed.add(pathKey(abs))
-    const present = await deps.exists(abs)
-    const health = await (async (): Promise<WorktreeHealth> => {
-      if (present) return registered.has(pathKey(abs)) ? "ok" : "unregistered"
-      return (await deps.branchExists(row.branch)) ? "absent-restorable" : "absent-gone"
-    })()
-    entries.push({ id: row.id, path: abs, branch: row.branch, health, sessions: deps.sessions(row.id) })
-  }
+  const branchGate = new Semaphore(4)
+  const entries: WorktreeHealthEntry[] = await Promise.all(
+    rows.map(async (row) => {
+      const abs = resolve(deps.root, row.path)
+      claimed.add(pathKey(abs))
+      const present = await deps.exists(abs)
+      const health: WorktreeHealth = present
+        ? registered.has(pathKey(abs))
+          ? "ok"
+          : "unregistered"
+        : (await branchGate.run(() => deps.branchExists(row.branch)))
+          ? "absent-restorable"
+          : "absent-gone"
+      return { id: row.id, path: abs, branch: row.branch, health, sessions: deps.sessions(row.id) }
+    }),
+  )
 
   // One prune per pass, and only when a tracked directory really did vanish. Pruning on every
   // startup would spend a git invocation to discover there is nothing to do.

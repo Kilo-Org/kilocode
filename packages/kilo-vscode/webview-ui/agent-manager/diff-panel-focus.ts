@@ -73,7 +73,8 @@ export function createDiffPanelFocus(opts: {
       if (focusDiffScroller(selector, doc())) return
       if (retries > 0) frame(() => attempt(retries - 1))
     }
-    frame(() => attempt(1))
+    // Retry across frames while a lazy-loaded diff or review chunk mounts on first open.
+    frame(() => attempt(30))
   }
 
   const openPanel = (focus: boolean) => {

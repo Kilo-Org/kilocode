@@ -12,8 +12,6 @@ const wasm = (window as { KILO_SHIKI_WORKER_URI?: string }).KILO_SHIKI_WORKER_UR
 )
 if (wasm) DotLottie.setWasmUrl(wasm)
 
-export const reduced = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true
-
 /**
  * Yellow slot-machine Kilo mark, mirrors Kilo Cloud's welcome logo hover animation.
  *

@@ -329,6 +329,8 @@ export function stop(child: ChildProcess) {
  * reports the first failure after a start or Restart Server. `settings` may be a function so a start after a settings
  * change reads the current values.
  */
+export type ServerStatus = "idle" | "starting" | "ready" | "failed"
+
 export function manager(input: {
   command: () => Command | undefined
   cwd: string
@@ -340,7 +342,16 @@ export function manager(input: {
   onStop?: () => void
   retry?: number
 }) {
-  const state: { current?: Promise<Server>; failed: boolean } = { failed: false }
+  const state: { current?: Promise<Server>; status: ServerStatus; failed: boolean } = {
+    status: "idle",
+    failed: false,
+  }
+  const listeners = new Set<(status: ServerStatus) => void>()
+  const setStatus = (next: ServerStatus) => {
+    if (state.status === next) return
+    state.status = next
+    listeners.forEach((listener) => listener(next))
+  }
   const boot = () => {
     const promise = (async () => {
       const found = input.command()
@@ -357,20 +368,29 @@ export function manager(input: {
         onExit: () => {
           if (state.current !== promise) return
           state.current = undefined
+          setStatus("idle")
           input.onStop?.()
         },
       })
     })()
+    state.current = promise
+    setStatus("starting")
     promise.then(
       (server) => {
         state.failed = false
-        if (state.current === promise) input.onStart?.(server)
+        if (state.current !== promise) return
+        setStatus("ready")
+        input.onStart?.(server)
       },
       (error: Error) => {
         if (!state.failed) input.onError?.(error)
         state.failed = true
+        if (state.current === promise) setStatus("failed")
         const timer = setTimeout(() => {
-          if (state.current === promise) state.current = undefined
+          if (state.current === promise) {
+            state.current = undefined
+            setStatus("idle")
+          }
         }, input.retry ?? RETRY)
         timer.unref()
       },
@@ -382,10 +402,23 @@ export function manager(input: {
       state.current ??= boot()
       return state.current
     },
+    ready() {
+      return state.status === "ready"
+    },
+    status() {
+      return state.status
+    },
+    onStatus(listener: (status: ServerStatus) => void) {
+      listeners.add(listener)
+      return () => {
+        listeners.delete(listener)
+      }
+    },
     stop() {
       const current = state.current
       state.current = undefined
       state.failed = false
+      setStatus("idle")
       if (current) input.onStop?.()
       return current?.then(
         (server) => stop(server.process),

@@ -1,10 +1,8 @@
 import MarkdownShikiWorkerUrl from "./markdown-shiki.worker.ts?worker&url"
-import { getSharedHighlighter } from "@pierre/diffs" // kilocode_change
 import type { BundledLanguage } from "shiki" // kilocode_change
 import { KiloTheme } from "../context/marked" // kilocode_change
 import {
   applyMarkdownWorkerResponse,
-  highlightTokens, // kilocode_change
   nextMarkdownGeneration, // kilocode_change
   shouldReleaseMarkdownWorkerState,
   type MarkdownToken, // kilocode_change
@@ -60,9 +58,13 @@ let inProcessQueue: Promise<unknown> = Promise.resolve()
 export function highlightInProcess(text: string, language: string) {
   const run = inProcessQueue.then(async () => {
     await new Promise((resolve) => setTimeout(resolve, 0))
-    const highlighter = await getSharedHighlighter({ themes: ["Kilo"], langs: [] })
+    const [{ KILO_DIFF_THEME, loadKiloHighlighter }, { highlightTokens }] = await Promise.all([
+      import("../pierre/kilo-diff-theme"),
+      import("./markdown-highlight-tokens"),
+    ])
+    const highlighter = await loadKiloHighlighter()
     if (!highlighter.getLoadedLanguages().includes(language)) await highlighter.loadLanguage(language as BundledLanguage)
-    const result = highlighter.codeToTokens(text, { lang: language as BundledLanguage, theme: "Kilo" })
+    const result = highlighter.codeToTokens(text, { lang: language as BundledLanguage, theme: KILO_DIFF_THEME })
     return {
       language,
       generation: nextMarkdownGeneration(),

@@ -1,5 +1,5 @@
 // kilocode_change - new file
-import { registerCustomTheme, type ThemeRegistrationResolved } from "@pierre/diffs"
+import { getSharedHighlighter, registerCustomTheme, type ThemeRegistrationResolved } from "@pierre/diffs"
 
 // The "Kilo" Pierre/Shiki theme used by every diff review surface (Code / Diff /
 // File / SessionReview) and by markdown code highlighting. Pierre resolves the
@@ -413,4 +413,10 @@ export function ensureKiloDiffTheme(): void {
     } as unknown as ThemeRegistrationResolved)
   })
   registrations.add(registerCustomTheme)
+}
+
+/** Register the Kilo theme and resolve Pierre's shared Shiki highlighter in one step. */
+export function loadKiloHighlighter(options?: { preferredHighlighter?: "shiki-wasm" | "shiki-js" }) {
+  ensureKiloDiffTheme()
+  return getSharedHighlighter({ themes: [KILO_DIFF_THEME], langs: [], ...options })
 }

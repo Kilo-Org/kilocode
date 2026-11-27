@@ -8,19 +8,8 @@
  * worktree, or of the project root for a local session.
  */
 import {
-  batch,
-  For,
-  Show,
-  createSignal,
-  createMemo,
-  createUniqueId,
-  createEffect,
-  on,
-  untrack,
-  onMount,
-  onCleanup,
-  type Component,
-  type JSX,
+  batch, For, Show, createSignal, createMemo, createUniqueId, createEffect, on, untrack, onMount, onCleanup,
+  type Component, type JSX,
 } from "solid-js"
 import type { ToolActions } from "@kilocode/kilo-ui/message-part"
 import type {
@@ -147,22 +136,20 @@ import {
   createTerminalState,
   createTerminalHandlers,
   createTerminalMessageHandler,
-  SideTerminalPanel,
   createSideTerminal,
   createAmbientSetup,
   hasSetupTerminal,
   keepTerminalStack,
 } from "./terminal"
+import { SideTerminalPanel } from "./terminal/SideTerminalPanel"
 import { createEmbeddedTerminalReader } from "./terminal/output"
 import { focusCurrentTab, renderTab, renderTerminalLayer, renderNewTabButton } from "./tab-rendering"
 import { useTabScroll } from "./tab-scroll"
 import { setTabWidths } from "./tab-widths"
-import { DiffPanelCache } from "./DiffPanelCache"
-import { createPRNavigation, PRPanelHost } from "./pr/PRPanelHost"
+import { createPRNavigation } from "./pr/navigation"
 import { createPRReview } from "./pr/review"
 import { createPRDiffCommentState } from "./pr/diff-comment-state"
 import { createRevertFile } from "./revert-file"
-import { FullScreenDiffView } from "../diff-viewer/FullScreenDiffView"
 import { DiffScopeControls } from "../diff-viewer/DiffScopeControls"
 import { createTabFocus } from "../src/utils/tab-navigation"
 import { createDiffReviewScope } from "./diff-review-scope"
@@ -194,10 +181,8 @@ import { clampPanelWidth, createPanelResize, maxPanelWidth, minPanelWidth, SideP
 import { createSidePanel, sideHostNeeded } from "./side-panel-state"
 import { createDocumentInspector, isMarkdownPath } from "../documents/state"
 import { chunkPaths } from "../src/v2/validate-paths"
-import { DocumentPanelHost } from "./documents/DocumentPanelHost"
 import { SubagentPanel } from "./SubagentPanel"
 import { attachSubagentEvent, createSubagentController } from "./subagent-tabs"
-import { EditPreviewPanel } from "./EditPreviewPanel"
 import {
   createEditPreview,
   previewMatchesContext,
@@ -214,6 +199,7 @@ import type { SidebarSearchMenuRef } from "./SidebarSearchMenu"
 import type { WorktreeDelete } from "./worktree-delete"
 import { SpeechToTextStatusProvider } from "../src/components/speech-to-text/status"
 import { useDisplaySettings } from "../src/v2/display-settings"
+import { DiffPanelCache, DocumentPanelHost, EditPreviewPanel, FullScreenDiffView, PRPanelHost } from "./lazy-panels"
 
 type SidebarSelection = typeof LOCAL | string | null
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
@@ -498,10 +484,7 @@ const AgentManagerContent: Component = () => {
     onSessions: (pid) => replayCatalog(pid),
   })
   const [activePendingId, setActivePendingId] = createSignal<string | undefined>()
-  const [terminalFont, setTerminalFont] = createSignal<TerminalFont>({
-    fontFamily: getComputedStyle(document.documentElement).getPropertyValue("--vscode-editor-font-family").trim(),
-    fontSize: fallbackFontSize(),
-  })
+  const [terminalFont, setTerminalFont] = createSignal<TerminalFont>({ fontFamily: "", fontSize: fallbackFontSize() })
   const nsKey = (sel: string) => `${currentProjectId() ?? "single"}:${sel}`
   const terms = createTerminalState(() => {
     const sel = selection()
@@ -2268,10 +2251,15 @@ const AgentManagerContent: Component = () => {
   })
 
   onMount(() => {
+    performance?.mark("kilo.startup.mount")
     selectLocal()
     to({ type: "agentManager.requestState" })
     to({ type: "agentManager.requestProjects" })
     if (localSessionIDs().length === 0) addPendingTab()
+  })
+  let markedWorktrees = false
+  createEffect(() => {
+    if (!markedWorktrees && worktreesLoaded()) { markedWorktrees = true; performance?.mark("kilo.startup.worktrees") }
   })
 
   // A worktree selection names its directory. Local, and a session opened outside the catalog, read the store that

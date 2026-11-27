@@ -1,19 +1,26 @@
-import { Tiktoken, encodingForModel as _encodingForModel } from "js-tiktoken"
+import type { Tiktoken } from "js-tiktoken"
 import type { MessageContent } from "../index.js"
-import { llamaTokenizer } from "./llamaTokenizer.js"
+import type { Tokenizers } from "./tokenizers"
 
 interface Encoding {
   encode: Tiktoken["encode"]
   decode: Tiktoken["decode"]
 }
 
+let loaded: Tokenizers | undefined
+
+function tokenizers(): Tokenizers {
+  // Loaded on first token count so extension activation skips parsing js-tiktoken and llamaTokenizer.
+  return (loaded ??= require("./tokenizers") as Tokenizers)
+}
+
 class LlamaEncoding implements Encoding {
   encode(text: string): number[] {
-    return llamaTokenizer.encode(text)
+    return tokenizers().llamaTokenizer.encode(text)
   }
 
   decode(tokens: number[]): string {
-    return llamaTokenizer.decode(tokens)
+    return tokenizers().llamaTokenizer.decode(tokens)
   }
 }
 
@@ -42,7 +49,7 @@ function modelUsesGptTokenizer(modelName: string): boolean {
 
 export function encodingForModel(modelName: string): Encoding {
   if (!modelUsesGptTokenizer(modelName)) return llamaEncoding
-  return (gptEncoding ??= _encodingForModel("gpt-4"))
+  return (gptEncoding ??= tokenizers().encodingForModel("gpt-4"))
 }
 
 export function countTokens(

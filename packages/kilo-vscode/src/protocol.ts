@@ -131,6 +131,7 @@ export type ToHost =
   | Request
   | BrowserTab
   | { type: "sidebar.session"; sessionId?: string }
+  | { type: "requestServerStatus" }
   | { type: "abort"; id: number }
   | { type: "open"; url: string; external?: boolean }
   | Ui
@@ -341,6 +342,14 @@ export type ModelPreferences = {
   variants: Record<string, string>
 }
 
+/** Persisted composer state injected into webview HTML so contexts hydrate synchronously on frame 0. */
+export type KiloInitialState = {
+  autoApprove: boolean
+  modelSelectorExpanded: boolean
+  modelPreferences: ModelPreferences
+  dismissedNotifications: string[]
+}
+
 export type ModelPreferenceMessage =
   | { type: "requestModelPreferences" }
   | ({ type: "toggleFavorite"; action: "add" | "remove" } & ModelPreferenceRef)
@@ -524,6 +533,7 @@ export type ToWebview =
   | { type: "chunk"; id: number; data: Uint8Array }
   | { type: "end"; id: number }
   | { type: "error"; id: number; message: string }
+  | { type: "serverStatus"; status: "ready" | "stopped" | "failed" }
   | {
       type: "command"
       name:

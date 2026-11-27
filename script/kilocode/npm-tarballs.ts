@@ -1,4 +1,3 @@
-import { $ } from "bun"
 import { createReadStream } from "node:fs"
 import { readdir } from "node:fs/promises"
 import { createHash } from "node:crypto"
@@ -50,14 +49,17 @@ async function inventory(dir: string, version: string) {
 // Only the producer interprets tarball contents. Consumers compare all compressed bytes to this job output.
 export async function record(dir: string, version: string) {
   const entries = await inventory(dir, version)
-  await Promise.all(
-    entries.map(async (entry) => {
-      // GNU tar treats a Windows drive prefix as a remote host. Pass only the local archive name.
-      const manifest = await $`tar -xOf ${entry.file} package/package.json`.cwd(dir).json()
-      if (manifest.name !== entry.name || manifest.version !== version)
-        throw new Error(`Expected ${entry.name}@${version} inside ${entry.file}`)
-    }),
-  )
+  for (const entry of entries) {
+    const files = await new Bun.Archive(await Bun.file(path.join(dir, entry.file)).bytes()).files([
+      "package/package.json",
+      "./package/package.json",
+    ])
+    const pkg = files.get("package/package.json") ?? files.get("./package/package.json")
+    if (!pkg) throw new Error(`Missing package/package.json inside ${entry.file}`)
+    const manifest = JSON.parse(await pkg.text())
+    if (manifest.name !== entry.name || manifest.version !== version)
+      throw new Error(`Expected ${entry.name}@${version} inside ${entry.file}`)
+  }
   return entries
 }
 

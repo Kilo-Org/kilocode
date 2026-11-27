@@ -16,7 +16,7 @@ import { createSignal } from "solid-js"
 import type { Accessor } from "solid-js"
 import { LOCAL } from "../navigate"
 import { strongest, type Activity } from "../v2/activity"
-import { measureInitialDimensions } from "./ghostty"
+import { measureInitialDimensions } from "./measure"
 import type {
   ExtensionMessage,
   ScriptTerminalKind,

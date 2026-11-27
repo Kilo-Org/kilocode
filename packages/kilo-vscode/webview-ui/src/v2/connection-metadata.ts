@@ -18,7 +18,11 @@ export type ConnectionMetadata = ReturnType<typeof createConnectionMetadata>
 const HANDSHAKE_RETRY = [500, 1_000, 2_000, 5_000, 10_000] as const
 
 /** Call inside a reactive owner to share the server-wide handshake read across every store of one connection. */
-export function createConnectionMetadata(input: { api: OpenCodeClient; connection: Connection }) {
+export function createConnectionMetadata(input: {
+  api: OpenCodeClient
+  connection: Connection
+  onPluginUpdated?: (handler: () => void) => () => void
+}) {
   const active = new Set<string>()
   const [directory, setDirectory] = createSignal<string>()
   const [version, setVersion] = createSignal("")
@@ -27,11 +31,16 @@ export function createConnectionMetadata(input: { api: OpenCodeClient; connectio
   onCleanup(() => clearTimeout(state.retry))
 
   // A Location that is still activating answers the handshake like a server without it, so the read waits for the
-  // plugins of the Location first.
+  // plugins of the Location first (waking immediately on `plugin.updated` instead of waiting for the next poll).
   const readHandshake = (dir: string, attempt = 0) => {
     clearTimeout(state.retry)
     const read = ++state.handshake
-    void pluginsListed({ api: input.api, directory: dir, active: () => read === state.handshake })
+    void pluginsListed({
+      api: input.api,
+      directory: dir,
+      active: () => read === state.handshake,
+      onUpdated: input.onPluginUpdated,
+    })
       .then(() => {
         if (read !== state.handshake) return
         return input.api

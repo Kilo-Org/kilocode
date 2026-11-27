@@ -6,7 +6,6 @@ import { SpeechToTextStatusProvider } from "../components/speech-to-text/status"
 import { NotificationsProvider } from "../context/notifications"
 import { WorkStyleProvider } from "../context/work-style"
 import { IndexingProvider } from "../context/indexing"
-import { KiloEmbeddingModelsProvider } from "../context/kilo-embedding-models"
 import { Chat } from "./chat"
 import { V2Provider } from "./client"
 import { WebviewShell } from "./shell"
@@ -17,21 +16,19 @@ export default function App(props: { directory: string; view: string }) {
   return (
     <WebviewShell>
       <V2Provider directory={props.directory}>
-        <KiloEmbeddingModelsProvider>
-          <IndexingProvider>
-            <NotificationsProvider>
-              <SpeechToTextStatusProvider>
-                <div class="container">
-                  <WorkStyleProvider>
-                    <Show when={props.view === "subagent"} fallback={<Chat />}>
-                      <SubagentViewer />
-                    </Show>
-                  </WorkStyleProvider>
-                </div>
-              </SpeechToTextStatusProvider>
-            </NotificationsProvider>
-          </IndexingProvider>
-        </KiloEmbeddingModelsProvider>
+        <IndexingProvider>
+          <NotificationsProvider>
+            <SpeechToTextStatusProvider>
+              <div class="container">
+                <WorkStyleProvider>
+                  <Show when={props.view === "subagent"} fallback={<Chat />}>
+                    <SubagentViewer />
+                  </Show>
+                </WorkStyleProvider>
+              </div>
+            </SpeechToTextStatusProvider>
+          </NotificationsProvider>
+        </IndexingProvider>
       </V2Provider>
     </WebviewShell>
   )

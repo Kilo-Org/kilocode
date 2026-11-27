@@ -13,6 +13,7 @@ import { sessionMissing, type V2 } from "../src/v2/scope"
 import type { VSCodeContext } from "./v2/bridge"
 import type { AppDirectories } from "./app-directories"
 import { reportFailure, type FailureToastDeps } from "./failure-toast"
+import { syncAgentsOnColdActivation } from "../src/v2/agent-sync"
 import { createPanelData } from "./v2/panel-data"
 import { createSessions } from "./v2/sessions"
 import { dispatchInitialPrompt, initialModel } from "./initial-message"
@@ -65,6 +66,11 @@ export function createAppSession(opts: {
       },
     ),
   )
+  createEffect(() => {
+    const store = rootStore()
+    if (!store) return
+    onCleanup(syncAgentsOnColdActivation(store))
+  })
 
   const commandStore = createMemo(() => {
     const directory = opts.directories.root(opts.commandProject())

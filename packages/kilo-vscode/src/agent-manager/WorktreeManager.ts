@@ -33,6 +33,7 @@ import {
 } from "./git-import"
 import { pathKey } from "./project/paths"
 import { MISSING_GIT } from "./git-errors"
+import { ensureRepoGitExclude } from "./git-exclude"
 import { Semaphore } from "./semaphore"
 
 const TEMP_PREFIX = ".kilo-delete-"
@@ -122,7 +123,7 @@ function stripRemotePrefix(ref: string): { branch: string; remote?: string } {
   return { branch: ref }
 }
 
-import { KILO_DIR, LEGACY_DIR, STATE_DIR, migrateAgentManagerData, resolveGitDir } from "./constants"
+import { KILO_DIR, LEGACY_DIR, migrateAgentManagerData, resolveGitDir } from "./constants"
 
 const SESSION_ID_FILE = "session-id"
 const METADATA_FILE = "metadata.json"
@@ -696,19 +697,31 @@ export class WorktreeManager {
   }
 
   /**
-   * Normalized paths git currently tracks as worktrees, or undefined when the listing failed.
+   * Normalized paths git currently tracks as worktrees, mapped to their branch info, or undefined
+   * when the listing failed.
    *
-   * One call answers "is this directory still a worktree?" for every directory at once, which is
-   * what keeps discovery from spawning a `rev-parse` per directory.
+   * One `git worktree list --porcelain` call answers both "is this directory still a worktree?"
+   * and "what branch is checked out?" for every directory at once, keeping startup discovery from
+   * spawning a `rev-parse` per directory.
    */
-  async registeredPaths(): Promise<Set<string> | undefined> {
+  async registeredWorktrees(): Promise<Map<string, { branch: string; detached: boolean }> | undefined> {
     try {
       const raw = await this.git.raw(["worktree", "list", "--porcelain"])
-      return new Set(parseWorktreeList(raw).map((entry) => pathKey(entry.path)))
+      return new Map(
+        parseWorktreeList(raw).map((entry) => [
+          pathKey(entry.path),
+          { branch: entry.branch, detached: entry.detached },
+        ]),
+      )
     } catch (err) {
       this.log(`registeredPaths: worktree list failed: ${err}`)
       return undefined
     }
+  }
+
+  async registeredPaths(): Promise<Set<string> | undefined> {
+    const entries = await this.registeredWorktrees()
+    return entries ? new Set(entries.keys()) : undefined
   }
 
   /** Drop git metadata for worktrees whose directory is gone. */
@@ -949,8 +962,10 @@ export class WorktreeManager {
       .catch(() => {})
   }
 
-  async discoverWorktrees(): Promise<WorktreeInfo[]> {
-    const probes = await this.scanWorktrees()
+  async discoverWorktrees(opts?: {
+    registered?: Map<string, { branch: string; detached: boolean }>
+  }): Promise<WorktreeInfo[]> {
+    const probes = await this.scanWorktrees(opts)
     return probes.flatMap((probe) => (probe.ok ? [probe.info] : []))
   }
 
@@ -961,16 +976,25 @@ export class WorktreeManager {
    * `Promise.all`, so a repository with dozens of leftover directories opened dozens of git
    * processes at startup — the same storm that makes every command look like it timed out.
    */
-  async scanWorktrees(): Promise<WorktreeProbe[]> {
+  async scanWorktrees(opts?: {
+    registered?: Map<string, { branch: string; detached: boolean }>
+  }): Promise<WorktreeProbe[]> {
     await this.ensureMigrated()
     if (!fs.existsSync(this.dir)) return []
     await markNoIndex(this.dir, this.log)
 
     const names = await this.worktreeDirs()
     this.cleanupOrphanedTempDirs()
-    const registered = await this.registeredPaths()
+    if (names.length === 0) return []
+    const registered = opts?.registered ?? (await this.registeredWorktrees())
+    let basePromise: Promise<{ branch: string; remote?: string }> | undefined
+    let remotesPromise: Promise<Array<{ name: string }>> | undefined
+    const shared = {
+      baseBranch: () => (basePromise ??= this.resolveBaseBranch()),
+      remotes: () => (remotesPromise ??= this.git.getRemotes().catch(() => [])),
+    }
     return await Promise.all(
-      names.map((name) => this.scanGate.run(() => this.worktreeInfo(path.join(this.dir, name), registered))),
+      names.map((name) => this.scanGate.run(() => this.worktreeInfo(path.join(this.dir, name), registered, shared))),
     )
   }
 
@@ -1020,7 +1044,9 @@ export class WorktreeManager {
         remote: data.remote,
       }
     } catch (e) {
-      this.log(`readMetadata: git metadata unreadable in ${worktreePath}: ${e}`)
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        this.log(`readMetadata: git metadata unreadable in ${worktreePath}: ${e}`)
+      }
       return undefined
     }
   }
@@ -1050,6 +1076,7 @@ export class WorktreeManager {
 
   private async readMetadataFrom(worktreePath: string, dirName: string): Promise<Metadata | undefined> {
     const dir = path.join(worktreePath, dirName)
+    if (!fs.existsSync(dir)) return undefined
 
     // Try metadata.json first (has parentBranch + remote)
     try {
@@ -1063,7 +1090,9 @@ export class WorktreeManager {
         }
       }
     } catch (e) {
-      this.log(`readMetadata: metadata.json unreadable in ${worktreePath}: ${e}`)
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        this.log(`readMetadata: metadata.json unreadable in ${worktreePath}: ${e}`)
+      }
     }
 
     // Legacy: plain text session-id file
@@ -1072,7 +1101,9 @@ export class WorktreeManager {
       const id = content.trim()
       if (id) return { sessionId: id }
     } catch (e) {
-      this.log(`readMetadata: session-id unreadable in ${worktreePath}: ${e}`)
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        this.log(`readMetadata: session-id unreadable in ${worktreePath}: ${e}`)
+      }
     }
 
     return undefined
@@ -1083,54 +1114,7 @@ export class WorktreeManager {
   // ---------------------------------------------------------------------------
 
   async ensureGitExclude(): Promise<void> {
-    const target = await this.excludeTarget()
-    const items = [
-      [".kilo/worktrees/", "Kilo Code agent worktrees"],
-      [`${STATE_DIR}/agent-manager.json`, "Kilo Agent Manager state"],
-      [".kilo/agent-manager.json", "Kilo Agent Manager legacy state"],
-      [".kilo/setup-script", "Kilo Code worktree setup script"],
-      [".kilo/setup-script.sh", "Kilo Code worktree setup script"],
-      [".kilo/setup-script.ps1", "Kilo Code worktree setup script"],
-      [".kilo/setup-script.cmd", "Kilo Code worktree setup script"],
-      [".kilo/setup-script.bat", "Kilo Code worktree setup script"],
-      [".kilocode/worktrees/", "Kilo Code legacy agent worktrees"],
-      [".kilocode/agent-manager.json", "Kilo Agent Manager legacy state"],
-      [".kilocode/setup-script", "Kilo Code legacy worktree setup script"],
-      [".kilocode/setup-script.sh", "Kilo Code legacy worktree setup script"],
-      [".kilocode/setup-script.ps1", "Kilo Code legacy worktree setup script"],
-      [".kilocode/setup-script.cmd", "Kilo Code legacy worktree setup script"],
-      [".kilocode/setup-script.bat", "Kilo Code legacy worktree setup script"],
-    ] as const
-
-    for (const [entry, comment] of items) {
-      await this.addExcludeEntry(target.file, `${target.prefix}${entry}`, comment)
-    }
-  }
-
-  /**
-   * Resolve the repository exclude file and the repository-relative path to
-   * this manager's root.
-   *
-   * Git answers both questions for a linked worktree and for a workspace that
-   * is a subdirectory of a repository. `--show-prefix` is already relative and
-   * uses forward slashes, so it avoids symlink mismatches such as macOS
-   * `/var` versus `/private/var`. The anchored ignore patterns then point at
-   * the real `.kilo` directory instead of the repository root.
-   *
-   * `--git-path` is used without `--path-format=absolute`, because older Git
-   * echoes unsupported rev-parse flags to stdout with exit code 0, which would
-   * silently corrupt the path. Its result is relative to this command's cwd,
-   * so it is resolved against this root.
-   *
-   * Failures propagate: callers decide whether to continue without excludes.
-   * There is deliberately no silent fallback, because a guessed prefix would
-   * write ignore patterns anchored to the wrong directory.
-   */
-  private async excludeTarget(): Promise<{ file: string; prefix: string }> {
-    const exclude = (await this.git.raw(["rev-parse", "--git-path", "info/exclude"])).trim()
-    if (!exclude || exclude.startsWith("--")) throw new Error("git rev-parse did not return an exclude path")
-    const prefix = (await this.git.raw(["rev-parse", "--show-prefix"])).trim()
-    return { file: path.resolve(this.root, exclude), prefix }
+    return ensureRepoGitExclude(this.git, this.root, this.log)
   }
 
   /**
@@ -1147,25 +1131,6 @@ export class WorktreeManager {
     return true
   }
 
-  private async addExcludeEntry(excludePath: string, entry: string, comment: string): Promise<void> {
-    const infoDir = path.dirname(excludePath)
-    if (!fs.existsSync(infoDir)) await fs.promises.mkdir(infoDir, { recursive: true })
-
-    let content = ""
-    if (fs.existsSync(excludePath)) {
-      content = await fs.promises.readFile(excludePath, "utf-8")
-      if (content.split(/\r?\n/).includes(entry)) return
-    }
-
-    const pad = content.endsWith("\n") || content === "" ? "" : "\n"
-    await fs.promises.appendFile(excludePath, `${pad}\n# ${comment}\n${entry}\n`)
-    this.log(`Added ${entry} to ${excludePath}`)
-  }
-
-  // ---------------------------------------------------------------------------
-  // Helpers
-  // ---------------------------------------------------------------------------
-
   private async ensureDir(): Promise<void> {
     if (!fs.existsSync(this.dir)) {
       await fs.promises.mkdir(this.dir, { recursive: true })
@@ -1177,7 +1142,14 @@ export class WorktreeManager {
    * Probe one directory. The failure reason is part of the result so callers can tell a leftover
    * directory from a broken worktree from a git that would not answer.
    */
-  private async worktreeInfo(wtPath: string, registered?: Set<string>): Promise<WorktreeProbe> {
+  private async worktreeInfo(
+    wtPath: string,
+    registered?: Map<string, { branch: string; detached: boolean }>,
+    shared?: {
+      baseBranch: () => Promise<{ branch: string; remote?: string }>
+      remotes: () => Promise<Array<{ name: string }>>
+    },
+  ): Promise<WorktreeProbe> {
     const gitFile = path.join(wtPath, ".git")
     if (!fs.existsSync(gitFile)) return { ok: false, path: wtPath, reason: "leftover" }
 
@@ -1191,14 +1163,15 @@ export class WorktreeManager {
 
     // Cheap and decisive: git already told us which paths it tracks, so a directory missing from
     // that list is broken and does not deserve a git process of its own.
-    if (registered && !registered.has(pathKey(wtPath))) {
+    const listed = registered?.get(pathKey(wtPath))
+    if (registered && !listed) {
       return { ok: false, path: wtPath, reason: "unregistered" }
     }
 
     try {
-      const git = this.client(wtPath)
+      const knownBranch = listed && !listed.detached && listed.branch !== "unknown" ? listed.branch : undefined
       const [branch, stat, meta] = await Promise.all([
-        git.revparse(["--abbrev-ref", "HEAD"]),
+        knownBranch !== undefined ? Promise.resolve(knownBranch) : this.client(wtPath).revparse(["--abbrev-ref", "HEAD"]),
         fs.promises.stat(wtPath),
         this.readMetadata(wtPath),
       ])
@@ -1215,11 +1188,11 @@ export class WorktreeManager {
           // Only split when the prefix is a known remote name (not a branch like "release/1.0").
           const split = stripRemotePrefix(meta.parentBranch)
           if (split.remote) {
-            const remotes = await this.git.getRemotes().catch(() => [])
+            const remotes = await (shared ? shared.remotes() : this.git.getRemotes().catch(() => []))
             if (remotes.some((r) => r.name === split.remote)) return split
           }
           return { branch: meta.parentBranch }
-        })()) ?? (await this.resolveBaseBranch())
+        })()) ?? (await (shared ? shared.baseBranch() : this.resolveBaseBranch()))
       return {
         ok: true,
         info: {

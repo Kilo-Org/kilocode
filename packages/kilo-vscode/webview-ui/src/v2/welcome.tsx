@@ -2,8 +2,7 @@
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
-import { createSignal, For, Show, type JSX } from "solid-js"
-import { AnimatedKiloLogo, reduced } from "../components/brand/AnimatedKiloLogo"
+import { createSignal, For, lazy, Show, Suspense, type JSX } from "solid-js"
 import { useLanguage } from "../context/language"
 import { useWorkStyleOptional } from "../context/work-style"
 import { WorkStylePicker } from "../components/shared/WorkStylePicker"
@@ -12,6 +11,12 @@ import { useV2 } from "./client"
 import { FeedbackDialog } from "./feedback"
 
 const RECENT = 3
+
+// Loaded only on hover so `@lottiefiles/dotlottie-web` (~830 KB) stays out of the initial webview bundle.
+const AnimatedKiloLogo = lazy(() =>
+  import("../components/brand/AnimatedKiloLogo").then((mod) => ({ default: mod.AnimatedKiloLogo })),
+)
+const reduced = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true
 
 /**
  * Square Kilo mark. Hover rotates the mark and crossfades to the yellow Lottie animation. The player mounts on
@@ -39,7 +44,9 @@ export const KiloLogo = () => {
     >
       <Show when={mounted()}>
         <div class="kilo-logo-layer kilo-logo-animated">
-          <AnimatedKiloLogo playing={hover() && ready()} onReady={setReady} />
+          <Suspense>
+            <AnimatedKiloLogo playing={hover() && ready()} onReady={setReady} />
+          </Suspense>
         </div>
       </Show>
       <div class="kilo-logo-layer kilo-logo-static">
