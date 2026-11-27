@@ -232,8 +232,9 @@ jobs:
     concurrency:
       group: kilo-v2-progress-map
       cancel-in-progress: false
-    # Rollout requires the automation environment to admit v2 and the external ci-kilocode-app-key
-    # policy to admit Kilo-Org/kilocode/.github/workflows/kilo-v2.yml@refs/heads/v2 for push.
+    # Rollout requires the automation environment to admit v2. The dedicated ci-kilocode-app-key-v2 policy,
+    # pinned to Kilo-Org/kilocode/.github/workflows/kilo-v2.yml@refs/heads/v2 and to the automation
+    # environment, serves the key.
     # Every step can request OIDC: run only trusted code, without PR artifacts, caches or package installs.
     environment: automation
     permissions:
@@ -260,7 +261,7 @@ jobs:
         id: creds
         uses: Kilo-Org/kilocode/.github/actions/kilo-credentials@4a92556e45fa5173f2bbead33cdd010a21554502 # reviewed in #16629
         with:
-          workload: ci-kilocode-app-key
+          workload: ci-kilocode-app-key-v2
           secrets: KILOCODE_MAINTAINER_APP_KEY
 
       # Use the App for both git and gh so the bot PR starts its checks. Contents writes the branch;
