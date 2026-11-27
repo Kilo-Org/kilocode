@@ -1,13 +1,27 @@
-import { transformSync } from "@babel/core"
+import type { transformSync } from "@babel/core"
 import type { Plugin } from "esbuild"
 import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs"
 import { randomUUID } from "node:crypto"
+import { createRequire } from "node:module"
 import path from "node:path"
 
 // Solid's JSX compiler is the dominant cost of the webview build, and its output only depends on the file content and
 // the transform toolchain. Cache it under this worktree's node_modules so an unchanged file costs one read instead of a
-// Babel parse, without sharing state between worktrees. Babel is imported eagerly on purpose: a dynamic import inside
-// the esbuild callback can stall the build (the webview tests hit this in CI), and the transform is synchronous anyway.
+// Babel parse, without sharing state between worktrees. Babel is loaded synchronously on first cache miss via
+// createRequire: an async dynamic import inside the esbuild callback can stall the build (the webview tests hit this in
+// CI), while lazy synchronous loading avoids paying ~250 ms to import Babel when every file hits the cache.
+const require = createRequire(import.meta.url)
+let babelTransform: typeof transformSync | undefined
+
+function transformSolid(source: string, filename: string) {
+  babelTransform ??= (require("@babel/core") as { transformSync: typeof transformSync }).transformSync
+  return babelTransform(source, {
+    filename,
+    babelrc: false,
+    configFile: false,
+    presets: [["babel-preset-solid", { generate: "dom" }], "@babel/preset-typescript"],
+  })
+}
 
 // The cache key must change whenever the transform output can change: this module holds the options, and the presets
 // hold the compiler. Versions only, because resolved package paths are install-layout detail.
@@ -41,12 +55,7 @@ export function createSolidPlugin(options: { root: string; cacheDir?: string }):
           }
         }
 
-        const result = transformSync(source, {
-          filename: args.path,
-          babelrc: false,
-          configFile: false,
-          presets: [["babel-preset-solid", { generate: "dom" }], "@babel/preset-typescript"],
-        })
+        const result = transformSolid(source, args.path)
         if (result?.code == null) throw new Error(`Could not compile ${args.path}`)
 
         memory.set(key, result.code)

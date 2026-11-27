@@ -31,7 +31,7 @@ import { resolveOpencodePty } from "../../cli/script/opencode-pty"
 import { NativeArch } from "../../../script/native-arch"
 import { bundledModelsSnapshot, modelsSnapshotPlugin } from "../../core/script/models-snapshot"
 import { directory } from "../src/env"
-import { brandingPlugin } from "../src/branding/plugin"
+import { createBrandingPlugin } from "../src/branding/plugin"
 import { hostMirrorsPlugin } from "../src/mirrors"
 import { KiloBinary } from "../src/binary"
 import { createPluginRuntimePlugin } from "./plugin-runtime"
@@ -60,6 +60,8 @@ const requestedTarget = process.argv.find((arg) => arg.startsWith("--target="))?
 const skipInstall = process.argv.includes("--skip-install")
 const skipWebUi = process.argv.includes("--skip-web-ui")
 const solidPlugin = createSolidTransformPlugin()
+// Release builds never read a pre-existing disk cache; keep transforms in-memory across targets of one run.
+const brandingPlugin = createBrandingPlugin({ disk: false })
 const highlights = Script.preview ? undefined : embed(process.env.OPENCODE_RELEASE_NOTES)
 const releaseAssets = new Map<string, Promise<Map<string, string>>>()
 const modelsSnapshot = modelsSnapshotPlugin(await bundledModelsSnapshot())
