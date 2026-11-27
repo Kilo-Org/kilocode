@@ -1,0 +1,56 @@
+package ai.kilocode.client.ui.md
+
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.selection.SessionSelection
+import ai.kilocode.client.session.ui.style.SessionUiStyle
+import javax.swing.ScrollPaneConstants
+
+object MdViewFactory {
+    fun create(style: SessionEditorStyle = SessionEditorStyle.current(), selection: SessionSelection? = null): MdView =
+        hybrid(style, selection)
+
+    fun create(style: SessionEditorStyle, selection: SessionSelection?, code: MdCodeBlockFactory): MdView =
+        hybrid(style, selection, code)
+
+    fun hybrid(style: SessionEditorStyle = SessionEditorStyle.current(), selection: SessionSelection? = null): MdView =
+        MdViewHybrid(style, selection)
+
+    fun hybrid(
+        style: SessionEditorStyle,
+        selection: SessionSelection?,
+        code: MdCodeBlockFactory,
+    ): MdView = MdViewHybrid(style, selection, code)
+
+    fun hybrid(code: MdCodeBlockFactory): MdView = hybrid(SessionEditorStyle.current(), null, code)
+
+    fun html(style: SessionEditorStyle = SessionEditorStyle.current(), selection: SessionSelection? = null): MdView =
+        hybrid(style, selection)
+}
+
+data class MdCodeBlockOptions(
+    val border: MdCodeBlockBorder = MdCodeBlockBorder.None,
+    val maxLines: Int? = null,
+    val verticalPolicy: Int = ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER,
+    val editorOnly: Boolean = false,
+    val horizontalPadding: Int = SessionUiStyle.View.Code.VIEWPORT_HORIZONTAL_PADDING,
+    /**
+     * Float the horizontal scrollbar over the content instead of reserving a band beneath it. Keeps
+     * the block's bottom inset equal to the other views when the content fits (no empty scrollbar
+     * band), while the scrollbar still appears on demand for wide content such as diffs.
+     */
+    val overlapScrollbar: Boolean = false,
+    /**
+     * Decides whether a block renders folded behind a placeholder the reader can click to unfold,
+     * returning the placeholder text or null to leave the block open. Folded blocks size themselves
+     * from what is actually visible, so a folded one takes a single line.
+     */
+    val fold: ((String) -> String?)? = null,
+)
+
+enum class MdCodeBlockBorder { All, Horizontal, Bottom, None }
+
+data class MdCodeBlockFactory(val opts: MdCodeBlockOptions = MdCodeBlockOptions()) {
+    companion object {
+        fun default(opts: MdCodeBlockOptions = MdCodeBlockOptions()) = MdCodeBlockFactory(opts)
+    }
+}

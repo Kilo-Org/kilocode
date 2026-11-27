@@ -32,6 +32,8 @@ const active = new Set([
   "check-test.yml",
   // Upstream: lint and typecheck (`bun run check`).
   "check.yml",
+  // Kilo: build and test the native JetBrains plugin; upload an unsigned CI artifact.
+  "kilo-v2-jetbrains.yml",
   // Kilo: publishes the v2 CLI to npm with the `kilo-v2` dist-tag.
   "kilo-v2-publish.yml",
   // Kilo: v2 lane (this guard).

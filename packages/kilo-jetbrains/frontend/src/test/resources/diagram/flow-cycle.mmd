@@ -1,0 +1,9 @@
+graph TD
+    Retry --> Fetch
+    Fetch --> Parse
+    Parse -.-> Retry
+    Parse ==> Store
+    Store --- Audit
+    Fetch --> Fetch
+    Store --> Audit
+    Orphan[Detached node]

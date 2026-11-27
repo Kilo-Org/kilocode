@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@kilocode/kilo-jetbrains",
+  "private": true,
+  "type": "module",
+  "version": "0.0.0-v2-194",
+  "scripts": {
+    "build": "bun script/gradle.ts buildPlugin",
+    "build:production": "bun script/gradle.ts buildPlugin -Pproduction=true",
+    "generate": "bun script/generate.ts",
+    "pin:cli": "bun script/pin-cli.ts",
+    "typecheck": "bun check --no-script && bun script/gradle.ts typecheck",
+    "test": "bun script/gradle.ts test"
+  },
+  "devDependencies": {
+    "@opencode/protocol": "workspace:*",
+    "@tsconfig/bun": "catalog:",
+    "@types/bun": "catalog:",
+    "effect": "catalog:"
+  }
+}

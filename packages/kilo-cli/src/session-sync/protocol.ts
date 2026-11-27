@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { KiloNativeMessage } from "@kilocode/gateway-core"
 import { lookup } from "node:dns/promises"
 import { isIP } from "node:net"
 import { Effect, Schema } from "effect"
@@ -123,67 +124,7 @@ export function jsonNodes(value: unknown, maxDepth = limits.jsonValueDepth, maxN
   return visit(value, 0) ? nodes : undefined
 }
 
-const object = (value: Schema.Json | undefined): value is { [key: string]: Schema.Json } =>
-  value !== null && value !== undefined && typeof value === "object" && !Array.isArray(value)
-
-/**
- * Reconstruct a message from one revision-consistent entity snapshot. Callers resolve entity blobs
- * first and pass the source position from that same snapshot, never from a later state request.
- * Incomplete/deferred snapshots deliberately expose no purportedly complete transcript.
- */
-export function reconstructMessage(
-  value: Schema.Json,
-  parts: readonly Schema.Json[],
-  position: number,
-): { complete: false } | { complete: true; value: Schema.Json } {
-  if (!object(value) || !object(value.message)) return { complete: false }
-  if (value.parts === undefined) return { complete: true, value }
-  if (!object(value.parts) || value.message.type !== "assistant" || typeof value.message.id !== "string")
-    return { complete: false }
-  const count = value.parts.count
-  const messageID = value.message.id
-  const through = value.parts.through
-  if (
-    typeof count !== "number" ||
-    !Number.isSafeInteger(count) ||
-    count < 1 ||
-    typeof through !== "number" ||
-    !Number.isSafeInteger(through) ||
-    through < 0 ||
-    !Number.isSafeInteger(position) ||
-    position < through
-  )
-    return { complete: false }
-  const matching = parts.filter((part) => object(part) && part.messageID === messageID)
-  if (matching.length !== count) return { complete: false }
-  const ordered: { ordinal: number; part: Schema.Json }[] = []
-  const ordinals = new Set<number>()
-  for (const part of matching) {
-    if (
-      !object(part) ||
-      typeof part.ordinal !== "number" ||
-      !Number.isSafeInteger(part.ordinal) ||
-      typeof part.position !== "number" ||
-      !Number.isSafeInteger(part.position) ||
-      part.position < 0 ||
-      part.position > through ||
-      part.deferred === true ||
-      !object(part.part) ||
-      ordinals.has(part.ordinal)
-    )
-      return { complete: false }
-    ordinals.add(part.ordinal)
-    ordered.push({ ordinal: part.ordinal, part: part.part })
-  }
-  ordered.sort((a, b) => a.ordinal - b.ordinal)
-  const { parts: _, ...envelope } = value
-  // Inline content left on a split row follows its part rows, as the native reader returns it.
-  const inline = Array.isArray(value.message.content) ? value.message.content : []
-  return {
-    complete: true,
-    value: { ...envelope, message: { ...value.message, content: [...ordered.map((part) => part.part), ...inline] } },
-  }
-}
+export const reconstructMessage = KiloNativeMessage.reconstructMessage
 export const loopback = (hostname: string) =>
   hostname === "localhost" ||
   hostname === "[::1]" ||
