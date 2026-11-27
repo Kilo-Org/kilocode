@@ -11,16 +11,24 @@ export interface Failure {
   readonly message: string
   readonly params?: Record<string, string | number | boolean> | undefined
   readonly details?: string | undefined
+  /** True when missing, expired, or rejected authentication caused this failure. */
+  readonly auth?: boolean | undefined
 }
 
 const connectionFailed = "Couldn't reach the Kilo server. Check that it is running, then try again."
 const unreadableResponse = "The Kilo server sent a response this client couldn't read."
 
+/** Whether a structured session error represents missing, expired, or rejected authentication. */
+export function isAuthSessionError(error: { type?: string; status?: number }): boolean {
+  return error.type === "provider.auth" || error.status === 401
+}
+
 export function toFailure(error: unknown): Failure {
   const reason = reasonFor(error)
+  const auth = isAuthError(error) ? { auth: true as const } : {}
   const details = technicalDetails(error)
-  if (details === undefined || details.trim() === "" || details === reason.message) return reason
-  return { ...reason, details }
+  if (details === undefined || details.trim() === "" || details === reason.message) return { ...reason, ...auth }
+  return { ...reason, ...auth, details }
 }
 
 /** The readable sentence for an error, or for a message the server already recorded. */
@@ -197,6 +205,18 @@ function parse(value: string): unknown {
 
 function text(value: unknown) {
   return typeof value === "string" && value.trim() !== "" ? value.trim() : undefined
+}
+
+function isAuthError(error: unknown): boolean {
+  if (error instanceof Error) {
+    if (error.name === "AuthorizationError" || error.name === "AuthenticationError") return true
+    if (/^UnexpectedStatus:\s*401\b/.test(error.message)) return true
+    if (causeStatus(error) === 401) return true
+  }
+  if (!isRecord(error)) return false
+  if (error.type === "provider.auth" || error.type === "unauthorized") return true
+  if (error.status === 401 || causeStatus(error) === 401) return true
+  return isRecord(error.error) && isAuthError(error.error)
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

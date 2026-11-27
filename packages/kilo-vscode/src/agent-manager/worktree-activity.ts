@@ -1,4 +1,5 @@
 import { existsSync } from "fs"
+import { runningFromEvent } from "../session-status"
 import { samePath } from "./project/paths"
 import type { AgentManagerConnection } from "./connection"
 
@@ -430,15 +431,8 @@ export function createWorktreeActivity(opts: FactoryOptions) {
   })
   const unsubEvent = opts.connection.onEvent((event) => {
     activity.event(event, event.location?.directory)
-    if (event.type === "session.status" || event.type === "session.execution.started")
-      opts.status(String(event.data.sessionID), true)
-    if (
-      event.type === "session.idle" ||
-      event.type === "session.execution.succeeded" ||
-      event.type === "session.execution.failed" ||
-      event.type === "session.execution.interrupted"
-    )
-      opts.status(String(event.data.sessionID), false)
+    const status = runningFromEvent(event)
+    if (status) opts.status(status.sessionID, status.running)
   })
   const sync = (force = false) => {
     if (force) activity.replay()

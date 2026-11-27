@@ -4,6 +4,7 @@
 import { OpenCode, type OpenCodeClient, type OpenCodeEvent } from "@opencode/client"
 import { local } from "../local"
 import type { Manager, Server } from "../server"
+import { directoryKey } from "../shared/directory-key"
 
 export type ConnectionState = "connecting" | "connected" | "disconnected"
 
@@ -127,6 +128,7 @@ export function located(directories: () => Iterable<string>): Filter {
   return (event) => {
     const directory = event.location?.directory
     if (!directory) return true
-    return [...directories()].includes(directory)
+    const target = directoryKey(directory)
+    return [...directories()].some((candidate) => directoryKey(candidate) === target)
   }
 }

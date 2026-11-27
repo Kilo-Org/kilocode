@@ -13,7 +13,9 @@ const { createRoot, createSignal } = (await import(CLIENT_SOLID)) as {
   createRoot: <T>(fn: (dispose: () => void) => T) => T
   createSignal: <T>(value: T) => [Accessor<T>, Setter<T>]
 }
-const { createKiloCatalog, failureMessage, failureNeedsSignIn } = await import("../webview-ui/src/v2/kilo-catalog")
+const { catalogAuthFailure, createKiloCatalog, failureMessage, failureNeedsSignIn, signInAction } = await import(
+  "../webview-ui/src/v2/kilo-catalog"
+)
 
 const t = (key: string, vars?: { status: number }) => (vars ? `${key}:${vars.status}` : key)
 
@@ -69,6 +71,38 @@ describe("failureNeedsSignIn", () => {
     expect(failureNeedsSignIn({ kind: "organization_missing" })).toBe(false)
     expect(failureNeedsSignIn({ kind: "scope_conflict" })).toBe(false)
     expect(failureNeedsSignIn({ kind: "personal_unavailable" })).toBe(false)
+  })
+})
+
+describe("catalogAuthFailure & signInAction", () => {
+  test("converts only auth catalog failures into sign-in banner failures", () => {
+    expect(catalogAuthFailure({ kind: "unauthorized", status: 401 })).toEqual({
+      key: "provider.failure.unauthorized",
+      message: "Credentials rejected (HTTP 401). Sign in again.",
+      params: { status: 401 },
+      auth: true,
+    })
+    expect(catalogAuthFailure({ kind: "unauthorized" })).toEqual({
+      key: "provider.failure.unauthorizedNoStatus",
+      message: "Credentials rejected. Sign in again.",
+      auth: true,
+    })
+    expect(catalogAuthFailure({ kind: "unauthenticated" })).toEqual({
+      key: "provider.failure.unauthenticated",
+      message: "Not signed in.",
+      auth: true,
+    })
+    expect(catalogAuthFailure({ kind: "network" })).toBeUndefined()
+    expect(catalogAuthFailure({ kind: "http", status: 503 })).toBeUndefined()
+    expect(catalogAuthFailure(undefined)).toBeUndefined()
+  })
+
+  test("gates the sign-in callback on failureNeedsSignIn", () => {
+    const login = () => {}
+    expect(signInAction({ kind: "unauthorized", status: 401 }, login)).toBe(login)
+    expect(signInAction({ kind: "unauthenticated" }, login)).toBe(login)
+    expect(signInAction({ kind: "network" }, login)).toBeUndefined()
+    expect(signInAction(undefined, login)).toBeUndefined()
   })
 })
 
