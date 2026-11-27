@@ -177,10 +177,15 @@ function handle(request: IncomingMessage, response: ServerResponse) {
       if (mode === "unauthorized") return send(response, json(401, { message: "Unauthorized" }))
       if (mode === "bad") return send(response, json(200, { value: "not a jwt\n::error::x" }))
       // A distinct token per request, so the STS side can tell which one it received.
-      const token = ["hdrSynthetic", `payload${state.everIssued.length}Synthetic`, `sig-synthetic_${state.everIssued.length}`].join(".")
+      const token = [
+        "hdrSynthetic",
+        `payload${state.everIssued.length}Synthetic`,
+        `sig-synthetic_${state.everIssued.length}`,
+      ].join(".")
       state.issued.push(token)
       state.everIssued.push(token)
-      if (mode === "concatenated") return send(response, { status: 200, body: JSON.stringify({ value: token }).repeat(2) })
+      if (mode === "concatenated")
+        return send(response, { status: 200, body: JSON.stringify({ value: token }).repeat(2) })
       return send(response, json(200, { count: 1, value: token }))
     }
     if (`https://${host}` === state.audience && request.method === "POST") {
@@ -226,9 +231,24 @@ beforeAll(async () => {
   cert = path.join(root, "cert.pem")
   const key = path.join(root, "key.pem")
   const openssl = Bun.spawnSync([
-    "openssl", "req", "-x509", "-newkey", "ec", "-pkeyopt", "ec_paramgen_curve:prime256v1", "-nodes", "-days", "1",
-    "-subj", "/CN=sts.kiloapps.io", "-addext", `subjectAltName=${HOSTS.map((host) => `DNS:${host}`).join(",")}`,
-    "-keyout", key, "-out", cert,
+    "openssl",
+    "req",
+    "-x509",
+    "-newkey",
+    "ec",
+    "-pkeyopt",
+    "ec_paramgen_curve:prime256v1",
+    "-nodes",
+    "-days",
+    "1",
+    "-subj",
+    "/CN=sts.kiloapps.io",
+    "-addext",
+    `subjectAltName=${HOSTS.map((host) => `DNS:${host}`).join(",")}`,
+    "-keyout",
+    key,
+    "-out",
+    cert,
   ])
   if (openssl.exitCode !== 0) throw new Error(`openssl failed: ${openssl.stderr.toString()}`)
 
@@ -412,7 +432,8 @@ function parseOutputs(text: string) {
     const heredoc = /^([A-Za-z_][A-Za-z0-9_]*)<<(ghadelimiter_[0-9a-f]{32})$/.exec(line)
     if (!heredoc) {
       const single = /^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/.exec(line)
-      if (!single) throw new Error(`GITHUB_OUTPUT line is neither a heredoc header nor NAME=value: ${line.slice(0, 40)}`)
+      if (!single)
+        throw new Error(`GITHUB_OUTPUT line is neither a heredoc header nor NAME=value: ${line.slice(0, 40)}`)
       plain[single[1]!] = single[2]!
       i += 1
       continue
@@ -572,7 +593,11 @@ describe.skipIf(!supported)("kilo-credentials action", () => {
 
   test("waits 5 s after a 503 without a hint", async () => {
     reset([() => ({ status: 503, body: "busy" }), ok])
-    expectRetriedSuccess(await run(), [5], "kilo-credentials: STS bundle request returned HTTP 503; retrying in 5 s (attempt 2 of 3)")
+    expectRetriedSuccess(
+      await run(),
+      [5],
+      "kilo-credentials: STS bundle request returned HTTP 503; retrying in 5 s (attempt 2 of 3)",
+    )
   })
 
   test("caps the wait at 60 s", async () => {
@@ -597,7 +622,11 @@ describe.skipIf(!supported)("kilo-credentials action", () => {
 
   test("retries a dropped STS connection", async () => {
     reset([() => ({ status: 0, drop: true }), ok])
-    expectRetriedSuccess(await run(), [5], /^kilo-credentials: STS bundle request failed \(curl exit (52|56)\); retrying in 5 s/)
+    expectRetriedSuccess(
+      await run(),
+      [5],
+      /^kilo-credentials: STS bundle request failed \(curl exit (52|56)\); retrying in 5 s/,
+    )
     expect(state.stsRequests).toEqual([true, true])
   })
 
@@ -626,16 +655,23 @@ describe.skipIf(!supported)("kilo-credentials action", () => {
 
   test("fails after three 503s, naming retryAfterSeconds", async () => {
     reset([unavailable(1)])
-    expectFailure(await run(), "STS bundle request returned HTTP 503 (unavailable internal); retryAfterSeconds=1 after 3 attempts", {
-      waits: [1, 1],
-    })
+    expectFailure(
+      await run(),
+      "STS bundle request returned HTTP 503 (unavailable internal); retryAfterSeconds=1 after 3 attempts",
+      {
+        waits: [1, 1],
+      },
+    )
     expect(state.stsRequests).toHaveLength(3)
     expect(state.oidcRequests).toBe(3)
   })
 
   test("fails after three OIDC 5xx answers without calling STS", async () => {
     reset([ok], ["error"])
-    expectFailure(await run(), "GitHub OIDC token request returned HTTP 500 after 3 attempts", { stsCalled: false, waits: [5, 5] })
+    expectFailure(await run(), "GitHub OIDC token request returned HTTP 500 after 3 attempts", {
+      stsCalled: false,
+      waits: [5, 5],
+    })
     expect(state.oidcRequests).toBe(3)
   })
 
@@ -647,7 +683,9 @@ describe.skipIf(!supported)("kilo-credentials action", () => {
 
   test("does not retry another curl error", async () => {
     reset()
-    expectFailure(await run({ env: { CURL_FAIL_ONCE: "sts:6" } }), "STS bundle request failed (curl exit 6)", { stsCalled: false })
+    expectFailure(await run({ env: { CURL_FAIL_ONCE: "sts:6" } }), "STS bundle request failed (curl exit 6)", {
+      stsCalled: false,
+    })
   })
 
   test("does not retry a refusal", async () => {
@@ -658,14 +696,26 @@ describe.skipIf(!supported)("kilo-credentials action", () => {
 
   test("fails on a stale bundle", async () => {
     reset([() => json(200, bundle({ stale: true }))])
-    expectFailure(await run(), `STS served a stale copy of the ${WORKLOAD} bundle, fetched at ${FETCHED_AT}; run the job again later`)
+    expectFailure(
+      await run(),
+      `STS served a stale copy of the ${WORKLOAD} bundle, fetched at ${FETCHED_AT}; run the job again later`,
+    )
   })
 
   test("refuses a value that contains its delimiter", async () => {
     reset([
-      () => json(200, bundle({ secrets: { ...bundle().secrets, [A]: { value: `x\n${COLLISION_DELIMITER}\ny-synthetic`, version: 1 } } })),
+      () =>
+        json(
+          200,
+          bundle({
+            secrets: { ...bundle().secrets, [A]: { value: `x\n${COLLISION_DELIMITER}\ny-synthetic`, version: 1 } },
+          }),
+        ),
     ])
-    expectFailure(await run({ env: { PATH: `${fixedOd}:${wrap}:${process.env.PATH ?? ""}` } }), "could not set the outputs")
+    expectFailure(
+      await run({ env: { PATH: `${fixedOd}:${wrap}:${process.env.PATH ?? ""}` } }),
+      "could not set the outputs",
+    )
   })
 
   test("deletes the key file when GITHUB_OUTPUT cannot be written", async () => {
@@ -686,23 +736,61 @@ describe.skipIf(!supported)("kilo-credentials action", () => {
   })
 
   const failures: Array<[string, () => Reply, string | undefined]> = [
-    ["a missing key", () => json(200, bundle({ secrets: { [A]: { value: SECRETS[A], version: 1 } }, missing: [J, M] })), `lacks requested keys: ${J}(not in the manager) ${M}(not in the manager)`],
-    ["a key not granted", () => json(200, bundle({ secrets: { [A]: { value: SECRETS[A], version: 1 } } })), `lacks requested keys: ${J} ${M}`],
+    [
+      "a missing key",
+      () => json(200, bundle({ secrets: { [A]: { value: SECRETS[A], version: 1 } }, missing: [J, M] })),
+      `lacks requested keys: ${J}(not in the manager) ${M}(not in the manager)`,
+    ],
+    [
+      "a key not granted",
+      () => json(200, bundle({ secrets: { [A]: { value: SECRETS[A], version: 1 } } })),
+      `lacks requested keys: ${J} ${M}`,
+    ],
     ["401", () => json(401, { status: "denied", reason: "identity_rejected" }), "HTTP 401 (denied identity_rejected)"],
     ["a hostile 500 text", () => ({ status: 500, body: HOSTILE }), "STS bundle request returned HTTP 500"],
-    ["a hostile 403 JSON", () => json(403, { status: "denied", reason: "x\n::error::injected %0A", error: "a".repeat(10000), message: SECRETS[U] }), "HTTP 403 (denied)"],
+    [
+      "a hostile 403 JSON",
+      () =>
+        json(403, {
+          status: "denied",
+          reason: "x\n::error::injected %0A",
+          error: "a".repeat(10000),
+          message: SECRETS[U],
+        }),
+      "HTTP 403 (denied)",
+    ],
     ["an oversized 500", () => ({ status: 500, body: "E".repeat(3 * 1024 * 1024) }), "curl exit 63"],
     ["an oversized 200", () => ({ status: 200, body: " ".repeat(2 * 1024 * 1024) }), "curl exit 63"],
-    ["an oversized 200 without a length", () => ({ status: 200, body: " ".repeat(2 * 1024 * 1024), unsized: true }), undefined],
+    [
+      "an oversized 200 without a length",
+      () => ({ status: 200, body: " ".repeat(2 * 1024 * 1024), unsized: true }),
+      undefined,
+    ],
     ["an empty 200", () => ({ status: 200 }), "STS bundle response"],
     ["malformed JSON", () => ({ status: 200, body: '{"status": "ok", "secrets": {' }), "not JSON"],
-    ["concatenated JSON", () => ({ status: 200, body: JSON.stringify(bundle()) + JSON.stringify(bundle()) }), "expected shape"],
+    [
+      "concatenated JSON",
+      () => ({ status: 200, body: JSON.stringify(bundle()) + JSON.stringify(bundle()) }),
+      "expected shape",
+    ],
     ["a JSON array", () => json(200, [SECRETS[A]]), "expected shape"],
     ["an extra key", () => json(200, bundle({ extra: 1 })), "expected shape"],
     ["another workload", () => json(200, bundle({ workload: "ci-other" })), `workload ci-other, not ${WORKLOAD}`],
-    ["a negative version", () => json(200, bundle({ secrets: { [A]: { value: "v-synthetic", version: -1 } } })), "expected shape"],
-    ["a value that is not a string", () => json(200, bundle({ secrets: { [A]: { value: 12345, version: 1 } } })), "expected shape"],
-    ["a lower-case secret name", () => json(200, bundle({ secrets: { lower_key: { value: "v-synthetic", version: 1 } } })), "expected shape"],
+    [
+      "a negative version",
+      () => json(200, bundle({ secrets: { [A]: { value: "v-synthetic", version: -1 } } })),
+      "expected shape",
+    ],
+    [
+      "a value that is not a string",
+      () => json(200, bundle({ secrets: { [A]: { value: 12345, version: 1 } } })),
+      "expected shape",
+    ],
+    [
+      "a lower-case secret name",
+      () => json(200, bundle({ secrets: { lower_key: { value: "v-synthetic", version: 1 } } })),
+      "expected shape",
+    ],
     ["304", () => ({ status: 304, headers: { etag: '"etag_synthetic_0123456789"' } }), "HTTP 304"],
     ["204", () => ({ status: 204 }), "HTTP 204"],
     ["404", () => ({ status: 404, body: "Not Found" }), "HTTP 404"],
