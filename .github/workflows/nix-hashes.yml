@@ -8,6 +8,13 @@ permissions:
 
 on:
   workflow_dispatch:
+    # kilocode_change start
+    inputs:
+      sts_check:
+        description: "Only check that the Kilo STS bundle of ci-kilocode-app-key mints a Kilo Maintainer app token; compute and push no hashes"
+        type: boolean
+        default: false
+    # kilocode_change end
   push:
     branches: [main]
     paths:
@@ -21,14 +28,14 @@ on:
       - ".github/workflows/nix-hashes.yml"
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}${{ inputs.sts_check && '-sts-check' || '' }} # kilocode_change - a check run neither cancels nor is cancelled by a hash run
   cancel-in-progress: true
 
 jobs:
   # Native runners required: bun install cross-compilation flags (--os/--cpu)
   # do not produce byte-identical node_modules as native installs.
   compute-hash:
-    if: github.repository == 'Kilo-Org/kilocode'
+    if: github.repository == 'Kilo-Org/kilocode' && !inputs.sts_check # kilocode_change
     strategy:
       fail-fast: false
       matrix:
@@ -103,7 +110,7 @@ jobs:
 
   update-hashes:
     needs: compute-hash
-    if: github.repository == 'Kilo-Org/kilocode' && github.event_name != 'pull_request'
+    if: github.repository == 'Kilo-Org/kilocode' && github.event_name != 'pull_request' && !inputs.sts_check # kilocode_change
     runs-on: blacksmith-4vcpu-ubuntu-2404
 
     # kilocode_change start
@@ -183,3 +190,51 @@ jobs:
 
           echo "### Nix hashes" >> "$GITHUB_STEP_SUMMARY"
           echo "Status: committed $(git rev-parse --short HEAD)" >> "$GITHUB_STEP_SUMMARY"
+
+  # kilocode_change start
+  # Manual check of the Kilo STS bundle, run only by `gh workflow run nix-hashes.yml -f sts_check=true`
+  # on main. It reads KILOCODE_MAINTAINER_APP_KEY from the ci-kilocode-app-key bundle (STS policy in
+  # Kilo-Org/cloud services/sts/policy/ci-kilocode-app-key.yaml, which names this workflow on main,
+  # environment automation and the push and workflow_dispatch events) and mints a Kilo Maintainer
+  # app token with metadata read only, which proves the stored key works. It writes nothing and
+  # never prints the token. Read .github/actions/kilo-credentials/README.md before changing it.
+  sts-check:
+    if: github.repository == 'Kilo-Org/kilocode' && inputs.sts_check
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    environment: automation
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Require main
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::sts_check runs only on refs/heads/main, not $GITHUB_REF"
+            exit 1
+          fi
+
+      - name: Checkout the kilo-credentials action
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/actions/kilo-credentials
+
+      - name: Read the STS bundle
+        id: creds
+        uses: ./.github/actions/kilo-credentials
+        with:
+          workload: ci-kilocode-app-key
+          secrets: KILOCODE_MAINTAINER_APP_KEY
+
+      - name: Mint a Kilo Maintainer app token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
+        with:
+          app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
+          private-key: ${{ steps.creds.outputs.KILOCODE_MAINTAINER_APP_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: kilocode
+          permission-metadata: read
+
+      - name: Report
+        run: echo "Minted a Kilo Maintainer app token for kilocode from the STS bundle of ci-kilocode-app-key"
+  # kilocode_change end
