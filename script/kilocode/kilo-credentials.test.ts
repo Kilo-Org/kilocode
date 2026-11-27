@@ -216,8 +216,8 @@ let httpsServer: HttpsServer
 let proxy: NetServer
 let proxyPort = 0
 const bashPath = Bun.which("bash") ?? "bash"
-// The action is for the Ubuntu runners its workflows use; Windows has no bash with curl and jq by
-// default, so the test skips there.
+// The action is for the Ubuntu runners its workflows use; the test relies on POSIX file modes and
+// bash wrappers on PATH, so it skips on Windows.
 const supported = process.platform !== "win32"
 
 beforeAll(async () => {

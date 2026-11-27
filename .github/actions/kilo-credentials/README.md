@@ -39,7 +39,7 @@ temporary directory with mode 0700, which the action deletes when it exits. The 
 |---|---|
 | Typical: STS serves the bundle from its cache | about 1 s |
 | Cold: STS first fills the bundle from the secret manager | about 20 s |
-| STS or the secret manager is down (503 with `retryAfterSeconds` 30 to 60) | about 3 min before the action fails |
+| The secret manager is down or STS times out internally (503 with `retryAfterSeconds` 30 to 60) | about 2 to 3 min before the action fails |
 | OIDC request limit | 30 s |
 | STS request limit, per attempt | 60 s |
 | Worst case before the action fails | about 6.5 min: 3 attempts × (30 s + 60 s) + 2 waits × 60 s |
@@ -83,7 +83,7 @@ path. The value is still masked.
 
 | Bundle key | Output | Consumer and the form it needs |
 |---|---|---|
-| `KILOCODE_AUR_KEY` | `KILOCODE_AUR_KEY_FILE` | `ssh` and `git` read the key from a file (`ssh -i`, `GIT_SSH_COMMAND`). `ssh` needs the key's final newline; the stored value ends with one, and the file keeps it |
+| `KILOCODE_AUR_KEY` | `KILOCODE_AUR_KEY_FILE` | `ssh` and `git` read the key from a file (`ssh -i`, `GIT_SSH_COMMAND`). `ssh` needs the key's final newline, so the stored value must end with one; the file keeps the exact bytes |
 | `KILOCODE_JETBRAINS_PRIVATE_KEY` | `KILOCODE_JETBRAINS_PRIVATE_KEY_FILE` | The Gradle signing task reads `JETBRAINS_PRIVATE_KEY_FILE` (`packages/kilo-jetbrains/build.gradle.kts`) |
 | `KILOCODE_JETBRAINS_CERTIFICATE_CHAIN` | `KILOCODE_JETBRAINS_CERTIFICATE_CHAIN_FILE` | The Gradle signing task reads `JETBRAINS_CERTIFICATE_CHAIN_FILE` |
 | `KILOCODE_MAINTAINER_APP_KEY` | `KILOCODE_MAINTAINER_APP_KEY` | `actions/create-github-app-token`, also through `setup-git-committer`, takes the PEM contents in `private-key`, so this key is a value output |
