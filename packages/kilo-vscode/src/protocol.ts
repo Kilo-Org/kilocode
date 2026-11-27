@@ -2,7 +2,7 @@
 // requests through the host (`fetch`), and the host streams each response back in order.
 import type { KiloIndexingRpc } from "@opencode/schema/kilocode/indexing"
 import type { ReviewCommentData, ReviewCommentEntry } from "./shared/review-comments"
-import type { WorkStyle, WorkStyleState } from "./shared/work-style-presets"
+import { getDisplayPreset, type WorkStyle, type WorkStyleState } from "./shared/work-style-presets"
 
 import type { BrowserReference } from "./shared/browser-feedback"
 import type {
@@ -54,7 +54,7 @@ export type ReasoningDisplay = "expanded" | "preview" | "headline"
 
 /**
  * How the chat starts each kind of tool block and reasoning block. The Kilo config keys are not in the config API, so
- * the host reads the config documents and sends the effective values, with the same defaults as v1.
+ * the host reads the config documents and sends the effective values, defaulting to the High autonomy display preset.
  */
 export type DisplaySettings = {
   terminalCommandDisplay: ToolDisplayLayout
@@ -64,12 +64,13 @@ export type DisplaySettings = {
   reasoningDisplay: ReasoningDisplay
 }
 
+const autonomousDisplay = getDisplayPreset("autonomous")
 export const DISPLAY_DEFAULTS: DisplaySettings = {
-  terminalCommandDisplay: "expanded",
-  codeEditDisplay: "collapsed",
-  mcpToolDisplay: "collapsed",
-  codeModeDisplay: "collapsed",
-  reasoningDisplay: "expanded",
+  terminalCommandDisplay: autonomousDisplay.terminal_command_display,
+  codeEditDisplay: autonomousDisplay.code_edit_display,
+  mcpToolDisplay: autonomousDisplay.mcp_tool_display,
+  codeModeDisplay: autonomousDisplay.code_mode_display,
+  reasoningDisplay: autonomousDisplay.reasoning_display,
 }
 
 /**

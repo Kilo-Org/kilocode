@@ -90,8 +90,7 @@ function display(style: WorkStyle): DisplayPreset {
     terminal_command_display: human ? "expanded" : "collapsed",
     code_edit_display: human ? "expanded" : "collapsed",
     mcp_tool_display: "collapsed",
-    // Review first lists each tool call a script makes; high autonomy keeps it to one line.
-    code_mode_display: human ? "expanded" : "collapsed",
+    code_mode_display: "expanded",
   }
 }
 

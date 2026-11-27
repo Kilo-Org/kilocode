@@ -12,7 +12,7 @@ describe("display presets", () => {
     expect(WORK_STYLE_CHOICES).toEqual(["human-in-the-loop", "autonomous"])
   })
 
-  test("human-in-the-loop expands reasoning, commands and edits and shows the approval reason", () => {
+  test("human-in-the-loop expands reasoning, commands, edits and Code Mode", () => {
     expect(getDisplayPreset("human-in-the-loop")).toEqual({
       reasoning_display: "expanded",
       terminal_command_display: "expanded",
@@ -22,13 +22,13 @@ describe("display presets", () => {
     })
   })
 
-  test("autonomous previews reasoning, collapses commands and edits and hides the approval reason", () => {
+  test("autonomous previews reasoning, collapses commands, edits and MCP tools, and expands Code Mode", () => {
     expect(getDisplayPreset("autonomous")).toEqual({
       reasoning_display: "preview",
       terminal_command_display: "collapsed",
       code_edit_display: "collapsed",
       mcp_tool_display: "collapsed",
-      code_mode_display: "collapsed",
+      code_mode_display: "expanded",
     })
   })
 })
@@ -92,7 +92,7 @@ describe("buildWorkStylePlan", () => {
         terminal_command_display: "expanded",
         code_edit_display: "collapsed",
         mcp_tool_display: "expanded",
-        code_mode_display: "expanded",
+        code_mode_display: "collapsed",
         auto_collapse_reasoning: true,
         permission: { edit: "ask" },
       },

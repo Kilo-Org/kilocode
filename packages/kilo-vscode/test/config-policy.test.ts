@@ -45,13 +45,13 @@ describe("configPolicy", () => {
 })
 
 describe("displaySettings", () => {
-  test("uses the v1 defaults when no document sets a layout", () => {
+  test("uses the built-in defaults when no document sets a layout", () => {
     expect(displaySettings([{ path: targets.global, text: "{}" }])).toEqual({
-      terminalCommandDisplay: "expanded",
+      terminalCommandDisplay: "collapsed",
       codeEditDisplay: "collapsed",
       mcpToolDisplay: "collapsed",
-      codeModeDisplay: "collapsed",
-      reasoningDisplay: "expanded",
+      codeModeDisplay: "expanded",
+      reasoningDisplay: "preview",
     })
   })
 
@@ -67,8 +67,8 @@ describe("displaySettings", () => {
       terminalCommandDisplay: "expanded",
       codeEditDisplay: "expanded",
       mcpToolDisplay: "expanded",
-      codeModeDisplay: "collapsed",
-      reasoningDisplay: "expanded",
+      codeModeDisplay: "expanded",
+      reasoningDisplay: "preview",
     })
   })
 
@@ -78,11 +78,11 @@ describe("displaySettings", () => {
       { path: targets.project, text: "not json" },
     ]
     expect(displaySettings(documents)).toEqual({
-      terminalCommandDisplay: "expanded",
+      terminalCommandDisplay: "collapsed",
       codeEditDisplay: "collapsed",
       mcpToolDisplay: "expanded",
-      codeModeDisplay: "collapsed",
-      reasoningDisplay: "expanded",
+      codeModeDisplay: "expanded",
+      reasoningDisplay: "preview",
     })
   })
 
@@ -109,6 +109,6 @@ describe("displaySettings", () => {
   test("ignores an invalid reasoning mode", () => {
     expect(
       displaySettings([{ path: targets.global, text: '{"reasoning_display": "collapsed"}' }]).reasoningDisplay,
-    ).toBe("expanded")
+    ).toBe("preview")
   })
 })

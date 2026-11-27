@@ -1,4 +1,4 @@
-import type { ReasoningDisplay } from "../../../src/protocol"
+import { DISPLAY_DEFAULTS, type ReasoningDisplay } from "../../../src/protocol"
 
 type Values = Record<string, unknown> | undefined
 
@@ -15,5 +15,6 @@ export function resolveReasoningDisplay(project: Values, global: Values): Reason
   const mode = explicit(project) ?? explicit(global)
   if (mode) return mode
   const autoCollapse = project?.auto_collapse_reasoning ?? global?.auto_collapse_reasoning
-  return autoCollapse === true ? "preview" : "expanded"
+  if (typeof autoCollapse === "boolean") return autoCollapse ? "preview" : "expanded"
+  return DISPLAY_DEFAULTS.reasoningDisplay
 }
