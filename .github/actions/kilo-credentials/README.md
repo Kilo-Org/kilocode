@@ -2,11 +2,18 @@
 
 Reads the job's secret bundle from Kilo STS and sets each requested secret as a step output.
 
-**Callers.** The only caller so far is the `sts-check` job of `.github/workflows/nix-hashes.yml`, a
-manual check (`gh workflow run nix-hashes.yml -f sts_check=true` on `main`) that reads the
-`ci-kilocode-app-key` bundle and mints a Kilo Maintainer app token with it. Only the app's private
-key comes from STS; the app id still comes from the GitHub secret `KILO_MAINTAINER_APP_ID`. Every
-other job still reads GitHub secrets.
+**Callers.** Three jobs read the `ci-kilocode-app-key` bundle, all in the environment `automation`.
+Each takes only the Kilo Maintainer app's private key from STS; the app id still comes from the
+GitHub secret `KILO_MAINTAINER_APP_ID`.
+
+| Workflow | Job | Use |
+|---|---|---|
+| `.github/workflows/nix-hashes.yml` | `update-hashes` | Pushes the updated `nix/hashes.json` to `main`; reads the bundle only when that file changed |
+| `.github/workflows/nix-hashes.yml` | `sts-check` | Manual check (`gh workflow run nix-hashes.yml -f sts_check=true` on `main`) that mints an app token with metadata read only |
+| `.github/workflows/prepare-jetbrains-release.yml` | `prepare` | Creates the JetBrains release tag, branch and pull request; installs no packages, so the release script imports none |
+
+Every other job still reads GitHub secrets, including the `KILO_MAINTAINER_APP_SECRET` reader in
+`.github/workflows/publish.yml`.
 
 **Subject.** Kilo-Org/kilocode's OIDC tokens still carry GitHub's default subject
 (`repo:Kilo-Org/kilocode:environment:<name>`). STS admits that subject through its `legacySubject`
@@ -145,13 +152,19 @@ jobs:
   `KILOCODE_JETBRAINS_PRIVATE_KEY`, `KILOCODE_JETBRAINS_CERTIFICATE_CHAIN`) ends with an
   `if: always()` step that deletes those paths, as in the example. The runner also empties
   `$RUNNER_TEMP` when the job ends, and the action deletes its files itself when it fails.
-- Every action used after this step is pinned by its full commit SHA, so a moved tag cannot run new
-  code next to the secrets.
+- Every action used in the job is pinned by its full commit SHA, so a moved tag cannot run new code
+  next to the secrets.
 - Every step before this one is trusted. An earlier step can change the `PATH` and the environment
   this action runs with, through `GITHUB_PATH` and `GITHUB_ENV`: for example `BASH_ENV`,
   `HTTPS_PROXY` or `ALL_PROXY`, `CURL_CA_BUNDLE`, `SSL_CERT_FILE` or `SSLKEYLOGFILE`, any of which
-  can expose the OIDC token or the bundle. Every step also runs as the same user. The job runs only
-  trusted code, never code from a fork or from a pull request.
+  can expose the OIDC token or the bundle.
+- No step anywhere in the job, before or after this one, runs untrusted code: no code from a fork
+  or from a pull request, and no third-party package install or lifecycle script (`bun install`,
+  `npm install`, `pip install`, `npx` or `bunx` of a package, and the like). Moving this step does
+  not help, for two reasons. With `id-token: write`, any step can request its own OIDC token and
+  read the bundle from STS itself. And every step runs as the same user, so a later step can read
+  the earlier steps' outputs, including this one's values, from the runner's files under
+  `$RUNNER_TEMP`.
 
 ## Tests
 

@@ -1,6 +1,5 @@
 # kilocode_change - new file
-# First caller: the sts-check job of .github/workflows/nix-hashes.yml. Read README.md next to this
-# file before adding another caller.
+# Callers are listed in README.md next to this file (Callers). Read it before adding another caller.
 name: "Kilo credentials"
 description: "Read the job's secret bundle from Kilo STS with the GitHub OIDC token and set each requested secret as a step output"
 inputs:
