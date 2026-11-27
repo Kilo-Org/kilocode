@@ -1,0 +1,51 @@
+name: Setup Zig
+description: Install the pinned Linux x86_64 Zig compiler for Kilo sandbox helpers
+runs:
+  using: composite
+  steps:
+    - name: Install minisign
+      shell: bash
+      run: |
+        if ! command -v minisign >/dev/null; then
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends minisign
+        fi
+
+    - name: Download and verify Zig
+      shell: bash
+      run: |
+        version=0.14.1
+        archive="zig-x86_64-linux-$version.tar.xz"
+        sha256=24aeeec8af16c381934a6cd7d95c807a8cb2cf7df9fa40d359aa884195c4716c
+        # Zig Software Foundation release key from https://ziglang.org/download/
+        pubkey=RWSGOq2NVecA2UPNdBUZykf1CCb147pkmdtYxgb3Ti+JO/wCYvhbAb/U
+
+        # Keep a short list from https://ziglang.org/download/community-mirrors.txt
+        # so a ziglang.org outage doesn't prevent discovery. Use upstream last.
+        mapfile -t mirrors < <(printf '%s\n' https://pkg.hexops.org/zig https://zig.linus.dev/zig https://zig.squirl.dev | sort -R)
+        mirrors+=("https://ziglang.org/download/$version")
+        work=$(mktemp -d "$RUNNER_TEMP/zig.XXXXXXXX")
+        cd "$work" || exit 1
+        fetch() {
+          curl --fail --silent --show-error --location --connect-timeout 10 --max-time 90 \
+            --remove-on-error --output "$1" "$mirror/$1?source=kilocode"
+        }
+
+        for mirror in "${mirrors[@]}"; do
+          echo "Fetching $archive from $mirror"
+          fetch "$archive" || continue
+          echo "$sha256  $archive" | sha256sum --check || continue
+          fetch "$archive.minisig" || continue
+          comment=$(minisign -VQ -P "$pubkey" -m "$archive") || continue
+          # -VQ outputs the authenticated, tab-separated comment. Require its exact file field.
+          if [[ $'\t'"$comment"$'\t' != *$'\t'"file:$archive"$'\t'* ]]; then
+            echo 'Signature names a different archive' >&2
+            continue
+          fi
+
+          tar -xJf "$archive"
+          echo "$PWD/${archive%.tar.xz}" >> "$GITHUB_PATH"
+          exit 0
+        done
+        echo "No source supplied a verified $archive" >&2
+        exit 1
