@@ -196,11 +196,13 @@ jobs:
   # on main. It reads KILOCODE_MAINTAINER_APP_KEY from the ci-kilocode-app-key bundle (STS policy in
   # Kilo-Org/cloud services/sts/policy/ci-kilocode-app-key.yaml, which names this workflow on main,
   # environment automation and the push and workflow_dispatch events) and mints a Kilo Maintainer
-  # app token with metadata read only, which proves the stored key works. It writes nothing and
-  # never prints the token. Read .github/actions/kilo-credentials/README.md before changing it.
+  # app token with metadata read only, which proves the stored key works. It pushes nothing, changes
+  # no repository content and never prints the token. Read .github/actions/kilo-credentials/README.md
+  # before changing it.
   sts-check:
     if: github.repository == 'Kilo-Org/kilocode' && inputs.sts_check
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 10
     environment: automation
     permissions:
       contents: read

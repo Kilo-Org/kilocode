@@ -4,8 +4,9 @@ Reads the job's secret bundle from Kilo STS and sets each requested secret as a 
 
 **Callers.** The only caller so far is the `sts-check` job of `.github/workflows/nix-hashes.yml`, a
 manual check (`gh workflow run nix-hashes.yml -f sts_check=true` on `main`) that reads the
-`ci-kilocode-app-key` bundle and mints a Kilo Maintainer app token with it. Every other job still
-reads GitHub secrets.
+`ci-kilocode-app-key` bundle and mints a Kilo Maintainer app token with it. Only the app's private
+key comes from STS; the app id still comes from the GitHub secret `KILO_MAINTAINER_APP_ID`. Every
+other job still reads GitHub secrets.
 
 **Subject.** Kilo-Org/kilocode's OIDC tokens still carry GitHub's default subject
 (`repo:Kilo-Org/kilocode:environment:<name>`). STS admits that subject through its `legacySubject`
@@ -13,7 +14,7 @@ exception, which is allowed for this repository alone and is live in production 
 Kilo-Org/cloud#12991. The token's repository and owner ids and every other policy binding are still
 checked. The repository cannot turn on GitHub's immutable subject yet, because npm trusted
 publishing fails with it (npm/cli#9969). When npm fixes that, the repository switches to the
-immutable subject and STS drops the exception (design Q62a; the steps are in the comment on
+immutable subject and STS drops the exception (the steps are in the comment on
 `GITHUB_LEGACY_SUBJECT_REPOSITORY` in Kilo-Org/cloud `services/sts/src/policy/schema.ts`).
 
 ## What it does
