@@ -80,11 +80,6 @@ Downloads all build artifacts and publishes to every distribution channel, in th
 - Uploads the npm and container SBOM evidence to the draft, checks the complete draft again (every expected asset, each with its recorded digest, nothing else) and only then publishes the GitHub Release with its notes. No asset is uploaded after this, so the published release never changes.
 - Publishes the packed tarballs to **npm**: the platform packages, then `@kilocode/cli`. The installer and `kilo upgrade` take the version from npm and download the archives from the GitHub Release, so npm gets the version only once the release is public.
 
-#### Package Registries (stable releases only)
-
-- **AUR (Arch Linux)**: Clones `kilo-bin` from the AUR, updates the `PKGBUILD` with new version and SHA256 checksums, and pushes.
-- **Homebrew**: Clones `Kilo-Org/homebrew-tap`, updates the `kilo.rb` formula with new version, download URLs, and SHA256 checksums, and pushes.
-
 #### SDK (`@kilocode/sdk`)
 
 - Builds and publishes the TypeScript SDK to **npm**.
@@ -98,12 +93,21 @@ Downloads all build artifacts and publishes to every distribution channel, in th
 - Publishes platform-specific VSIX packages to the **VS Code Marketplace** via `vsce publish --oidc`. The `publish` job runs in the `release` GitHub Actions environment, and the `kilocode` publisher trusts `Kilo-Org/kilocode`'s `publish.yml` workflow in that environment, so no Marketplace token is stored.
 - Publishes the same packages to **Open VSX** via `ovsx publish --trusted-publishing`, using GitHub Actions OIDC instead of a PAT.
 
+### 5. AUR and Homebrew (`package-managers`, stable releases only)
+
+Runs after `publish`, once the release is public, in the `release-keys` environment. It installs no packages and runs only `script/kilocode/package-managers.ts` on Node. It reads the AUR key and the kilo-maintainer app key from the STS bundle of `ci-kilocode-release` (see `.github/actions/kilo-credentials/README.md`), and takes the archive digests from the CLI evidence manifest `build-cli` recorded, after checking that manifest's digest.
+
+- **AUR (Arch Linux)**: Clones `kilo-bin` from the AUR over SSH (host keys pinned in the script), writes the `PKGBUILD` and `.SRCINFO` with the new version and SHA256 checksums, and pushes.
+- **Homebrew**: Clones `Kilo-Org/homebrew-tap` with an app token that may write only that repository, updates the `kilo.rb` formula with the new version, download URLs, and SHA256 checksums, and pushes.
+
+Each update is retried from a new clone up to three times. A repository that already has the files of this version is left unchanged, so the job can be re-run on its own (**Re-run failed jobs**). A failure fails the job but does not touch the release or the npm packages.
+
 ### Recovering from a Failed `publish` Job
 
 Re-run the failed `publish` job (**Re-run failed jobs**); the build jobs and their recorded digests are reused.
 
 - **Failed before the release was published** (for example the evidence upload or the second draft check): the GitHub Release is still a draft. The Docker images may already be pushed. The re-run skips the version commit and tag if they were pushed, removes leftover distribution evidence from the draft, packs and describes the npm packages again, rebuilds and pushes the images, uploads the evidence, checks the draft and publishes it. npm has nothing yet: packages are published only after the release.
-- **Failed after the release was published** (for example an npm publish): the re-run uploads nothing and does not touch the release. It checks the published assets (the CLI and VS Code assets against their recorded digests, the distribution evidence against its own manifest), skips the Docker builds, skips npm packages that are already published, and packs the others again; each tarball must have the digest the published evidence names, or the run stops before publishing it. AUR and Homebrew are updated again only if they changed.
+- **Failed after the release was published** (for example an npm publish): the re-run uploads nothing and does not touch the release. It checks the published assets (the CLI and VS Code assets against their recorded digests, the distribution evidence against its own manifest), skips the Docker builds, skips npm packages that are already published, and packs the others again; each tarball must have the digest the published evidence names, or the run stops before publishing it. The `package-managers` job runs again after it.
 
 ### Fixing a Bad Release
 
@@ -136,17 +140,26 @@ The `publish` job inherits the workflow's `id-token: write` permission. The Open
 
 ### Required Secrets
 
-The following secrets must be configured in the repository. The VS Code Marketplace needs no secret (see [Checking Marketplace Trusted Publishing](#checking-marketplace-trusted-publishing)).
+The following secrets must be configured in the repository. The VS Code Marketplace needs no secret (see [Checking Marketplace Trusted Publishing](#checking-marketplace-trusted-publishing)). The AUR key and the kilo-maintainer app key of the `package-managers` job come from Kilo STS, not from GitHub secrets.
 
 | Secret | Purpose |
 |---|---|
 | `KILO_API_KEY` | Kilo Gateway key for the pre-publish smoke test (`smoke-test.yml`) |
 | `KILO_ORG_ID` | Kilo organization ID for the pre-publish smoke test |
 | `BENCH_GITHUB_TOKEN` | Read access to `Kilo-Org/kilo-bench` for the pre-publish smoke test |
-| `KILO_MAINTAINER_APP_ID` | GitHub App ID for the kilo-maintainer bot (used for git commits) |
-| `KILO_MAINTAINER_APP_SECRET` | GitHub App secret for the kilo-maintainer bot |
+| `KILO_MAINTAINER_APP_SECRET` | GitHub App private key for the kilo-maintainer bot (release commit, tag, draft release and JetBrains pin PR in the `publish` job) |
 | `NPM_TOKEN` | npm authentication token for publishing packages |
-| `AUR_KEY` | SSH private key for pushing to the AUR |
+
+The repository variable `KILO_MAINTAINER_APP_ID` holds the kilo-maintainer app id, which is public.
+
+### Environments
+
+| Environment | Jobs | Purpose |
+|---|---|---|
+| `release` | `publish`, `oidc-check` | npm, VS Code Marketplace and Open VSX trusted publishing |
+| `release-keys` | `package-managers` | The only environment the STS policy `ci-kilocode-release` accepts; no other job of the workflow may use it (see `.github/actions/kilo-credentials/README.md`) |
+
+Both allow only `main`.
 
 ### Concurrency
 

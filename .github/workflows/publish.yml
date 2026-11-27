@@ -994,11 +994,11 @@ jobs:
         uses: ./.github/actions/setup-git-committer
         with:
           # kilocode_change start
-          kilo-maintainer-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
+          kilo-maintainer-app-id: ${{ vars.KILO_MAINTAINER_APP_ID }}
           kilo-maintainer-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
-          # The release script pushes to this repo and to Kilo-Org/homebrew-tap,
-          # and opens the JetBrains CLI pin bump PR.
-          repositories: kilocode,homebrew-tap
+          # The release script pushes the release commit and tag to this repo and opens the
+          # JetBrains CLI pin bump PR. The package-managers job updates Kilo-Org/homebrew-tap.
+          repositories: kilocode
           permission-contents: write
           permission-pull-requests: write
           # kilocode_change end
@@ -1024,12 +1024,6 @@ jobs:
         run: |
           mkdir -p packages/opencode/dist
           tar --zstd -xf /tmp/kilo-cli-signed.tar.zst -C packages/opencode/dist
-
-      - name: Verify package recipe manifest
-        env:
-          EXPECTED: ${{ needs.build-cli.outputs.manifest-sha256 }}
-        run: |
-          printf '%s  packages/opencode/dist/cli-sbom-evidence.json\n' "$EXPECTED" | sha256sum -c -
       # kilocode_change end
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2 # kilocode_change
         with:
@@ -1080,35 +1074,103 @@ jobs:
         run: bun script/kilocode/draft-assets.ts "v$VERSION"
       # kilocode_change end
 
-      # kilocode_change - no apt cache: this job publishes with release secrets, so it restores nothing from the shared cache
-
-      - name: Setup SSH for AUR
-        # kilocode_change start
-        env:
-          AUR_KEY: ${{ secrets.AUR_KEY }}
-        # kilocode_change end
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y pacman-package-manager
-          mkdir -p ~/.ssh
-          (umask 077 && printf '%s\n' "$AUR_KEY" > ~/.ssh/id_rsa) # kilocode_change
-          chmod 600 ~/.ssh/id_rsa
-          git config --global user.email "kilo-maintainer[bot]@users.noreply.github.com"
-          git config --global user.name "kilo-maintainer[bot]"
-          ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts || true
-
       - run: ./script/publish.ts
         env:
           KILO_VERSION: ${{ needs.version.outputs.version }}
           KILO_RELEASE: ${{ needs.version.outputs.release }}
           KILO_PRE_RELEASE: ${{ inputs.pre_release }}
           GH_REPO: ${{ github.repository }}
-          AUR_KEY: ${{ secrets.AUR_KEY }}
           GITHUB_TOKEN: ${{ steps.committer.outputs.token }}
           NPM_CONFIG_PROVENANCE: true
           SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }} # kilocode_change
           CLI_MANIFEST_SHA256: ${{ needs.sbom-cli-windows.outputs.manifest-sha256 }} # kilocode_change
           VSIX_SHA256: ${{ needs.build-vscode.outputs.vsix-sha256 }} # kilocode_change
+
+  # kilocode_change start - stable releases update the AUR package kilo-bin and the Homebrew formula
+  # in Kilo-Org/homebrew-tap once the release is public. This job reads the AUR key and the Kilo
+  # Maintainer app key from the STS bundle of ci-kilocode-release, which needs environment
+  # release-keys (main only) and id-token: write. STS tells jobs apart only by their environment, so
+  # no other job of this workflow uses release-keys, and this job runs only pinned actions from
+  # GitHub's actions organisation and this repository's code: it installs no packages. Read
+  # .github/actions/kilo-credentials/README.md before adding or moving a step.
+  package-managers:
+    name: Update AUR and Homebrew
+    needs: [version, build-cli, publish]
+    if: github.repository == 'Kilo-Org/kilocode' && needs.version.outputs.release != '' && !inputs.pre_release
+    runs-on: ubuntu-24.04-8core-x64 # GitHub-hosted with static egress for the org IP allow list (app token).
+    environment: release-keys
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/actions/kilo-credentials/
+            /.github/actions/setup-git-committer/
+            /script/kilocode/package-managers.ts
+
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: kilo-cli-sboms
+          path: ${{ runner.temp }}/build
+
+      # The recipes take the archive digests from the evidence manifest build-cli recorded.
+      - name: Verify package recipe manifest
+        env:
+          EXPECTED: ${{ needs.build-cli.outputs.manifest-sha256 }}
+          MANIFEST: ${{ runner.temp }}/build/cli-sbom-evidence.json
+        run: |
+          printf '%s  %s\n' "$EXPECTED" "$MANIFEST" | sha256sum -c -
+
+      - name: Read the STS bundle
+        id: creds
+        uses: ./.github/actions/kilo-credentials
+        with:
+          workload: ci-kilocode-release
+          secrets: |
+            KILOCODE_AUR_KEY
+            KILOCODE_MAINTAINER_APP_KEY
+
+      # Also sets the git identity of the AUR and Homebrew commits.
+      - name: Setup Git Committer
+        id: committer
+        uses: ./.github/actions/setup-git-committer
+        with:
+          kilo-maintainer-app-id: ${{ vars.KILO_MAINTAINER_APP_ID }}
+          kilo-maintainer-app-secret: ${{ steps.creds.outputs.KILOCODE_MAINTAINER_APP_KEY }}
+          repositories: homebrew-tap
+          permission-contents: write
+
+      - name: Update AUR
+        env:
+          AUR_KEY_FILE: ${{ steps.creds.outputs.KILOCODE_AUR_KEY_FILE }}
+          MANIFEST: ${{ runner.temp }}/build/cli-sbom-evidence.json
+          VERSION: ${{ needs.version.outputs.version }}
+        run: node script/kilocode/package-managers.ts aur "$MANIFEST" "$VERSION"
+
+      # Runs even when the AUR update failed; either failure fails the job.
+      - name: Update Homebrew
+        if: ${{ !cancelled() && steps.committer.conclusion == 'success' }}
+        env:
+          MANIFEST: ${{ runner.temp }}/build/cli-sbom-evidence.json
+          VERSION: ${{ needs.version.outputs.version }}
+        run: node script/kilocode/package-managers.ts homebrew "$MANIFEST" "$VERSION"
+
+      - name: Remove key files
+        if: always()
+        env:
+          AUR_KEY_FILE: ${{ steps.creds.outputs.KILOCODE_AUR_KEY_FILE }}
+        run: rm -f -- "$AUR_KEY_FILE"
+  # kilocode_change end
 
   # kilocode_change start - check VS Code Marketplace trusted publishing without
   # building or publishing anything. Exchanges the GitHub OIDC token for a

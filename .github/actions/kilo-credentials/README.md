@@ -2,18 +2,18 @@
 
 Reads the job's secret bundle from Kilo STS and sets each requested secret as a step output.
 
-**Callers.** Three jobs read the `ci-kilocode-app-key` bundle, all in the environment `automation`.
-Each takes only the Kilo Maintainer app's private key from STS; the app id still comes from the
-GitHub secret `KILO_MAINTAINER_APP_ID`.
+**Callers.** Four jobs read an STS bundle. Each takes only the keys in its `secrets:` input.
 
-| Workflow | Job | Use |
-|---|---|---|
-| `.github/workflows/nix-hashes.yml` | `update-hashes` | Pushes the updated `nix/hashes.json` to `main`; reads the bundle only when that file changed |
-| `.github/workflows/nix-hashes.yml` | `sts-check` | Manual check (`gh workflow run nix-hashes.yml -f sts_check=true` on `main`) that mints an app token with metadata read only |
-| `.github/workflows/prepare-jetbrains-release.yml` | `prepare` | Creates the JetBrains release tag, branch and pull request; installs no packages, so the release script imports none |
+| Workflow | Job | Workload and environment | Use |
+|---|---|---|---|
+| `.github/workflows/nix-hashes.yml` | `update-hashes` | `ci-kilocode-app-key`, `automation` | Pushes the updated `nix/hashes.json` to `main`; reads the bundle only when that file changed |
+| `.github/workflows/nix-hashes.yml` | `sts-check` | `ci-kilocode-app-key`, `automation` | Manual check (`gh workflow run nix-hashes.yml -f sts_check=true` on `main`) that mints an app token with metadata read only |
+| `.github/workflows/prepare-jetbrains-release.yml` | `prepare` | `ci-kilocode-app-key`, `automation` | Creates the JetBrains release tag, branch and pull request; installs no packages, so the release script imports none |
+| `.github/workflows/publish.yml` | `package-managers` | `ci-kilocode-release`, `release-keys` | Updates the AUR package `kilo-bin` (AUR key) and the Homebrew formula in `Kilo-Org/homebrew-tap` (app key) after a stable release; installs no packages, runs only `script/kilocode/package-managers.ts` on Node |
 
-Every other job still reads GitHub secrets, including the `KILO_MAINTAINER_APP_SECRET` reader in
-`.github/workflows/publish.yml`.
+The Kilo Maintainer app id comes from the repository variable `KILO_MAINTAINER_APP_ID` (the app id
+is public). Every other job still reads GitHub secrets, including the `KILO_MAINTAINER_APP_SECRET`
+reader in the `publish` job of `.github/workflows/publish.yml`.
 
 **Subject.** Kilo-Org/kilocode's OIDC tokens still carry GitHub's default subject
 (`repo:Kilo-Org/kilocode:environment:<name>`). STS admits that subject through its `legacySubject`
@@ -110,9 +110,9 @@ Every other key is a value output of the same name.
 
 ```yaml
 jobs:
-  publish:
+  package-managers:
     runs-on: ubuntu-latest
-    environment: release # must be the environment that the STS policy names
+    environment: release-keys # must be the environment that the STS policy names
     permissions:
       contents: read
       id-token: write
@@ -123,11 +123,7 @@ jobs:
         with:
           workload: ci-kilocode-release
           secrets: |
-            KILOCODE_ANACONDA_API_KEY
             KILOCODE_AUR_KEY
-      - run: anaconda upload ...
-        env:
-          ANACONDA_API_KEY: ${{ steps.creds.outputs.KILOCODE_ANACONDA_API_KEY }}
       - run: ./publish-aur.sh
         env:
           AUR_KEY_FILE: ${{ steps.creds.outputs.KILOCODE_AUR_KEY_FILE }}
@@ -143,6 +139,13 @@ jobs:
 - It runs in the GitHub environment that its STS policy names (`environment:`), and it has
   `permissions: id-token: write`. Without them STS refuses the token.
 - That environment's deployment branch policy allows `main` only.
+- No other job of the same workflow uses that environment unless it follows these rules too. STS
+  tells callers apart by the token's repository, environment, workflow file, ref and event; GitHub's
+  OIDC token has no claim that names the job. Every job of the workflow that runs in that
+  environment with `id-token: write` can therefore read the bundle, whether or not it uses this
+  action. This is why the `publish` job of `publish.yml`, which installs packages and runs in
+  `release` for npm, VS Code Marketplace and Open VSX trusted publishing, leaves the AUR and
+  Homebrew updates to the `package-managers` job in `release-keys`.
 - Its workflow is never callable with `workflow_call`. The OIDC token of a reusable workflow carries
   that workflow's `job_workflow_ref`, so any workflow allowed to call it would receive its bundle.
 - `secrets:` lists every key the job reads.
