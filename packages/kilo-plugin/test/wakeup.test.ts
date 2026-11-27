@@ -228,6 +228,27 @@ describe("wakeup service", () => {
     }),
   )
 
+  for (const timing of ["when", "delay"] as const) {
+    it.effect(`fires a one-shot cron task scheduled by ${timing} without promising recurrence`, () =>
+      Effect.gen(function* () {
+        const { wake, infos, prompts } = setup()
+        const created = yield* wake.scheduleCron({
+          sessionID,
+          prompt: "check the deploy once",
+          ...(timing === "when" ? { when: new Date(Date.now() + 60_000).toISOString() } : { delay: "1m" }),
+        })
+        if (!created.ok) throw new Error(created.error)
+        expect(created.wakeup.recurring).toBe(false)
+        expect(yield* wake.fire([...infos.values()][0]!)).toBe(true)
+        expect(prompts).toHaveLength(1)
+        expect(prompts[0]?.text).toStartWith("[scheduled cron task] check the deploy once")
+        expect(prompts[0]?.text).toContain("one-shot task")
+        expect(prompts[0]?.text).not.toContain("recurring task")
+        expect(yield* wake.list(sessionID)).toEqual([])
+      }),
+    )
+  }
+
   it.effect("fires a recurring task as a cron task and keeps its next slot", () =>
     Effect.gen(function* () {
       const { wake, infos, prompts } = setup()
@@ -236,6 +257,7 @@ describe("wakeup service", () => {
       const info = [...infos.values()][0]!
       expect(yield* wake.fire(info)).toBe(true)
       expect(prompts[0]?.text).toStartWith("[scheduled cron task] poll the deploy")
+      expect(prompts[0]?.text).toContain("recurring task")
       const remaining = yield* wake.list(sessionID)
       expect(remaining).toHaveLength(1)
       expect(remaining[0]?.dueAt).toBeGreaterThan(Date.now())
