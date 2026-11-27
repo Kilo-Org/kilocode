@@ -177,7 +177,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       getRoot: () => this.getRoot(),
       getWorktreePath: (id) => this.getStateManager()?.getWorktree(id)?.path,
       getProjectId: () => this.projectScope.current()?.id ?? this.contexts.active()?.id,
-      log: (...args) => this.log("[XTerm]", ...args),
+      log: (...args) => this.log("[Terminal]", ...args),
       post: (message) => this.postToWebview(message),
       closed: (terminalId) => this.relay.closeTerminal(terminalId),
       getTerminalFont: () => readTerminalFont(),

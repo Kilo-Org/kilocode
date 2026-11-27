@@ -1081,7 +1081,7 @@ export interface AgentManagerSetIntroDismissedRequest {
   dismissed: boolean
 }
 
-/** Create a new xterm terminal in the given worktree context (null = workspace root). */
+/** Create a new embedded terminal in the given worktree context (null = workspace root). */
 export interface AgentManagerTerminalCreateRequest {
   type: "agentManager.terminal.create"
   /** Webview-generated logical terminal id, echoed back in created/error. */
@@ -1103,7 +1103,7 @@ export interface AgentManagerTerminalStopRequest {
   terminalId: string
 }
 
-/** Notify the host of an xterm resize so it can update the backend PTY dimensions. */
+/** Notify the host of a terminal resize so it can update the backend PTY dimensions. */
 export interface AgentManagerTerminalResizeRequest {
   type: "agentManager.terminal.resize"
   terminalId: string

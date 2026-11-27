@@ -348,7 +348,7 @@ describe("Agent Manager terminal state", () => {
         worktreeId: "wt-1",
       })
       const createId = String(item.posted[0]!.createId)
-      // The optimistic xterm must not open its socket before the host has the PTY.
+      // The optimistic terminal must not open its socket before the host has the PTY.
       expect(item.state.sidesForContext("wt-1")[0]?.pending).toBe(true)
       expect(item.dispatch(createdSide(createId, createId, "Terminal 1", "wt-1"))).toBe(true)
       expect(item.state.sidesForContext("wt-1")[0]).toMatchObject({ id: createId, title: "Terminal 1" })
@@ -596,7 +596,7 @@ describe("Agent Manager terminal state", () => {
       item.state.setTitle("terminal:one", "npm run dev")
       expect(item.state.title("terminal:one")).toBe("npm run dev")
       // Reference stability: the stored record is untouched so <For> does
-      // not remount the xterm instance on a title change.
+      // not remount the terminal instance on a title change.
       expect(item.state.sidesForContext(LOCAL)[0]).toBe(before)
 
       // Empty titles are ignored; removal drops the override.
