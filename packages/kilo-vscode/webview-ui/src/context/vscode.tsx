@@ -8,6 +8,7 @@ import type { VSCodeAPI, WebviewMessage, ExtensionMessage } from "../types/messa
 import { ClipboardProvider } from "@kilocode/kilo-ui/context/clipboard"
 import { edge } from "../sidebar-position"
 import { protect } from "../utils/webview-message"
+import { dispatchToHandlers } from "../utils/message-dispatch" // (#16497)
 
 // Get the VS Code API (only available in webview context)
 let vscodeApi: VSCodeAPI | undefined
@@ -86,7 +87,9 @@ export const VSCodeProvider: ParentComponent = (props) => {
       copy.reject(new Error(message.error ?? "Failed to write to clipboard"))
       return
     }
-    handlers.forEach((handler) => handler(message))
+    // Isolate handler failures (#16497): one throwing subscriber must not starve every other
+    // message handler and silently freeze IPC-dependent controls.
+    dispatchToHandlers(handlers, message)
   }
 
   window.addEventListener("message", messageListener)

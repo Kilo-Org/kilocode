@@ -16,9 +16,44 @@ export interface ServerInstance {
 
 const STARTUP_TIMEOUT_SECONDS = 30
 const STARTUP_OUTPUT_LIMIT = 1024
+const PROCESS_EXIT_WAIT_MS = 5000
 
 type WorkspaceFolderLike = { uri: { fsPath: string } }
 type ServerExitListener = (code: number | null, signal: NodeJS.Signals | null) => void
+
+/**
+ * Process-control seam used by {@link terminateProcessForRestart}. Production code wires it to a
+ * real ChildProcess; tests inject fakes to cover the SIGTERM/SIGKILL escalation without spawning.
+ */
+export interface RestartProcessControls {
+  kill: (signal: NodeJS.Signals) => void
+  isAlive: () => boolean
+  waitForExit: (timeoutMs: number) => Promise<void>
+}
+
+/**
+ * Kill a wedged CLI process with the restart discipline (#16497): SIGTERM, wait, escalate to
+ * SIGKILL when the process ignores it, and refuse to proceed if even SIGKILL did not take effect.
+ * Extracted as a pure, vscode-free function so the escalation state machine is unit testable.
+ * Throws when the manager was disposed mid-restart or when the process survives SIGKILL.
+ */
+export async function terminateProcessForRestart(
+  controls: RestartProcessControls,
+  isDisposed: () => boolean,
+): Promise<void> {
+  controls.kill("SIGTERM")
+  await controls.waitForExit(PROCESS_EXIT_WAIT_MS)
+  if (isDisposed()) throw new Error("ServerManager is disposed")
+  if (controls.isAlive()) {
+    console.warn("[Kilo New] ServerManager: ⚠️ Wedged CLI ignored SIGTERM, sending SIGKILL")
+    controls.kill("SIGKILL")
+    await controls.waitForExit(PROCESS_EXIT_WAIT_MS)
+  }
+  if (controls.isAlive()) {
+    throw new Error("CLI process survived SIGKILL; refusing to start a replacement")
+  }
+  if (isDisposed()) throw new Error("ServerManager is disposed")
+}
 
 export function resolveServerCwd(folders: readonly WorkspaceFolderLike[] | undefined, storage: string): string {
   return folders?.[0]?.uri.fsPath ?? storage
@@ -45,6 +80,9 @@ export function resolveClaudeMigrationEnv(env: NodeJS.ProcessEnv, enabled: boole
 export class ServerManager {
   private instance: ServerInstance | null = null
   private startupPromise: Promise<ServerInstance> | null = null
+  // Single-flight CLI restart for wedged database recovery (#16497)
+  private restartPromise: Promise<ServerInstance> | null = null
+  private disposed = false
 
   constructor(
     private readonly context: vscode.ExtensionContext,
@@ -56,6 +94,7 @@ export class ServerManager {
    * Get or start the server instance
    */
   async getServer(): Promise<ServerInstance> {
+    if (this.disposed) throw new Error("ServerManager is disposed")
     console.log("[Kilo New] ServerManager: 🔍 getServer called")
     if (this.instance) {
       console.log("[Kilo New] ServerManager: ♻️ Returning existing instance:", { port: this.instance.port })
@@ -71,11 +110,50 @@ export class ServerManager {
     this.startupPromise = this.startServer()
     try {
       this.instance = await this.startupPromise
+      // A dispose during startup must not leave a freshly spawned CLI registered as the active instance.
+      if (this.disposed) {
+        ServerManager.killProcess(this.instance.process)
+        this.instance = null
+        throw new Error("ServerManager is disposed")
+      }
       console.log("[Kilo New] ServerManager: ✅ Server started successfully:", { port: this.instance.port })
       return this.instance
     } finally {
       this.startupPromise = null
     }
+  }
+
+  /**
+   * Restart the CLI process (single-flight). Used when deep health probes show
+   * the process is alive but its SQLite database is wedged: every database-backed
+   * request then hangs forever and only a fresh process recovers IPC controls.
+   * Kills the current process group with the same SIGTERM/SIGKILL discipline as
+   * dispose(), then starts a replacement through the normal startup path.
+   */
+  async restart(): Promise<ServerInstance> {
+    if (this.restartPromise) return this.restartPromise
+    if (this.disposed) throw new Error("ServerManager is disposed")
+    this.restartPromise = this.doRestart().finally(() => {
+      this.restartPromise = null
+    })
+    return this.restartPromise
+  }
+
+  private async doRestart(): Promise<ServerInstance> {
+    const current = this.instance
+    if (current) {
+      console.warn(`[Kilo New] ServerManager: 🔁 Restarting wedged CLI process, PID: ${current.process.pid}`)
+      await terminateProcessForRestart(
+        {
+          kill: (signal) => ServerManager.killProcess(current.process, signal),
+          isAlive: () => isProcessAlive(current.process),
+          waitForExit: (timeoutMs) => waitForProcessExit(current.process, timeoutMs),
+        },
+        () => this.disposed,
+      )
+      this.instance = null
+    }
+    return this.getServer()
   }
 
   private async startServer(): Promise<ServerInstance> {
@@ -278,10 +356,12 @@ export class ServerManager {
 
   dispose(): void {
     if (!this.instance) {
+      this.disposed = true // block restarts after extension deactivation (#16497)
       return
     }
     const proc = this.instance.process
     this.instance = null
+    this.disposed = true
 
     console.log("[Kilo New] ServerManager: 🔴 Disposing — sending SIGTERM to process group, PID:", proc.pid)
     ServerManager.killProcess(proc, "SIGTERM")
@@ -293,7 +373,7 @@ export class ServerManager {
         console.warn("[Kilo New] ServerManager: ⚠️ Process did not exit after SIGTERM, sending SIGKILL")
         ServerManager.killProcess(proc, "SIGKILL")
       }
-    }, 5000)
+    }, PROCESS_EXIT_WAIT_MS)
     // unref so this timer doesn't prevent the extension host from exiting
     timer.unref()
     proc.on("exit", () => clearTimeout(timer))
@@ -313,6 +393,35 @@ export class ServerStartupError extends Error {
 
 function stripAnsi(str: string): string {
   return str.replace(/\x1b\[[0-9;]*m/g, "")
+}
+
+/**
+ * Resolve once the process exits, or after `timeoutMs` if it keeps running.
+ * The caller is responsible for escalating (e.g. SIGKILL) on timeout.
+ *
+ * The timer is unref'd so it never keeps the extension host alive on its own. This cannot strand
+ * the promise: this branch only runs while `proc` is still alive, and a live ChildProcess is itself
+ * an active libuv handle that keeps the event loop running until the exit event or the timeout.
+ */
+function waitForProcessExit(proc: ChildProcess, timeoutMs: number): Promise<void> {
+  if (!isProcessAlive(proc)) return Promise.resolve()
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      proc.off("exit", onExit)
+      resolve()
+    }, timeoutMs)
+    timer.unref?.()
+    const onExit = () => {
+      clearTimeout(timer)
+      resolve()
+    }
+    proc.once("exit", onExit)
+  })
+}
+
+/** A process is alive until Node records either an exit code or a terminating signal. */
+function isProcessAlive(proc: ChildProcess): boolean {
+  return proc.exitCode === null && proc.signalCode === null
 }
 
 /**

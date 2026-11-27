@@ -1,4 +1,5 @@
 import type { KiloConnectionService } from "../services/cli-backend/connection-service"
+import { boundedCliFetch } from "../services/cli-backend/bounded-fetch" // (#16497)
 import { getErrorMessage } from "../kilo-provider-utils"
 import { getSpeechToTextModel } from "./models"
 import { hasCustomSource, sourceHeaders, sourceUrl, type SpeechToTextSource } from "./source"
@@ -50,7 +51,8 @@ export async function transcribeSpeech(
   if (dir) url.searchParams.set("directory", dir)
 
   try {
-    const res = await fetch(url, {
+    // Bounded CLI fetch: a wedged backend must fail the transcription instead of hanging the mic flow forever (#16497).
+    const res = await boundedCliFetch(url, {
       method: "POST",
       signal,
       headers: {

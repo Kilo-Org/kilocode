@@ -2,6 +2,7 @@ import { Config } from "@/config/config"
 import { GlobalBus, type GlobalEvent as GlobalBusEvent } from "@/bus/global"
 import { EffectBridge } from "@/effect/bridge"
 import { EventV2 } from "@opencode-ai/core/event"
+import { DeepHealth } from "@/kilocode/server/deep-health" // kilocode_change
 import { Installation } from "@/installation"
 import { disconnect } from "@/kilocode/server/sse" // kilocode_change
 import { copied } from "@/kilocode/event-wire" // kilocode_change
@@ -81,6 +82,16 @@ export const globalHandlers = HttpApiBuilder.group(RootHttpApi, "global", (handl
       return { healthy: true as const, version: InstallationVersion }
     })
 
+    // kilocode_change start - thin HTTP boundary over the Kilo deep-health probe (#16497).
+    // The DB probe itself lives in the kilocode mirror module to keep this forked upstream file small.
+    const deepHealth = Effect.fn("GlobalHttpApi.deepHealth")(function* () {
+      const healthy = yield* DeepHealth.probe()
+      if (healthy) return { healthy: true as const }
+      yield* Effect.logWarning("deep health probe failed: database is not responding")
+      return HttpServerResponse.jsonUnsafe({ healthy: false as const, error: "database unavailable" }, { status: 503 })
+    })
+    // kilocode_change end
+
     const event = Effect.fn("GlobalHttpApi.event")(function* () {
       const request = yield* HttpServerRequest.HttpServerRequest // kilocode_change
       return yield* eventResponse(request) // kilocode_change
@@ -143,6 +154,7 @@ export const globalHandlers = HttpApiBuilder.group(RootHttpApi, "global", (handl
 
     return handlers
       .handle("health", health)
+      .handle("deepHealth", deepHealth) // kilocode_change - DB-backed liveness probe (#16497)
       .handleRaw("event", event)
       .handle("configGet", configGet)
       .handle("configUpdate", configUpdate)
