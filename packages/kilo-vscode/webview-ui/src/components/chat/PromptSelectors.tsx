@@ -13,6 +13,7 @@
  */
 
 import { type Component, type JSX, onCleanup, onMount } from "solid-js"
+import { useViewActive } from "../../v2/view-active"
 import { reserve } from "./prompt-fold"
 
 interface Props {
@@ -85,6 +86,7 @@ function tight(root: HTMLElement) {
 }
 
 export const PromptSelectors: Component<Props> = (props) => {
+  const viewActive = useViewActive()
   let root: HTMLDivElement | undefined
 
   onMount(() => {
@@ -97,10 +99,12 @@ export const PromptSelectors: Component<Props> = (props) => {
     }
     const fit = () => {
       state.frame = 0
+      if (!viewActive()) return
       el.toggleAttribute("data-tight", tight(el))
     }
     const schedule = () => {
-      if (!state.frame) state.frame = requestAnimationFrame(fit)
+      if (!viewActive() || state.frame) return
+      state.frame = requestAnimationFrame(fit)
     }
     const peek = () => {
       const label = el.querySelector(".thinking-selector-trigger-label")

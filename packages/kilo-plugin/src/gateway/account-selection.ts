@@ -114,6 +114,25 @@ export function organizationKey(connection: ConnectionInfo) {
   return `organization:${connection.type === "credential" ? connection.id : `env:${connection.name}`}`
 }
 
+export function authStatus(
+  account: KiloAccount.Info | undefined,
+  fallbackOrganizationID: string | undefined,
+  connection: ConnectionInfo | undefined,
+  server: string,
+) {
+  const organizationID = account?.organizationID ?? fallbackOrganizationID ?? null
+  const method = account?.token && connection?.type === "credential" ? connection.method : undefined
+  return {
+    authenticated: Boolean(account?.token),
+    organizationID,
+    server,
+    ...(account?.token && organizationID === null
+      ? { identity: GatewayCatalog.snapshotKey(account.server ?? server, account.token) }
+      : {}),
+    ...(method ? { method } : {}),
+  }
+}
+
 function credentialInput(credential: Credential.Value): KiloAccount.Input | undefined {
   const token = KiloCredential.token(credential)
   if (token === undefined) return undefined

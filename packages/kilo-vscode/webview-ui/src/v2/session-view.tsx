@@ -53,6 +53,7 @@ import { reviewScopes, slashActions, worktreeAction, type SlashHandlers } from "
 import { createSlashCatalog } from "./slash-catalog"
 import { dispatchSlash } from "./slash-dispatch"
 import { TranscriptSearchProvider } from "./transcript-search"
+import { freezeMemo, sameArray, useViewActive } from "./view-active"
 
 export function SessionView(props: {
   session: string | undefined
@@ -122,20 +123,25 @@ export function SessionView(props: {
   focusOnDraftChange?: () => boolean
   /** Receives each focus and blur of the composer, so the Agent Manager restores the prompt on return. */
   onFocusChange?: (focused: boolean) => void
+  /** True when the host panel already requests display settings once for all views. */
+  displayManaged?: boolean
 }) {
   const v2 = useV2()
+  const viewActive = useViewActive()
   const language = useLanguage()
   const session = () => props.session
   const work = useWorkStyleOptional()
   // Display layouts and the reasoning mode are Kilo-only config keys, so the host reads them. Every surface that
-  // renders a transcript asks on connect and after each config change.
-  const display = useDisplaySettings()
-  createEffect(
-    on(v2.connection.status, (status) => {
-      if (status === "connected") display.request()
-    }),
-  )
-  onCleanup(v2.data.on("config.updated", () => display.request()))
+  // renders a transcript asks on connect and after each config change, unless the host panel already manages it.
+  if (!props.displayManaged) {
+    const display = useDisplaySettings()
+    createEffect(
+      on(v2.connection.status, (status) => {
+        if (status === "connected") display.request()
+      }),
+    )
+    onCleanup(v2.data.on("config.updated", () => display.request()))
+  }
   // Each session and pending tab has its own composer draft. The keyed mount below discards the previous composer
   // state and the draft store restores the text of the target one.
   const draftKey = () => props.draftKey ?? session() ?? "new"
@@ -167,8 +173,8 @@ export function SessionView(props: {
   )
   onCleanup(() => children.release(session()))
   createEffect(
-    on(session, (id) => {
-      if (id) getVSCodeAPI().postMessage({ type: "trackCostSession", sessionID: id } satisfies ToHost as never)
+    on([session, viewActive] as const, ([id, active]) => {
+      if (id && active) getVSCodeAPI().postMessage({ type: "trackCostSession", sessionID: id } satisfies ToHost as never)
     }),
   )
 
@@ -180,11 +186,14 @@ export function SessionView(props: {
   })
   // Sibling-aware identicons for the subagents this session spawned. The shared transcript helper reads the child
   // IDs from the session's subagent tool parts, matching the palette the open session's transcript had.
-  const siblings = createMemo(() => {
-    const id = session()
-    if (!id) return []
-    return transcriptChildren(v2.data.session.message.list(id))
-  })
+  const siblings = freezeMemo(
+    viewActive,
+    () => {
+      const id = session()
+      return id ? transcriptChildren(v2.data.session.message.list(id)) : []
+    },
+    sameArray,
+  )
   const permissions = createMemo(() => family().flatMap((id) => v2.data.session.permission.list(id) ?? []))
   const forms = createMemo(() => family().flatMap((id) => v2.data.session.form.list(id) ?? []))
 
@@ -263,12 +272,12 @@ export function SessionView(props: {
     onToggle: sandbox.toggle,
   }
   // The host sends the cycle action for the cycleAgentMode/cyclePreviousAgentMode commands, as in main.
-  // A read-only view, for example an Agent Manager subagent, has no composer to cycle.
-  if (!props.readOnly)
-    v2.onCommand((name) => {
-      if (name === "cycleAgentMode") selection.cycleAgent(1)
-      if (name === "cyclePreviousAgentMode") selection.cycleAgent(-1)
-    })
+  // Check props.readOnly dynamically so a cached slot promoted from read-only to editable starts responding.
+  v2.onCommand((name) => {
+    if (!viewActive() || props.readOnly) return
+    if (name === "cycleAgentMode") selection.cycleAgent(1)
+    if (name === "cyclePreviousAgentMode") selection.cycleAgent(-1)
+  })
   const working = createWorking(session)
   const goal = createGoal(session, (id) => selection.commit(id, selection.draft(id)))
   // Subagent jobs feed the dock's agent stack and the stop and "continue in background" actions of subagent cards. A
@@ -565,8 +574,8 @@ export function SessionView(props: {
   // Escape first consumes the event, so this only fires for a press nothing else used. A read-only view has no
   // composer, so it also has nothing to interrupt.
   onMount(() => {
-    if (props.readOnly) return
     const handler = (event: KeyboardEvent) => {
+      if (!viewActive() || props.readOnly) return
       if (event.key !== "Escape" || event.defaultPrevented || event.isComposing) return
       if (!running() && !working.submitting() && !goal.active()) return
       event.preventDefault()

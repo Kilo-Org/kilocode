@@ -251,7 +251,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
         void this.terminalRouter.closeProject(id)
         void this.scripts.manager.closeProject(id)
       },
-      selected: (target) => this.postToWebview({ type: "agentManager.selectionActivated", target }),
+      selected: (target, seq) => this.postToWebview({ type: "agentManager.selectionActivated", target, seq }),
       post: (message) => this.postToWebview(message),
       routeSession: (_projectId, sessionId, directory) =>
         this.connection

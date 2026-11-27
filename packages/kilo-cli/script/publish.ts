@@ -1,20 +1,17 @@
 #!/usr/bin/env bun
 
 // kilo_mirror: packages/cli/script/pack.ts
-// Publishes the Kilo host that script/build.ts built to npm as `@kilocode/cli` with the `kilo-v2` dist-tag.
+// Packs the platform packages and generates the @kilocode/cli launcher for the read-only release producer.
 //
 // Mirror of the npm part of upstream's publish script (packages/cli/script/publish.ts, replaced by pack.ts in v2.2).
-// It publishes one platform package per target (`@kilocode/cli-<os>-<arch>`, written by script/build.ts) and then the
+// It packs one platform package per target (`@kilocode/cli-<os>-<arch>`, written by script/build.ts) and the
 // `@kilocode/cli` launcher package. The launcher has the platform packages as optional dependencies, and its
 // postinstall script copies the matching binary into place.
 // Upstream's update artifacts, Docker image, AUR and Homebrew steps are not part of this script.
 //
-// v1 publishes the same package names under the `latest` and `rc` dist-tags. This script uses only its own dist-tag,
-// so a v2 build never replaces what v1 users install. Upstream uses the build channel as the dist-tag, but npm rejects
-// `v2` because it is also a semver range, so the dist-tag is fixed here.
+// script/kilocode/publish-npm.ts publishes only these tested files, with the separate preview dist-tag.
 //
-// Usage: KILO_VERSION=<version> bun script/publish.ts [--dry-run]
-// --dry-run packs every package and runs `npm publish --dry-run`. It publishes nothing.
+// Usage: KILO_VERSION=<version> bun script/publish.ts <output directory> (or --dry-run for a local build).
 // KILO_VERSION must be the version that script/build.ts built. release-env copies it to OPENCODE_VERSION, which
 // `@opencode/script` reads, so it is imported first.
 import "../../../script/kilocode/release-env"
@@ -22,34 +19,17 @@ import { $ } from "bun"
 import { mkdir, rm } from "node:fs/promises"
 import path from "node:path"
 import { Script } from "@opencode/script"
-import { isPreview } from "../src/update-version"
+import { platforms, launcher } from "../../../script/kilocode/npm-tarballs"
+import { packNpm } from "../../../script/kilocode/pack-npm"
 import { launcherPostinstall } from "./postinstall"
-import { refuseStale, refuseWithdrawn, waitForRegistry } from "./registry-readiness"
 
 const dir = path.resolve(import.meta.dirname, "..")
 const root = path.join(dir, "dist")
-const name = "@kilocode/cli"
-const tag = "kilo-v2"
 const repository = { type: "git", url: "git+https://github.com/Kilo-Org/kilocode.git" }
-const dryRun = process.argv.includes("--dry-run")
+const output = process.argv[2]
+if (!output) throw new Error("Pass a tarball output directory or --dry-run")
+const dryRun = output === "--dry-run"
 const license = Bun.file(path.resolve(dir, "../../LICENSE"))
-// Every target that script/build.ts builds without --single or --target (`allTargets`). The launcher lists the platform
-// packages it finds, so a partial build would publish a launcher that has no binary on the other platforms. CI checks
-// this list against the full build in the dry run of every PR that changes script/build.ts.
-const targets = [
-  "darwin-arm64",
-  "darwin-x64",
-  "darwin-x64-baseline",
-  "linux-arm64",
-  "linux-arm64-musl",
-  "linux-x64",
-  "linux-x64-baseline",
-  "linux-x64-musl",
-  "linux-x64-baseline-musl",
-  "windows-arm64",
-  "windows-x64",
-  "windows-x64-baseline",
-]
 
 const binaries: Record<string, string> = Object.fromEntries(
   await Promise.all(
@@ -65,11 +45,11 @@ if (versions.size === 0) throw new Error(`No platform packages in ${root}. Run s
 if (versions.size > 1) throw new Error(`Platform package versions do not match: ${[...versions].join(", ")}`)
 const version = [...versions][0]
 if (version !== Script.version) throw new Error(`Expected version ${Script.version}, the build has ${version}`)
-const built = Object.keys(binaries).map((pkg) => pkg.slice("@kilocode/cli-".length))
-const missing = targets.filter((target) => !built.includes(target))
-const unexpected = built.filter((target) => !targets.includes(target))
+const built = Object.keys(binaries)
+const missing = platforms.filter((pkg) => !built.includes(pkg))
+const unexpected = built.filter((pkg) => !platforms.includes(pkg))
 // A local dry run of a --single build is fine. A publish and every CI run need exactly the targets above.
-if ((missing.length > 0 || unexpected.length > 0) && (!dryRun || process.env.CI))
+if ((missing.length > 0 && (!dryRun || process.env.CI)) || unexpected.length > 0)
   throw new Error(
     [
       missing.length > 0 &&
@@ -81,17 +61,17 @@ if ((missing.length > 0 || unexpected.length > 0) && (!dryRun || process.env.CI)
       .join(" "),
   )
 
-const launcher = path.join(root, "cli")
-await rm(launcher, { recursive: true, force: true })
-await mkdir(path.join(launcher, "bin"), { recursive: true })
-await Bun.write(path.join(launcher, "LICENSE"), license)
+const directory = path.join(root, "cli")
+await rm(directory, { recursive: true, force: true })
+await mkdir(path.join(directory, "bin"), { recursive: true })
+await Bun.write(path.join(directory, "LICENSE"), license)
 // Kilo: copy the platform's runtime sidecars along with the binary.
-await Bun.write(path.join(launcher, "postinstall.mjs"), await launcherPostinstall())
+await Bun.write(path.join(directory, "postinstall.mjs"), await launcherPostinstall())
 // The postinstall script replaces this placeholder with the binary. It stays only when install scripts are disabled.
 await Bun.write(
-  path.join(launcher, "bin", "kilo2.exe"),
+  path.join(directory, "bin", "kilo2.exe"),
   [
-    `echo "Error: ${name}'s postinstall script was not run." >&2`,
+    `echo "Error: ${launcher}'s postinstall script was not run." >&2`,
     'echo "" >&2',
     'echo "This occurs when installation scripts are disabled." >&2',
     'echo "Run the package postinstall script or reinstall with scripts enabled." >&2',
@@ -100,10 +80,10 @@ await Bun.write(
   ].join("\n"),
 )
 await Bun.write(
-  path.join(launcher, "package.json"),
+  path.join(directory, "package.json"),
   JSON.stringify(
     {
-      name,
+      name: launcher,
       version,
       license: "MIT",
       repository,
@@ -120,44 +100,11 @@ await Bun.write(
   ),
 )
 
-// The launcher goes last: its postinstall script needs the platform packages on the registry.
-const platformPackages = Object.entries(binaries)
-// A rerun of an older workflow run must fail before it can move the launcher or platform `kilo-v2` tags back to its
-// version. A manual rollback moves only the tag, so the launcher's published version history independently rejects a
-// rerun of an already promoted run, including a later attempt of that run. Both checks are public reads and stay out of
-// the dry run, which must not touch the network.
-if (!dryRun) {
-  if (!isPreview(version)) throw new Error(`Refusing to publish ${name}@${version}: ${tag} needs a Kilo v2 preview.`)
-  const packages: Array<[string, string]> = [...platformPackages, [name, version]]
-  await Promise.all([refuseWithdrawn(name, version), ...packages.map(([pkg, build]) => refuseStale(pkg, build, tag))])
-}
 await Promise.all(
-  platformPackages.map(([pkg, version]) => publish(path.join(root, pkg.slice("@kilocode/".length)), pkg, version)),
+  [...built, launcher].map(async (pkg) => {
+    const directory = path.join(root, pkg.slice("@kilocode/".length))
+    if (process.platform !== "win32") await $`chmod -R 755 .`.cwd(directory)
+    for (const file of new Bun.Glob("*.tgz").scanSync({ cwd: directory })) await rm(path.join(directory, file))
+    await packNpm(directory, dryRun ? directory : path.resolve(output), pkg, version)
+  }),
 )
-// A successful publish or a visible version does not mean the tarball is served yet. npm hides a platform package
-// that 404s as a skipped optional dependency, so the launcher would be installable with no binary on that platform.
-// Wait for every exact-version manifest and tarball before the launcher can become visible. Dry runs publish nothing.
-if (!dryRun) await waitForRegistry(platformPackages.map(([name, version]) => ({ name, version })))
-await publish(launcher, name, version)
-console.log(`${dryRun ? "dry run: " : ""}${name}@${version} published with dist-tag ${tag}`)
-
-async function publish(directory: string, pkg: string, version: string) {
-  // GitHub artifact downloads can drop the executable bit.
-  if (process.platform !== "win32") await $`chmod -R 755 .`.cwd(directory)
-  for (const file of new Bun.Glob("*.tgz").scanSync({ cwd: directory })) await rm(path.join(directory, file))
-  await $`bun pm pack --quiet`.cwd(directory)
-  const tarball = Array.from(new Bun.Glob("*.tgz").scanSync({ cwd: directory }))[0]
-  if (!tarball) throw new Error(`bun pm pack did not write a tarball for ${pkg}`)
-  const notice = (await $`tar -xOf ${tarball} package/LICENSE`.cwd(directory).quiet()).text()
-  if (!notice.startsWith(await license.text())) throw new Error(`${pkg} does not include the repository MIT license`)
-  if (dryRun) {
-    await $`npm publish ${tarball} --dry-run --access public --tag ${tag}`.cwd(directory)
-    return
-  }
-  // A rerun of the workflow publishes only the packages that are missing.
-  if ((await $`npm view ${pkg}@${version} version`.quiet().nothrow()).exitCode === 0) {
-    console.log(`already published ${pkg}@${version}`)
-    return
-  }
-  await $`npm publish ${tarball} --access public --tag ${tag} --provenance`.cwd(directory)
-}

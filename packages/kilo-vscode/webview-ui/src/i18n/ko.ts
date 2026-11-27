@@ -659,6 +659,9 @@ export const dict = {
 
   "profile.title": "프로필",
   "profile.notLoggedIn": "로그인하지 않음",
+  "profile.expired": "Kilo 로그인이 만료되었거나 취소되었습니다. 계속하려면 다시 로그인하세요.",
+  "profile.unavailable": "Kilo 프로필을 불러올 수 없습니다. 지금은 Kilo에 연결할 수 없을 수 있습니다.",
+  "profile.stale": "프로필을 새로 고칠 수 없습니다. 마지막으로 불러온 정보를 표시합니다.",
   "profile.action.login": "Kilo Code로 로그인",
   "profile.balance.title": "잔액",
   "profile.balance.refresh": "잔액 새로고침",

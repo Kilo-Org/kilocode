@@ -24,20 +24,20 @@ const surface = (view: "chat" | "settings" | "profile" | "marketplace" | "agentM
 const page = (view: "chat" | "settings" | "profile" | "marketplace" | "agentManager") => html({ ...base, view })
 
 describe("webview script loading", () => {
-  test("only the Settings, Profile and Marketplace panels load an ES module", () => {
+  test("every webview panel loads an ES module", () => {
     expect(page("settings")).toContain('type="module"')
     expect(page("profile")).toContain('type="module"')
     expect(page("marketplace")).toContain('type="module"')
-    expect(page("chat")).not.toContain('type="module"')
-    expect(page("agentManager")).not.toContain('type="module"')
+    expect(page("chat")).toContain('type="module"')
+    expect(page("agentManager")).toContain('type="module"')
   })
 
-  test("only the module panels allow their chunks with strict-dynamic", () => {
+  test("every webview panel allows its chunks with strict-dynamic", () => {
     expect(page("settings")).toContain("'strict-dynamic'")
     expect(page("profile")).toContain("'strict-dynamic'")
     expect(page("marketplace")).toContain("'strict-dynamic'")
-    expect(page("chat")).not.toContain("'strict-dynamic'")
-    expect(page("agentManager")).not.toContain("'strict-dynamic'")
+    expect(page("chat")).toContain("'strict-dynamic'")
+    expect(page("agentManager")).toContain("'strict-dynamic'")
   })
 })
 

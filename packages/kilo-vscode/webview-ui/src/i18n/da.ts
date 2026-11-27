@@ -705,6 +705,9 @@ export const dict = {
 
   "profile.title": "Profil",
   "profile.notLoggedIn": "Ikke logget ind",
+  "profile.expired": "Dit Kilo-login er udløbet eller tilbagekaldt. Log ind igen for at fortsætte.",
+  "profile.unavailable": "Din Kilo-profil kunne ikke indlæses. Kilo er muligvis ikke tilgængelig lige nu.",
+  "profile.stale": "Din profil kunne ikke opdateres. Viser de senest indlæste oplysninger.",
   "profile.action.login": "Log ind med Kilo Code",
   "profile.balance.title": "Saldo",
   "profile.balance.refresh": "Opdatér saldo",

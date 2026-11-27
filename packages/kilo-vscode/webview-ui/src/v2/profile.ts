@@ -6,16 +6,12 @@ import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
 import { ProviderUsage } from "@opencode/schema/kilocode/provider-usage"
 import { createSignal, onCleanup } from "solid-js"
 import { useV2 } from "./client"
-import { accountAction } from "./profile-account"
+import { accountAction, readProfile, type ProfileData, type ProfileStatus } from "./profile-account"
+
+export type { ProfileData, ProfileStatus }
 
 const KILO = "kilo"
 const POLL = 1000
-
-export type ProfileData = {
-  profile: KiloGatewayRpc.Profile
-  balance: KiloGatewayRpc.Balance | null
-  kiloPass: KiloGatewayRpc.KiloPass
-}
 
 export type DeviceAuthStatus = "idle" | "initiating" | "pending" | "success" | "error" | "cancelled"
 
@@ -27,8 +23,6 @@ export type DeviceAuthState = {
   error?: string
 }
 
-
-
 export function createProfile() {
   const v2 = useV2()
   const location = { directory: v2.directory }
@@ -36,6 +30,8 @@ export function createProfile() {
   const usageRpc = v2.api.rpc(ProviderUsage.Definition)
   /** `undefined` while loading, `null` when signed out. */
   const [data, setData] = createSignal<ProfileData | null>()
+  /** Why the latest profile read failed: a rejected OAuth login, or an outage that could not complete. */
+  const [profileStatus, setProfileStatus] = createSignal<ProfileStatus>()
   const [auth, setAuth] = createSignal<DeviceAuthState>({ status: "idle" })
   const [usage, setUsage] = createSignal<ProviderUsage.Info>()
   const [usageLoading, setUsageLoading] = createSignal(false)
@@ -49,30 +45,37 @@ export function createProfile() {
   } = { usage: 0, profile: 0, held: false }
 
   // Only the contract's `unauthorized` error means signed out; other failures are real errors.
-  const status = () =>
+  const authStatus = () =>
     rpc.authStatus({}, { location }).catch((error: { type?: string }) => {
       if (error?.type === "unauthorized") return undefined
       throw error
     })
 
-  const account = async (): Promise<ProfileData | null> => {
-    if (!(await status())?.authenticated) return null
-    const [profile, balance, kiloPass] = await Promise.all([
-      rpc.profile({}, { location }),
-      rpc.balance({}, { location }).catch(() => null),
-      rpc.kiloPass({}, { location }).catch(() => null),
-    ])
-    return { profile, balance, kiloPass }
-  }
-
   const refresh = async () => {
     // As usage: only the latest read writes, so an answer for an earlier account cannot replace a newer one.
     const read = ++state.profile
-    const next = await account()
+    const next = await readProfile({
+      authStatus: () => rpc.authStatus({}, { location }),
+      profile: () => rpc.profile({}, { location }),
+      balance: () => rpc.balance({}, { location }),
+      kiloPass: () => rpc.kiloPass({}, { location }),
+    })
     if (read !== state.profile) return
-    setData(next)
-    // A completed sign-in shows its success state until the account loads (see the `provider.updated` handler).
-    if (next && auth().status === "success") setAuth({ status: "idle" })
+    if (next.kind === "ok") {
+      setData(next.data)
+      setProfileStatus(undefined)
+      // A completed sign-in shows its success state until the account loads (see the `provider.updated` handler).
+      if (auth().status === "success") setAuth({ status: "idle" })
+      return
+    }
+    if (next.kind === "unavailable") {
+      // Keep any previously loaded account visible with a stale notice; only clear the initial loading state.
+      if (data() === undefined) setData(null)
+      setProfileStatus("unavailable")
+      return
+    }
+    setData(null)
+    setProfileStatus(next.kind === "expired" ? "expired" : undefined)
   }
 
   // The OAuth attempt completes when the credential is saved, but the Gateway loads the new account after that, and
@@ -81,9 +84,9 @@ export function createProfile() {
   onCleanup(
     v2.data.on("provider.updated", (event) => {
       if (event.location?.directory !== v2.directory) return
-      void status()
+      void authStatus()
         .then((current) => {
-          const action = accountAction(data(), current, state.held)
+          const action = accountAction(data(), current, state.held, profileStatus())
           state.held = action === "hold"
           if (action !== "refresh" && action !== "clear") return
           // As v1: a new account invalidates the cached usage.
@@ -151,6 +154,7 @@ export function createProfile() {
 
   return {
     data,
+    status: profileStatus,
     auth,
     refresh: () => void refresh().catch(v2.report),
     usage,

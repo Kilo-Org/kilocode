@@ -717,6 +717,9 @@ export const dict = {
 
   "profile.title": "Profil",
   "profile.notLoggedIn": "Non connecté",
+  "profile.expired": "Votre connexion à Kilo a expiré ou a été révoquée. Reconnectez-vous pour continuer.",
+  "profile.unavailable": "Impossible de charger votre profil Kilo. Kilo est peut-être injoignable pour le moment.",
+  "profile.stale": "Impossible d'actualiser votre profil. Affichage des dernières informations chargées.",
   "profile.action.login": "Se connecter avec Kilo Code",
   "profile.balance.title": "Solde",
   "profile.balance.refresh": "Actualiser le solde",

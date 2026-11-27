@@ -158,6 +158,7 @@ const REJECTED_BODY = JSON.stringify({
   let logins = 0
   const fakeProfile = {
     data,
+    status: () => undefined,
     auth,
     refresh: () => undefined,
     usage: () => undefined,

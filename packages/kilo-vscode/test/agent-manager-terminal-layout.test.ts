@@ -98,7 +98,9 @@ test("keeps terminal sockets mounted while history is open", () => {
 })
 
 test("moves a closed side panel off-screen without unmounting terminals", () => {
-  expect(css).toMatch(/\.am-side-host-hidden[^}]*transform: translate\(-100vw, 0\)/s)
+  // Scoped to the terminal: the cached diff panels must stay in place inside the
+  // hidden host so Pierre's IntersectionObserver never tears their hunks down.
+  expect(css).toMatch(/\.am-side-host-hidden \.am-side-terminal[^}]*transform: translate\(-100vw, 0\)/s)
 })
 
 test("re-sends dimensions when an optimistic terminal receives its PTY", () => {

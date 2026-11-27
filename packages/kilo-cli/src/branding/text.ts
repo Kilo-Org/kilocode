@@ -3,79 +3,9 @@ export * as KiloBranding from "./text"
 import { KiloBrandingRules } from "./rules"
 import { KiloBrandingStructural } from "./structural"
 import { KiloBrandingEngine } from "./engine"
+import { files } from "./files"
 
-// The upstream modules the branding loader intercepts. Branding itself is not
-// described here: the rule engine (rules.ts, engine.ts) brands user-visible
-// text dynamically, and the structural transforms (structural.ts) rewrite the
-// few logic sites and the OAuth wordmark. This list only decides which files
-// are rebranded; the branding audit reports any user-visible OpenCode string
-// the rules leave behind at a sync.
-export const files: readonly string[] = [
-  "cli/src/commands/commands.ts",
-  "cli/src/services/service-config.ts",
-  "cli/src/server-process.ts",
-  "cli/src/services/remote-tunnel.ts",
-  "cli/src/mini.ts",
-  "cli/src/mini-host.ts",
-  "cli/src/acp/service.ts",
-  "cli/src/acp/translate.ts",
-  "cli/src/acp/error.ts",
-  "cli/src/commands/handlers/acp.ts",
-  "cli/src/commands/handlers/mcp/auth.ts",
-  "cli/src/commands/handlers/stats.ts",
-  "cli/src/commands/handlers/pair.ts",
-  "cli/src/commands/handlers/default.ts",
-  "cli/src/commands/handlers/uninstall.ts",
-  "cli/src/services/update-preflight.tsx",
-  "tui/src/component/logo.tsx",
-  "tui/src/util/error.ts",
-  "tui/src/util/error-details.ts",
-  "tui/src/util/presentation.ts",
-  "tui/src/attention.ts",
-  "tui/src/app.tsx",
-  "tui/src/mini/runtime.lifecycle.ts",
-  "tui/src/routes/session/permission.tsx",
-  "tui/src/mini/footer.permission.tsx",
-  "tui/src/mini/footer.prompt.tsx",
-  "tui/src/mini/splash.ts",
-  "tui/src/component/dialog-update.tsx",
-  "tui/src/component/dialog-pair.tsx",
-  "tui/src/component/terminal-pane.tsx",
-  "tui/src/component/error-component.tsx",
-  "tui/src/feature-plugins/system/stats.tsx",
-  "tui/src/feature-plugins/sidebar/footer.tsx",
-  "tui/src/config/index.tsx",
-  "core/src/session/runner/prompt/system.txt",
-  "core/src/plugin/system-prompt/gpt.txt",
-  "core/src/plugin/system-prompt/gpt-astra.txt",
-  "core/src/plugin/system-prompt/kimi.txt",
-  "core/src/plugin/system-prompt/trinity.txt",
-  "core/src/plugin/system-prompt/meta.txt",
-  "core/src/plugin/command/initialize.txt",
-  "core/src/plugin/command/automation.txt",
-  "core/src/tool/plugin/opencode.ts",
-  "core/src/tool/plugin/artifact.ts",
-  "core/src/tool/plugin/automation.ts",
-  "core/src/tool/plugin/mcp-resource.ts",
-  "core/src/tool/plugin/mcp-events.ts",
-  "core/src/automation/code.ts",
-  "core/src/tool/plugin/websearch.ts",
-  "core/src/artifact.ts",
-  "core/src/generate.ts",
-  // The claude-agent modules that name the host to the model or in an error, and no other provider module: the rules
-  // run over a whole module, and what a provider is sent (referer, title, user agent) is not host branding. In these
-  // five the wire identities are the bare `"opencode"` MCP server name, which the rules leave alone.
-  "core/src/plugin/provider/claude-agent/language-model/system-prompt.ts",
-  "core/src/plugin/provider/claude-agent/sync/catch-up.ts",
-  "core/src/plugin/provider/claude-agent/claude/sessions.ts",
-  "core/src/plugin/provider/claude-agent/tools/pending.ts",
-  "core/src/plugin/provider/claude-agent/tools/server.ts",
-  "core/src/oauth/page.ts",
-  "server/src/handlers/server.ts",
-  "server/src/process.ts",
-  // The loader the host installs for user plugins: the error names the host a plugin has to take `effect` from.
-  "plugin/src/runtime.ts",
-]
+export { files }
 
 const intercepted: ReadonlySet<string> = new Set(files)
 
