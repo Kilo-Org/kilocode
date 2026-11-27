@@ -2,11 +2,18 @@
 
 Reads the job's secret bundle from Kilo STS and sets each requested secret as a step output.
 
-**Callers.** The only caller so far is the `sts-check` job of `.github/workflows/nix-hashes.yml`, a
-manual check (`gh workflow run nix-hashes.yml -f sts_check=true` on `main`) that reads the
-`ci-kilocode-app-key` bundle and mints a Kilo Maintainer app token with it. Only the app's private
-key comes from STS; the app id still comes from the GitHub secret `KILO_MAINTAINER_APP_ID`. Every
-other job still reads GitHub secrets.
+**Callers.** Three jobs read the `ci-kilocode-app-key` bundle, all in the environment `automation`.
+Each takes only the Kilo Maintainer app's private key from STS; the app id still comes from the
+GitHub secret `KILO_MAINTAINER_APP_ID`.
+
+| Workflow | Job | Use |
+|---|---|---|
+| `.github/workflows/nix-hashes.yml` | `update-hashes` | Pushes the updated `nix/hashes.json` to `main` |
+| `.github/workflows/nix-hashes.yml` | `sts-check` | Manual check (`gh workflow run nix-hashes.yml -f sts_check=true` on `main`) that mints an app token with metadata read only |
+| `.github/workflows/prepare-jetbrains-release.yml` | `prepare` | Creates the JetBrains release tag, branch and pull request |
+
+Every other job still reads GitHub secrets, including the `KILO_MAINTAINER_APP_SECRET` reader in
+`.github/workflows/publish.yml`.
 
 **Subject.** Kilo-Org/kilocode's OIDC tokens still carry GitHub's default subject
 (`repo:Kilo-Org/kilocode:environment:<name>`). STS admits that subject through its `legacySubject`

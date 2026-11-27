@@ -113,18 +113,31 @@ jobs:
     if: github.repository == 'Kilo-Org/kilocode' && github.event_name != 'pull_request' && !inputs.sts_check # kilocode_change
     runs-on: blacksmith-4vcpu-ubuntu-2404
 
-    # kilocode_change start
+    # kilocode_change start - the Kilo Maintainer app key comes from the STS bundle of
+    # ci-kilocode-app-key, which needs environment automation (main only) and id-token: write.
+    # Read .github/actions/kilo-credentials/README.md before adding a step before "Read the STS bundle".
+    environment: automation
     permissions:
       contents: read
+      id-token: write
     # kilocode_change end
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6 # kilocode_change
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2 # kilocode_change
         with:
           persist-credentials: false
           fetch-depth: 0
           ref: ${{ github.ref_name }}
+
+      # kilocode_change start
+      - name: Read the STS bundle
+        id: creds
+        uses: ./.github/actions/kilo-credentials
+        with:
+          workload: ci-kilocode-app-key
+          secrets: KILOCODE_MAINTAINER_APP_KEY
+      # kilocode_change end
 
       - name: Setup Git Committer
         id: committer
@@ -132,7 +145,7 @@ jobs:
         with:
           # kilocode_change start
           kilo-maintainer-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
-          kilo-maintainer-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
+          kilo-maintainer-app-secret: ${{ steps.creds.outputs.KILOCODE_MAINTAINER_APP_KEY }}
           repositories: kilocode
           permission-contents: write
           # kilocode_change end
@@ -142,7 +155,7 @@ jobs:
           git pull --rebase --autostash origin "$GITHUB_REF_NAME"
 
       - name: Download hash artifacts
-        uses: actions/download-artifact@v8 # kilocode_change
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2 # kilocode_change
         with:
           path: hashes
           pattern: hash-*
