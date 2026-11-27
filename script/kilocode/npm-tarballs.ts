@@ -52,7 +52,8 @@ export async function record(dir: string, version: string) {
   const entries = await inventory(dir, version)
   await Promise.all(
     entries.map(async (entry) => {
-      const manifest = await $`tar -xOf ${path.join(dir, entry.file)} package/package.json`.json()
+      // GNU tar treats a Windows drive prefix as a remote host. Pass only the local archive name.
+      const manifest = await $`tar -xOf ${entry.file} package/package.json`.cwd(dir).json()
       if (manifest.name !== entry.name || manifest.version !== version)
         throw new Error(`Expected ${entry.name}@${version} inside ${entry.file}`)
     }),

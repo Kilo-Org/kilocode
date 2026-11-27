@@ -53,7 +53,7 @@ async function pack(name: string) {
     const manifest = ClientManifest.manifest(pkg, name, Script.version)
     await Bun.write(file, JSON.stringify(manifest, null, 2) + "\n")
     const archive = await packNpm(dir, out, `@kilocode/${name}`, Script.version)
-    const files = (await $`tar -tzf ${archive}`.text()).split("\n")
+    const files = (await $`tar -tzf ${path.basename(archive)}`.cwd(out).text()).split("\n")
     for (const entry of Object.values(manifest.exports).flatMap(Object.values)) {
       const pattern = new Bun.Glob(entry.replace(/^\.\//, "package/"))
       if (!files.some((file) => pattern.match(file))) throw new Error(`${archive} has no export matching ${entry}`)
