@@ -13,7 +13,8 @@
  *
  * Before anything is uploaded, the evidence of the stage must be the distribution evidence and
  * nothing else (evidence()): the manifest, its checksum file and exactly the sidecars its entries
- * name, with the manifest's entries equal to the stage's. Distribution evidence that an earlier
+ * name, with the manifest's entries equal to the stage's. Each sidecar must have the sha256 its
+ * entry records, and the checksum file must be the one those entries give. Distribution evidence that an earlier
  * attempt left on the draft is deleted (listed by name, not downloaded). The draft then gets the
  * evidence, is checked complete once and is published with its notes (draft-assets.ts publish()).
  * A release that is already published (a re-run) is only checked, together with the npm tarballs
@@ -26,6 +27,7 @@ import path from "node:path"
 import * as KiloDraft from "./draft-assets.ts"
 import * as Stage from "./publish-stage.ts"
 import { assets, remove } from "./release.ts"
+import { digest } from "./sbom/artifact.ts"
 import type { Entry } from "./sbom/manifest.ts"
 
 /** Problems of the stage's evidence files, by their paths, against the stage's entries. */
@@ -45,6 +47,28 @@ export async function evidence(files: string[], entries: Entry[]) {
   const named = entries.flatMap((entry) => (entry.sbom ? [entry.sbom] : [])).sort()
   if (sidecars.join("\n") !== named.join("\n")) {
     problems.push(`The sidecars [${sidecars.join(", ")}] are not the ones the entries name [${named.join(", ")}]`)
+  }
+  const file = (name: string) => files[names.indexOf(name)]
+  for (const entry of entries) {
+    if (!entry.sbom) continue
+    if (!/^[0-9a-f]{64}$/.test(entry.sbomSha256 ?? "")) {
+      problems.push(`${entry.sbom}: the entry records no sha256 for its sidecar`)
+      continue
+    }
+    const sidecar = file(entry.sbom)
+    if (!sidecar) continue
+    const actual = await digest(sidecar)
+    if (actual !== entry.sbomSha256)
+      problems.push(`${entry.sbom} has sha256 ${actual}; its entry records ${entry.sbomSha256}`)
+  }
+  // sums() needs every sidecar's sha256; a missing one is reported above.
+  const sums = file(KiloDraft.DISTRIBUTION_SUMS)
+  if (sums && entries.every((entry) => !entry.sbom || /^[0-9a-f]{64}$/.test(entry.sbomSha256 ?? ""))) {
+    const expected = KiloDraft.sums(entries)
+    const actual = await digest(sums)
+    if (actual !== expected) {
+      problems.push(`${KiloDraft.DISTRIBUTION_SUMS} has sha256 ${actual}; the entries give ${expected}`)
+    }
   }
   const manifest = files[names.indexOf(KiloDraft.DISTRIBUTION)]
   if (manifest) {

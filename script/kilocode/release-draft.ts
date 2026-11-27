@@ -1,25 +1,29 @@
 #!/usr/bin/env bun
 // kilocode_change - new file
 /**
- * Checks the version the `version` job of .github/workflows/publish.yml proposed and creates the
- * draft release, in the release-draft job.
+ * Decides the release version and creates the draft release, in the release-draft job of
+ * .github/workflows/publish.yml. This is the only place the version is decided.
  *
- * `version` installs packages, so it holds only read access and its output is a proposal. This job
- * holds the job token with contents: write and installs nothing: this script imports only Bun and
- * Node built-ins.
+ * The job holds the job token with contents: write and installs nothing: this script imports only
+ * Bun and Node built-ins.
  *
  *   bun script/kilocode/release-draft.ts
  *
- * Environment: PROPOSED (the `version` job's output), REQUESTED (the workflow's `version` input),
- * BUMP and PRE_RELEASE (its `bump` and `pre_release` inputs), GH_REPO, GH_TOKEN, GITHUB_RUN_ID.
- * Writes `version`, `release` (the draft's id) and `tag` to GITHUB_OUTPUT.
+ * Environment: REQUESTED (the workflow's `version` input), BUMP and PRE_RELEASE (its `bump` and
+ * `pre_release` inputs), GH_REPO, GH_TOKEN, GITHUB_RUN_ID. Writes `version`, `release` (the
+ * draft's id) and `tag` to GITHUB_OUTPUT.
  *
- * The version must be `x.y.z` or `x.y.z-rc.n` (an `-rc.n` version only for a pre-release). With a
- * requested version it must be that version; otherwise it must be the `bump` (default patch) of the
- * highest `vx.y.z` tag on origin. A version that already has a tag or a release stops here, before
- * any build, image or upload; only a re-run of this job in the same workflow run reuses the draft
- * its first attempt created (marked with the run id). Later jobs address the release by its id
- * (drafts have no tag yet, and two drafts can share a tag name).
+ * decide() is a pure function of the `vx.y.z` tags on origin, every release (drafts included), the
+ * marker of this run's draft and the inputs. Without a requested version the version is the `bump`
+ * (default patch) of the highest plain version among those tags and release tag names, leaving out
+ * this run's own draft: an orphan draft of an earlier run counts. A requested version must be
+ * `x.y.z` or `x.y.z-rc.n` (`-rc.n` only for a pre-release), must not be a tag or a release yet,
+ * and a requested `x.y.z` must be above the highest version. Only a re-run of this job in the same
+ * workflow run reuses the draft its first attempt created (marked with the run id); any other
+ * existing release of that version stops the run before any build, image or upload. Right before
+ * the draft is created the tag is looked up once more, and anything but "not found" stops the run.
+ * Later jobs address the release by its id (drafts have no tag yet, and two drafts can share a tag
+ * name).
  */
 
 import { $ } from "bun"
@@ -28,99 +32,139 @@ import { appendFile } from "node:fs/promises"
 const VERSION = /^\d+\.\d+\.\d+(?:-rc\.\d+)?$/
 const PLAIN = /^v(\d+)\.(\d+)\.(\d+)$/
 
-/** The `bump` of the highest plain `vx.y.z` tag. */
+export type Release = { id: number; tag_name: string; draft: boolean; body: string | null }
+export type Inputs = { requested: string; bump: string; prerelease: boolean }
+type Triple = readonly [number, number, number]
+
+const parse = (tag: string): Triple | undefined => {
+  const match = PLAIN.exec(tag)
+  return match ? [Number(match[1]), Number(match[2]), Number(match[3])] : undefined
+}
+const compare = (a: Triple, b: Triple) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2]
+
+/** The highest plain `vx.y.z` among `tags`. */
+export function highest(tags: string[]) {
+  const versions = tags.map(parse).filter((item) => item !== undefined)
+  const top = versions.sort(compare).at(-1)
+  if (!top) throw new Error("No vx.y.z tag or release to bump")
+  return top
+}
+
+/** The `bump` of the highest plain `vx.y.z` among `tags`. */
 export function next(tags: string[], bump: string) {
-  const versions = tags
-    .map((tag) => PLAIN.exec(tag))
-    .filter((match) => match !== null)
-    .map((match) => [Number(match[1]), Number(match[2]), Number(match[3])] as const)
-    .sort((a, b) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2])
-  const highest = versions.at(-1)
-  if (!highest) throw new Error("No vx.y.z tag on origin to bump")
-  const [major, minor, patch] = highest
+  const [major, minor, patch] = highest(tags)
   if (bump === "major") return `${major + 1}.0.0`
   if (bump === "minor") return `${major}.${minor + 1}.0`
   if (bump === "patch" || bump === "") return `${major}.${minor}.${patch + 1}`
   throw new Error(`Unknown bump ${JSON.stringify(bump)}`)
 }
 
-/** The checked version, or an error naming why the proposal is refused. */
-export function decide(input: {
-  proposed: string
-  requested: string
-  bump: string
-  prerelease: boolean
-  tags: string[]
-}) {
-  const { proposed, requested } = input
-  if (!VERSION.test(proposed))
-    throw new Error(`The proposed version ${JSON.stringify(proposed)} is not x.y.z or x.y.z-rc.n`)
-  if (proposed.includes("-rc.") && !input.prerelease) {
-    throw new Error(`The proposed version ${proposed} is a release candidate, but pre_release is false`)
-  }
-  if (requested !== "") {
-    if (proposed !== requested)
-      throw new Error(`The proposed version ${proposed} is not the requested version ${JSON.stringify(requested)}`)
-    return proposed
-  }
-  const expected = next(input.tags, input.bump)
-  if (proposed !== expected) {
-    throw new Error(
-      `The proposed version ${proposed} is not the ${input.bump || "patch"} bump of the highest tag (${expected})`,
-    )
-  }
-  return proposed
-}
-
-/** Creates the draft release for `version`, or reuses the one an earlier attempt of this run created. */
-async function draft(version: string, prerelease: boolean) {
+/**
+ * The version, and this run's own draft for it when an earlier attempt created one. Throws with
+ * the reason when nothing may be created.
+ */
+export function decide(input: { tags: string[]; releases: Release[]; marker: string } & Inputs) {
+  const own = input.releases.filter((item) => item.draft && item.body === input.marker)
+  if (own.length > 1) throw new Error(`This run created ${own.length} drafts: ${own.map((item) => item.id).join(", ")}`)
+  const others = input.releases.filter((item) => !own.includes(item))
+  const names = [...input.tags, ...others.map((item) => item.tag_name)]
+  const version = (() => {
+    const requested = input.requested
+    if (requested === "") return next(names, input.bump)
+    if (!VERSION.test(requested))
+      throw new Error(`The requested version ${JSON.stringify(requested)} is not x.y.z or x.y.z-rc.n`)
+    if (requested.includes("-rc.") && !input.prerelease) {
+      throw new Error(`The requested version ${requested} is a release candidate, but pre_release is false`)
+    }
+    const plain = parse(`v${requested}`)
+    if (plain && compare(plain, highest(names)) <= 0) {
+      throw new Error(`The requested version ${requested} is not above the highest version ${highest(names).join(".")}`)
+    }
+    return requested
+  })()
   const tag = `v${version}`
-  const repo = process.env.GH_REPO
-  const marker = `Draft for publish run ${process.env.GITHUB_RUN_ID ?? "local"}`
-  const ref = await $`gh api repos/${repo}/git/ref/tags/${tag}`.quiet().nothrow()
-  if (ref.exitCode === 0) throw new Error(`Tag ${tag} already exists: it was released already. Nothing was created.`)
-  if (!/HTTP 404/.test(ref.stderr.toString())) throw new Error(`Could not check tag ${tag}: ${ref.stderr.toString()}`)
-  // Interpolated, so that the shell does not read `[]` and `?` as globs.
-  const [jq, list] = [".[]", `repos/${repo}/releases?per_page=100`]
-  const releases: { id: number; tag_name: string; draft: boolean; body: string | null }[] = (
-    await $`gh api --paginate --jq ${jq} ${list}`.text()
-  )
-    .split("\n")
-    .filter((line) => line.trim() !== "")
-    .map((line) => JSON.parse(line))
-  const existing = releases.filter((item) => item.tag_name === tag)
-  const [only] = existing
-  if (existing.length === 1 && only?.draft && only.body === marker) {
-    console.log(`Reusing draft release ${only.id} for ${tag}, created by an earlier attempt of this run`)
-    return { release: String(only.id), tag: only.tag_name }
-  }
+  if (input.tags.includes(tag))
+    throw new Error(`Tag ${tag} already exists: it was released already. Nothing was created.`)
+  const existing = others.filter((item) => item.tag_name === tag)
   if (existing.length) {
-    const ids = existing.map((item) => `${item.id}${item.draft ? " (draft)" : ""}`).join(", ")
+    const ids = existing.map((item) => `${item.id}${item.draft ? " (draft of another run)" : ""}`).join(", ")
     throw new Error(`A release for ${tag} already exists: ${ids}. Nothing was created.`)
   }
-  const fields = ["-f", `tag_name=${tag}`, "-f", `name=${tag}`, "-f", `body=${marker}`, "-F", "draft=true"]
-  if (prerelease) fields.push("-F", "prerelease=true")
-  const created: { id: number; tag_name: string } =
-    await $`gh api --method POST repos/${repo}/releases ${fields}`.json()
-  return { release: String(created.id), tag: created.tag_name }
+  const [mine] = own
+  if (mine && mine.tag_name !== tag) {
+    throw new Error(
+      `This run's draft ${mine.id} is for ${mine.tag_name}, but the version is now ${version}. Nothing was created.`,
+    )
+  }
+  return { version, tag, reuse: mine }
+}
+
+/** A lookup of the tag ref: exit 0 means it exists, HTTP 404 that it does not; anything else stops. */
+export function absent(tag: string, result: { exitCode: number; stderr: string }) {
+  if (result.exitCode === 0) throw new Error(`Tag ${tag} already exists: it was released already. Nothing was created.`)
+  if (!/HTTP 404/.test(result.stderr)) throw new Error(`Could not check tag ${tag}: ${result.stderr.trim()}`)
+}
+
+/** What run() reads and writes, substituted in tests. */
+export type IO = {
+  tags: () => Promise<string[]>
+  releases: () => Promise<Release[]>
+  ref: (tag: string) => Promise<{ exitCode: number; stderr: string }>
+  create: (input: { tag: string; marker: string; prerelease: boolean }) => Promise<{ id: number; tag_name: string }>
+}
+
+/** Decides the version and creates (or reuses) the draft. */
+export async function run(io: IO, input: Inputs & { marker: string }) {
+  const decided = decide({ ...input, tags: await io.tags(), releases: await io.releases() })
+  if (decided.reuse) {
+    console.log(
+      `Reusing draft release ${decided.reuse.id} for ${decided.tag}, created by an earlier attempt of this run`,
+    )
+    return { version: decided.version, release: String(decided.reuse.id), tag: decided.tag }
+  }
+  absent(decided.tag, await io.ref(decided.tag))
+  const created = await io.create({ tag: decided.tag, marker: input.marker, prerelease: input.prerelease })
+  return { version: decided.version, release: String(created.id), tag: created.tag_name }
 }
 
 if (import.meta.main) {
-  const prerelease = process.env.PRE_RELEASE === "true"
-  const tags = (await $`git ls-remote --tags --refs origin ${"refs/tags/v*"}`.text())
-    .split("\n")
-    .map((line) => line.split("\t")[1]?.replace(/^refs\/tags\//, "") ?? "")
-    .filter(Boolean)
-  const version = decide({
-    proposed: process.env.PROPOSED ?? "",
+  const repo = process.env.GH_REPO
+  if (!repo) throw new Error("GH_REPO is required")
+  const io: IO = {
+    tags: async () =>
+      (await $`git ls-remote --tags --refs origin ${"refs/tags/v*"}`.text())
+        .split("\n")
+        .map((line) => line.split("\t")[1]?.replace(/^refs\/tags\//, "") ?? "")
+        .filter(Boolean),
+    releases: async () => {
+      // Interpolated, so that the shell does not read `[]` and `?` as globs.
+      const [jq, list] = [".[]", `repos/${repo}/releases?per_page=100`]
+      return (await $`gh api --paginate --jq ${jq} ${list}`.text())
+        .split("\n")
+        .filter((line) => line.trim() !== "")
+        .map((line) => JSON.parse(line))
+    },
+    ref: async (tag) => {
+      const result = await $`gh api repos/${repo}/git/ref/tags/${tag}`.quiet().nothrow()
+      return { exitCode: result.exitCode, stderr: result.stderr.toString() }
+    },
+    create: async ({ tag, marker, prerelease }) => {
+      const fields = ["-f", `tag_name=${tag}`, "-f", `name=${tag}`, "-f", `body=${marker}`, "-F", "draft=true"]
+      if (prerelease) fields.push("-F", "prerelease=true")
+      return $`gh api --method POST repos/${repo}/releases ${fields}`.json()
+    },
+  }
+  const created = await run(io, {
     requested: process.env.REQUESTED ?? "",
     bump: (process.env.BUMP ?? "").toLowerCase(),
-    prerelease,
-    tags,
+    prerelease: process.env.PRE_RELEASE === "true",
+    marker: `Draft for publish run ${process.env.GITHUB_RUN_ID ?? "local"}`,
   })
-  const created = await draft(version, prerelease)
   console.log(`Draft release ${created.release} for ${created.tag}`)
   if (process.env.GITHUB_OUTPUT) {
-    await appendFile(process.env.GITHUB_OUTPUT, `version=${version}\nrelease=${created.release}\ntag=${created.tag}\n`)
+    await appendFile(
+      process.env.GITHUB_OUTPUT,
+      `version=${created.version}\nrelease=${created.release}\ntag=${created.tag}\n`,
+    )
   }
 }

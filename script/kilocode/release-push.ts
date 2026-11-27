@@ -71,7 +71,8 @@ export async function push(input: Input) {
     throw new Error(`The bundle must hold exactly refs/tags/${tag}; it holds: ${heads.join(", ")}. Nothing was pushed.`)
   }
   await git`git -c fetch.fsckObjects=true fetch --quiet --no-tags ${bundle} ${`+refs/tags/${tag}:refs/kilo-release/bundle`}`
-  // The changelog check needs the commit history of the dispatch commit (commits only, no trees or blobs).
+  // The changelog check needs the commit history of the dispatch commit (commits only, no trees or
+  // blobs). The workflow fetches it before the job reads its keys; this only covers a shallow clone.
   if ((await git`git rev-parse --is-shallow-repository`.text()).trim() === "true") {
     await git`git fetch --quiet --no-tags --filter=tree:0 --unshallow origin ${base}`
   }
@@ -127,7 +128,8 @@ export async function push(input: Input) {
       target = commit
       if (head !== base) {
         if ((await git`git cat-file -e ${`${head}^{commit}`}`.quiet().nothrow()).exitCode !== 0) {
-          await git`git fetch --quiet --no-tags --depth=1 origin ${head}`
+          // An explicit filter, so that the tree:0 filter of the history fetch does not apply here.
+          await git`git fetch --quiet --no-tags --depth=1 --filter=blob:none origin ${head}`
         }
         const merged = await git`git merge-tree --write-tree ${`--merge-base=${base}`} ${head} ${commit}`
           .quiet()

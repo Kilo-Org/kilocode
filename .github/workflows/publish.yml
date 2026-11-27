@@ -41,63 +41,28 @@ permissions:
   contents: read # kilocode_change
 
 jobs:
-  version:
-    permissions: # kilocode_change
-      contents: read # kilocode_change - proposes the version; release-draft checks it and creates the draft
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-    timeout-minutes: 15 # kilocode_change
-    if: github.repository == 'Kilo-Org/kilocode' && !inputs.oidc_check # kilocode_change
-    steps:
-      # kilocode_change start - stop before the draft release and tag are created
-      # when the workflow is dispatched from a branch other than main
-      - name: Require main
-        run: |
-          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
-            echo "::error::Run the publish workflow from main (got $GITHUB_REF). Nothing was created."
-            exit 1
-          fi
-      # kilocode_change end
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0 # kilocode_change
-        with:
-          fetch-depth: 0
-          persist-credentials: false # kilocode_change
-
-      - uses: ./.github/actions/setup-bun
-        # kilocode_change start - its output feeds the job that creates the draft, so skip the shared dependency cache
-        with:
-          cache: false
-        # kilocode_change end
-
-      # kilocode_change start - install deps for version script workspace resolution
-      - name: Install dependencies
-        run: bun install
-      # kilocode_change end
-
-      - id: version
-        run: |
-          ./script/version.ts
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          KILO_BUMP: ${{ inputs.bump }}
-          KILO_VERSION: ${{ inputs.version }}
-          KILO_PRE_RELEASE: ${{ inputs.pre_release }}
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-
-  # kilocode_change start - checks the version the `version` job proposed (x.y.z or x.y.z-rc.n; the
-  # requested version, or the bump of the highest vx.y.z tag) and creates the draft release. It
-  # holds the job token with contents: write and runs only this repository's code (Bun from
-  # setup-bun, nothing installed). Every later job reads the version, release id and tag from here.
+  # kilocode_change start - the upstream `version` job is removed: release-draft decides the version
+  # (the bump of the highest vx.y.z among origin's tags and every release, drafts included, or the
+  # requested version, which must be new) and creates the draft release. It holds the job token
+  # with contents: write and runs only this repository's code (Bun from setup-bun, nothing
+  # installed). Every later job reads the version, release id and tag from here.
   release-draft:
     name: Create draft release
-    needs: version
     if: github.repository == 'Kilo-Org/kilocode' && !inputs.oidc_check
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 10
     permissions:
       contents: write
     steps:
+      # Stop before the draft release and tag are created when the workflow is dispatched from a
+      # branch other than main.
+      - name: Require main
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Run the publish workflow from main (got $GITHUB_REF). Nothing was created."
+            exit 1
+          fi
+
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           persist-credentials: false
@@ -114,7 +79,6 @@ jobs:
 
       - id: draft
         env:
-          PROPOSED: ${{ needs.version.outputs.version }}
           REQUESTED: ${{ inputs.version }}
           BUMP: ${{ inputs.bump }}
           PRE_RELEASE: ${{ inputs.pre_release }}
@@ -946,20 +910,85 @@ jobs:
     # kilocode_change end
 
   # kilocode_change start
-  # Run smoke tests against CLI assets uploaded to the draft GitHub release
-  # before publishing the release and package artifacts.
+  # Downloads the Linux x64 CLI archive from the draft release, by release id, for the smoke test,
+  # and checks it against the digest of the CLI evidence manifest sbom-cli-windows recorded.
+  # Reading a draft needs push access, so this job holds the job token with contents: write; it
+  # checks out nothing and installs nothing (gh, jq and sha256sum of the runner image). The smoke
+  # test, which installs packages, gets the archive as an artifact with read access only.
+  smoke-cli:
+    name: Fetch CLI archive for the smoke test
+    needs: [release-draft, sbom-cli-windows, upload-cli]
+    if: github.repository == 'Kilo-Org/kilocode' && needs.release-draft.outputs.release != ''
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: kilo-cli-evidence
+          path: ${{ runner.temp }}/evidence
+
+      - name: Download the archive from the draft
+        id: archive
+        env:
+          EVIDENCE_SHA256: ${{ needs.sbom-cli-windows.outputs.manifest-sha256 }}
+          RELEASE: ${{ needs.release-draft.outputs.release }}
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          name=kilo-linux-x64.tar.gz
+          manifest="$RUNNER_TEMP/evidence/cli-sbom-evidence.json"
+          actual="$(sha256sum "$manifest" | cut -d ' ' -f 1)"
+          if [ -z "$EVIDENCE_SHA256" ] || [ "$actual" != "$EVIDENCE_SHA256" ]; then
+            echo "::error::cli-sbom-evidence.json has digest $actual; sbom-cli-windows recorded ${EVIDENCE_SHA256:-none}."
+            exit 1
+          fi
+          want="$(jq -r --arg name "$name" '[.entries[] | select(.artifact == $name) | .sha256] | if length == 1 then .[0] else "" end' "$manifest")"
+          if ! [[ "$want" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "::error::The CLI evidence manifest records no single digest for $name."
+            exit 1
+          fi
+          id="$(gh api --paginate "repos/$GH_REPO/releases/$RELEASE/assets" --jq ".[] | select(.name == \"$name\") | .id")"
+          if ! [[ "$id" =~ ^[0-9]+$ ]]; then
+            echo "::error::Draft release $RELEASE holds no single $name."
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/smoke-cli"
+          gh api -H "Accept: application/octet-stream" "repos/$GH_REPO/releases/assets/$id" > "$RUNNER_TEMP/smoke-cli/$name"
+          got="$(sha256sum "$RUNNER_TEMP/smoke-cli/$name" | cut -d ' ' -f 1)"
+          if [ "$got" != "$want" ]; then
+            echo "::error::The draft's $name has digest $got; the CLI evidence manifest records $want."
+            exit 1
+          fi
+          echo "sha256=$want" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: smoke-cli
+          path: ${{ runner.temp }}/smoke-cli
+          if-no-files-found: error
+          compression-level: 0
+    outputs:
+      sha256: ${{ steps.archive.outputs.sha256 }}
+
+  # Run smoke tests against the CLI archive smoke-cli took from the draft GitHub release and
+  # checked, before publishing the release and package artifacts.
   smoke-test:
     name: Smoke Test (pre-publish gate)
     permissions:
-      contents: write # The called workflow needs push access to download draft assets.
+      contents: read
     needs:
       - release-draft
       - build-cli
       - upload-cli
+      - smoke-cli
     if: github.repository == 'Kilo-Org/kilocode'
     uses: ./.github/workflows/smoke-test.yml
     with:
-      cli_version: ${{ needs.release-draft.outputs.version }}
+      cli_artifact: smoke-cli
+      cli_sha256: ${{ needs.smoke-cli.outputs.sha256 }}
       # Temporary: waive the private kilo-bench gate for stable and prerelease v1
       # releases until BENCH_GITHUB_TOKEN access is approved. Standalone
       # smoke-test dispatch still runs the bench so access can be verified.
@@ -984,13 +1013,16 @@ jobs:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 20
     steps:
-      # The whole commit history (no blobs beyond the checkout): changesets looks up the commit
-      # that added each changeset, and the release commit check follows its links into the history.
+      # The commit history of the dispatch commit without file contents: changesets looks up the
+      # commit that added each changeset, and the release commit check follows its links into the
+      # history. Only that history, not every branch and tag.
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           persist-credentials: false
-          fetch-depth: 0
           filter: blob:none
+
+      - name: Fetch the history of the dispatch commit
+        run: git fetch --quiet --no-tags --filter=blob:none --unshallow origin "$GITHUB_SHA"
 
       - uses: ./.github/actions/setup-bun
         with:
@@ -1070,6 +1102,11 @@ jobs:
         with:
           name: release-commit
           path: ${{ runner.temp }}/release-commit
+
+      # The release commit check follows changelog links into the history of the dispatch commit.
+      # Fetched here (commits only) so that the job holds its keys for less time.
+      - name: Fetch the history of the dispatch commit
+        run: git fetch --quiet --no-tags --filter=tree:0 --unshallow origin "$GITHUB_SHA"
 
       - name: Read the STS bundle
         id: creds

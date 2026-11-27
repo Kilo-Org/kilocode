@@ -661,6 +661,37 @@ describe("release-push", () => {
     expect(refs(f.origin)).toEqual({ main: outcome.commit, tag: outcome.commit })
   })
 
+  for (const fetched of [true, false]) {
+    test(`ci checkout: a changelog link to an older ancestor passes (${fetched ? "history fetched by the workflow step" : "fetched by the script"})`, async () => {
+      const f = await fixture()
+      const older = f.base
+      // The dispatch commit is one commit after the commit the changelog links.
+      const base = await move(f, { "docs/later.md": "Later\n" })
+      git(f.work, "fetch", "--quiet", "origin", "main")
+      git(f.work, "checkout", "--quiet", "--detach", base)
+      const moved = { ...f, base }
+      await release(f.work, "1.0.1")
+      const file = path.join(f.work, "packages/opencode/CHANGELOG.md")
+      const text = await readFile(file, "utf8")
+      await writeFile(file, text.replaceAll(base, older).replace(`\`${base.slice(0, 7)}\``, `\`${older.slice(0, 7)}\``))
+      expect(await readFile(file, "utf8")).toContain(`/commit/${older})`)
+      const out = path.join(f.root, "out")
+      const result = await pack({ cwd: f.work, version: "1.0.1", out })
+      const cwd = await keys(moved, "ci")
+      expect(git(cwd, "rev-parse", "--is-shallow-repository")).toBe("true")
+      if (fetched) git(cwd, "fetch", "--quiet", "--no-tags", "--filter=tree:0", "--unshallow", "origin", base)
+      const outcome = await push({
+        cwd,
+        bundle: path.join(out, "release.bundle"),
+        sha256: result.sha256,
+        version: "1.0.1",
+        base,
+      })
+      expect(refs(f.origin)).toEqual({ main: outcome.commit, tag: outcome.commit })
+      expect(parents(f.origin, "v1.0.1")).toEqual([base])
+    })
+  }
+
   test("refuses after two more merges when main keeps moving", async () => {
     const f = await fixture()
     const result = await packed(f)

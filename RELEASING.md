@@ -6,7 +6,7 @@ Kilo Code uses a fully automated CI pipeline triggered via GitHub Actions `workf
 
 1. Go to the [`publish` workflow](https://github.com/Kilo-Org/kilocode/actions/workflows/publish.yml) in GitHub Actions.
 2. Click **"Run workflow"**.
-3. Select the `main` branch. On any other branch the `version` job fails in its first step, before `release-draft` creates the draft release, and the `publish` job runs in the `release` environment, which only accepts `main`.
+3. Select the `main` branch. On any other branch the `release-draft` job fails in its first step, before it creates the draft release, and the `publish` job runs in the `release` environment, which only accepts `main`.
 4. Fill in the inputs:
    - **`bump`** (choice): `patch`, `minor`, or `major`. Determines how the version number is incremented.
    - **`version`** (string, optional): Override the version explicitly instead of using `bump`. Leave empty to use the bump-based calculation.
@@ -19,12 +19,14 @@ Kilo Code uses a fully automated CI pipeline triggered via GitHub Actions `workf
 
 ## What Happens During a Release
 
-The `publish.yml` workflow starts with `version` and `release-draft`, which creates the draft release before the build and publish jobs run. The main jobs are:
+The `publish.yml` workflow starts with `release-draft`, which decides the version and creates the draft release before the build and publish jobs run. The main jobs are:
 
-### 1. Version (`version`, then `release-draft`)
+### 1. Version and draft release (`release-draft`)
 
-- `version` checks out the repo with full history (`fetch-depth: 0`), installs packages and runs `script/version.ts` to propose the next version from the `bump` or `version` input. It holds only read access, so its output is a proposal.
-- `release-draft` holds the job token with `contents: write` and installs nothing. `script/kilocode/release-draft.ts` checks the proposal: it must be `x.y.z` or `x.y.z-rc.n` (`-rc.n` only with `pre_release`), and equal to the `version` input when that is set, or else to the `bump` of the highest `vx.y.z` tag on origin. It then creates the **draft** GitHub Release with the tag name (e.g. `v1.2.3`); the notes are written when the release is published. A version that already has a tag or a release stops here.
+- `release-draft` is the only job that decides the version. It holds the job token with `contents: write`, installs nothing and stops first unless the workflow runs on `main`.
+- Without a `version` input, `script/kilocode/release-draft.ts` takes the `bump` (default patch) of the highest `vx.y.z` among origin's tags and the tag names of every release, drafts included. The one exception is the draft this workflow run created on an earlier attempt, which a re-run of the job reuses. An orphan draft of an earlier run therefore counts: the next run bumps past it.
+- A `version` input must be `x.y.z` or `x.y.z-rc.n` (`-rc.n` only with `pre_release`), must not be a tag or a release yet, and an `x.y.z` must be above the highest version.
+- It looks the tag up once more and then creates the **draft** GitHub Release with the tag name (e.g. `v1.2.3`); the notes are written when the release is published. Any doubt (an existing tag or release, an error other than "not found") stops here, before any build.
 - `release-draft` outputs the `version`, `release` (database ID), and `tag` for every later job.
 
 ### 2. Build CLI (`build-cli`)
@@ -44,6 +46,7 @@ The `publish.yml` workflow starts with `version` and `release-draft`, which crea
 - `sbom-cli-windows` describes the signed zips again: new SBOM sidecars, manifest entries and checksum lines. Every other evidence file stays as `build-cli` wrote it.
 - `upload-cli` checks every archive and evidence file against the digests recorded by the job that produced it, then uploads them to the draft GitHub Release.
 - `attest-cli` attests each archive's SBOM under the digest of the uploaded bytes (the signed digest for the Windows zips).
+- `smoke-cli` (job token `contents: write`, nothing checked out or installed) downloads `kilo-linux-x64.tar.gz` from the draft by its release id, checks it against the digest the CLI evidence manifest records and hands it to the smoke test (`smoke-test.yml`, read access only) as an artifact with that digest, which the smoke test checks again.
 
 ### 3. Build VS Code Extension (`build-vscode`)
 
@@ -73,7 +76,7 @@ Checks out the pushed tag (and checks that it is the commit `release-push` pushe
 
 ### 7. GitHub Release (`release-undraft`)
 
-With the job token (`contents: write`) and nothing installed: checks that the evidence of `publish-build` is the distribution manifest, its checksum file and exactly the sidecars the manifest's entries name, with those entries, before anything is uploaded; deletes distribution evidence an earlier attempt left on the draft; uploads the npm and container evidence; checks the complete draft again (every expected asset, each with its recorded digest, nothing else) and only then publishes the GitHub Release with its notes, from the changelogs of the tag. No asset is uploaded after this, so the published release never changes.
+With the job token (`contents: write`) and nothing installed: checks that the evidence of `publish-build` is the distribution manifest, its checksum file and exactly the sidecars the manifest's entries name, with those entries, each sidecar with the sha256 its entry records and the checksum file the one those entries give, before anything is uploaded; deletes distribution evidence an earlier attempt left on the draft; uploads the npm and container evidence; checks the complete draft again (every expected asset, each with its recorded digest, nothing else) and only then publishes the GitHub Release with its notes, from the changelogs of the tag. No asset is uploaded after this, so the published release never changes.
 
 ### 8. Publish (`publish`)
 
@@ -103,8 +106,9 @@ Runs after `publish` in the `release-keys` environment and installs nothing. Wit
 
 | Job | Repository token | Other |
 |---|---|---|
-| `version` | `contents: read` | none |
 | `release-draft` | `contents: write` | none |
+| `smoke-cli` | `contents: write` | none |
+| `smoke-test` | `contents: read` | the smoke test's secrets |
 | `release-commit` | `contents: read`, `pull-requests: read` | none |
 | `release-push` | `contents: read` | `id-token: write`, environment `release-keys` (kilo-maintainer app key from STS) |
 | `release-assets` | `contents: write` | none |
@@ -115,11 +119,11 @@ Runs after `publish` in the `release-keys` environment and installs nothing. Wit
 
 ### Refusals at `release-commit` or `release-push`
 
-A refused release commit cannot be fixed by a re-run: the re-run checks the same bundle again. Examples: `bun.lock` on `main` not in Bun's canonical form; a changelog on `main` that changesets reformats when it adds the new section (it runs prettier over the whole file); a change outside the allowed version and changelog lines. The draft release `release-draft` created is then an orphan. Fix the cause on `main` (merge the `bun install` output, or format the changelog with prettier), then either delete the orphan draft and dispatch again with the same version, or dispatch again and let the bump skip to the next version.
+A refused release commit cannot be fixed by a re-run: the re-run checks the same bundle again. Examples: `bun.lock` on `main` not in Bun's canonical form; a changelog on `main` that changesets reformats when it adds the new section (it runs prettier over the whole file); a change outside the allowed version and changelog lines. The draft release `release-draft` created is then an orphan. Fix the cause on `main` (merge the `bun install` output, or format the changelog with prettier), then dispatch again: the bump counts the orphan draft and moves to the next version. To reuse the orphan's version instead, delete the orphan draft first and dispatch again (with the same `bump`, or with that `version`).
 
 ### Recovering from a Failed Job
 
-Re-run the failed job (**Re-run failed jobs**); the build jobs, their recorded digests and the artifacts of the jobs that succeeded are reused. `release-commit` and `release-push` do not run again once they succeeded, so a re-run publishes from the same pushed tag. If `release-push` itself failed, its re-run checks the same bundle again; if the tag is already on origin at the release commit, it pushes nothing. Never re-run `version`, `release-draft` or `release-commit` on its own after `release-push` succeeded (their outputs feed the jobs after it); re-run `publish-build` instead.
+Re-run the failed job (**Re-run failed jobs**); the build jobs, their recorded digests and the artifacts of the jobs that succeeded are reused. `release-commit` and `release-push` do not run again once they succeeded, so a re-run publishes from the same pushed tag. If `release-push` itself failed, its re-run checks the same bundle again; if the tag is already on origin at the release commit, it pushes nothing. Never re-run `release-draft` or `release-commit` on its own after `release-push` succeeded (their outputs feed the jobs after it); re-run `publish-build` instead.
 
 - **`publish-build` or `release-undraft` failed**: the GitHub Release is still a draft. The Docker images may already be pushed. A re-run of `publish-build` packs and describes the npm packages again and rebuilds and pushes the images; `release-undraft` then uploads the evidence (replacing assets of the same name that an earlier attempt left), checks the draft and publishes it. npm has nothing yet: packages are published only after the release.
 - **`publish` failed** (for example an npm publish): the release is public. The re-run publishes the tarballs `publish-build` packed, each with its recorded sha256, and skips npm packages that are already published. AUR and Homebrew are updated only after a `publish` run succeeds: the `package-managers` job runs after the successful re-run.

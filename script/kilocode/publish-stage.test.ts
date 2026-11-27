@@ -93,13 +93,17 @@ test("the release jobs run in today's user-visible order, each with only the per
     { needs?: string[] | string; permissions?: Record<string, string>; environment?: string }
   > = workflow.jobs
   const needs = (name: string) => [jobs[name]?.needs ?? []].flat()
-  expect(needs("release-draft")).toContain("version")
+  // release-draft alone decides the version; no job installs packages before it.
+  expect(jobs.version).toBeUndefined()
+  expect(needs("release-draft")).toEqual([])
   expect(needs("build-cli")).toContain("release-draft")
   expect(needs("release-push")).toContain("release-assets")
   expect(needs("publish-build")).toContain("release-push")
   expect(needs("release-undraft")).toContain("release-assets")
   expect(needs("release-undraft")).toContain("publish-build")
-  expect(jobs.version?.permissions).toEqual({ contents: "read" })
+  expect(needs("smoke-test")).toContain("smoke-cli")
+  expect(jobs["smoke-cli"]?.permissions).toEqual({ contents: "write" })
+  expect(jobs["smoke-test"]?.permissions).toEqual({ contents: "read" })
   expect(jobs["release-draft"]?.permissions).toEqual({ contents: "write" })
   expect(jobs["release-assets"]?.permissions).toEqual({ contents: "write" })
   expect(jobs["publish-build"]?.permissions).toEqual({ contents: "read", packages: "write" })
