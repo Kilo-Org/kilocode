@@ -30,6 +30,7 @@ describe("Form", () => {
     }),
   )
 
+  // kilocode_change start - the plan follow-up submits typed custom answers through the shared form
   it.effect("accepts a typed answer for a field that allows custom values", () =>
     Effect.sync(() => {
       const fields = [
@@ -51,6 +52,7 @@ describe("Form", () => {
       ).toBe("Invalid option for form field: choice")
     }),
   )
+  // kilocode_change end
 
   it.effect("returns a terminal cancelled state from ask", () =>
     Effect.gen(function* () {
