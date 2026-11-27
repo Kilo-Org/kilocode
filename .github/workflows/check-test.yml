@@ -104,6 +104,12 @@ jobs:
             shard: 4
         # kilocode_change end
     runs-on: ${{ matrix.settings.host }}
+    # kilocode_change start - this job reports results with checks: write, so turbo never
+    # reads a cache: local:w executes every task and keeps turbo off the remote cache.
+    # (TURBO_FORCE is left unset: it turns into local:w,remote:w and writes remotely.)
+    env:
+      TURBO_CACHE: local:w
+    # kilocode_change end
     defaults:
       run:
         shell: bash
@@ -119,9 +125,14 @@ jobs:
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0 # kilocode_change
         with:
           node-version: "24"
+          package-manager-cache: false # kilocode_change - job holds checks: write
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
+        # kilocode_change start - job holds checks: write, so skip the shared caches
+        with:
+          cache: false
+        # kilocode_change end
 
       - name: Test Effect simplification rules
         if: runner.os == 'Linux' && matrix.shard == 'packages' # kilocode_change
@@ -144,16 +155,7 @@ jobs:
           git config --global user.email "bot@opencode.ai"
           git config --global user.name "opencode"
 
-      # kilocode_change start - Turborepo 2.x writes .turbo/cache. Each shard has its own cache key.
-      - name: Cache Turbo
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0 # kilocode_change
-        with:
-          path: .turbo/cache
-          key: turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-unit-${{ matrix.shard }}-${{ github.sha }}
-          restore-keys: |
-            turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-unit-${{ matrix.shard }}-
-            turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-unit-
-      # kilocode_change end
+      # kilocode_change - no Turbo cache restore: the job runs turbo with TURBO_CACHE=local:w (see env above)
 
       - name: Run unit tests
         timeout-minutes: 20
@@ -253,6 +255,10 @@ jobs:
           - name: windows
             host: blacksmith-4vcpu-windows-2025
     runs-on: ${{ matrix.settings.host }}
+    # kilocode_change start - checks: write, so turbo runs with no cache (see `unit`)
+    env:
+      TURBO_CACHE: local:w
+    # kilocode_change end
     defaults:
       run:
         shell: bash
@@ -265,6 +271,10 @@ jobs:
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
+        # kilocode_change start - job holds checks: write, so skip the shared caches
+        with:
+          cache: false
+        # kilocode_change end
 
       - name: Verify compiled service lifecycle
         timeout-minutes: 10
@@ -293,6 +303,7 @@ jobs:
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0 # kilocode_change
         with:
           node-version: "26.4.0"
+          package-manager-cache: false # kilocode_change - job holds checks: write
 
       - name: Verify Node build
         if: ${{ !cancelled() }}
@@ -348,9 +359,14 @@ jobs:
         with:
           # Playwright 1.59 hangs while extracting Chromium with Node 24.16.
           node-version: "24.15"
+          package-manager-cache: false # kilocode_change - job holds checks: write
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
+        # kilocode_change start - job holds checks: write, so skip the shared caches
+        with:
+          cache: false
+        # kilocode_change end
 
       - name: Read Playwright version
         id: playwright-version
@@ -358,12 +374,7 @@ jobs:
           version=$(node -e 'console.log(require("./package.json").workspaces.catalog["@playwright/test"])')
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
-      - name: Cache Playwright browsers
-        id: playwright-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0 # kilocode_change
-        with:
-          path: ${{ github.workspace }}/.playwright-browsers
-          key: ${{ runner.os }}-${{ runner.arch }}-playwright-${{ steps.playwright-version.outputs.version }}-chromium
+      # kilocode_change - no Playwright browser cache: the job holds checks: write, so it installs the browsers
 
       - name: Install Playwright system dependencies
         if: runner.os == 'Linux'
@@ -371,7 +382,6 @@ jobs:
         run: bunx playwright install-deps chromium
 
       - name: Install Playwright browsers
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
         working-directory: packages/app
         run: bunx playwright install chromium
 
@@ -444,6 +454,9 @@ jobs:
     name: sdk package
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
+    # checks: write, so turbo runs with no cache (see `unit`)
+    env:
+      TURBO_CACHE: local:w
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # kilocode_change
@@ -452,6 +465,8 @@ jobs:
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
+        with:
+          cache: false # job holds checks: write
 
       - name: Verify packed workerd SDK
         run: |
