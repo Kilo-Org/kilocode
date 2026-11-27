@@ -97,8 +97,18 @@ trap cleanup EXIT
 # -q must come first: it stops curl from reading a .curlrc that could add tracing.
 curl_options=(--silent --proto '=https' --max-filesize "$MAX_BODY_BYTES" --write-out '%{http_code}')
 
+# Transport failures worth another attempt: no connection (7), HTTP/2 framing (16), timeout (28),
+# TLS handshake (35), empty reply (52), send or receive failure (55, 56), HTTP/2 stream (92).
+retryable_curl_exit() {
+  case $1 in
+    7 | 16 | 28 | 35 | 52 | 55 | 56 | 92) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 # 1. A GitHub OIDC token for the STS audience, in $tmp/oidc.json and masked. The audience is the
-# STS origin, whose characters need only ':' and '/' encoded.
+# STS origin, whose characters need only ':' and '/' encoded. A 5xx answer or a retryable
+# transport failure sets `problem` and returns 1; any other failure ends the action.
 audience=${sts_url//:/%3A}
 audience=${audience//\//%2F}
 separator='?'
@@ -106,11 +116,21 @@ separator='?'
 oidc_url="$ACTIONS_ID_TOKEN_REQUEST_URL${separator}audience=$audience"
 
 request_oidc_token() {
-  local status
+  local status curl_exit=0
+  rm -f -- "$tmp/oidc.json"
   status=$(
     printf 'header = "Authorization: Bearer %s"\nurl = "%s"\n' "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$oidc_url" |
       curl -q --config - "${curl_options[@]}" --max-time 30 --output "$tmp/oidc.json" 2>/dev/null
-  ) || fail "GitHub OIDC token request failed (curl exit $?)"
+  ) || curl_exit=$?
+  if ((curl_exit != 0)); then
+    retryable_curl_exit "$curl_exit" || fail "GitHub OIDC token request failed (curl exit $curl_exit)"
+    problem="GitHub OIDC token request failed (curl exit $curl_exit)"
+    return 1
+  fi
+  if [[ $status =~ ^5[0-9][0-9]$ ]]; then
+    problem="GitHub OIDC token request returned HTTP $status"
+    return 1
+  fi
   [[ $status == 200 ]] || fail "GitHub OIDC token request returned HTTP ${status:0:3}"
   jq -s -r '
     if length == 1 and (.[0] | type == "object" and (.value | type) == "string"
@@ -132,65 +152,64 @@ refusal_detail() {
   ' "$tmp/bundle.json" 2>/dev/null || true
 }
 
-# 2. The bundle (STS POST /v1/bundle with an empty BundleRequest). HTTP 503 and the curl errors of
-# a timeout, a failed TLS handshake or a dropped connection (28, 35, 52, 56) are retried with a
-# fresh OIDC token, at most twice, after the wait STS asks for (capped at 60 s).
+# 2. The bundle (STS POST /v1/bundle with an empty BundleRequest). Each attempt requests a new
+# OIDC token. A retryable OIDC or transport failure waits 5 s; an STS 503 waits for the
+# retryAfterSeconds of its body, else its Retry-After header, else 5 s, capped at 60 s. At most
+# three attempts.
 attempt=1
 while :; do
-  request_oidc_token
-  rm -f -- "$tmp/bundle.json" "$tmp/headers"
-  curl_exit=0
-  status=$(
-    {
-      jq -r '"header = \"Authorization: Bearer \(.value)\""' "$tmp/oidc.json"
-      printf '%s\n' 'header = "Content-Type: application/json"' 'header = "Accept: application/json"' 'data = "{}"'
-      printf 'url = "%s/v1/bundle"\n' "$sts_url"
-    } | curl -q --config - "${curl_options[@]}" --max-time 60 --dump-header "$tmp/headers" \
-      --output "$tmp/bundle.json" 2>/dev/null
-  ) || curl_exit=$?
-  rm -f -- "$tmp/oidc.json"
+  problem=""
+  wait_seconds=$DEFAULT_RETRY_WAIT_SECONDS
+  if request_oidc_token; then
+    rm -f -- "$tmp/bundle.json" "$tmp/headers"
+    curl_exit=0
+    status=$(
+      {
+        jq -r '"header = \"Authorization: Bearer \(.value)\""' "$tmp/oidc.json"
+        printf '%s\n' 'header = "Content-Type: application/json"' 'header = "Accept: application/json"' 'data = "{}"'
+        printf 'url = "%s/v1/bundle"\n' "$sts_url"
+      } | curl -q --config - "${curl_options[@]}" --max-time 60 --dump-header "$tmp/headers" \
+        --output "$tmp/bundle.json" 2>/dev/null
+    ) || curl_exit=$?
+    rm -f -- "$tmp/oidc.json"
 
-  if ((curl_exit != 0)); then
-    case $curl_exit in
-      28 | 35 | 52 | 56) ;;
-      *) fail "STS bundle request failed (curl exit $curl_exit)" ;;
-    esac
-    problem="failed (curl exit $curl_exit)"
-    wait_seconds=$DEFAULT_RETRY_WAIT_SECONDS
-  elif [[ $status == 503 ]]; then
-    detail=$(refusal_detail)
-    problem="returned HTTP 503${detail:+ ($detail)}"
-    wait_seconds=$DEFAULT_RETRY_WAIT_SECONDS
-    retry_after=$(
-      jq -s -r '
-        if length == 1 and (.[0] | type == "object")
-          and (.[0].retryAfterSeconds | type == "number" and . >= 1 and . <= 3600 and . == floor)
-        then .[0].retryAfterSeconds
-        else empty
-        end
-      ' "$tmp/bundle.json" 2>/dev/null
-    ) || retry_after=""
-    if [[ $retry_after =~ ^[0-9]{1,4}$ ]]; then
-      problem+="; retryAfterSeconds=$retry_after"
-      wait_seconds=$retry_after
-    else
+    if ((curl_exit != 0)); then
+      retryable_curl_exit "$curl_exit" || fail "STS bundle request failed (curl exit $curl_exit)"
+      problem="STS bundle request failed (curl exit $curl_exit)"
+    elif [[ $status == 503 ]]; then
+      detail=$(refusal_detail)
+      problem="STS bundle request returned HTTP 503${detail:+ ($detail)}"
       retry_after=$(
-        awk 'tolower($0) ~ /^retry-after:[ \t]*[0-9]+[ \t\r]*$/ { sub(/^[^:]*:[ \t]*/, ""); sub(/[ \t\r]+$/, ""); print; exit }' \
-          "$tmp/headers" 2>/dev/null
+        jq -s -r '
+          if length == 1 and (.[0] | type == "object")
+            and (.[0].retryAfterSeconds | type == "number" and . >= 1 and . <= 3600 and . == floor)
+          then .[0].retryAfterSeconds
+          else empty
+          end
+        ' "$tmp/bundle.json" 2>/dev/null
       ) || retry_after=""
       if [[ $retry_after =~ ^[0-9]{1,4}$ ]]; then
-        problem+="; Retry-After=$retry_after"
+        problem+="; retryAfterSeconds=$retry_after"
         wait_seconds=$retry_after
+      else
+        retry_after=$(
+          awk 'tolower($0) ~ /^retry-after:[ \t]*[0-9]+[ \t\r]*$/ { sub(/^[^:]*:[ \t]*/, ""); sub(/[ \t\r]+$/, ""); print; exit }' \
+            "$tmp/headers" 2>/dev/null
+        ) || retry_after=""
+        if [[ $retry_after =~ ^[0-9]{1,4}$ ]]; then
+          problem+="; Retry-After=$retry_after"
+          wait_seconds=$retry_after
+        fi
       fi
+      wait_seconds=$((10#$wait_seconds))
+      ((wait_seconds <= MAX_RETRY_WAIT_SECONDS)) || wait_seconds=$MAX_RETRY_WAIT_SECONDS
+      ((wait_seconds >= 1)) || wait_seconds=1
+    else
+      break
     fi
-    wait_seconds=$((10#$wait_seconds))
-    ((wait_seconds <= MAX_RETRY_WAIT_SECONDS)) || wait_seconds=$MAX_RETRY_WAIT_SECONDS
-    ((wait_seconds >= 1)) || wait_seconds=1
-  else
-    break
   fi
-  ((attempt < MAX_ATTEMPTS)) || fail "STS bundle request $problem after $attempt attempts"
-  printf 'kilo-credentials: STS bundle request %s; retrying in %s s (attempt %s of %s)\n' \
+  ((attempt < MAX_ATTEMPTS)) || fail "$problem after $attempt attempts"
+  printf 'kilo-credentials: %s; retrying in %s s (attempt %s of %s)\n' \
     "$problem" "$wait_seconds" "$((attempt + 1))" "$MAX_ATTEMPTS"
   sleep "$wait_seconds" || fail "could not wait before retrying"
   attempt=$((attempt + 1))

@@ -15,10 +15,10 @@ inputs:
     default: "https://sts.kiloapps.io"
 # One output per bundle key that a kilocode STS policy grants (services/sts/policy/ci-kilocode-*.yaml
 # in Kilo-Org/cloud). A composite action passes on only declared outputs, and the script refuses a
-# requested key that is not declared here. A private key or certificate chain is declared as
-# `<KEY>_FILE`: the script writes it to a mode 0600 file under RUNNER_TEMP and sets the path. The
-# Kilo Maintainer app key has both forms, because actions/create-github-app-token takes the PEM
-# contents.
+# requested key that is not declared here. A private key or certificate chain that its consumer
+# reads from a file is declared as `<KEY>_FILE`: the script writes it to a mode 0600 file under
+# RUNNER_TEMP and sets the path. The Kilo Maintainer app key stays a value, because
+# actions/create-github-app-token takes the PEM contents.
 outputs:
   KILOCODE_ANACONDA_API_KEY:
     description: "Anaconda.org API token (ci-kilocode-release)"
@@ -29,9 +29,6 @@ outputs:
   KILOCODE_MAINTAINER_APP_KEY:
     description: "Kilo Maintainer GitHub App private key, PEM contents for actions/create-github-app-token (ci-kilocode-release, -app-key, -scan-notify, -community)"
     value: ${{ steps.bundle.outputs.KILOCODE_MAINTAINER_APP_KEY }}
-  KILOCODE_MAINTAINER_APP_KEY_FILE:
-    description: "Path of the Kilo Maintainer GitHub App private key file (ci-kilocode-release, -app-key, -scan-notify, -community)"
-    value: ${{ steps.bundle.outputs.KILOCODE_MAINTAINER_APP_KEY_FILE }}
   KILOCODE_JETBRAINS_MARKETPLACE_TOKEN:
     description: "JetBrains Marketplace token (ci-kilocode-release-jetbrains)"
     value: ${{ steps.bundle.outputs.KILOCODE_JETBRAINS_MARKETPLACE_TOKEN }}

@@ -31,7 +31,7 @@ again later, so it never takes a stale value.
 
 Tokens and values never appear in a command line or in the log. The responses are kept in a
 temporary directory with mode 0700, which the action deletes when it exits. The action needs
-`bash`, `curl` and `jq`, which the GitHub-hosted runners have.
+`bash`, `curl` and `jq`, all installed on the Ubuntu runners these workflows use.
 
 ### Retries and timing
 
@@ -39,15 +39,23 @@ temporary directory with mode 0700, which the action deletes when it exits. The 
 |---|---|
 | Typical: STS serves the bundle from its cache | about 1 s |
 | Cold: STS first fills the bundle from the secret manager | about 20 s |
+| STS or the secret manager is down (503 with `retryAfterSeconds` 30 to 60) | about 3 min before the action fails |
 | OIDC request limit | 30 s |
 | STS request limit, per attempt | 60 s |
 | Worst case before the action fails | about 6.5 min: 3 attempts × (30 s + 60 s) + 2 waits × 60 s |
 
-HTTP 503 and the curl errors for a timeout, a failed TLS handshake and a dropped connection (exit
-codes 28, 35, 52, 56) are retried at most twice, each time with a new OIDC token. Before each retry
-the action waits for the `retryAfterSeconds` in STS's response, or else the `Retry-After` header, or
-else 5 s, capped at 60 s. The final error line names the `retryAfterSeconds` or `Retry-After` value.
-No other error is retried.
+The action makes at most 3 attempts, and each attempt requests a new OIDC token. It retries:
+
+- an OIDC answer with a 5xx status;
+- an STS answer with status 503;
+- a curl transport error on either request: no connection (7), HTTP/2 framing (16), timeout (28),
+  TLS handshake (35), empty reply (52), send or receive failure (55, 56), HTTP/2 stream (92).
+
+Before an attempt after an STS 503 it waits for the `retryAfterSeconds` in the response, or else
+the `Retry-After` header, or else 5 s, capped at 60 s. After a transport error or an OIDC 5xx it
+waits 5 s. The final error line names the `retryAfterSeconds` or `Retry-After` value. No other
+error is retried. STS may already have delivered a bundle when a transport error hides its answer,
+so a retry after a transport error can record two delivery audit rows for one run.
 
 ## Inputs
 
@@ -68,16 +76,17 @@ same pull request as the first workflow that requests it.
 The outputs of keys that the job did not request are empty strings. So `secrets:` must list every
 key the job reads.
 
-Private keys and certificate chains are delivered as files. Each is declared as `<KEY>_FILE`: the
-action writes the exact bytes of the value to a file with mode 0600, in a new directory with mode
-0700 under `$RUNNER_TEMP`, and sets `<KEY>_FILE` to the file's path. The value is still masked.
+Private keys and certificate chains that their consumers read from a file are delivered as files.
+Each is declared as `<KEY>_FILE`: the action writes the exact bytes of the value to a file with mode
+0600, in a new directory with mode 0700 under `$RUNNER_TEMP`, and sets `<KEY>_FILE` to the file's
+path. The value is still masked.
 
-| Bundle key | Outputs | Consumer and the form it needs |
+| Bundle key | Output | Consumer and the form it needs |
 |---|---|---|
-| `KILOCODE_AUR_KEY` | `KILOCODE_AUR_KEY_FILE` | `ssh` and `git` read the key from a file (`ssh -i`, `GIT_SSH_COMMAND`) |
-| `KILOCODE_MAINTAINER_APP_KEY` | `KILOCODE_MAINTAINER_APP_KEY` and `KILOCODE_MAINTAINER_APP_KEY_FILE` | `actions/create-github-app-token`, also through `setup-git-committer`, takes the PEM contents in `private-key`, so it needs the value. A tool that reads a path takes the file |
+| `KILOCODE_AUR_KEY` | `KILOCODE_AUR_KEY_FILE` | `ssh` and `git` read the key from a file (`ssh -i`, `GIT_SSH_COMMAND`). `ssh` needs the key's final newline; the stored value ends with one, and the file keeps it |
 | `KILOCODE_JETBRAINS_PRIVATE_KEY` | `KILOCODE_JETBRAINS_PRIVATE_KEY_FILE` | The Gradle signing task reads `JETBRAINS_PRIVATE_KEY_FILE` (`packages/kilo-jetbrains/build.gradle.kts`) |
 | `KILOCODE_JETBRAINS_CERTIFICATE_CHAIN` | `KILOCODE_JETBRAINS_CERTIFICATE_CHAIN_FILE` | The Gradle signing task reads `JETBRAINS_CERTIFICATE_CHAIN_FILE` |
+| `KILOCODE_MAINTAINER_APP_KEY` | `KILOCODE_MAINTAINER_APP_KEY` | `actions/create-github-app-token`, also through `setup-git-committer`, takes the PEM contents in `private-key`, so this key is a value output |
 
 Every other key is a value output of the same name.
 
@@ -123,22 +132,27 @@ jobs:
 - `secrets:` lists every key the job reads.
 - Each value or path goes to the step that needs it, with `env:` on that step only, never in the
   job's `env:` or in `GITHUB_ENV`, which would show it to every later step.
-- A job that requests a `*_FILE` key ends with an `if: always()` step that deletes each of those
-  files, as in the example. The runner also empties `$RUNNER_TEMP` when the job ends, and the action
-  deletes its files itself when it fails.
+- A job that requests a key that has a `<KEY>_FILE` output (`KILOCODE_AUR_KEY`,
+  `KILOCODE_JETBRAINS_PRIVATE_KEY`, `KILOCODE_JETBRAINS_CERTIFICATE_CHAIN`) ends with an
+  `if: always()` step that deletes those paths, as in the example. The runner also empties
+  `$RUNNER_TEMP` when the job ends, and the action deletes its files itself when it fails.
 - Every action used after this step is pinned by its full commit SHA, so a moved tag cannot run new
   code next to the secrets.
-- An earlier step can change the `PATH` this action runs with, and every step runs as the same user.
-  The job runs only trusted code, never code from a fork or from a pull request.
+- Every step before this one is trusted. An earlier step can change the `PATH` and the environment
+  this action runs with, through `GITHUB_PATH` and `GITHUB_ENV`: for example `BASH_ENV`,
+  `HTTPS_PROXY` or `ALL_PROXY`, `CURL_CA_BUNDLE`, `SSL_CERT_FILE` or `SSLKEYLOGFILE`, any of which
+  can expose the OIDC token or the bundle. Every step also runs as the same user. The job runs only
+  trusted code, never code from a fork or from a pull request.
 
 ## Tests
 
 `script/kilocode/kilo-credentials.test.ts` runs the script against a stand-in GitHub OIDC endpoint
-and a stand-in STS, reached through a local HTTPS proxy with a throwaway certificate. It checks the
-outputs, the key files, masking, every failure line, the retries, and that no token or value reaches
-a command line. CI runs it in the root tooling unit tests (`bun run test:script:ci` in `test.yml`).
-To run it alone from the repository root, with `bash`, `curl`, `jq` and `openssl` installed:
+and a stand-in STS, reached through a local HTTPS proxy with a throwaway certificate. A stand-in
+`sleep` records each wait and returns at once. The test checks the outputs, the key files, masking,
+every failure line, the retries and their waits, and that no token or value reaches a command line.
+CI runs it in the root tooling unit tests (`bun run test:script:ci` in `test.yml`). To run it alone
+from the repository root, with `bash`, `curl`, `jq` and `openssl` installed:
 
 ```sh
-bun test ./script/kilocode/kilo-credentials.test.ts --timeout 30000
+bun test ./script/kilocode/kilo-credentials.test.ts
 ```
