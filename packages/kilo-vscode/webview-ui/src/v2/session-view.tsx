@@ -36,6 +36,7 @@ import { MessageList } from "./messages"
 import { PermissionDock } from "./permission"
 import { createPermissionPresentation } from "./permission-presentation"
 import { PromptInput, setPromptDraft, type SendTarget } from "./prompt"
+import { answerQuestion } from "./question-answer"
 import { createRevertQueue, EMPTY_DRAFT, redoTarget, restoredDraft, type ComposerDraft } from "./revert"
 import { sendBinding } from "./send-binding"
 import { createSelection, Selectors } from "./selectors"
@@ -238,7 +239,8 @@ export function SessionView(props: {
   const runningOf = (id: string | undefined) => !!id && v2.data.session.status(id) === "running"
   const running = () => runningOf(session())
 
-  // Users can steer while a question is open and still answer it. Only a permission blocks sending.
+  // Plain text answers the pending question; a send with attachments or references still steers. Only
+  // a permission blocks sending.
   const blocked = () => permissions().length > 0
   const dockBlocked = () => blocked() || forms().length > 0
   // Only a pending permission changes the Send label. A pending question leaves Send in place instead of Stop.
@@ -433,6 +435,11 @@ export function SessionView(props: {
       target?: SendTarget
     },
   ) => {
+    // The question dock owns the question on screen, so typed composer text is its custom answer,
+    // as v1. Attachments and references are a prompt, not an answer. A dock that cannot take the
+    // text (the review step, a field that is not text) returns undefined and the send continues.
+    const answered = await answerQuestion(forms()[0], text, input)
+    if (answered !== undefined) return answered
     const { id, gate, model, draft, delivery } = await begin(mode, input?.target)
     const files = promptFiles(input?.items ?? [], input?.files ?? [])
     return v2.data.session

@@ -48,8 +48,9 @@ const OPTIONS = [
   },
 ]
 
-/** VS Code routes text typed in its main prompt input as the answer, so the custom row is hidden there. */
-const fields = (custom: boolean): Form.Fields => [
+// The form accepts a typed answer on every client. VS Code's main prompt routes typed text as the
+// answer, so `composerReply` hides the dock's own custom row there instead of forbidding the value.
+const fields: Form.Fields = [
   {
     key: "q0",
     title: dict["plan.followup.header"],
@@ -60,11 +61,11 @@ const fields = (custom: boolean): Form.Fields => [
       label: option.label,
       description: option.description,
     })),
-    custom,
+    custom: true,
   },
 ]
 
-const METADATA = {
+const metadata = (document: boolean) => ({
   kind: "question",
   kilocode: {
     options: hints([
@@ -74,8 +75,9 @@ const METADATA = {
         options: OPTIONS,
       },
     ]),
+    ...(document ? { composerReply: true } : {}),
   },
-}
+})
 
 /**
  * Asks the post-plan question when the turn that just ended called `plan_exit`, and acts on the answer:
@@ -113,8 +115,8 @@ export const ask = Effect.fn(function* (input: {
   const state = yield* forms.value.ask({
     sessionID: input.sessionID,
     title: dict["plan.followup.header"],
-    metadata: METADATA,
-    fields: fields(!input.document),
+    metadata: metadata(input.document),
+    fields,
   })
   if (state.status !== "answered") return
 

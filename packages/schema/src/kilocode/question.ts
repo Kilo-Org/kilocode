@@ -53,6 +53,11 @@ export const FormHints = Schema.Record(Schema.String, Schema.Record(Schema.Strin
 export type FormHints = typeof FormHints.Type
 
 export const FormMetadata = Schema.Struct({
-  kilocode: Schema.Struct({ options: FormHints }),
+  kilocode: Schema.Struct({
+    options: FormHints,
+    // Set by a question form for a client whose main prompt submits typed text as the answer, so the
+    // dock does not offer a second, redundant custom-answer row. The form still accepts custom values.
+    composerReply: optional(Schema.Boolean),
+  }),
 }).annotate({ identifier: "KiloQuestion.FormMetadata" })
 export interface FormMetadata extends Schema.Schema.Type<typeof FormMetadata> {}

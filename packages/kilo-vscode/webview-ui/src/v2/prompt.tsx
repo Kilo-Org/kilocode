@@ -170,7 +170,7 @@ export function PromptInput(props: {
   model?: ModelRef
   /** A pending permission blocks sending. Drives the blocked Send tooltip. */
   blocked?: boolean
-  /** A pending question tool call. The composer waits for an answer, so Send replaces Stop. */
+  /** A pending question tool call. The composer answers it, so Send replaces Stop. */
   questioning?: boolean
   /**
    * Sends the composed text. While the agent runs, `mode` chooses between steering, queueing and stopping to send now.

@@ -24,6 +24,23 @@ test("the question offers the three answers with modes and i18n keys", async () 
   })
 })
 
+test("VS Code accepts a typed answer and marks the composer as its input", async () => {
+  const previous = process.env.OPENCODE_CLIENT
+  process.env.OPENCODE_CLIENT = "vscode"
+  try {
+    const result = await handoff({ answer: "Also cover the login page" })
+    const form = result.asked[0]
+    // The typed answer must pass form validation, so the field stays open to custom values even
+    // though the dock hides its own custom row behind `composerReply`.
+    expect(form?.fields[0]).toMatchObject({ type: "string", custom: true })
+    expect(form?.metadata).toMatchObject({ kilocode: { composerReply: true } })
+    expect(result.prompted).toEqual([{ sessionID, text: "Also cover the login page" }])
+  } finally {
+    if (previous === undefined) delete process.env.OPENCODE_CLIENT
+    else process.env.OPENCODE_CLIENT = previous
+  }
+})
+
 test("Continue here switches the session to Code and starts the implementation", async () => {
   const result = await handoff({ answer: PlanFollowup.CONTINUE })
   expect(result.switched).toEqual([code])
