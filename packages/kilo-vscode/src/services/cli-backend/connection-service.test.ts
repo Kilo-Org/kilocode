@@ -380,3 +380,62 @@ describe("KiloConnectionService server exit handling", () => {
     expect(stateErr?.message).toBe("CLI background process exited with code 1. Retry to reconnect.")
   })
 })
+
+describe("KiloConnectionService disposeGlobal", () => {
+  test("notifies fallback listeners when /global/dispose rejects", async () => {
+    const service = new KiloConnectionService({} as any)
+    let calls = 0
+    ;(service as any).client = {
+      global: {
+        dispose: async () => {
+          throw new Error("worktree disposer failed")
+        },
+      },
+    }
+    const unsub = service.onGlobalDisposed(() => {
+      calls += 1
+    })
+
+    await service.disposeGlobal("auth change", 0)
+    expect(calls).toBe(1)
+
+    unsub()
+    await service.disposeGlobal("auth change", 0)
+    expect(calls).toBe(1)
+  })
+
+  test("notifies fallback listeners when SSE does not deliver global.disposed", async () => {
+    const service = new KiloConnectionService({} as any)
+    let calls = 0
+    ;(service as any).client = {
+      global: {
+        dispose: async () => ({ data: true }),
+      },
+    }
+    service.onGlobalDisposed(() => {
+      calls += 1
+    })
+
+    await service.disposeGlobal("auth change", 1)
+    expect(calls).toBe(1)
+  })
+
+  test("skips fallback notification when SSE delivers global.disposed", async () => {
+    const service = new KiloConnectionService({} as any)
+    let calls = 0
+    ;(service as any).client = {
+      global: {
+        dispose: async () => {
+          ;(service as any).broadcast({ id: "evt-1", type: "global.disposed", properties: {} }, "global")
+          return { data: true }
+        },
+      },
+    }
+    service.onGlobalDisposed(() => {
+      calls += 1
+    })
+
+    await service.disposeGlobal("auth change", 1)
+    expect(calls).toBe(0)
+  })
+})

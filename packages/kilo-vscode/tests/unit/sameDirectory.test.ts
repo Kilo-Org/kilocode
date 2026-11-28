@@ -1,4 +1,7 @@
 import { afterEach, describe, expect, it } from "bun:test"
+import * as fs from "fs"
+import * as os from "os"
+import * as path from "path"
 import { sameDirectory } from "../../src/kilo-provider-utils"
 
 const platform = Object.getOwnPropertyDescriptor(process, "platform")
@@ -27,5 +30,22 @@ describe("sameDirectory", () => {
 
   it("returns false for different directories", () => {
     expect(sameDirectory("/repo/pkg-a", "/repo/pkg-b")).toBe(false)
+  })
+
+  it("matches symlinked paths pointing to the same real directory", () => {
+    const base = fs.mkdtempSync(path.join(os.tmpdir(), "kilo-samedir-"))
+    const real = path.join(base, "real")
+    const other = path.join(base, "other")
+    const link = path.join(base, "link")
+    try {
+      fs.mkdirSync(real)
+      fs.mkdirSync(other)
+      fs.symlinkSync(real, link, "dir")
+      expect(sameDirectory(link, real)).toBe(true)
+      expect(sameDirectory(real, link)).toBe(true)
+      expect(sameDirectory(link, other)).toBe(false)
+    } finally {
+      fs.rmSync(base, { recursive: true, force: true })
+    }
   })
 })

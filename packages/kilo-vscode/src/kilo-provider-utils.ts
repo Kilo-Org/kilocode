@@ -10,6 +10,7 @@ import {
   type SessionPage,
   type SessionPageState,
 } from "./kilo-provider/session-page"
+import * as fs from "fs"
 import * as path from "path"
 
 export { SessionStreamScheduler } from "./kilo-provider/session-stream-scheduler"
@@ -495,15 +496,31 @@ export function resolveNewSessionDirectory(input: {
   })
 }
 
+function equal(left: string, right: string): boolean {
+  if (path.relative(left, right) === "") return true
+  if (process.platform !== "win32") return false
+  return path.relative(left.toLowerCase(), right.toLowerCase()) === ""
+}
+
+function real(dir: string): string {
+  try {
+    return fs.realpathSync.native(dir)
+  } catch {
+    return dir
+  }
+}
+
 export function sameDirectory(a: string, b: string): boolean {
   if (!a || !b) return false
 
   const left = path.resolve(a)
   const right = path.resolve(b)
-  if (path.relative(left, right) === "") return true
+  if (equal(left, right)) return true
 
-  if (process.platform !== "win32") return false
-  return path.relative(left.toLowerCase(), right.toLowerCase()) === ""
+  const lhs = real(left)
+  const rhs = real(right)
+  if (lhs === left && rhs === right) return false
+  return equal(lhs, rhs)
 }
 
 type SyncEvent =

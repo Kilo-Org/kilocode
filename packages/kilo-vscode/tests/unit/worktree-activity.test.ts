@@ -51,6 +51,7 @@ function connection(client: unknown, state = "connected") {
   let stateListener: ((value: string) => void) | undefined
   let eventListener: ((event: unknown, directory?: string) => void) | undefined
   let eventFilter: ((event: unknown) => boolean) | undefined
+  let disposed: (() => void) | undefined
   const value = {
     getClient: () => client,
     getConnectionState: () => state,
@@ -68,6 +69,12 @@ function connection(client: unknown, state = "connected") {
         eventListener = undefined
       }
     },
+    onGlobalDisposed: (listener: () => void) => {
+      disposed = listener
+      return () => {
+        disposed = undefined
+      }
+    },
     change: (next: string) => {
       state = next
       stateListener?.(next)
@@ -77,6 +84,9 @@ function connection(client: unknown, state = "connected") {
     },
     emit: (event: unknown, directory?: string) => {
       if (eventFilter?.(event)) eventListener?.(event, directory)
+    },
+    emitGlobalDisposed: () => {
+      disposed?.()
     },
   }
   return value
@@ -608,5 +618,50 @@ describe("WorktreeActivity", () => {
     await Bun.sleep(0)
     expect(loads).toEqual([])
     wrapper.dispose()
+  })
+
+  it("reconciles and re-syncs worktrees on fallback onGlobalDisposed notifications", async () => {
+    const loads: string[] = []
+    let active: Record<string, Record<string, { type: string }>> = {
+      "/repo/a": { a1: { type: "busy" } },
+    }
+    const client = {
+      session: {
+        status: async (input: { directory: string }) => {
+          loads.push(input.directory)
+          return { data: active[input.directory] ?? {} }
+        },
+      },
+      permission: { list: async () => ({ data: [] }) },
+      question: { list: async () => ({ data: [] }) },
+    }
+    const conn = connection(client)
+    const posted: string[][] = []
+    const lifecycle: Array<{ event: unknown; directory?: string }> = []
+    const wrapper = createWorktreeActivity({
+      connection: conn as never,
+      paths: () => ["/repo/a"],
+      post: (dirs) => posted.push(dirs),
+      status: () => {},
+      lifecycle: (event, directory) => lifecycle.push({ event, directory }),
+      log: () => {},
+    })
+
+    await wrapper.sync()
+    expect(posted.at(-1)).toEqual(["/repo/a"])
+
+    loads.length = 0
+    active = { "/repo/a": {} }
+    conn.emitGlobalDisposed()
+    expect(posted.at(-1)).toEqual([])
+    expect(lifecycle.at(-1)).toEqual({ event: { type: "global.disposed", properties: {} }, directory: "global" })
+    await Bun.sleep(0)
+    expect(loads).toEqual(["/repo/a"])
+
+    loads.length = 0
+    wrapper.dispose()
+    conn.emitGlobalDisposed()
+    await Bun.sleep(0)
+    expect(loads).toEqual([])
   })
 })

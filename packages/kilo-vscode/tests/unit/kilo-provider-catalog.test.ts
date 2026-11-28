@@ -1,9 +1,14 @@
-import { describe, expect, it } from "bun:test"
+import { afterEach, describe, expect, it } from "bun:test"
 import type { Config } from "@kilocode/sdk/v2/client"
 import type { AuthContext } from "../../src/kilo-provider/handlers/auth"
 import { createCatalogRetry } from "../../src/kilo-provider/catalog-retry"
 
 const { KiloProvider } = await import("../../src/KiloProvider")
+const created: Array<{ dispose(): void }> = []
+
+afterEach(() => {
+  for (const item of created.splice(0)) item.dispose()
+})
 
 const external = { id: "external", name: "External", models: { model: { id: "model" } } }
 const catalog = (org: string) => ({
@@ -23,10 +28,12 @@ const catalog = (org: string) => ({
 
 type Internals = {
   connectionState: string
+  providersRetry: boolean
   cachedConfigMessage: unknown
   cachedProvidersMessage: unknown
   providersRefresh: Promise<void> | null
   catalogRetry: ReturnType<typeof createCatalogRetry>
+  providerRetry: ReturnType<typeof createCatalogRetry>
   authCtx: AuthContext
   fetchAndSendProviders(): Promise<void>
   invalidateProviders(): void
@@ -34,7 +41,11 @@ type Internals = {
   reloadAfterAuthChange(): Promise<void>
 }
 
-function setup(list: () => Promise<ReturnType<typeof catalog>>, org: () => string) {
+function setup(
+  list: () => Promise<ReturnType<typeof catalog>>,
+  org: () => string,
+  opts?: { projectDirectory?: string | null },
+) {
   const client = {
     provider: { list, auth: async () => ({ data: {} }) },
     kilo: { authStatus: async () => ({ data: { authenticated: true, type: "oauth", organizationId: org() } }) },
@@ -47,8 +58,16 @@ function setup(list: () => Promise<ReturnType<typeof catalog>>, org: () => strin
   }
   const provider = new KiloProvider(
     {} as never,
-    { getClient: () => client, resolveEventSessionId: () => undefined } as never,
+    {
+      getClient: () => client,
+      resolveEventSessionId: () => undefined,
+      unregisterVisible: () => undefined,
+      unregisterAttached: () => undefined,
+    } as never,
+    undefined,
+    opts,
   )
+  created.push(provider)
   const internal = provider as unknown as Internals
   Object.assign(internal, {
     connectionState: "connected",
@@ -367,5 +386,100 @@ describe("KiloProvider catalog refresh", () => {
       organizationId: "b",
       defaults: { kilo: "b/model" },
     })
+  })
+
+  it("retries automatically after a provider fetch failure and recovers without SSE reconnect", async () => {
+    let fail = true
+    const { internal, messages } = setup(
+      async () => {
+        if (fail) throw new Error("disposing")
+        return catalog("org")
+      },
+      () => "org",
+    )
+    const scheduled: Array<() => void> = []
+    internal.providerRetry.dispose()
+    internal.providerRetry = createCatalogRetry({
+      refresh: () => void internal.fetchAndSendProviders(),
+      schedule: (run) => {
+        scheduled.push(run)
+        return () => {}
+      },
+    })
+
+    await internal.fetchAndSendProviders()
+    expect(internal.providersRetry).toBe(true)
+    expect(messages.at(-1)).toMatchObject({ type: "providersLoaded", providers: {}, loadFailed: true })
+    expect(scheduled).toHaveLength(1)
+
+    fail = false
+    scheduled.at(0)?.()
+    await internal.providersRefresh
+    expect(internal.providersRetry).toBe(false)
+    expect(messages.at(-1)).toMatchObject({
+      type: "providersLoaded",
+      ready: true,
+      providers: { kilo: { models: { "org/model": { id: "org/model" } } } },
+    })
+    expect(scheduled).toHaveLength(1)
+  })
+
+  it("retries automatically when kilo.authStatus fails and strips unverified Kilo data", async () => {
+    let fail = true
+    const { internal, messages, client } = setup(
+      async () => catalog("org"),
+      () => "org",
+    )
+    client.kilo.authStatus = async () => {
+      if (fail) throw new Error("auth status interrupted")
+      return { data: { authenticated: true, type: "oauth", organizationId: "org" } }
+    }
+    const scheduled: Array<() => void> = []
+    internal.providerRetry.dispose()
+    internal.providerRetry = createCatalogRetry({
+      refresh: () => void internal.fetchAndSendProviders(),
+      schedule: (run) => {
+        scheduled.push(run)
+        return () => {}
+      },
+    })
+
+    await internal.fetchAndSendProviders()
+    expect(internal.providersRetry).toBe(true)
+    expect(messages.at(-1)).toMatchObject({
+      type: "providersLoaded",
+      ready: false,
+      providers: { external },
+    })
+    expect(scheduled).toHaveLength(1)
+
+    fail = false
+    scheduled.at(0)?.()
+    await internal.providersRefresh
+    expect(internal.providersRetry).toBe(false)
+    expect(messages.at(-1)).toMatchObject({
+      type: "providersLoaded",
+      ready: true,
+      organizationId: "org",
+      providers: { kilo: { models: { "org/model": { id: "org/model" } } }, external },
+    })
+    expect(scheduled).toHaveLength(1)
+  })
+
+  it("reloads providers on server.instance.disposed matching the panel projectDirectory", async () => {
+    const { internal, messages, reloads } = setup(
+      async () => catalog("org"),
+      () => "org",
+      { projectDirectory: "/project-b" },
+    )
+    await internal.fetchAndSendProviders()
+
+    internal.handleEvent({ type: "server.instance.disposed", properties: { directory: "/repo" } }, "/repo")
+    expect(reloads).toHaveLength(0)
+
+    internal.handleEvent({ type: "server.instance.disposed", properties: { directory: "/project-b" } }, "/project-b")
+    expect(reloads).toHaveLength(1)
+    await Promise.all(reloads)
+    expect(messages.at(-1)).toMatchObject({ type: "agentBehaviourInvalidated" })
   })
 })

@@ -474,6 +474,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private providersGeneration = 0
   /** Re-fetch providers while an organization's Kilo catalog is unavailable. */
   private readonly catalogRetry = createCatalogRetry({ refresh: () => void this.fetchAndSendProviders() })
+  /** Re-fetch providers after a transient fetch failure or unverified Kilo auth status. */
+  private readonly providerRetry = createCatalogRetry({
+    refresh: () => void this.fetchAndSendProviders(),
+    delays: [1_000, 2_000, 5_000, 10_000, 30_000],
+    limit: 5,
+  })
   private sandboxRevision = 0
   private cachedAgentsMessage: unknown = null
   /** Cached skillsLoaded payload so requestSkills can be served before client is ready */
@@ -567,6 +573,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private unsubscribeAcknowledged: (() => void) | null = null
   private unsubscribeLanguageChange: (() => void) | null = null
   private unsubscribeProfileChange: (() => void) | null = null
+  private unsubscribeGlobalDisposed: (() => void) | null = null
   private unsubscribeFavoritesChange: (() => void) | null = null
   private unsubscribeModelSelectorExpanded: (() => void) | null = null
   private unsubscribeClearPendingPrompts: (() => void) | null = null
@@ -1162,7 +1169,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /** Retry failed workspace initialization against the newly selected project. */
   public async retryInitialization(): Promise<void> {
     const dir = this.settingsDirectory()
-    if (this.retainedProviders() && this.cachedConfigMessage && sameDirectory(this.cachedConfigDirectory ?? "", dir))
+    if (
+      !this.providersRetry &&
+      this.retainedProviders() &&
+      this.cachedConfigMessage &&
+      sameDirectory(this.cachedConfigDirectory ?? "", dir)
+    )
       return
     await this.fetchAndSendConfig()
     await Promise.all([
@@ -2091,6 +2103,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.unsubscribeNotificationDismiss?.()
     this.unsubscribeLanguageChange?.()
     this.unsubscribeProfileChange?.()
+    this.unsubscribeGlobalDisposed?.()
     this.unsubscribeFavoritesChange?.()
     this.unsubscribeModelSelectorExpanded?.()
     this.unsubscribeClearPendingPrompts?.()
@@ -2213,7 +2226,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // Subscribe to profile change broadcast from other KiloProvider instances
       this.unsubscribeProfileChange = this.connectionService.onProfileChanged((msg) => {
         this.postMessage(msg)
+        if (this.staleProviders(msg)) void this.fetchAndSendProviders()
       })
+
+      // Subscribe to fallback global-disposal broadcast when /global/dispose fails or SSE misses it
+      this.unsubscribeGlobalDisposed =
+        this.connectionService.onGlobalDisposed?.(() => {
+          this.reconcileDisposedSessions()
+          void this.reloadAfterAuthChange()
+        }) ?? null
 
       // Subscribe to favorites change broadcast from other KiloProvider instances
       this.unsubscribeFavoritesChange = this.connectionService.onFavoritesChanged((favorites) => {
@@ -2945,6 +2966,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.providersGeneration++
     this.cachedProvidersMessage = null
     this.cachedProvidersDirectory = null
+    this.providerRetry.update(false)
     this.postMessage({ type: "providersLoading" })
   }
 
@@ -2954,9 +2976,39 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    */
   private resetProviders(): void {
     this.invalidateProviders()
+    this.catalogRetry.update(false)
     // The saved keys are part of the project's own read, so only a project change replaces them.
     this.storedProviderKeys = {}
     this.postMessage({ type: "providersReset" })
+  }
+
+  private staleProviders(msg: unknown): boolean {
+    if (typeof msg !== "object" || msg === null) return false
+    const record = msg as { type?: unknown; data?: unknown }
+    if (record.type !== "profileData") return false
+    if (this.providersRetry) return true
+    const cached = this.retainedProviders() as {
+      ready?: boolean
+      organizationId?: string | null
+      authStates?: Record<string, string>
+      kiloUnavailable?: boolean
+      failures?: Array<{ providerID?: string; kind?: string }>
+    } | null
+    if (!cached) return !this.providersRefresh
+    if (cached.ready === false || cached.kiloUnavailable === true) return true
+    const authed = Boolean(cached.authStates?.kilo)
+    const data = record.data
+    if (data == null) return authed
+    const org =
+      typeof data === "object" && "currentOrgId" in data
+        ? ((data as { currentOrgId?: string | null }).currentOrgId ?? null)
+        : null
+    if (!authed || (cached.organizationId ?? null) !== org) return true
+    return (
+      cached.failures?.some(
+        (item) => item.providerID === "kilo" && (item.kind === "unauthenticated" || item.kind === "unauthorized"),
+      ) ?? false
+    )
   }
 
   /** Fetch providers and send to webview. Coalesced: at most one in-flight + one queued. */
@@ -2973,6 +3025,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.providersQueued = false
         const client = this.client
         if (!client) {
+          this.catalogRetry.update(false)
+          this.providerRetry.update(false)
           // Keep the provider view on the panel's project: replay only a payload loaded for
           // that project, and mark the fetch to run once a client is available.
           const retained = this.retainedProviders()
@@ -3012,9 +3066,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           }
           this.cachedProvidersMessage = message
           this.cachedProvidersDirectory = dir
-          this.providersRetry = false
+          this.providersRetry = !ready
           this.postMessage(message)
           this.catalogRetry.update(unavailable)
+          this.providerRetry.update(!ready && !unavailable)
         } catch (error) {
           if (generation !== this.providersGeneration) {
             if (!this.providersQueued) return
@@ -3023,7 +3078,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           }
           // This project has no provider payload yet, so publish an explicit failure for it:
           // the view reports the failure rather than a loading state. Either way the fetch runs
-          // again on the next connect.
+          // again on the next connect or scheduled retry.
           this.providersRetry = true
           if (!this.retainedProviders()) {
             this.postMessage({
@@ -3038,9 +3093,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               loadFailed: true,
             })
           }
-          // Keep backing off while the last loaded Kilo catalog was unavailable.
+          // Keep backing off while the last loaded Kilo catalog was unavailable,
+          // and otherwise retry the failed provider fetch with a short backoff.
           const last = this.cachedProvidersMessage as { kiloUnavailable?: boolean } | null
-          this.catalogRetry.update(last?.kiloUnavailable === true)
+          const unavailable = last?.kiloUnavailable === true
+          this.catalogRetry.update(unavailable)
+          this.providerRetry.update(!unavailable)
           console.error("[Kilo New] KiloProvider: Failed to fetch providers:", error)
         }
         if (!this.providersQueued) return
@@ -3081,6 +3139,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // Provider actions read and write the config of the project the panel shows.
       this.settingsDirectory(),
       () => this.fetchAndSendProviders(),
+      (reason) => this.disposeInstances(reason),
     )
     const set = (m: unknown) => {
       this.cachedConfigMessage = m
@@ -5342,20 +5401,29 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.postMessage({ type: "providerUsageLoaded", reset: true })
   }
 
+  private async disposeInstances(reason: string): Promise<void> {
+    if (!this.client) return
+    if (typeof this.connectionService.disposeGlobal === "function") {
+      await this.connectionService.disposeGlobal(reason)
+      return
+    }
+    await this.client.global.dispose({ throwOnError: true }).catch((err: unknown) => {
+      console.warn(`[Kilo New] KiloProvider: global.dispose() after ${reason} failed:`, err)
+    })
+  }
+
   private async disposeGlobal(): Promise<void> {
     if (!this.client) return
 
-    await this.client.global
-      .dispose()
-      .catch((e: unknown) => console.warn("[Kilo New] KiloProvider: global.dispose() after org switch failed:", e))
+    await this.disposeInstances("auth change")
 
-    // Org switch succeeded — refresh profile and providers independently (best-effort)
+    // Auth change succeeded — refresh profile and providers independently (best-effort)
     // Broadcast to all webviews (sidebar, profile tab, agent manager, etc.)
     await sendProfile(this.client, (msg) => this.connectionService.notifyProfileChanged(msg))
     try {
       await this.fetchAndSendProviders()
     } catch (error) {
-      console.error("[Kilo New] KiloProvider: Failed to refresh providers after org switch:", error)
+      console.error("[Kilo New] KiloProvider: Failed to refresh providers after auth change:", error)
     }
   }
 
@@ -5861,7 +5929,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const props = event.properties as Record<string, unknown> | null
       const dir = typeof props?.directory === "string" ? props.directory : directory
       if (dir) this.reconcileDisposedSessions(dir)
-      if (dir && !sameDirectory(dir, this.getWorkspaceDirectory())) return
+      if (dir && !sameDirectory(dir, this.settingsDirectory())) return
       void this.reloadAfterAuthChange().finally(() => this.postMessage({ type: "agentBehaviourInvalidated" }))
       return
     }
@@ -6599,6 +6667,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.latch?.dispose()
     this.latch = undefined
     this.catalogRetry.dispose()
+    this.providerRetry.dispose()
     this.unsubscribeRemote?.()
     this.streams.focus(undefined)
     this.connectionService.unregisterVisible(this.instanceId)
@@ -6612,6 +6681,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.unsubscribeNotificationDismiss?.()
     this.unsubscribeLanguageChange?.()
     this.unsubscribeProfileChange?.()
+    this.unsubscribeGlobalDisposed?.()
     this.unsubscribeFavoritesChange?.()
     this.unsubscribeModelSelectorExpanded?.()
     this.unsubscribeClearPendingPrompts?.()

@@ -1,7 +1,13 @@
-import { describe, expect, it } from "bun:test"
+import { afterEach, describe, expect, it } from "bun:test"
+import { KiloConnectionService } from "../../src/services/cli-backend/connection-service"
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
 const { KiloProvider } = await import("../../src/KiloProvider")
+const created: Array<{ dispose(): void }> = []
+
+afterEach(() => {
+  for (const item of created.splice(0)) item.dispose()
+})
 
 type State = "connecting" | "connected" | "disconnected" | "error"
 
@@ -31,6 +37,7 @@ type Internals = {
   fetchAndSendConfig: () => Promise<void>
   fetchAndSendNotifications: () => Promise<void>
   seedSessionStatusMap: () => Promise<void>
+  seedSessionWakeups: () => Promise<void>
   sendNotificationSettings: () => void
   startStatsPolling: () => void
   handleProviderAction: (msg: Record<string, unknown>) => Promise<void>
@@ -40,11 +47,21 @@ type Internals = {
 function connection(online: boolean | (() => boolean) = true, custom?: unknown) {
   const up = typeof online === "function" ? online : () => online
   let listener: ((state: State, error?: Error) => void) | undefined
+  let profile: ((msg: unknown) => void) | undefined
+  let disposed: (() => void) | undefined
   const client = custom ?? { kilo: { profile: async () => ({ data: null }) } }
   return {
     emitState(next: State) {
       if (!listener) throw new Error("expected a connection state subscription")
       listener(next)
+    },
+    emitProfile(msg: unknown) {
+      if (!profile) throw new Error("expected a profile change subscription")
+      profile(msg)
+    },
+    emitGlobalDisposed() {
+      if (!disposed) throw new Error("expected a global disposed subscription")
+      disposed()
     },
     connect: async () => {},
     getClient: () => {
@@ -59,7 +76,14 @@ function connection(online: boolean | (() => boolean) = true, custom?: unknown) 
     onNotificationDismissed: () => () => undefined,
     onClearPendingPrompts: () => () => undefined,
     onLanguageChanged: () => () => undefined,
-    onProfileChanged: () => () => undefined,
+    onProfileChanged: (next: typeof profile) => {
+      profile = next
+      return () => undefined
+    },
+    onGlobalDisposed: (next: typeof disposed) => {
+      disposed = next
+      return () => undefined
+    },
     onFavoritesChanged: () => () => undefined,
     onModelSelectorExpandedChanged: () => () => undefined,
     registerDirectoryProvider: () => () => undefined,
@@ -73,9 +97,11 @@ function connection(online: boolean | (() => boolean) = true, custom?: unknown) 
 }
 
 function provider(service: ReturnType<typeof connection>, root = () => "/repo") {
-  return new KiloProvider({} as never, service as never, undefined, {
+  const instance = new KiloProvider({} as never, service as never, undefined, {
     rootDirectory: root,
-  }) as unknown as Internals
+  })
+  created.push(instance)
+  return instance as unknown as Internals
 }
 
 function stub(internal: Internals) {
@@ -92,6 +118,7 @@ function stub(internal: Internals) {
   internal.fetchAndSendConfig = async () => {}
   internal.fetchAndSendNotifications = async () => {}
   internal.seedSessionStatusMap = async () => {}
+  internal.seedSessionWakeups = async () => {}
   internal.sendNotificationSettings = () => {}
   internal.startStatsPolling = () => {}
 }
@@ -395,10 +422,12 @@ describe("KiloProvider providers on reconnect", () => {
   it("loads the provider view for the project a settings panel selected", async () => {
     const requests: string[] = []
     const messages: unknown[] = []
-    const internal = new KiloProvider({} as never, connection(true, remote(requests)) as never, undefined, {
+    const instance = new KiloProvider({} as never, connection(true, remote(requests)) as never, undefined, {
       rootDirectory: () => "/repo",
       projectDirectory: "/repo/packages/app",
-    }) as unknown as Internals
+    })
+    created.push(instance)
+    const internal = instance as unknown as Internals
     stub(internal)
     internal.webview = { postMessage: async (message) => messages.push(message) }
 
@@ -430,10 +459,12 @@ describe("KiloProvider providers on reconnect", () => {
       auth: { remove: async () => ({ data: true }) },
     }
     const messages: unknown[] = []
-    const internal = new KiloProvider({} as never, connection(true, custom) as never, undefined, {
+    const instance = new KiloProvider({} as never, connection(true, custom) as never, undefined, {
       rootDirectory: () => "/repo",
       projectDirectory: "/repo/packages/app",
-    }) as unknown as Internals
+    })
+    created.push(instance)
+    const internal = instance as unknown as Internals
     stub(internal)
     internal.webview = { postMessage: async (message) => messages.push(message) }
 
@@ -531,5 +562,236 @@ describe("KiloProvider providers on reconnect", () => {
     expect(internal.providersRetry).toBe(false)
     const cached = internal.cachedProvidersMessage
     if (cached) expect(cached).toMatchObject({ defaults: { "/project-b": true } })
+  })
+
+  it("reloads a non-initiating panel on fallback global-disposed notifications", async () => {
+    let authed = false
+    const requests: string[] = []
+    const messages: unknown[] = []
+    const service = connection(true, {
+      kilo: {
+        authStatus: async () => ({ data: authed ? { authenticated: true, type: "oauth" } : { authenticated: false } }),
+        profile: async () => ({ data: null }),
+      },
+      provider: {
+        list: async (input: { directory: string }) => {
+          requests.push(input.directory)
+          return {
+            data: {
+              all: authed ? [{ id: "kilo", name: "Kilo Gateway", models: { "kilo/auto": { id: "kilo/auto" } } }] : [],
+              connected: authed ? ["kilo"] : [],
+              default: authed ? { kilo: "kilo/auto" } : {},
+            },
+          }
+        },
+      },
+    })
+    const internal = provider(service)
+    stub(internal)
+    internal.webview = { postMessage: async (message) => messages.push(message) }
+    await internal.initializeConnection()
+    expect(requests).toHaveLength(1)
+
+    authed = true
+    service.emitGlobalDisposed()
+    if (internal.providersRefresh) await internal.providersRefresh
+
+    expect(requests).toHaveLength(2)
+    expect(messages.at(-1)).toMatchObject({
+      type: "providersLoaded",
+      ready: true,
+      authStates: { kilo: "oauth" },
+      providers: { kilo: { models: { "kilo/auto": { id: "kilo/auto" } } } },
+    })
+  })
+
+  it("refreshes providers on profile broadcasts only when the cached auth state disagrees", async () => {
+    let auth: { authenticated: boolean; type?: "oauth"; organizationId?: string } = { authenticated: false }
+    let fetches = 0
+    const messages: unknown[] = []
+    const service = connection(true, {
+      kilo: {
+        authStatus: async () => ({ data: auth }),
+        profile: async () => ({ data: null }),
+      },
+      provider: {
+        list: async () => {
+          fetches++
+          return {
+            data: {
+              all: auth.authenticated
+                ? [{ id: "kilo", name: "Kilo Gateway", models: { "kilo/auto": { id: "kilo/auto" } } }]
+                : [],
+              connected: auth.authenticated ? ["kilo"] : [],
+              default: auth.authenticated ? { kilo: "kilo/auto" } : {},
+            },
+          }
+        },
+      },
+    })
+    const internal = provider(service)
+    stub(internal)
+    internal.webview = { postMessage: async (message) => messages.push(message) }
+    await internal.initializeConnection()
+    expect(fetches).toBe(1)
+
+    // Matching logged-out profile does not trigger a redundant fetch.
+    service.emitProfile({ type: "profileData", data: null })
+    if (internal.providersRefresh) await internal.providersRefresh
+    expect(fetches).toBe(1)
+
+    // Profile outage status is forwarded without triggering a provider reload.
+    service.emitProfile({ type: "profileStatus", status: "unavailable" })
+    if (internal.providersRefresh) await internal.providersRefresh
+    expect(fetches).toBe(1)
+    expect(messages.at(-1)).toEqual({ type: "profileStatus", status: "unavailable" })
+
+    // Logged-in profile disagrees with cached unauthenticated providers -> refreshes.
+    auth = { authenticated: true, type: "oauth", organizationId: "org-a" }
+    service.emitProfile({ type: "profileData", data: { currentOrgId: "org-a" } })
+    if (internal.providersRefresh) await internal.providersRefresh
+    expect(fetches).toBe(2)
+    expect(messages.at(-1)).toMatchObject({
+      type: "providersLoaded",
+      organizationId: "org-a",
+      authStates: { kilo: "oauth" },
+    })
+
+    // Same logged-in profile does not trigger another fetch.
+    service.emitProfile({ type: "profileData", data: { currentOrgId: "org-a" } })
+    if (internal.providersRefresh) await internal.providersRefresh
+    expect(fetches).toBe(2)
+
+    // Profile outage status while signed in also leaves cached providers untouched.
+    service.emitProfile({ type: "profileStatus", status: "unavailable" })
+    if (internal.providersRefresh) await internal.providersRefresh
+    expect(fetches).toBe(2)
+
+    // Switched organization disagrees with cached organizationId -> refreshes.
+    auth = { authenticated: true, type: "oauth", organizationId: "org-b" }
+    service.emitProfile({ type: "profileData", data: { currentOrgId: "org-b" } })
+    if (internal.providersRefresh) await internal.providersRefresh
+    expect(fetches).toBe(3)
+    expect(messages.at(-1)).toMatchObject({ type: "providersLoaded", organizationId: "org-b" })
+
+    // Logout / rejected-login broadcast disagrees with cached authenticated providers -> refreshes once,
+    // and the follow-up expired status is forwarded without a duplicate fetch.
+    auth = { authenticated: false }
+    service.emitProfile({ type: "profileData", data: null })
+    if (internal.providersRefresh) await internal.providersRefresh
+    expect(fetches).toBe(4)
+    expect(messages.at(-1)).toMatchObject({ type: "providersLoaded", authStates: {} })
+
+    service.emitProfile({ type: "profileStatus", status: "expired" })
+    if (internal.providersRefresh) await internal.providersRefresh
+    expect(fetches).toBe(4)
+    expect(messages.at(-1)).toEqual({ type: "profileStatus", status: "expired" })
+  })
+
+  it("retries initialization when a retained payload has unverified Kilo auth", async () => {
+    let verified = false
+    let fetches = 0
+    const messages: unknown[] = []
+    const internal = provider(
+      connection(true, {
+        kilo: {
+          authStatus: async () => (verified ? { data: { authenticated: true, type: "oauth" } } : { data: undefined }),
+        },
+        provider: {
+          list: async () => {
+            fetches++
+            return {
+              data: {
+                all: [{ id: "kilo", name: "Kilo Gateway", models: { "kilo/auto": { id: "kilo/auto" } } }],
+                connected: ["kilo"],
+                default: { kilo: "kilo/auto" },
+              },
+            }
+          },
+        },
+      }),
+    )
+    stub(internal)
+    internal.webview = { postMessage: async (message) => messages.push(message) }
+    internal.cachedConfigMessage = { type: "configLoaded", config: {} }
+    internal.cachedConfigDirectory = "/repo"
+
+    await internal.fetchAndSendProviders()
+    expect(internal.providersRetry).toBe(true)
+    expect(messages.at(-1)).toMatchObject({ type: "providersLoaded", ready: false, providers: {} })
+
+    verified = true
+    await internal.retryInitialization()
+    expect(fetches).toBe(2)
+    expect(internal.providersRetry).toBe(false)
+    expect(messages.at(-1)).toMatchObject({
+      type: "providersLoaded",
+      ready: true,
+      providers: { kilo: { models: { "kilo/auto": { id: "kilo/auto" } } } },
+    })
+  })
+
+  it("refreshes Agent Manager providers when another panel logs in and /global/dispose fails", async () => {
+    let authed = false
+    const client = {
+      global: {
+        dispose: async () => {
+          throw new Error("worktree disposer failed")
+        },
+      },
+      kilo: {
+        authStatus: async () => ({
+          data: authed ? { authenticated: true, type: "oauth", organizationId: "org-1" } : { authenticated: false },
+        }),
+        profile: async () => ({
+          data: authed ? { profile: { email: "dev@kilo.ai" }, currentOrgId: "org-1" } : null,
+          response: new Response(null, { status: authed ? 200 : 401 }),
+        }),
+      },
+      provider: {
+        auth: async () => ({ data: {} }),
+        list: async () => ({
+          data: {
+            all: authed ? [{ id: "kilo", name: "Kilo Gateway", models: { "org-1/model": { id: "org-1/model" } } }] : [],
+            connected: authed ? ["kilo"] : [],
+            default: authed ? { kilo: "org-1/model" } : {},
+          },
+        }),
+      },
+    }
+    const service = new KiloConnectionService({} as never)
+    created.push(service)
+    ;(service as unknown as { client: unknown; state: State }).client = client
+    ;(service as unknown as { client: unknown; state: State }).state = "connected"
+
+    const profile = new KiloProvider({} as never, service, undefined, { rootDirectory: () => "/workspace" })
+    const manager = new KiloProvider({} as never, service, undefined, {
+      rootDirectory: () => "/other-project",
+      projectQualifier: () => ({ projectId: "prj-other" }),
+    })
+    created.push(profile, manager)
+
+    const origin = profile as unknown as Internals & { disposeGlobal(): Promise<void> }
+    const target = manager as unknown as Internals
+    stub(origin)
+    stub(target)
+
+    const messages: unknown[] = []
+    target.webview = { postMessage: async (message) => messages.push(message) }
+    await origin.initializeConnection()
+    await target.initializeConnection()
+    expect(loaded(messages).at(-1)).toMatchObject({ providers: {}, authStates: {} })
+
+    authed = true
+    await origin.disposeGlobal()
+    if (target.providersRefresh) await target.providersRefresh
+
+    expect(loaded(messages).at(-1)).toMatchObject({
+      type: "providersLoaded",
+      ready: true,
+      organizationId: "org-1",
+      authStates: { kilo: "oauth" },
+      providers: { kilo: { models: { "org-1/model": { id: "org-1/model" } } } },
+    })
   })
 })
