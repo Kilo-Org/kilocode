@@ -21,7 +21,7 @@ Use this page to understand hosted service topology: which product boundaries ex
 |---|---|---|
 | Web control plane | Identity, organization authorization, billing, product configuration, and API orchestration | Next.js application in `apps/web/` |
 | Shared cloud services | Model routing, asynchronous orchestration, real-time delivery, persistence adapters, and operational services | Kilo Gateway, Workers, queues, Durable Objects, R2, KV, Hyperdrive |
-| Scoped execution | Runs code or scoped runtime workloads | Cloud Agent, Gas Town container |
+| Scoped execution | Runs code or scoped runtime workloads | Cloud Agent |
 | External providers | Services outside Kilo Cloud trust boundary | Model providers, source-control providers, messaging providers, telemetry providers |
 
 Where these pages say `owner`, they mean personal user or organization that authorizes scoped product state and credentials.
@@ -50,8 +50,6 @@ flowchart LR
   automation["Automation Workers"]
   agent["Cloud Agent"]
   chat["Kilo Chat / Event Service / Notifications"]
-  town["Gas Town"]
-  wasteland["Wasteland"]
   repos["GitHub and GitLab repositories"]
   providers["Model providers and gateways"]
   stores["PostgreSQL, Durable Objects, queues, R2, KV, and analytics stores"]
@@ -64,13 +62,9 @@ flowchart LR
   web --> agent
   agent --> repos
   agent --> providers
-  town --> repos
-  town --> providers
-  town --> wasteland
   gateway --> stores
   agent --> stores
   chat --> stores
-  wasteland --> stores
 ```
 
 Not every hosted flow launches Cloud Agent. Shared services also route model requests, deliver chat events, and dispatch notifications.
@@ -82,7 +76,6 @@ Not every hosted flow launches Cloud Agent. Shared services also route model req
 | Session execution | `cloud-agent-next`{% linebreak /%}`session-ingest`{% linebreak /%}`git-token-service`{% linebreak /%}`notifications` | Hosted coding sessions, session ingestion, repository credentials, and completion push |
 | Automation | `code-review-infra`{% linebreak /%}`auto-triage-infra`{% linebreak /%}`auto-fix-infra`{% linebreak /%}`security-auto-analysis`{% linebreak /%}`security-sync`{% linebreak /%}`webhook-agent-ingest` | Queue-backed review, triage, fix, security, and configured trigger flows |
 | Real-time chat | `kilo-chat`{% linebreak /%}`event-service`{% linebreak /%}`notifications` | Conversation state, WebSocket delivery, and mobile push |
-| Multi-agent orchestration | `gastown`{% linebreak /%}`wasteland` | Town execution and collaborative commons |
 | Evaluation and operations | `o11y`{% linebreak /%}`kilo-ops`{% linebreak /%}`model-eval-ingest` | Metrics, alerts, operations, and model-evaluation ingestion |
 | Attribution | `ai-attribution` | AI-edit attribution events |
 
@@ -231,36 +224,6 @@ sequenceDiagram
 
 Kilo Chat stores conversation state in Durable Objects and fans events out through Event Service. Notifications checks Event Service presence context before selected pushes and processes Expo receipts asynchronously. See [Cloud Security](/docs/contributing/architecture/cloud-security#chat-events-and-notifications) for ticket and push-delivery trust boundaries.
 
-## Gas Town and Wasteland
-
-Gas Town is multi-agent orchestration for coding work on repositories. `TownDO` owns town state and `TownContainerDO` owns town container execution. Active town work uses 5-second alarm cadence. Idle towns use 5-minute cadence.
-
-| Gas Town concept | Role |
-|---|---|
-| Town | Workspace or project with one or more rigs |
-| Rig | Repository attached to town |
-| Bead | Unit of work such as issue, task, merge request, or message |
-| Convoy | Related beads with dependency tracking |
-| Mayor | Persistent coordinator that decomposes and delegates work |
-| Polecat | Worker agent that edits code and creates pull requests |
-| Refinery | Review agent that runs quality gates and handles merge flow |
-| Triage | Ephemeral agent for ambiguous automated-check outcomes |
-
-Gas Town binds separate `wasteland` Worker through `WASTELAND_SERVICE`. Wasteland uses `WastelandDO` and `WastelandRegistryDO` Durable Objects and DoltHub-backed collaborative commons paths.
-
-```mermaid
-flowchart LR
-  town["Gas Town TownDO"]
-  container["TownContainerDO"]
-  binding["WASTELAND_SERVICE binding"]
-  wasteland["Wasteland Worker"]
-  dos["WastelandDO and WastelandRegistryDO"]
-  dolt["DoltHub-backed collaborative commons"]
-
-  town --> container
-  town --> binding --> wasteland --> dos --> dolt
-```
-
 ## Observability
 
 `services/o11y/` is current metrics and alert infrastructure. Higher-order agent outcome analysis remains roadmap work unless backed by separate implementation.
@@ -286,7 +249,6 @@ Paths below are relative to [`Kilo-Org/cloud`](https://github.com/Kilo-Org/cloud
 | Automation Workers | `services/code-review-infra/`{% linebreak /%}`services/auto-triage-infra/`{% linebreak /%}`services/auto-fix-infra/`{% linebreak /%}`services/webhook-agent-ingest/` |
 | Security Agent | `apps/web/src/lib/security-agent/`{% linebreak /%}`services/security-auto-analysis/`{% linebreak /%}`services/security-sync/` |
 | Chat, events, and notifications | `services/kilo-chat/`{% linebreak /%}`services/event-service/`{% linebreak /%}`services/notifications/` |
-| Multi-agent orchestration | `services/gastown/`{% linebreak /%}`services/wasteland/` |
 | Observability and operations | `services/o11y/`{% linebreak /%}`services/kilo-ops/`{% linebreak /%}`services/model-eval-ingest/` |
 | Attribution | `services/ai-attribution/` |
 

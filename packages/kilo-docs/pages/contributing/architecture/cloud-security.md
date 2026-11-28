@@ -24,7 +24,6 @@ Kilo Cloud combines web control plane with Cloudflare-hosted services and scoped
 - Cloudflare Workers provide feature-specific ingress, service bindings, queue-backed workflows, durable coordination, real-time streams, and selected sandbox orchestration.
 - Managed PostgreSQL stores relational control-plane records. Durable Objects, queues, KV, R2, and feature-specific analytical stores hold scoped state.
 - Cloud Agent coding sessions run in Cloudflare sandbox containers with session-specific workspaces and policy-selected sandbox allocation.
-- Gas Town binds to Wasteland as separate multi-agent orchestration boundary.
 
 ## Logical topology
 
@@ -51,8 +50,6 @@ flowchart LR
 
   subgraph execution["Scoped execution"]
     agent["Cloud Agent policy-selected sandbox"]
-    town["Gas Town Town container"]
-    wasteland["Wasteland commons boundary"]
   end
 
   subgraph stores["Managed persistence"]
@@ -77,7 +74,6 @@ flowchart LR
   workers --> async --> durable
   workers --> chat
   workers --> agent
-  workers --> town --> wasteland
   agent --> repos
   agent --> source
   agent --> model
@@ -97,7 +93,6 @@ flowchart LR
 | Cloud service layer | Authenticated APIs, asynchronous workflows, durable coordination, streaming, and integration delivery |
 | Managed persistence | Scoped records, durable state, queue delivery, object storage, and operational telemetry |
 | Cloud Agent execution | Policy-selected sandbox containers with session-specific workspace and home directory |
-| Gas Town and Wasteland | Town-owned container execution plus separate collaborative commons Worker |
 | External providers | Third-party trust boundaries invoked by enabled capabilities |
 
 ## Trust boundaries
@@ -109,7 +104,6 @@ flowchart LR
 | Web control plane to Workers | Session preparation, orchestration, integration delivery, and callbacks | Service credentials, scoped callback tokens, or Cloudflare service bindings by flow |
 | Workers to persistence | Relational records, Durable Object state, queue messages, objects, and telemetry | Scoped identifiers, schema validation, service-specific authorization, and feature storage separation |
 | Control plane to Cloud Agent | Repository metadata, task input, credentials, and runtime configuration | Policy-selected sandbox identity, session-specific paths, and just-in-time scoped credentials |
-| Gas Town to Wasteland | Collaborative orchestration operations | `WASTELAND_SERVICE` binding and separate Wasteland Durable Objects |
 | Kilo Cloud to third parties | Repository operations, model requests, billing, notifications, and telemetry | Provider credentials, opt-in where applicable, scoped tokens, and feature-specific routing |
 
 ## Identity and access
@@ -260,10 +254,6 @@ sequenceDiagram
 
 Kilo Chat binds to Event Service and Notifications. Event Service consumes one-time tickets before WebSocket upgrade and places connections in per-user Durable Objects. Notifications service uses per-user Durable Objects, checks presence context for conversation pushes, sends Expo push, and processes delayed receipts. See [Chat, events, and notifications](/docs/contributing/architecture/cloud-platform#chat-events-and-notifications) for canonical service topology.
 
-### Gas Town and Wasteland
-
-Gas Town and Wasteland are separate trust boundaries. Gas Town owns town state and container execution. It calls Wasteland through `WASTELAND_SERVICE` binding; Wasteland owns separate Durable Objects and DoltHub-backed collaborative commons paths. See [Gas Town and Wasteland](/docs/contributing/architecture/cloud-platform#gas-town-and-wasteland) for canonical topology and orchestration concepts.
-
 ### Security Agent sync and cleanup
 
 Security Agent interactive web sync and scheduled Worker sync are separate paths. `services/security-sync` config defines six-hour cron, owner-level queue, Hyperdrive access, and Git Token Service binding. `apps/web/vercel.json` defines stale cleanup every 15 minutes. Cleanup marks stale `running` findings failed only when no matching queue row remains `pending` or `running`. Static source does not prove scheduled sync enqueues newly synced findings for auto-analysis.
@@ -294,7 +284,7 @@ Higher-order agent outcome analysis is roadmap work unless separate source prove
 | Authorization | User, organization, role, owner, instance, and administrative checks by operation |
 | Abuse prevention | Turnstile, fraud telemetry, blocking logic, free-model limits, and bounded external payload handling |
 | Internal service separation | Service bindings, callback tokens, and service credentials separate public access from orchestration |
-| Execution isolation | Cloud Agent workspaces and town container |
+| Execution isolation | Cloud Agent workspaces |
 | Secret handling | Protected config storage, encrypted delivery for supported runtime secrets, and sensitive-log prohibitions |
 | Privacy | Soft-delete and anonymization workflows, webhook-header redaction, explicit experiment paths, and purpose-specific retention paths |
 | Reliability | Durable coordination, queues, retries, dead-letter patterns, idempotency handling, and reconciliation |
