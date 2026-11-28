@@ -606,4 +606,78 @@ export const dict = {
   "agentManager.orphans.deleteButton": "Eliminar {{count}} carpetas ({{size}})",
   "agentManager.orphans.cancel": "Cancelar",
   "agentManager.error.title": "Error de Agent Manager",
+  "agentManager.readiness.projects.title": 'Elige un proyecto dentro de "{{name}}"',
+  "agentManager.readiness.projects.body":
+    '"{{name}}" no es un proyecto Git, pero contiene {{count}} proyectos. Elige en cuál quieres trabajar.',
+  "agentManager.readiness.projects.bodyOne":
+    '"{{name}}" no es un proyecto Git, pero contiene un proyecto. Elígelo para trabajar en él.',
+  "agentManager.readiness.projects.use": "Usar {{name}}",
+  "agentManager.readiness.projects.other": "Elegir otra carpeta",
+  "agentManager.readiness.plain.title": '"{{name}}" aún no está configurado para Git',
+  "agentManager.readiness.plain.body":
+    "Los worktrees necesitan Git. Kilo puede configurarlo en esta carpeta y tus archivos quedan exactamente como están.",
+  "agentManager.readiness.plain.action": "Configurar Git",
+  "agentManager.readiness.plain.other": "Elegir una carpeta distinta",
+  "agentManager.readiness.identity.title": "¿Qué nombre debe aparecer en tus cambios?",
+  "agentManager.readiness.identity.body":
+    "Git etiqueta cada cambio con un nombre y un correo. Kilo los guarda para tu usuario de Git.",
+  "agentManager.readiness.identity.name": "Nombre",
+  "agentManager.readiness.identity.email": "Correo electrónico",
+  "agentManager.readiness.identity.saveInit": "Guardar y configurar Git",
+  "agentManager.readiness.identity.saveCommit": "Guardar y crear el primer commit",
+  "agentManager.readiness.restricted.title": "Elige la carpeta de tu proyecto",
+  "agentManager.readiness.restricted.body":
+    "Esta es tu carpeta personal, así que Kilo no configurará Git aquí. Elige la carpeta propia de tu proyecto.",
+  "agentManager.readiness.restricted.action": "Elegir una carpeta",
+  "agentManager.readiness.commit.title": '"{{name}}" necesita un primer commit',
+  "agentManager.readiness.commit.body":
+    "Los worktrees parten de tu último commit y este proyecto aún no tiene ninguno. Kilo puede crear uno vacío por ti.",
+  "agentManager.readiness.commit.action": "Crear primer commit",
+  "agentManager.readiness.ready.initGit": "Git está configurado.",
+  "agentManager.readiness.ready.initGitNote":
+    "Tus archivos existentes aún no están guardados en Git, así que los nuevos worktrees empiezan vacíos.",
+  "agentManager.readiness.ready.initialCommit": "Primer commit creado.",
+  "agentManager.readiness.ready.initialCommitNote":
+    "Tus archivos existentes aún no están en él, así que los nuevos worktrees empiezan vacíos hasta que los confirmes.",
+  "agentManager.readiness.unknown.title": "Kilo no pudo comprobar este proyecto",
+  "agentManager.readiness.untrusted": "Confía en esta ventana para que Kilo pueda configurar Git.",
+  "agentManager.readiness.error": "Kilo no pudo completar este paso.",
+  "agentManager.readiness.check": "Comprobar de nuevo",
+  "agentManager.readiness.working.initGit": "Configurando Git…",
+  "agentManager.readiness.working.initialCommit": "Creando el primer commit…",
+  "agentManager.readiness.working.project": "Abriendo el proyecto…",
+  "agentManager.readiness.blocked": "Soluciona el problema de arriba para crear un worktree.",
+  "agentManager.readiness.blockedGit": "Instala Git primero. Puedes seguir escribiendo tu tarea.",
+  "agentManager.readiness.blockedLfs": "Instala Git LFS primero. Puedes seguir escribiendo tu tarea.",
+  "agentManager.readiness.git.title": "Kilo necesita Git para crear worktrees",
+  "agentManager.readiness.git.body":
+    "Git aún no está instalado en este equipo. Instálalo y vuelve a esta ventana. Tu tarea se queda aquí.",
+  "agentManager.readiness.git.bodyMac":
+    "Git aún no está instalado en este Mac. Instálalo y vuelve a esta ventana. Tu tarea se queda aquí.",
+  "agentManager.readiness.lfs.title": "{{name}} necesita Git LFS",
+  "agentManager.readiness.lfs.body":
+    "Este proyecto guarda algunos archivos grandes en Git LFS, que aún no está instalado. Instálalo y vuelve a esta ventana. Tu tarea se queda aquí.",
+  "agentManager.readiness.tool.install": "Instalar {{tool}}",
+  "agentManager.readiness.tool.get": "Obtener {{tool}}",
+  "agentManager.readiness.tool.other": "Otras formas de instalar",
+  "agentManager.readiness.install.apple.title": "Termina la instalación en la ventana de Apple",
+  "agentManager.readiness.install.apple.body": "Kilo vuelve a comprobar cuando regresas a esta ventana.",
+  "agentManager.readiness.install.terminal.title": "Instalando {{tool}}…",
+  "agentManager.readiness.install.terminal.body":
+    "Se está ejecutando en la terminal de abajo. Kilo vuelve a comprobar al terminar.",
+  "agentManager.readiness.install.stale.title": "{{tool}} está instalado, pero VS Code aún no lo detecta",
+  "agentManager.readiness.install.stale.body":
+    "Recargar la ventana suele solucionarlo. Tu tarea vuelve después de recargar.",
+  "agentManager.readiness.install.reload": "Recargar ventana",
+  "agentManager.readiness.ready.git": "Git está listo.",
+  "agentManager.readiness.ready.lfs": "Git LFS está listo.",
+  "agentManager.readiness.install.failed":
+    "La instalación terminó con el código {{code}}. Consulta la salida del terminal.",
+  "agentManager.readiness.install.stopped": "La instalación se detuvo. Consulta la salida del terminal.",
+  "agentManager.readiness.lfsSetup.title": "{{name}} necesita Git LFS configurado",
+  "agentManager.readiness.lfsSetup.body":
+    "Git LFS está instalado, pero aún no está configurado para tu usuario de Git. Configúralo para crear worktrees.",
+  "agentManager.readiness.lfsSetup.action": "Configurar Git LFS",
+  "agentManager.readiness.blockedLfsSetup": "Configura Git LFS primero. Puedes seguir escribiendo tu tarea.",
+  "agentManager.readiness.working.setupLfs": "Configurando Git LFS…",
 }

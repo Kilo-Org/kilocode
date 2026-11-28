@@ -607,4 +607,77 @@ export const dict = {
   "agentManager.orphans.deleteButton": "Видалити {{count}} тек ({{size}})",
   "agentManager.orphans.cancel": "Скасувати",
   "agentManager.error.title": "Помилка Agent Manager",
+  "agentManager.readiness.projects.title": "Виберіть проєкт у теці «{{name}}»",
+  "agentManager.readiness.projects.body":
+    "«{{name}}» сама не є Git-проєктом, але містить проєкти ({{count}}). Виберіть той, у якому хочете працювати.",
+  "agentManager.readiness.projects.bodyOne":
+    "«{{name}}» сама не є Git-проєктом, але містить проєкт. Виберіть його, щоб працювати в ньому.",
+  "agentManager.readiness.projects.use": "Використати {{name}}",
+  "agentManager.readiness.projects.other": "Вибрати іншу теку",
+  "agentManager.readiness.plain.title": "«{{name}}» ще не налаштовано для Git",
+  "agentManager.readiness.plain.body":
+    "Для worktree потрібен Git. Kilo може налаштувати його в цій теці, а ваші файли залишаться саме такими, як є.",
+  "agentManager.readiness.plain.action": "Налаштувати Git",
+  "agentManager.readiness.plain.other": "Вибрати іншу теку",
+  "agentManager.readiness.identity.title": "Яке ім’я вказувати у ваших змінах?",
+  "agentManager.readiness.identity.body":
+    "Git позначає кожну зміну ім’ям та адресою пошти. Kilo збереже їх для вашого користувача Git.",
+  "agentManager.readiness.identity.name": "Ім’я",
+  "agentManager.readiness.identity.email": "Пошта",
+  "agentManager.readiness.identity.saveInit": "Зберегти й налаштувати Git",
+  "agentManager.readiness.identity.saveCommit": "Зберегти й створити перший коміт",
+  "agentManager.readiness.restricted.title": "Виберіть теку вашого проєкту",
+  "agentManager.readiness.restricted.body":
+    "Це ваша домашня тека, тому Kilo не налаштовуватиме тут Git. Виберіть власну теку проєкту.",
+  "agentManager.readiness.restricted.action": "Вибрати теку",
+  "agentManager.readiness.commit.title": "«{{name}}» потрібен перший коміт",
+  "agentManager.readiness.commit.body":
+    "Worktree створюються від останнього коміту, а в цьому проєкті його ще немає. Kilo може створити порожній коміт за вас.",
+  "agentManager.readiness.commit.action": "Створити перший коміт",
+  "agentManager.readiness.ready.initGit": "Git налаштовано.",
+  "agentManager.readiness.ready.initGitNote":
+    "Ваші наявні файли ще не збережено в Git, тому нові worktree будуть порожніми.",
+  "agentManager.readiness.ready.initialCommit": "Перший коміт створено.",
+  "agentManager.readiness.ready.initialCommitNote":
+    "Ваших наявних файлів у ньому ще немає, тому нові worktree будуть порожніми, доки ви їх не закомітите.",
+  "agentManager.readiness.unknown.title": "Kilo не вдалося перевірити цей проєкт",
+  "agentManager.readiness.untrusted": "Довіртеся цьому вікну, щоб Kilo міг налаштувати Git.",
+  "agentManager.readiness.error": "Kilo не вдалося завершити цей крок.",
+  "agentManager.readiness.check": "Перевірити знову",
+  "agentManager.readiness.working.initGit": "Налаштування Git…",
+  "agentManager.readiness.working.initialCommit": "Створення першого коміту…",
+  "agentManager.readiness.working.project": "Відкриття проєкту…",
+  "agentManager.readiness.blocked": "Виправте проблему вище, щоб створити worktree.",
+  "agentManager.readiness.blockedGit": "Спочатку встановіть Git. Ви можете продовжувати писати завдання.",
+  "agentManager.readiness.blockedLfs": "Спочатку встановіть Git LFS. Ви можете продовжувати писати завдання.",
+  "agentManager.readiness.git.title": "Kilo потрібен Git для створення worktree",
+  "agentManager.readiness.git.body":
+    "Git ще не встановлено на цьому комп'ютері. Встановіть його й поверніться до цього вікна. Ваше завдання залишиться тут.",
+  "agentManager.readiness.git.bodyMac":
+    "Git ще не встановлено на цьому Mac. Встановіть його й поверніться до цього вікна. Ваше завдання залишиться тут.",
+  "agentManager.readiness.lfs.title": "{{name}} потребує Git LFS",
+  "agentManager.readiness.lfs.body":
+    "Цей проєкт зберігає деякі великі файли в Git LFS, який ще не встановлено. Встановіть його й поверніться до цього вікна. Ваше завдання залишиться тут.",
+  "agentManager.readiness.tool.install": "Встановити {{tool}}",
+  "agentManager.readiness.tool.get": "Завантажити {{tool}}",
+  "agentManager.readiness.tool.other": "Інші способи встановлення",
+  "agentManager.readiness.install.apple.title": "Завершіть встановлення у вікні Apple",
+  "agentManager.readiness.install.apple.body": "Kilo перевірить знову, коли ви повернетеся до цього вікна.",
+  "agentManager.readiness.install.terminal.title": "Встановлення {{tool}}…",
+  "agentManager.readiness.install.terminal.body":
+    "Воно виконується в терміналі нижче. Kilo перевірить знову після завершення.",
+  "agentManager.readiness.install.stale.title": "{{tool}} встановлено, але VS Code його ще не бачить",
+  "agentManager.readiness.install.stale.body":
+    "Зазвичай це виправляє перезавантаження вікна. Ваше завдання повернеться після перезавантаження.",
+  "agentManager.readiness.install.reload": "Перезавантажити вікно",
+  "agentManager.readiness.ready.git": "Git готовий.",
+  "agentManager.readiness.ready.lfs": "Git LFS готовий.",
+  "agentManager.readiness.install.failed": "Встановлення завершилося з кодом {{code}}. Див. вивід термінала.",
+  "agentManager.readiness.install.stopped": "Встановлення було зупинено. Див. вивід термінала.",
+  "agentManager.readiness.lfsSetup.title": "{{name}} потребує налаштування Git LFS",
+  "agentManager.readiness.lfsSetup.body":
+    "Git LFS встановлено, але ще не налаштовано для вашого користувача Git. Налаштуйте його, щоб створювати worktree.",
+  "agentManager.readiness.lfsSetup.action": "Налаштувати Git LFS",
+  "agentManager.readiness.blockedLfsSetup": "Спочатку налаштуйте Git LFS. Ви можете продовжувати писати завдання.",
+  "agentManager.readiness.working.setupLfs": "Налаштування Git LFS…",
 }

@@ -7,6 +7,119 @@ export type WorktreeErrorCode =
   | "worktree_unregistered"
   | "git_timeout"
 
+/** Which surface started a creation, for telemetry: the New Worktree modal, quick create, or anything else. */
+export type WorktreeEntry = "modal" | "quick" | "other"
+
+/** Fixes a readiness card can ask the extension to run. */
+export type ReadinessFix =
+  | "useProject"
+  | "initGit"
+  | "initialCommit"
+  | "pickFolder"
+  | "installGit"
+  | "installLfs"
+  | "downloadGit"
+  | "downloadLfs"
+  | "setupLfs"
+
+/** A package manager a card can use, or Apple's Command Line Tools launcher. */
+export type ReadinessInstaller = "apple" | "brew" | "winget" | "apt" | "dnf"
+
+/** What the extension did after an install fix. */
+export interface ReadinessInstall {
+  kind: "git" | "lfs"
+  mode: "apple" | "terminal" | "external"
+  /** The installer succeeded, or the tool became available anyway. */
+  ok: boolean
+  /** A raw launch error, shown verbatim in Show details. */
+  error?: string
+  /** The install task's exit code when the tool is still missing. */
+  code?: number
+  /** The install task was stopped without an exit code. */
+  stopped?: boolean
+}
+
+/** A Git project found directly inside a folder that is not one itself. */
+export interface ReadinessProject {
+  root: string
+  label: string
+}
+
+/**
+ * Whether a project can hold worktrees. `unknown` means the check itself failed:
+ * it is advisory and never blocks creation.
+ */
+export type Readiness =
+  | { status: "ready"; note?: "uncommitted" }
+  | { status: "unknown"; detail: string }
+  | {
+      status: "blocked"
+      code: "not_git_repo" | "no_commits" | "git_not_found" | "lfs_missing" | "lfs_not_setup"
+      /** Folder or repository name, for the card title. */
+      name: string
+      /** Workspace trust; every fix needs it. */
+      trusted: boolean
+      /** Git has a name and email. Only probed when a fix will commit. */
+      identity?: boolean
+      /** The folder is the home folder or a filesystem root. */
+      restricted?: boolean
+      /** This card is for the folder the user just picked; a fix targets it, not the selected project. */
+      picked?: boolean
+      /** Up to 3 projects found inside the folder. */
+      projects?: ReadinessProject[]
+      /** More projects exist than are listed. */
+      more?: boolean
+      /** Package manager offered by an install fix; absent means open a download page. */
+      installer?: ReadinessInstaller
+      /** Host platform, so copy can say "this Mac" where it applies. */
+      platform?: string
+    }
+
+export interface CheckReadinessRequest {
+  type: "agentManager.checkReadiness"
+  projectId: string
+  requestID: string
+  /** Bypass the Git and Git LFS caches and refresh the login-shell PATH first. */
+  fresh?: boolean
+  /** Bypass cached tool results without refreshing PATH; used by the Create gate. */
+  verify?: boolean
+}
+
+export interface FixReadinessRequest {
+  type: "agentManager.fixReadiness"
+  projectId: string
+  requestID: string
+  fix: ReadinessFix
+  /** Repository root for `useProject`, or `picked` for the folder the user just picked. */
+  target?: string
+  identity?: { name: string; email: string }
+}
+
+/** Reply to a check or fix. Echoes the request's project and ID. */
+export interface ReadinessMessage {
+  type: "agentManager.readiness"
+  projectId: string
+  requestID: string
+  /** Readiness of `selected` when set, otherwise of `projectId`. */
+  result: Readiness
+  /** Project a switch fix selected. */
+  selected?: string
+  /** Why a fix failed; `result` is then the re-checked state. */
+  error?: string
+  /** What an install fix did, when that is the fix. */
+  install?: ReadinessInstall
+}
+
+/** One-shot trigger: the VS Code window regained focus, so a mounted Git/LFS card can re-check. */
+export interface ReadinessFocusMessage {
+  type: "agentManager.readinessFocus"
+}
+
+/** Reload the VS Code window; the New Worktree dialog reopens when the draft says so. */
+export interface ReloadWindowRequest {
+  type: "agentManager.reloadWindow"
+}
+
 export interface BaseUpdateRequest {
   type: "agentManager.updateFromBase"
   projectId?: string
@@ -226,3 +339,5 @@ export type ContinueInWorktreeStatus =
   | "forking"
   | "done"
   | "error"
+
+export type { Tool, InstallFix, DownloadFix } from "../../../../src/shared/worktree-readiness"

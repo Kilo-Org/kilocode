@@ -14,6 +14,7 @@ import { ProjectContexts, type ProjectSnapshot } from "./contexts"
 import type { ProjectMessageDeps } from "./messages"
 import { createSettingsHandler, type SettingsHandler } from "./settings"
 import { poolHome } from "../pool/home"
+import { postBranches } from "../worktree-importer"
 
 export interface ProjectWiring {
   registry: ProjectRegistry
@@ -73,6 +74,17 @@ export function createProjectWiring(opts: {
       sized: (ctx) => opts.pushState(ctx),
     },
   })
+  const branches = (ctx: ProjectContext) =>
+    postBranches(
+      {
+        manager: () => ctx.worktreeManager(),
+        state: () => ctx.peekState(),
+        post: opts.post,
+        push: () => opts.pushState(ctx),
+        log: opts.log,
+      },
+      ctx.id,
+    )
   const messages: ProjectMessageDeps = {
     registry,
     contexts,
@@ -87,6 +99,11 @@ export function createProjectWiring(opts: {
     selected: opts.selected,
     post: opts.post,
     routeSession: opts.routeSession,
+    openRepository: (root) => opts.host.openRepository(root),
+    branches,
+    install: (name, command) => opts.host.runInstall(name, command),
+    openExternal: (url) => opts.host.openExternal(url),
+    reloadWindow: () => opts.host.reloadWindow(),
     git: opts.git,
     error: (message) => opts.host.showError(message),
     openSettings: (tab, projectId) => opts.host.openSettings(tab, projectId),
@@ -100,6 +117,9 @@ export function createProjectWiring(opts: {
   })
   const listeners: Disposable[] = [
     opts.host.onDidChangeWorkspaceFolders(() => opts.changed()),
+    // A mounted Git/LFS readiness card asks for a fresh check when the window returns,
+    // which is how an install finished outside VS Code is picked up.
+    opts.host.onWindowFocus?.(() => opts.post({ type: "agentManager.readinessFocus" })),
     opts.host.onDidChangeWorktreePool((enabled) => {
       for (const project of contexts.snapshots()) {
         const manager = contexts.get(project.id)?.peekWorktrees()

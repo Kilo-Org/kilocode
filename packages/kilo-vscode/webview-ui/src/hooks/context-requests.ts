@@ -1,17 +1,17 @@
 import { createSignal } from "solid-js"
 
-type Pending = {
-  resolve: (content: string) => void
+type Pending<T> = {
+  resolve: (content: T) => void
   reject: (err: Error) => void
   timer: ReturnType<typeof setTimeout>
 }
 
-export function createContextRequests(prefix: string, timeout: number, expired: string) {
+export function createContextRequests<T = string>(prefix: string, timeout: number, expired: string) {
   const [pending, setPending] = createSignal(false)
-  const requests = new Map<string, Pending>()
+  const requests = new Map<string, Pending<T>>()
   let counter = 0
 
-  const settle = (id: string, run: (req: Pending) => void) => {
+  const settle = (id: string, run: (req: Pending<T>) => void) => {
     const req = requests.get(id)
     if (!req) return
     clearTimeout(req.timer)
@@ -22,7 +22,7 @@ export function createContextRequests(prefix: string, timeout: number, expired: 
 
   const request = (send: (id: string) => void) => {
     const id = `${prefix}-${++counter}`
-    const deferred = Promise.withResolvers<string>()
+    const deferred = Promise.withResolvers<T>()
     const timer = setTimeout(() => {
       settle(id, (req) => req.reject(new Error(expired)))
     }, timeout)

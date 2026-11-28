@@ -1,5 +1,6 @@
 import { existsSync } from "fs"
 import { isTimeout } from "./command-budget"
+import { missingDeveloperTools } from "./git-errors"
 
 export interface BranchListItem {
   name: string
@@ -41,6 +42,7 @@ export type PRErrorKind = "not_found" | "gh_missing" | "gh_auth" | "gh_timeout" 
 export type WorktreeSetupErrorCode =
   | "git_not_found"
   | "not_git_repo"
+  | "project_unavailable"
   | "lfs_missing"
   | "no_commits"
   | "worktree_missing"
@@ -212,6 +214,7 @@ export function classifyWorktreeError(msg: string, ctx?: WorktreeErrorContext): 
   if (isTimeout(ctx?.err ?? msg)) return "git_timeout"
   if (ctx?.probeFailed) return "git_not_found"
   if (msg.includes("not found in PATH")) return "git_not_found"
+  if (missingDeveloperTools(msg)) return "git_not_found"
 
   const cwd = ctx?.cwd
   const exists = ctx?.exists ?? existsSync

@@ -28,7 +28,6 @@ describe("Agent Manager New Worktree project targeting", () => {
   })
 
   it("tags branch and import responses with their owning project", () => {
-    expect(importer).toContain("async branches(projectId?: string)")
     expect(importer).toContain('type: "agentManager.branches", projectId')
     expect(importer).toContain('type: "agentManager.importResult", projectId')
     expect(importer).toContain('type: "agentManager.worktreeSetup", projectId')

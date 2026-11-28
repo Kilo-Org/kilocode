@@ -605,4 +605,77 @@ export const dict = {
   "agentManager.orphans.deleteButton": "{{count}} mappen verwijderen ({{size}})",
   "agentManager.orphans.cancel": "Annuleren",
   "agentManager.error.title": "Agent Manager-fout",
+  "agentManager.readiness.projects.title": 'Kies een project in "{{name}}"',
+  "agentManager.readiness.projects.body":
+    '"{{name}}" is zelf geen Git-project, maar bevat {{count}} projecten. Kies het project waarin je wilt werken.',
+  "agentManager.readiness.projects.bodyOne":
+    '"{{name}}" is zelf geen Git-project, maar bevat een project. Kies het om daar te werken.',
+  "agentManager.readiness.projects.use": "{{name}} gebruiken",
+  "agentManager.readiness.projects.other": "Andere map kiezen",
+  "agentManager.readiness.plain.title": '"{{name}}" is nog niet ingesteld voor Git',
+  "agentManager.readiness.plain.body":
+    "Worktrees hebben Git nodig. Kilo kan het in deze map instellen, en je bestanden blijven precies zoals ze zijn.",
+  "agentManager.readiness.plain.action": "Git instellen",
+  "agentManager.readiness.plain.other": "Een andere map kiezen",
+  "agentManager.readiness.identity.title": "Welke naam moet er bij je wijzigingen staan?",
+  "agentManager.readiness.identity.body":
+    "Git voorziet elke wijziging van een naam en e-mailadres. Kilo bewaart ze voor je Git-gebruiker.",
+  "agentManager.readiness.identity.name": "Naam",
+  "agentManager.readiness.identity.email": "E-mail",
+  "agentManager.readiness.identity.saveInit": "Opslaan en Git instellen",
+  "agentManager.readiness.identity.saveCommit": "Opslaan en eerste commit maken",
+  "agentManager.readiness.restricted.title": "Kies de map waarin je project staat",
+  "agentManager.readiness.restricted.body":
+    "Dit is je thuismap, dus Kilo stelt hier geen Git in. Kies in plaats daarvan de eigen map van je project.",
+  "agentManager.readiness.restricted.action": "Een map kiezen",
+  "agentManager.readiness.commit.title": '"{{name}}" heeft een eerste commit nodig',
+  "agentManager.readiness.commit.body":
+    "Worktrees beginnen bij je laatste commit, en dit project heeft er nog geen. Kilo kan een lege voor je maken.",
+  "agentManager.readiness.commit.action": "Eerste commit maken",
+  "agentManager.readiness.ready.initGit": "Git is ingesteld.",
+  "agentManager.readiness.ready.initGitNote":
+    "Je bestaande bestanden zijn nog niet in Git opgeslagen, dus nieuwe worktrees beginnen leeg.",
+  "agentManager.readiness.ready.initialCommit": "Eerste commit gemaakt.",
+  "agentManager.readiness.ready.initialCommitNote":
+    "Je bestaande bestanden zitten er nog niet in, dus nieuwe worktrees beginnen leeg totdat je ze commit.",
+  "agentManager.readiness.unknown.title": "Kilo kon dit project niet controleren",
+  "agentManager.readiness.untrusted": "Vertrouw dit venster zodat Kilo Git kan instellen.",
+  "agentManager.readiness.error": "Kilo kon deze stap niet voltooien.",
+  "agentManager.readiness.check": "Opnieuw controleren",
+  "agentManager.readiness.working.initGit": "Git wordt ingesteld…",
+  "agentManager.readiness.working.initialCommit": "Eerste commit wordt gemaakt…",
+  "agentManager.readiness.working.project": "Project wordt geopend…",
+  "agentManager.readiness.blocked": "Los het probleem hierboven op om een worktree te maken.",
+  "agentManager.readiness.blockedGit": "Installeer eerst Git. Je kunt je taak blijven schrijven.",
+  "agentManager.readiness.blockedLfs": "Installeer eerst Git LFS. Je kunt je taak blijven schrijven.",
+  "agentManager.readiness.git.title": "Kilo heeft Git nodig om worktrees te maken",
+  "agentManager.readiness.git.body":
+    "Git is nog niet geïnstalleerd op deze computer. Installeer het en kom terug naar dit venster. Je taak blijft hier.",
+  "agentManager.readiness.git.bodyMac":
+    "Git is nog niet geïnstalleerd op deze Mac. Installeer het en kom terug naar dit venster. Je taak blijft hier.",
+  "agentManager.readiness.lfs.title": "{{name}} heeft Git LFS nodig",
+  "agentManager.readiness.lfs.body":
+    "Dit project bewaart sommige grote bestanden in Git LFS, dat nog niet is geïnstalleerd. Installeer het en kom terug naar dit venster. Je taak blijft hier.",
+  "agentManager.readiness.tool.install": "{{tool}} installeren",
+  "agentManager.readiness.tool.get": "{{tool}} downloaden",
+  "agentManager.readiness.tool.other": "Andere installatiemethoden",
+  "agentManager.readiness.install.apple.title": "Voltooi de installatie in het venster van Apple",
+  "agentManager.readiness.install.apple.body": "Kilo controleert opnieuw wanneer je terugkeert naar dit venster.",
+  "agentManager.readiness.install.terminal.title": "{{tool}} wordt geïnstalleerd…",
+  "agentManager.readiness.install.terminal.body":
+    "Het draait in de terminal hieronder. Kilo controleert opnieuw wanneer het klaar is.",
+  "agentManager.readiness.install.stale.title": "{{tool}} is geïnstalleerd, maar VS Code ziet het nog niet",
+  "agentManager.readiness.install.stale.body":
+    "Het venster opnieuw laden lost dit meestal op. Je taak komt terug na het herladen.",
+  "agentManager.readiness.install.reload": "Venster opnieuw laden",
+  "agentManager.readiness.ready.git": "Git is klaar.",
+  "agentManager.readiness.ready.lfs": "Git LFS is klaar.",
+  "agentManager.readiness.install.failed": "De installatie is beëindigd met code {{code}}. Bekijk de terminaluitvoer.",
+  "agentManager.readiness.install.stopped": "De installatie is gestopt. Bekijk de terminaluitvoer.",
+  "agentManager.readiness.lfsSetup.title": "{{name}} vereist ingesteld Git LFS",
+  "agentManager.readiness.lfsSetup.body":
+    "Git LFS is geïnstalleerd, maar nog niet ingesteld voor je Git-gebruiker. Stel het in om worktrees te maken.",
+  "agentManager.readiness.lfsSetup.action": "Git LFS instellen",
+  "agentManager.readiness.blockedLfsSetup": "Stel eerst Git LFS in. Je kunt je taak blijven schrijven.",
+  "agentManager.readiness.working.setupLfs": "Git LFS wordt ingesteld…",
 }

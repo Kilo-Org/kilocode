@@ -588,4 +588,76 @@ export const dict = {
   "agentManager.orphans.deleteButton": "폴더 {{count}}개 삭제 ({{size}})",
   "agentManager.orphans.cancel": "취소",
   "agentManager.error.title": "Agent Manager 오류",
+  "agentManager.readiness.projects.title": '"{{name}}" 안의 프로젝트 선택',
+  "agentManager.readiness.projects.body":
+    '"{{name}}"은(는) Git 프로젝트가 아니지만 안에 프로젝트가 {{count}}개 있습니다. 작업할 프로젝트를 선택하세요.',
+  "agentManager.readiness.projects.bodyOne":
+    '"{{name}}"은(는) Git 프로젝트가 아니지만 안에 프로젝트가 있습니다. 그곳에서 작업하려면 선택하세요.',
+  "agentManager.readiness.projects.use": "{{name}} 사용",
+  "agentManager.readiness.projects.other": "다른 폴더 선택",
+  "agentManager.readiness.plain.title": '"{{name}}"에 아직 Git이 설정되지 않았습니다',
+  "agentManager.readiness.plain.body":
+    "Worktree에는 Git이 필요합니다. Kilo가 이 폴더에 설정할 수 있으며, 파일은 그대로 유지됩니다.",
+  "agentManager.readiness.plain.action": "Git 설정",
+  "agentManager.readiness.plain.other": "다른 폴더 선택",
+  "agentManager.readiness.identity.title": "변경 사항에 어떤 이름을 표시할까요?",
+  "agentManager.readiness.identity.body":
+    "Git은 모든 변경 사항에 이름과 이메일을 기록합니다. Kilo는 이를 Git 사용자에 대해 저장합니다.",
+  "agentManager.readiness.identity.name": "이름",
+  "agentManager.readiness.identity.email": "이메일",
+  "agentManager.readiness.identity.saveInit": "저장하고 Git 설정",
+  "agentManager.readiness.identity.saveCommit": "저장하고 첫 커밋 만들기",
+  "agentManager.readiness.restricted.title": "프로젝트가 있는 폴더 선택",
+  "agentManager.readiness.restricted.body":
+    "이곳은 홈 폴더이므로 Kilo가 여기에 Git을 설정하지 않습니다. 대신 프로젝트 자체 폴더를 선택하세요.",
+  "agentManager.readiness.restricted.action": "폴더 선택",
+  "agentManager.readiness.commit.title": '"{{name}}"에 첫 커밋이 필요합니다',
+  "agentManager.readiness.commit.body":
+    "Worktree는 최신 커밋에서 시작하는데, 이 프로젝트에는 아직 커밋이 없습니다. Kilo가 빈 커밋을 만들어 드릴 수 있습니다.",
+  "agentManager.readiness.commit.action": "첫 커밋 만들기",
+  "agentManager.readiness.ready.initGit": "Git이 설정되었습니다.",
+  "agentManager.readiness.ready.initGitNote":
+    "기존 파일이 아직 Git에 저장되지 않아 새 worktree는 빈 상태로 시작합니다.",
+  "agentManager.readiness.ready.initialCommit": "첫 커밋을 만들었습니다.",
+  "agentManager.readiness.ready.initialCommitNote":
+    "기존 파일이 아직 포함되지 않아 커밋하기 전까지 새 worktree는 빈 상태로 시작합니다.",
+  "agentManager.readiness.unknown.title": "Kilo가 이 프로젝트를 확인할 수 없습니다",
+  "agentManager.readiness.untrusted": "Kilo가 Git을 설정할 수 있도록 이 창을 신뢰하세요.",
+  "agentManager.readiness.error": "Kilo가 이 단계를 완료하지 못했습니다.",
+  "agentManager.readiness.check": "다시 확인",
+  "agentManager.readiness.working.initGit": "Git 설정 중…",
+  "agentManager.readiness.working.initialCommit": "첫 커밋 만드는 중…",
+  "agentManager.readiness.working.project": "프로젝트 여는 중…",
+  "agentManager.readiness.blocked": "worktree를 만들려면 위의 문제를 해결하세요.",
+  "agentManager.readiness.blockedGit": "먼저 Git을 설치하세요. 작업 내용은 계속 작성할 수 있습니다.",
+  "agentManager.readiness.blockedLfs": "먼저 Git LFS를 설치하세요. 작업 내용은 계속 작성할 수 있습니다.",
+  "agentManager.readiness.git.title": "Kilo가 worktree를 만들려면 Git이 필요합니다",
+  "agentManager.readiness.git.body":
+    "이 컴퓨터에 아직 Git이 설치되어 있지 않습니다. 설치한 후 이 창으로 돌아오세요. 작업 내용은 여기에 유지됩니다.",
+  "agentManager.readiness.git.bodyMac":
+    "이 Mac에 아직 Git이 설치되어 있지 않습니다. 설치한 후 이 창으로 돌아오세요. 작업 내용은 여기에 유지됩니다.",
+  "agentManager.readiness.lfs.title": "{{name}}에 Git LFS가 필요합니다",
+  "agentManager.readiness.lfs.body":
+    "이 프로젝트는 일부 큰 파일을 아직 설치되지 않은 Git LFS에 보관합니다. 설치한 후 이 창으로 돌아오세요. 작업 내용은 여기에 유지됩니다.",
+  "agentManager.readiness.tool.install": "{{tool}} 설치",
+  "agentManager.readiness.tool.get": "{{tool}} 받기",
+  "agentManager.readiness.tool.other": "다른 설치 방법",
+  "agentManager.readiness.install.apple.title": "Apple 창에서 설치를 완료하세요",
+  "agentManager.readiness.install.apple.body": "이 창으로 돌아오면 Kilo가 다시 확인합니다.",
+  "agentManager.readiness.install.terminal.title": "{{tool}} 설치 중…",
+  "agentManager.readiness.install.terminal.body": "아래 터미널에서 실행 중입니다. 완료되면 Kilo가 다시 확인합니다.",
+  "agentManager.readiness.install.stale.title": "{{tool}}이(가) 설치되었지만 VS Code에서 아직 보이지 않습니다",
+  "agentManager.readiness.install.stale.body":
+    "창을 다시 로드하면 보통 해결됩니다. 다시 로드한 후 작업 내용이 돌아옵니다.",
+  "agentManager.readiness.install.reload": "창 다시 로드",
+  "agentManager.readiness.ready.git": "Git이 준비되었습니다.",
+  "agentManager.readiness.ready.lfs": "Git LFS가 준비되었습니다.",
+  "agentManager.readiness.install.failed": "설치가 코드 {{code}}으로 종료되었습니다. 터미널 출력을 확인하세요.",
+  "agentManager.readiness.install.stopped": "설치가 중지되었습니다. 터미널 출력을 확인하세요.",
+  "agentManager.readiness.lfsSetup.title": "{{name}}에 Git LFS 설정이 필요합니다",
+  "agentManager.readiness.lfsSetup.body":
+    "Git LFS가 설치되어 있지만 Git 사용자에 대해 아직 설정되지 않았습니다. worktree를 만들려면 설정하세요.",
+  "agentManager.readiness.lfsSetup.action": "Git LFS 설정",
+  "agentManager.readiness.blockedLfsSetup": "먼저 Git LFS를 설정하세요. 작업 내용은 계속 작성할 수 있습니다.",
+  "agentManager.readiness.working.setupLfs": "Git LFS 설정 중…",
 }

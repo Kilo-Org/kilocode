@@ -10,6 +10,7 @@ import { beginBoot, prepareSession, type CreationBoot } from "./provider-lifecyc
 import { Timing } from "./creation-timing"
 import { plan } from "./creation-plan"
 import { sessionCreateBody } from "./session-create"
+import type { WorktreeEntry } from "./worktree-create"
 
 const LABEL_MAX = 28
 const PREFIX = new Set(["feat", "fix", "chore", "bug", "issue", "task", "branch"])
@@ -54,6 +55,7 @@ export interface ToolDeps {
   openPanel: (preserveFocus?: boolean) => void
   waitReady: (context: string) => Promise<void>
   createWorktree: (opts: {
+    entry: WorktreeEntry
     groupId?: string
     baseBranch?: string
     branchName?: string
@@ -217,6 +219,7 @@ async function worktree(
   const version = versionedName(seed, versions ? index : 0, versions ? total : 1)
   const timing = Timing.start(`create ${version.branch ?? "worktree"}`, deps.log)
   const created = await deps.createWorktree({
+    entry: "other",
     groupId,
     baseBranch: clean(task.baseBranch),
     branchName: version.branch,

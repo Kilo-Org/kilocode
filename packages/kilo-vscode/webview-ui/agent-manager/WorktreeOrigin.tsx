@@ -37,6 +37,7 @@ export const WorktreeOrigin: Component<Props> = (props) => {
   const [highlight, setHighlight] = createSignal(0)
 
   const label = () => props.projects.find((item) => item.id === props.project)?.label ?? ""
+  const empty = () => !props.loading && props.branches.length === 0
   const custom = () => props.base !== props.fallback
   // Default and current pick come first, so they stay visible above the row cap.
   const ordered = createMemo(() => {
@@ -159,12 +160,14 @@ export const WorktreeOrigin: Component<Props> = (props) => {
               class="am-nv-origin-segment am-nv-origin-branch"
               type="button"
               aria-label={t("agentManager.dialog.baseBranch")}
-              title={props.base}
+              title={empty() ? t("agentManager.import.noBranchesFound") : props.base}
               disabled={props.disabled}
             >
               <Icon name="branch" size="small" />
-              <span class="am-nv-origin-value am-nv-origin-mono">{props.base}</span>
-              <Show when={!custom()}>
+              <span class="am-nv-origin-value am-nv-origin-mono">
+                {empty() ? t("agentManager.import.noBranchesFound") : props.base}
+              </span>
+              <Show when={!empty() && !custom()}>
                 <span class="am-branch-badge">{t("agentManager.dialog.branchBadge.default")}</span>
               </Show>
               <Icon name="selector" size="small" />

@@ -28,7 +28,7 @@ export async function defaultParent(primary: string | undefined, git: GitOps): P
   return path.dirname(root ?? primary)
 }
 
-/** Collect a repository-local Git identity when none is configured. */
+/** Collect a Git identity when none is configured; it is saved globally for the user. */
 async function identify(root: string, deps: Onboarding): Promise<boolean> {
   const host = deps.host
   if (await prepare.identity(root, deps.git)) return true
@@ -47,7 +47,7 @@ async function identify(root: string, deps: Onboarding): Promise<boolean> {
   if (
     !name ||
     !email ||
-    !(await host.confirm(`Save this Git identity only in ${root}?\n${name} <${email}>`, "Save identity"))
+    !(await host.confirm(`Save this Git identity for all your repositories?\n${name} <${email}>`, "Save identity"))
   ) {
     host.notify("info", `The repository remains at ${root}. Add this folder again to finish its initial commit.`)
     return false

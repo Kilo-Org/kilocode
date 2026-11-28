@@ -17,47 +17,55 @@ export interface WorktreeImporterHost {
   log(...args: unknown[]): void
 }
 
+/** Post the project's branch list, choosing the base branch the same way as the New Worktree dialog. */
+export async function postBranches(
+  host: Pick<WorktreeImporterHost, "manager" | "state" | "post" | "push" | "log">,
+  projectId?: string,
+): Promise<void> {
+  const manager = host.manager()
+  if (!manager) {
+    host.post({ type: "agentManager.branches", projectId, branches: [], defaultBranch: "main" })
+    return
+  }
+
+  try {
+    const result = await manager.listBranches()
+    const state = host.state()
+    const configured = state?.getDefaultBaseBranch()
+    const base =
+      configured && result.branches.some((branch) => branch.name === configured) ? configured : result.defaultBranch
+    void manager.prefetchBase(base).catch((err) => host.log("Failed to prefetch base branch:", err))
+    const checked = await manager.checkedOutBranches()
+    const branches = result.branches.map((branch) => ({
+      ...branch,
+      isCheckedOut: checked.has(branch.name),
+    }))
+
+    if (state && configured && !branches.some((branch) => branch.name === configured)) {
+      host.log(`Default base branch "${configured}" no longer exists, clearing`)
+      state.setDefaultBaseBranch(undefined)
+      host.push()
+    }
+
+    host.post({
+      type: "agentManager.branches",
+      projectId,
+      branches,
+      defaultBranch: result.defaultBranch,
+    })
+  } catch (error) {
+    host.log(`Failed to list branches: ${error}`)
+    host.post({ type: "agentManager.branches", projectId, branches: [], defaultBranch: "main" })
+  }
+}
+
 export class WorktreeImporter {
   private importing = false
 
   constructor(private readonly host: WorktreeImporterHost) {}
 
-  async branches(projectId?: string): Promise<void> {
-    const manager = this.host.manager()
-    if (!manager) {
-      this.host.post({ type: "agentManager.branches", projectId, branches: [], defaultBranch: "main" })
-      return
-    }
-
-    try {
-      const result = await manager.listBranches()
-      const state = this.host.state()
-      const configured = state?.getDefaultBaseBranch()
-      const base =
-        configured && result.branches.some((branch) => branch.name === configured) ? configured : result.defaultBranch
-      void manager.prefetchBase(base).catch((err) => this.host.log("Failed to prefetch base branch:", err))
-      const checked = await manager.checkedOutBranches()
-      const branches = result.branches.map((branch) => ({
-        ...branch,
-        isCheckedOut: checked.has(branch.name),
-      }))
-
-      if (state && configured && !branches.some((branch) => branch.name === configured)) {
-        this.host.log(`Default base branch "${configured}" no longer exists, clearing`)
-        state.setDefaultBaseBranch(undefined)
-        this.host.push()
-      }
-
-      this.host.post({
-        type: "agentManager.branches",
-        projectId,
-        branches,
-        defaultBranch: result.defaultBranch,
-      })
-    } catch (error) {
-      this.host.log(`Failed to list branches: ${error}`)
-      this.host.post({ type: "agentManager.branches", projectId, branches: [], defaultBranch: "main" })
-    }
+  branches(projectId?: string): Promise<void> {
+    return postBranches(this.host, projectId)
   }
 
   async branch(branch: string, projectId?: string): Promise<void> {
