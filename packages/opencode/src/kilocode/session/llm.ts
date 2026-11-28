@@ -16,6 +16,12 @@ const CLAUDE = new Set([
 ])
 
 export namespace KiloLLM {
+  export function needsMaxCompletionTokens(model: Provider.Model) {
+    if (model.api.npm !== "@ai-sdk/openai-compatible") return false
+    const id = model.api.id.toLowerCase()
+    return id.includes("gpt-5") || id.includes("gpt-6")
+  }
+
   // Stream failures and interruptions propagate while text deltas are collected.
   export function text(stream: Stream.Stream<LLMEvent, unknown>) {
     return stream.pipe(
