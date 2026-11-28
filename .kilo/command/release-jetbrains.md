@@ -6,7 +6,7 @@ Release the Kilo JetBrains plugin for version spec: $1 (default to `next rc` if 
 
 This command drives the existing JetBrains release workflows. It must not move, delete, or recreate JetBrains release tags. It must always confirm the resolved version with the user before dispatching the prepare workflow because the prepare workflow creates an immutable `jetbrains/v<version>` tag.
 
-The helper scripts live at `.kilo/skills/release-jetbrains/script/` (kept there, not under `.kilo/command/`, because `script/publish.ts` in CI and the `jetbrains-cli-pin` skill both call them directly).
+The helper scripts live at `.kilo/skills/release-jetbrains/script/` (kept there, not under `.kilo/command/`, because the `jetbrains-pin` job of `publish.yml` in CI and the `jetbrains-cli-pin` skill both call them directly). `set-pin.ts` and `pin-common.ts` import no packages, so CI runs them without installing any.
 
 ## Preconditions
 

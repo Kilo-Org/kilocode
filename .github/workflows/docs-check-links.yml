@@ -12,10 +12,15 @@ on:
     - cron: "0 9 * * *"
   workflow_dispatch: # Allow manual trigger
 
+# kilocode_change start
+permissions:
+  contents: read
+# kilocode_change end
+
 jobs:
   link-checker:
     if: github.repository == 'Kilo-Org/kilocode'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404 # kilocode_change
     steps:
       - uses: actions/checkout@v6 # kilocode_change
 

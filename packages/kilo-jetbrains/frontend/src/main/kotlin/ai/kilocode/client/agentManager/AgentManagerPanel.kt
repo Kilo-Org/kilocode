@@ -226,7 +226,7 @@ class AgentManagerPanel(
             hover = { row -> hover(row) },
         ),
         menu = ActiveMenu(
-            SECTION, group, element = { row -> (row as? AgentManagerLayout.Section)?.key },
+            SECTION, group, element = { row -> (row as? AgentManagerLayout.Header)?.key },
             alternate = ActiveMenu(
                 AgentManagerKeys.ELEMENT, group, element = { row -> (row as? AgentManagerRow)?.element },
             ),
@@ -236,7 +236,7 @@ class AgentManagerPanel(
             pinned = { row -> ((row as? AgentManagerWorkspaceRow<*>)?.element as? AgentManagerElement.Local)?.dto?.main == true },
             onMove = { move -> ordering.move(move); sync() },
             reparent = { row, parent ->
-                parent == null || parent is AgentManagerLayout.Section && row !is AgentManagerLayout.Section
+                parent == null || parent is AgentManagerLayout.Header && row !is AgentManagerLayout.Header
             },
         ),
     )
@@ -1171,7 +1171,7 @@ class AgentManagerPanel(
                 .filterNot { it.ref.key in removedHosted }
             val keys = visible.mapTo(mutableSetOf()) { it.ref.key }
             val pending = if (hostedState.signedOut) emptyList() else pendingHosted.values.map {
-                HostedWorkspaceRowData(it, null, null, KiloBundle.message("hosted.workspace.progress.creating.short"))
+                HostedWorkspaceRowData(it, progress = KiloBundle.message("hosted.workspace.progress.creating.short"))
             }
             val created = if (hostedState.signedOut) emptyList() else createdHosted.values
                 .filterNot { it.ref.key in keys || management?.excluded(it.ref) == true }
@@ -1421,7 +1421,7 @@ class AgentManagerPanel(
         sink[SidePanelKeys.WORKTREE_PANEL] = this
         selectedLocal()?.let { sink[WorktreeDataKeys.WORKTREE] = it }
         selectedCloud()?.let { sink[HostedWorkspaceDataKeys.WORKSPACE] = it }
-        (tree.selected() as? AgentManagerLayout.Section)?.let { sink[SECTION] = it.key }
+        (tree.selected() as? AgentManagerLayout.Header)?.let { sink[SECTION] = it.key }
         sink[PlatformDataKeys.DELETE_ELEMENT_PROVIDER] = provider
     }
 
@@ -1442,7 +1442,7 @@ class AgentManagerPanel(
 
         @RequiresEdt
         override fun canDeleteElement(dataContext: DataContext): Boolean {
-            if (tree.selected() is AgentManagerLayout.Section) return true
+            if (tree.selected() is AgentManagerLayout.Header) return true
             return (tree.selected() as? AgentManagerRow)?.element?.let {
                 availability(it, AgentManagerCommand.DELETE).enabled
             } ?: false
@@ -1450,7 +1450,7 @@ class AgentManagerPanel(
 
         @RequiresEdt
         override fun deleteElement(dataContext: DataContext) {
-            (tree.selected() as? AgentManagerLayout.Section)?.let { section ->
+            (tree.selected() as? AgentManagerLayout.Header)?.let { section ->
                 ordering.delete(section.key)
                 sync()
                 return
@@ -1468,12 +1468,12 @@ class AgentManagerPanel(
 
         @RequiresEdt
         override fun update(e: AnActionEvent) {
-            e.presentation.isEnabled = tree.selected() is AgentManagerLayout.Section || renameable(selectedLocal())
+            e.presentation.isEnabled = tree.selected() is AgentManagerLayout.Header || renameable(selectedLocal())
         }
 
         @RequiresEdt
         override fun actionPerformed(e: AnActionEvent) {
-            (tree.selected() as? AgentManagerLayout.Section)?.let { renameSection(it.key); return }
+            (tree.selected() as? AgentManagerLayout.Header)?.let { renameSection(it.key); return }
             selectedLocal()?.takeIf(::renameable)?.let { beginRename(it) }
         }
     }

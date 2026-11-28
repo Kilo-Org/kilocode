@@ -12,7 +12,6 @@ import ai.kilocode.client.session.history.HistorySection
 import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.testing.FakeAppRpcApi
-import ai.kilocode.client.testing.FakeAgentManagerFacade
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.client.testing.installBrowser
@@ -666,7 +665,6 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
     fun testHeaderUsesSharedChangesAndClickableStatusWithoutCloudSpecificControls() {
         val browser = installBrowser()
         val cell = edtWait { descendants(panel).filterIsInstance<ActiveBadgeCell>().single { it.cellId == "cloud-compute" } }
-        val initial = edtWait { badge() }
         val header = edtWait { descendants(panel).filterIsInstance<WorkspaceSessionHeader>().single() }
         val changes = edtWait { descendants(header).filterIsInstance<ChangesPanel>().single() }
         assertTrue(coroutines.pumpUntil { edtWait {
@@ -676,12 +674,7 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
         } })
         val count = edtWait { descendants(header).size }
         edtWait {
-            val row = hostedWorkspaceRow(
-                HostedWorkspaceRowData(HostedWorkspaceDto(ref), hosted.state.value.presentation(ref)),
-                FakeAgentManagerFacade(),
-            )
-            assertEquals(row.badges.single().text, initial.segments.single().text)
-            assertSame(row.badges.single().style, initial.segments.single().style)
+            assertEquals("Sleeping", badge().segments.single().text)
             assertTrue(descendants(header).filterIsInstance<JBLabel>().none { it.text.orEmpty().endsWith("/h") })
             assertTrue(descendants(header).filterIsInstance<JButton>().none { it.text == "Open" || it.text.contains("Build/Run") })
         }

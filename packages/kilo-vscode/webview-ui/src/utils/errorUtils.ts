@@ -58,6 +58,7 @@ export function unwrapError(message: string): string {
 const errorCodes = {
   PAID_MODEL_AUTH_REQUIRED: "PAID_MODEL_AUTH_REQUIRED",
   PROMOTION_MODEL_LIMIT_REACHED: "PROMOTION_MODEL_LIMIT_REACHED",
+  INVALID_TOKEN: "INVALID_TOKEN",
 } as const
 
 export interface ParsedError {
@@ -127,4 +128,13 @@ export function isUnauthorizedPromotionLimitError(parsed: ParsedError | null): b
   return (
     (parsed.statusCode === 401 || parsed.statusCode === 429) && parsed.code === errorCodes.PROMOTION_MODEL_LIMIT_REACHED
   )
+}
+
+/**
+ * The Kilo Gateway rejected the stored credential: the user was signed out
+ * and has to sign in again before any request can succeed.
+ */
+export function isSignedOutError(parsed: ParsedError | null): boolean {
+  if (!parsed) return false
+  return parsed.statusCode === 401 && parsed.code === errorCodes.INVALID_TOKEN
 }
