@@ -3,8 +3,11 @@
 /**
  * Guards the declared scope of the headless Kilo CLI passes: the committed
  * policy exists and is what the scripts and the workflow pass, the gateway
- * credentials sit on the steps that call the CLI, and the checkout keeps no
- * credential on disk.
+ * credentials sit on the steps that call the CLI, no checkout keeps a
+ * credential on disk, and the workflow keeps its job split: the agent job holds
+ * a read-only token and only the gateway credentials, and the publish job,
+ * which holds the write token, runs no agent step and checks the handoff
+ * before any step holds a credential.
  *
  * Run: node .github/docs-sync/agent-policy.test.mjs
  */
@@ -33,19 +36,33 @@ function check(label, fn) {
   }
 }
 
-/** The `sync` job block only: the selftest job must stay out of these checks. */
-function syncJob() {
-  const start = workflow.indexOf("\n  sync:\n")
-  assert.ok(start >= 0, "sync job not found")
-  return workflow.slice(start)
+/** One job block, from its `  <name>:` line to the next job; the selftest job stays out of the checks. */
+function job(name) {
+  const start = workflow.indexOf(`\n  ${name}:\n`)
+  assert.ok(start >= 0, `${name} job not found`)
+  const rest = workflow.slice(start + 1)
+  const next = rest.slice(1).search(/\n {2}[a-z][\w-]*:\n/)
+  return next < 0 ? rest : rest.slice(0, next + 1)
 }
 
-/** One step block, from its `- name:` line to the next step. */
-function step(name) {
-  const blocks = syncJob().split("\n      - name: ")
-  const block = blocks.find((b) => b.startsWith(name))
+const syncJob = () => job("sync")
+const publishJob = () => job("publish")
+
+/** The step blocks of one job, each from its `- name:` line to the next step. */
+function steps(jobBlock) {
+  return jobBlock.split("\n      - name: ").slice(1)
+}
+
+/** One step block of a job (default: sync). */
+function step(name, jobBlock = syncJob()) {
+  const block = steps(jobBlock).find((b) => b.startsWith(name))
   assert.ok(block, `step "${name}" not found`)
-  return block.split("\n      - name: ")[0]
+  return block
+}
+
+/** The job-level lines above `steps:`. */
+function header(jobBlock) {
+  return jobBlock.slice(0, jobBlock.indexOf("\n    steps:"))
 }
 
 // 1. The policy is data a reviewer can read, with one mode per call site.
@@ -352,9 +369,9 @@ const agentSteps = ["Learn from maintainer corrections", "Triage merged PRs", "U
 const agentKeys = ["KILO_API_KEY", "KILO_ORG_ID"]
 
 check("no gateway secret sits at job level", () => {
-  const job = syncJob()
-  const header = job.slice(0, job.indexOf("\n    steps:"))
-  for (const key of agentKeys) assert.ok(!new RegExp(`^\\s+${key}:`, "m").test(header), `${key} must not be job-level`)
+  for (const block of [syncJob(), publishJob()]) {
+    for (const key of agentKeys) assert.ok(!new RegExp(`^\\s+${key}:`, "m").test(header(block)), `${key} must not be job-level`)
+  }
 })
 
 for (const name of agentSteps) {
@@ -365,48 +382,156 @@ for (const name of agentSteps) {
 }
 
 check("no non-agent step carries a gateway credential", () => {
-  const blocks = syncJob().split("\n      - name: ")
-  for (const block of blocks) {
+  for (const block of [...steps(syncJob()), ...steps(publishJob())]) {
     const name = block.split("\n")[0]
-    if (!name || agentSteps.some((n) => name.startsWith(n))) continue
+    if (agentSteps.some((n) => name.startsWith(n))) continue
     for (const key of agentKeys) assert.ok(!block.includes(key), `step "${name}" must not carry ${key}`)
   }
 })
 
-check("the docs build secret stays out of the agent step", () => {
-  const block = step("Fix verify failures")
-  assert.ok(!block.includes("POSTHOG_API_KEY"), "the agent step must not hold the docs build secret")
-  assert.ok(step("Re-verify docs after the fix pass").includes("POSTHOG_API_KEY"), "the rebuild step keeps it")
+check("no docs-sync step reads a PostHog secret", () => {
+  assert.doesNotMatch(workflow, /secrets\.POSTHOG/, "the docs check builds are never published and need no analytics key")
 })
 
-// 5. No git credential is left in the worktree, and the steps that push carry
-//    the token only in their own environment.
-check("the checkout does not persist credentials", () => {
-  const block = step("Checkout repository")
-  assert.match(block, /persist-credentials: false/, "checkout must not persist the token")
-})
-
-for (const name of ["Learn from maintainer corrections", "Prepare rolling branch", "Upsert rolling PR"]) {
-  check(`step "${name}" authenticates git from its own environment`, () => {
-    const block = step(name)
-    assert.ok(block.includes("GH_TOKEN: ${{ github.token }}"), `${name} needs the token for its git calls`)
-    assert.ok(
-      block.includes("GIT_CONFIG_VALUE_0: ${{ runner.temp }}/docs-sync-credential.sh"),
-      `${name} must use the env credential helper`,
-    )
+// 5. No git credential is left in a worktree, and the one step that pushes
+//    carries the token only in its own environment.
+for (const [label, block] of [
+  ["sync", syncJob],
+  ["publish", publishJob],
+]) {
+  check(`the ${label} checkout does not persist credentials`, () => {
+    assert.match(step("Checkout repository", block()), /persist-credentials: false/, "checkout must not persist the token")
   })
 }
 
+check('the publish step "Upsert rolling PR" authenticates git from its own environment', () => {
+  const block = step("Upsert rolling PR", publishJob())
+  assert.ok(block.includes("GH_TOKEN: ${{ github.token }}"), "the upsert step needs the token for its git calls")
+  assert.ok(
+    block.includes("GIT_CONFIG_VALUE_0: ${{ runner.temp }}/docs-sync-credential.sh"),
+    "the upsert step must use the env credential helper",
+  )
+})
+
 check("the helper step writes the credential helper outside the worktree", () => {
-  const block = step("Install git credential helper")
+  const block = step("Install git credential helper", publishJob())
   assert.ok(block.includes('"$RUNNER_TEMP/docs-sync-credential.sh"'), "helper must live in RUNNER_TEMP")
   assert.ok(!/git config/.test(block), "helper install must not touch git config")
 })
 
 check("the helper reads the token from the calling step's environment", () => {
-  const block = step("Install git credential helper")
+  const block = step("Install git credential helper", publishJob())
   assert.match(block, /test -n "\$GH_TOKEN" \|\| exit 0/, "the helper must fail closed without a token")
   assert.match(block, /printf 'username=x-access-token\\npassword=%s\\n' "\$GH_TOKEN"/, "the helper must supply the token")
+})
+
+// 6. The agent job holds no write scope and no secret beyond the gateway
+//    credentials; the publish job holds the write scopes and runs no step that
+//    executes the agent or anything the agent produced.
+const INFERENCE_SECRETS = new Set(agentKeys)
+const PUBLISH_SCRIPTS = [".github/docs-sync/handoff.mjs", ".github/docs-sync/upsert-pr.mjs"]
+
+/** `<scope>: <access>` pairs of a job's `permissions:` block. */
+function permissions(block) {
+  const lines = header(block).split("\n")
+  const start = lines.findIndex((l) => l === "    permissions:")
+  assert.ok(start >= 0, "the job must declare its own permissions")
+  const out = {}
+  for (const line of lines.slice(start + 1)) {
+    const m = line.match(/^ {6}([a-z-]+): (\w+)/)
+    if (!m) break
+    out[m[1]] = m[2]
+  }
+  return out
+}
+
+check("the workflow grants no permission at workflow level", () => {
+  assert.match(workflow, /^permissions: \{\}/m, "every job must declare its own permissions")
+})
+
+check("the agent job runs in environment agent", () => {
+  assert.match(header(syncJob()), /^ {4}environment: agent$/m)
+})
+
+check("the agent job's token has no write scope", () => {
+  const perms = permissions(syncJob())
+  assert.equal(perms.contents, "read", "the agent job reads the repository")
+  for (const [scope, access] of Object.entries(perms)) {
+    assert.equal(access, "read", `the agent job must not hold ${scope}: ${access}`)
+  }
+  assert.ok(!("id-token" in perms), "the agent job must not mint OIDC tokens")
+})
+
+check("the agent job holds no secret beyond the gateway credentials", () => {
+  const used = [...syncJob().matchAll(/secrets\.([A-Z0-9_]+)/g)].map((m) => m[1])
+  assert.ok(used.length > 0, "the agent steps read the gateway credentials")
+  for (const name of used) assert.ok(INFERENCE_SECRETS.has(name), `the agent job must not read secrets.${name}`)
+})
+
+check("the agent job has no git credential and makes no GitHub write", () => {
+  const block = syncJob()
+  assert.ok(!block.includes("docs-sync-credential"), "the agent job must not install the git credential helper")
+  assert.ok(!block.includes("GIT_CONFIG_"), "the agent job must not configure git credentials")
+  assert.ok(!block.includes("upsert-pr.mjs"), "the agent job must not publish")
+})
+
+check("the publish job runs in environment automation after the agent job", () => {
+  const head = header(publishJob())
+  assert.match(head, /^ {4}needs: sync$/m)
+  assert.match(head, /^ {4}environment: automation$/m)
+  assert.deepEqual(
+    permissions(publishJob()),
+    { contents: "write", "pull-requests": "write", issues: "write" },
+    "publish holds exactly the write scopes the rolling PRs need",
+  )
+})
+
+check("the publish job holds no agent-run step", () => {
+  const forbidden = [
+    [/\bkilo run\b/, "runs the Kilo CLI"],
+    [/install -g|@kilocode\/cli/, "installs the Kilo CLI"],
+    [/agent-policy\.mjs/, "builds an agent policy"],
+    [/(edit|triage|learn|collect|prepare-branch|filter-worthy)\.mjs/, "runs an agent-job script"],
+    [/\bbun\b|setup-bun/, "runs bun"],
+    [/\b(npm|npx|pnpm|yarn)\b/, "runs a package manager"],
+    [/@kilocode\/kilo-docs/, "builds the docs"],
+  ]
+  for (const block of steps(publishJob())) {
+    const name = block.split("\n")[0]
+    for (const [re, what] of forbidden) assert.ok(!re.test(block), `publish step "${name}" ${what}`)
+  }
+  const scripts = [...publishJob().matchAll(/\bnode (\S+)/g)].map((m) => m[1])
+  assert.deepEqual([...new Set(scripts)].sort(), PUBLISH_SCRIPTS, "publish runs only the handoff check and the upsert")
+  for (const m of publishJob().matchAll(/^\s+uses: (\S+)/gm)) {
+    assert.match(m[1], /@[0-9a-f]{40}$/, `publish action ${m[1]} must be pinned to a commit`)
+  }
+})
+
+check("the publish job checks the handoff before any step holds a credential", () => {
+  const blocks = steps(publishJob())
+  const checkIdx = blocks.findIndex((b) => b.startsWith("Check the handoff"))
+  assert.ok(checkIdx >= 0, "the publish job must check the handoff")
+  const credIdx = blocks.findIndex((b) => /secrets\.|github\.token/.test(b))
+  assert.ok(credIdx > checkIdx, "no step before the check may hold a credential")
+  assert.match(blocks[checkIdx], /node \.github\/docs-sync\/handoff\.mjs check/)
+  assert.match(step("Download the handoff", publishJob()), /path: \$\{\{ runner\.temp \}\}\/docs-sync-handoff/)
+  assert.match(step("Upload the handoff"), /name: docs-sync-handoff/)
+  assert.match(step("Download the handoff", publishJob()), /name: docs-sync-handoff/)
+})
+
+check("the publish steps read the agent job's values only through the check", () => {
+  for (const block of steps(publishJob())) {
+    assert.ok(!block.includes("needs.sync"), `publish step "${block.split("\n")[0]}" must not read needs.sync`)
+  }
+  const upsert = step("Upsert rolling PR", publishJob())
+  for (const key of ["HAS_EDITS", "INTEGRATION_SHA", "LEARNED_THROUGH", "MARKER_PATCH", "PROCESSED_THROUGH", "BRANCH"]) {
+    assert.match(upsert, new RegExp(`${key}: \\$\\{\\{ steps\\.check\\.outputs\\.\\w+ \\}\\}`), `${key} must come from the check`)
+  }
+})
+
+check("CROSS_REPO_ACCESS_TOKEN reaches only the publish upsert step", () => {
+  assert.equal(workflow.split("secrets.CROSS_REPO_ACCESS_TOKEN").length - 1, 1, "one read of the cloud token")
+  assert.ok(step("Upsert rolling PR", publishJob()).includes("secrets.CROSS_REPO_ACCESS_TOKEN"))
 })
 
 if (failures.length > 0) {

@@ -1,9 +1,10 @@
 // kilocode_change - new file
 
 /**
- * Commits the agent's packages/kilo-docs changes, pushes the rolling
- * integration branch, and maintains one auto-docs PR per product surface
- * (plus one `other` PR).
+ * Publishes the docs commit the agent job handed over (INTEGRATION_SHA, checked
+ * by handoff.mjs in the publish job): pushes the rolling integration branch and
+ * maintains one auto-docs PR per product surface (plus one `other` PR). It also
+ * writes a learned-through marker that learn.mjs handed over (MARKER_PATCH).
  *
  * The integration branch (`BRANCH`, normally `docs/auto-sync`) accumulates the
  * whole docs tree and has no PR of its own. Every surface PR is rebuilt in a
@@ -30,6 +31,7 @@ import {
   OTHER,
   derivation,
   groupBySurface,
+  isSurfaceBranch,
   loadSurfaceMap,
   otherDocPrefixes,
   surfaceBranch,
@@ -55,6 +57,9 @@ const ROW_CAP = 150
 const PENDING_DISPLAY_CAP = 60
 const SUMMARY_FILE = ".docs-sync-summary.json"
 const DOCS_PATH = "packages/kilo-docs"
+// The pre-surface rolling branch. A ref may not be a path prefix of another
+// ref, so it must be gone before any `docs/auto-sync/<surface>` push.
+const LEGACY_BRANCH = "docs/auto-sync"
 const MAP_FILE = ".github/docs-sync/surfaces.json"
 export const LEARNINGS_FILE = "packages/kilo-docs/LEARNINGS.md"
 
@@ -648,6 +653,70 @@ async function upsertSurface({
   }
 }
 
+/**
+ * Write the learned-through marker into every open surface PR. learn.mjs hands
+ * it over when it found nothing new to learn (no candidate correction, or a
+ * validated delta that adds and removes nothing); the agent job's token is
+ * read-only, so this job writes it. Each body is read just before its PATCH, so
+ * an edit made while the agent job ran survives; GitHub has no conditional
+ * update for a pull request body, so a short read-to-PATCH race remains. One
+ * PR's failure warns and does not skip the rest: a stale marker only re-reads a
+ * range already learned from.
+ */
+async function patchLearnedMarkers({ api, searchIssues, repo, marker }) {
+  let prs = []
+  try {
+    prs = await searchIssues(`repo:${repo} is:pr is:open label:auto-docs sort:created-desc`, { maxPages: 2 })
+  } catch (err) {
+    console.warn(`::warning::docs-sync: could not list auto-docs PRs for the learned-through marker: ${err.message}`)
+    return
+  }
+  for (const item of prs) {
+    try {
+      const detail = await api(`/repos/${repo}/pulls/${item.number}`)
+      // Only a `docs/auto-sync/<surface>` head is one of this job's own PRs.
+      if (!isSurfaceBranch(detail?.head?.ref)) continue
+      await api(`/repos/${repo}/pulls/${item.number}`, {
+        method: "PATCH",
+        body: { body: patchLearnedThrough(detail.body ?? "", marker) },
+      })
+      console.log(`PATCHed learned-through marker on PR #${item.number}`)
+    } catch (err) {
+      console.warn(`::warning::docs-sync: could not PATCH the learned-through marker on PR #${item.number}: ${err.message}`)
+    }
+  }
+}
+
+/**
+ * Delete a lingering legacy `docs/auto-sync` branch on origin, whether or not
+ * an open legacy PR names it (a closed PR or a partial cleanup still blocks
+ * every surface push), and drop its remote-tracking ref, which actions/checkout
+ * creates for every origin branch and which would block fetching a surface
+ * branch. Its content already lives in the integration base and the surface
+ * branches.
+ */
+function deleteLegacyBranch() {
+  try {
+    const stale = git(["ls-remote", "--heads", "origin", LEGACY_BRANCH])
+      .split("\n")
+      .some((line) => line.endsWith(`refs/heads/${LEGACY_BRANCH}`))
+    if (stale) {
+      try {
+        git(["push", "origin", "--delete", LEGACY_BRANCH])
+      } catch (err) {
+        console.warn(`::warning::docs-sync: could not delete the legacy branch ${LEGACY_BRANCH}: ${err.message}`)
+      }
+    }
+  } catch (err) {
+    console.warn(`::warning::docs-sync: could not check for the legacy branch ${LEGACY_BRANCH}: ${err.message}`)
+  }
+  try {
+    git(["update-ref", "-d", `refs/remotes/origin/${LEGACY_BRANCH}`])
+  } catch (err) {
+    console.warn(`::warning::docs-sync: could not remove the stale ref for ${LEGACY_BRANCH}: ${err.message}`)
+  }
+}
+
 async function main() {
   const { api, appendOutput, appendSummary, repo, searchIssues } = await import("./lib.mjs")
 
@@ -661,46 +730,53 @@ async function main() {
   // The surface map is data, loaded once for the whole run.
   const map = loadSurfaceMap()
 
-  // The agent's run summary is consumed here and never committed.
+  // The agent's run summary, staged by handoff.mjs check, is consumed here and
+  // never committed.
   const agentSummary = readJson(SUMMARY_FILE, [])
   fs.rmSync(SUMMARY_FILE, { force: true })
   const triage = readJson("docs-sync-out/triage.json", [])
   const worthy = readJson("docs-sync-out/worthy.json", [])
   const digest = readJson("docs-sync-out/digest-full.json", [])
 
+  const marker = process.env.MARKER_PATCH ?? ""
+  if (marker) await patchLearnedMarkers({ api, searchIssues, repo: repo(), marker })
+
   // Order matters: compute uncovered BEFORE the no-diff early return so
   // noDiffReport can name every held-back PR.
   const uncovered = computeUncovered({ worthy, summary: agentSummary, triage })
 
-  if (git(["status", "--porcelain", "--", DOCS_PATH]) === "") {
-    console.log("no packages/kilo-docs changes produced; nothing to commit")
+  if (process.env.HAS_EDITS !== "true") {
+    console.log("no packages/kilo-docs changes produced; nothing to publish")
     const { summary, warning } = noDiffReport({ uncovered, sinceOverride })
     appendSummary(summary)
     if (warning) console.warn(`::warning::${warning}`)
     return
   }
 
-  // Git identity is configured once in docs-sync.yml (Configure git identity)
-  // before any commit-creating step, including prepare-branch's merge.
-  git(["add", DOCS_PATH])
-  git(["commit", "-m", `docs: sync with merged PRs (${date})`])
-  const integrationSha = git(["rev-parse", "HEAD"])
+  // The agent job committed the docs diff on the integration branch
+  // (handoff.mjs pack), and handoff.mjs check fetched that commit here.
+  const integrationSha = process.env.INTEGRATION_SHA ?? ""
+  if (!/^[0-9a-f]{40}$/.test(integrationSha)) {
+    throw new Error(`INTEGRATION_SHA must be a commit id when HAS_EDITS is true; got ${JSON.stringify(integrationSha)}`)
+  }
 
   // Watermark: now when fully covered; else earliest uncovered merged_at − 1ms.
   // Pass SINCE as fallback so missing digest-full cannot strand uncovered PRs.
   // Computed once (global); per-surface failures never touch it.
   const through = computeProcessedThrough({ uncovered, digest, now, fallback: since })
 
-  // Commit the full diff to the integration branch and push it first, so a
-  // single surface's later failure cannot lose the run's changes. A conflicted
-  // run pushes its dated fallback branch; a normal run pushes the durability
-  // ref (see INTEGRATION_BRANCH).
-  const changedFiles = git(["diff", "--name-only", "origin/main...HEAD", "--", DOCS_PATH]).split("\n").filter(Boolean)
+  // Push the full diff to the integration branch first, so a single surface's
+  // later failure cannot lose the run's changes. A conflicted run pushes its
+  // dated fallback branch; a normal run pushes the durability ref (see
+  // INTEGRATION_BRANCH).
+  const changedFiles = git(["diff", "--name-only", `origin/main...${integrationSha}`, "--", DOCS_PATH])
+    .split("\n")
+    .filter(Boolean)
   const durableBranch = mode === "conflict" ? BRANCH : INTEGRATION_BRANCH
   git(
     mode === "update"
-      ? ["push", "origin", `HEAD:refs/heads/${durableBranch}`]
-      : ["push", "--force-with-lease", "origin", `HEAD:refs/heads/${durableBranch}`],
+      ? ["push", "origin", `${integrationSha}:refs/heads/${durableBranch}`]
+      : ["push", "--force-with-lease", "origin", `${integrationSha}:refs/heads/${durableBranch}`],
   )
 
   try {
@@ -718,6 +794,8 @@ async function main() {
   // Run-log proof: the computed surface for every changed file.
   console.log(`docs-sync surface map (${changedFiles.length} changed files):`)
   for (const file of changedFiles) console.log(`  ${surfaceForDoc(file, map)} <- ${file}`)
+
+  deleteLegacyBranch()
 
   let open = new Map()
   try {
