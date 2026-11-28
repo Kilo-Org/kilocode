@@ -55,9 +55,11 @@ export const ripgrepLayer = Layer.effect(
         .find({
           cwd: real,
           pattern: "*",
+          hidden: true, // kilocode_change - include dotfiles and dot directories (.git stays excluded)
           limit: location.vcs ? Number.MAX_SAFE_INTEGER : 100_000,
           onEntry: (entry) =>
             Effect.sync(() => {
+              if (/(^|[\\/])\.git$/u.test(entry.path)) return // .git file (worktrees, submodules) is not a mention target
               state.files.push(entry.path)
               const parts = entry.path.split("/")
               parts.slice(0, -1).forEach((_, index) => directories.add(parts.slice(0, index + 1).join("/") + path.sep))
