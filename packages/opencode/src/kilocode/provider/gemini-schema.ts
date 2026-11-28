@@ -156,6 +156,14 @@ export function lowerTypeArrays(schema: unknown, npm: string | undefined): unkno
       }
       out[key] = walk(value)
     }
+    // Gemini rejects empty strings in enums ("enum[i]: cannot be empty") and an
+    // enum left with no values is invalid too, so empty entries come out before
+    // type-array lowering decides which types the enum still admits.
+    if (Array.isArray(out.enum) && (out.enum.length === 0 || out.enum.includes(""))) {
+      const values = out.enum.filter((value) => value !== "")
+      if (values.length === 0) delete out.enum
+      else out.enum = values
+    }
     const types = out.type
     if (Array.isArray(types) && types.every((type) => typeof type === "string")) return spread(lower(out, types, native))
     return spread(strip(out))
