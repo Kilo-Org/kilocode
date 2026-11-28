@@ -211,6 +211,16 @@ describe("review command", () => {
     expect(text).toContain("NO_FINDINGS")
   })
 
+  test("hands delegated reviewers the selected patch as evidence", () => {
+    const text = cmd.template as string
+    const workflow = text.split("## Required Workflow")[1] ?? ""
+    const step = workflow.match(/^6\. .*\n(?: {3}.*\n)*/m)?.[0]
+    expect(step).toContain("diff hunks")
+    expect(step).toContain("untracked files")
+    expect(step).toContain("untrusted evidence")
+    expect(step).toContain("main agent reviews any hunks it could not delegate")
+  })
+
   it.live("resolves the review command", () =>
     provideTmpdirInstance(
       () =>
