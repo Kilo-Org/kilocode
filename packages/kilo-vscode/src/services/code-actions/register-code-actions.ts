@@ -41,8 +41,8 @@ export function registerCodeActions(
   }
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("kilo-code.new.explainCode", async () => {
-      const ctx = getEditorContext()
+    vscode.commands.registerCommand("kilo-code.new.explainCode", async (range?: vscode.Range, uri?: string) => {
+      const ctx = getEditorContext(range, undefined, uri)
       if (!ctx) return
       const prompt = createPrompt("EXPLAIN", {
         filePath: ctx.filePath,
@@ -55,23 +55,26 @@ export function registerCodeActions(
       provider.postMessage({ type: "triggerTask", text: prompt, injectedTitle: "Explain selected code" })
     }),
 
-    vscode.commands.registerCommand("kilo-code.new.fixCode", async () => {
-      const ctx = getEditorContext()
-      if (!ctx) return
-      const prompt = createPrompt("FIX", {
-        filePath: ctx.filePath,
-        startLine: String(ctx.startLine),
-        endLine: String(ctx.endLine),
-        selectedText: ctx.selectedText,
-        diagnostics: ctx.diagnostics,
-        userInput: "",
-      })
-      await reveal()
-      provider.postMessage({ type: "triggerTask", text: prompt, injectedTitle: "Fix code problems" })
-    }),
+    vscode.commands.registerCommand(
+      "kilo-code.new.fixCode",
+      async (range?: vscode.Range, diagnostics?: vscode.Diagnostic[], uri?: string) => {
+        const ctx = getEditorContext(range, diagnostics, uri)
+        if (!ctx) return
+        const prompt = createPrompt("FIX", {
+          filePath: ctx.filePath,
+          startLine: String(ctx.startLine),
+          endLine: String(ctx.endLine),
+          selectedText: ctx.selectedText,
+          diagnostics: ctx.diagnostics,
+          userInput: "",
+        })
+        await reveal()
+        provider.postMessage({ type: "triggerTask", text: prompt, injectedTitle: "Fix code problems" })
+      },
+    ),
 
-    vscode.commands.registerCommand("kilo-code.new.improveCode", async () => {
-      const ctx = getEditorContext()
+    vscode.commands.registerCommand("kilo-code.new.improveCode", async (range?: vscode.Range, uri?: string) => {
+      const ctx = getEditorContext(range, undefined, uri)
       if (!ctx) return
       const prompt = createPrompt("IMPROVE", {
         filePath: ctx.filePath,
@@ -84,8 +87,8 @@ export function registerCodeActions(
       provider.postMessage({ type: "triggerTask", text: prompt, injectedTitle: "Improve selected code" })
     }),
 
-    vscode.commands.registerCommand("kilo-code.new.addToContext", async () => {
-      const ctx = getEditorContext()
+    vscode.commands.registerCommand("kilo-code.new.addToContext", async (range?: vscode.Range, uri?: string) => {
+      const ctx = getEditorContext(range, undefined, uri)
       if (!ctx) return
       const view = lastFocusedChat?.() ?? target()
       if (!(await revealTarget(view))) return

@@ -15,25 +15,41 @@ export class KiloCodeActionProvider implements vscode.CodeActionProvider {
     const actions: vscode.CodeAction[] = []
 
     const add = new vscode.CodeAction("Add to Kilo Code", vscode.CodeActionKind.RefactorRewrite)
-    add.command = { command: "kilo-code.new.addToContext", title: "Add to Kilo Code" }
+    add.command = {
+      command: "kilo-code.new.addToContext",
+      title: "Add to Kilo Code",
+      arguments: [range, document.uri.toString()],
+    }
     actions.push(add)
 
     const hasDiagnostics = context.diagnostics.length > 0
 
     if (hasDiagnostics) {
       const fix = new vscode.CodeAction("Fix with Kilo Code", vscode.CodeActionKind.QuickFix)
-      fix.command = { command: "kilo-code.new.fixCode", title: "Fix with Kilo Code" }
+      fix.command = {
+        command: "kilo-code.new.fixCode",
+        title: "Fix with Kilo Code",
+        arguments: [range, context.diagnostics, document.uri.toString()],
+      }
       fix.isPreferred = true
       actions.push(fix)
     }
 
     if (!hasDiagnostics) {
       const explain = new vscode.CodeAction("Explain with Kilo Code", vscode.CodeActionKind.RefactorRewrite)
-      explain.command = { command: "kilo-code.new.explainCode", title: "Explain with Kilo Code" }
+      explain.command = {
+        command: "kilo-code.new.explainCode",
+        title: "Explain with Kilo Code",
+        arguments: [range, document.uri.toString()],
+      }
       actions.push(explain)
 
       const improve = new vscode.CodeAction("Improve with Kilo Code", vscode.CodeActionKind.RefactorRewrite)
-      improve.command = { command: "kilo-code.new.improveCode", title: "Improve with Kilo Code" }
+      improve.command = {
+        command: "kilo-code.new.improveCode",
+        title: "Improve with Kilo Code",
+        arguments: [range, document.uri.toString()],
+      }
       actions.push(improve)
     }
 
