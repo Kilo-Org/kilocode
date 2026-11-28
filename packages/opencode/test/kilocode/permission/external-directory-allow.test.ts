@@ -74,11 +74,7 @@ const config = path.resolve(Global.Path.config)
 const configFile = path.join(config, "hello.txt")
 const configGlob = glob(path.join(config, "*"))
 const bus = Bus.layer
-const env = Layer.mergeAll(
-  AppNodeBuilder.build(Permission.node),
-  bus,
-  AppNodeBuilder.build(CrossSpawnSpawner.node),
-)
+const env = Layer.mergeAll(AppNodeBuilder.build(Permission.node), bus, AppNodeBuilder.build(CrossSpawnSpawner.node))
 const it = testEffect(env)
 
 const ask = (input: Permission.AskInput) =>
@@ -436,6 +432,71 @@ describe("external_directory allow config protection", () => {
           expect(yield* list()).toMatchObject([{ id: targetID }])
           yield* reply({ requestID: targetID, reply: "reject" })
           expect(Exit.isFailure(yield* Fiber.await(targetPending))).toBe(true)
+        }),
+      { git: true },
+    ),
+  )
+})
+
+describe("data protection with allow rules", () => {
+  const ruleset: Permission.Ruleset = [{ permission: "*", pattern: "*", action: "allow" }]
+
+  for (const permission of ["edit", "external_directory"]) {
+    it.live(`requires one-shot approval for ${permission} on internal data`, () =>
+      provideTmpdirInstance(
+        () =>
+          Effect.gen(function* () {
+            const target = path.join(Global.Path.data, permission === "edit" ? "auth.json" : "*")
+            const input = {
+              sessionID: SessionID.make(`session_data_${permission}`),
+              permission,
+              patterns: [target],
+              always: ["*"],
+              metadata: {},
+              ruleset,
+            }
+            const id = PermissionV1.ID.ascending()
+            const pending = yield* ask({ ...input, id }).pipe(Effect.forkScoped)
+            expect(yield* wait(1)).toMatchObject([{ id, metadata: { disableAlways: true, configProtected: true } }])
+            yield* saveAlwaysRules({ requestID: id, approvedAlways: ["*"] })
+            yield* reply({ requestID: id, reply: "always" })
+            yield* Fiber.join(pending)
+
+            const next = PermissionV1.ID.ascending()
+            const again = yield* ask({ ...input, id: next }).pipe(Effect.forkScoped)
+            expect(yield* wait(1)).toMatchObject([{ id: next }])
+            const service = yield* Permission.Service
+            yield* service.allowEverything({ enable: true, sessionID: input.sessionID })
+            expect(yield* list()).toMatchObject([{ id: next }])
+            yield* reply({ requestID: next, reply: "reject" })
+            expect(Exit.isFailure(yield* Fiber.await(again))).toBe(true)
+          }),
+        { git: true },
+      ),
+    )
+  }
+
+  it.live("preserves normal approval rules for data plans and worktree source edits", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          for (const file of [
+            path.join(Global.Path.data, "plans", "123-plan.md"),
+            path.join(Global.Path.data, "worktree", "project", "checkout", "package.json"),
+            path.join(Global.Path.data, "worktree", "project", "checkout", "src", "index.ts"),
+            path.join(Global.Path.data, "worktree", "project", "checkout", ".kilo", "plans", "plan.md"),
+          ]) {
+            yield* immediate(
+              ask({
+                sessionID: SessionID.make("session_data_allowed"),
+                permission: "edit",
+                patterns: [file],
+                metadata: { filepath: file },
+                always: ["*"],
+                ruleset,
+              }),
+            )
+          }
         }),
       { git: true },
     ),
