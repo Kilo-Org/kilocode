@@ -1,0 +1,47 @@
+# kilocode_change - new file
+name: V1 release runner probe
+
+on:
+  pull_request:
+    branches: [main]
+    paths: [.github/workflows/v1-release-probe.yml]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  probe:
+    name: Probe ${{ matrix.label }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: ubuntu-24.04-8core-x64
+            arch: X64
+          - label: windows-11-arm64
+            arch: ARM64
+    runs-on: ${{ matrix.label }}
+    timeout-minutes: 5
+    steps:
+      - name: Verify GitHub-hosted runner assignment
+        shell: bash
+        env:
+          HOSTING: ${{ runner.environment }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          echo "Runner: $HOSTING ($RUNNER_OS/$RUNNER_ARCH)"
+          test "$HOSTING" = github-hosted
+          test "$RUNNER_ARCH" = "$ARCH"
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Read this PR's changed files
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/files" --jq 'length'
