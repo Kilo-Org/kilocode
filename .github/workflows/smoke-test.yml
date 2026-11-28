@@ -30,10 +30,6 @@ on:
         description: "CLI version to test from draft release assets."
         required: false
         type: string
-      waive_bench:
-        description: "Skip the bench tests and record the release exception."
-        type: boolean
-        default: false
     secrets:
       KILO_API_KEY:
         description: "Kilo Gateway key."
@@ -52,16 +48,8 @@ concurrency:
 permissions: {}
 
 jobs:
-  bench-exception:
-    name: Record bench exception
-    if: inputs.waive_bench
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "The kilo-bench end-to-end tests are paused for stable and prerelease v1 releases until the release runner's BENCH_GITHUB_TOKEN access is approved. Run this workflow manually to verify access, then remove the waiver." >> "$GITHUB_STEP_SUMMARY"
-
   smoke-test:
     name: Smoke Test
-    if: ${{ !inputs.waive_bench }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 30
     # Draft releases are visible only to tokens with push access, so reading
