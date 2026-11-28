@@ -39,7 +39,7 @@ const NotificationsTab: Component = () => {
   const vscode = useVSCode()
   const language = useLanguage()
   const [enabled, setEnabled] = createSignal(false)
-  const [notifications, setNotifications] = createSignal(false)
+  const [notifications, setNotifications] = createSignal(true)
   const [os, setOs] = createSignal(false)
   const [available, setAvailable] = createSignal(false)
   const [sound, setSound] = createSignal("default")
