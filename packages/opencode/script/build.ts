@@ -26,7 +26,8 @@ import { KiloSandboxWorker } from "./kilocode/kilo-sandbox-worker"
 import { KiloSandboxNetwork } from "./kilocode/kilo-sandbox-network"
 import * as KiloSbom from "./kilocode/sbom"
 import * as KiloBun from "../../../script/kilocode/bun"
-if (Bun.revision !== KiloBun.pin.revision) {
+const hostBun = process.env.KILO_USE_HOST_BUN === "1"
+if (!hostBun && Bun.revision !== KiloBun.pin.revision) {
   throw new Error(`Build the CLI with Bun ${KiloBun.pin.version} (${KiloBun.pin.revision}), not ${Bun.revision}`)
 }
 // kilocode_change end
@@ -292,15 +293,10 @@ for (const item of targets) {
   console.log(`building ${name}`)
   await $`mkdir -p dist/${name}/bin`
   // kilocode_change start
-  // Nix already verifies its runtime with fetchurl and builds without network access.
-  const runtime =
-    process.env.NIX_BUILD_TOP &&
-    item.os === process.platform &&
-    item.arch === process.arch &&
-    !item.abi &&
-    item.avx2 !== false
-      ? process.execPath
-      : await KiloBun.stage(item)
+  // Nix and distro packagers already provide a verified runtime and may build without network access.
+  const runtime = KiloBun.native(item, process.env.NIX_BUILD_TOP !== undefined || hostBun)
+    ? process.execPath
+    : await KiloBun.stage(item)
   const bwrap =
     item.os === "linux" && process.env.KILO_SKIP_BUNDLED_BWRAP !== "1"
       ? await stageBubblewrap(item.arch, path.resolve(dir, `dist/${name}/bin`))

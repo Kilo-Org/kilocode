@@ -49,7 +49,7 @@ bun --version
 bun --print "Bun.revision"
 ```
 
-The expected `Bun.revision` is `38afee6c84fcf48c0edb2466aa4b27d287a59c30`. The CLI build rejects other revisions. The root `package.json` pins the npm package version, and `script/kilocode/bun.json` records the exact revision and target artifact checksums.
+The expected `Bun.revision` is `38afee6c84fcf48c0edb2466aa4b27d287a59c30`. The CLI build rejects other revisions. The root `package.json` pins the npm package version, and `script/kilocode/bun.json` records the exact revision and target artifact checksums. Package builders that provide their own verified Bun can set `KILO_USE_HOST_BUN=1` to skip the revision check and compile native targets with the running Bun.
 
 The first CLI build needs access to the npm registry. The build caches verified Bun archives in a private, user-scoped temporary directory. Each build extracts a fresh executable before compilation.
 
