@@ -11,7 +11,7 @@
 //
 // Runs in two places of .github/workflows/publish.yml on the same commit:
 // - build-vscode, so the packaged VSIX ships the current changelog
-// - publish (via script/publish.ts), which commits the result
+// - release-commit (via script/kilocode/release-bundle.ts), which commits the result
 
 import { $ } from "bun"
 import { fileURLToPath } from "url"

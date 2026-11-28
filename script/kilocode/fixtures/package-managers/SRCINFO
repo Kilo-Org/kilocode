@@ -1,0 +1,20 @@
+pkgbase = kilo-bin
+	pkgdesc = The AI coding agent built for the terminal.
+	pkgver = 7.8.40
+	pkgrel = 1
+	url = https://github.com/Kilo-Org/kilocode
+	arch = aarch64
+	arch = x86_64
+	license = MIT
+	license = LGPL-2.0-or-later
+	depends = ripgrep
+	provides = kilo
+	conflicts = kilo
+	options = !debug
+	options = !strip
+	source_aarch64 = kilo-bin_7.8.40_aarch64.tar.gz::https://github.com/Kilo-Org/kilocode/releases/download/v7.8.40/kilo-linux-arm64.tar.gz
+	sha256sums_aarch64 = 3e7b140cd446c09b1f48589085d7b4b975889e37255eb4d71ebf80b506f54661
+	source_x86_64 = kilo-bin_7.8.40_x86_64.tar.gz::https://github.com/Kilo-Org/kilocode/releases/download/v7.8.40/kilo-linux-x64.tar.gz
+	sha256sums_x86_64 = 5ccdd8972f1b57306c28e613a1810b87a95224d966b381897a12bdae4d9bf0d1
+
+pkgname = kilo-bin

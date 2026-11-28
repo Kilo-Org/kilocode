@@ -26,7 +26,7 @@ class ActiveListMenuTest : BasePlatformTestCase() {
             override val search = dto.name
         }
         val hosted = HostedWorkspaceDto(HostedWorkspaceRefDto("cloud", "one"))
-        val cloud = hostedWorkspaceRow(HostedWorkspaceRowData(hosted, null), FakeAgentManagerFacade())
+        val cloud = hostedWorkspaceRow(HostedWorkspaceRowData(hosted), FakeAgentManagerFacade())
         val group = DefaultActionGroup()
         val menu = ActiveMenu(WorktreeDataKeys.WORKTREE, group, element = { row -> dto.takeIf { row === local } },
             alternate = ActiveMenu(HostedWorkspaceDataKeys.WORKSPACE, group, element = { row ->

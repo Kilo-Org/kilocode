@@ -699,6 +699,9 @@ export const dict = {
 
   "profile.title": "Profil",
   "profile.notLoggedIn": "Niste prijavljeni",
+  "profile.expired": "Vaša Kilo prijava je istekla ili je opozvana. Prijavite se ponovo da nastavite.",
+  "profile.unavailable": "Nije moguće učitati vaš Kilo profil. Kilo trenutno možda nije dostupan.",
+  "profile.stale": "Nije moguće osvježiti vaš profil. Prikazuju se posljednji učitani podaci.",
   "profile.action.login": "Prijavite se putem Kilo Code",
   "profile.balance.title": "Stanje",
   "profile.balance.refresh": "Osvježi stanje",

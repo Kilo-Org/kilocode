@@ -123,12 +123,11 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
             const response = await sdk.client.kilo.profile()
 
             if (response.error || !response.data) {
-              dialog.replace(() => (
-                <DialogAlert
-                  title="Error"
-                  message="Failed to fetch profile. Please ensure you're authenticated with Kilo Gateway."
-                />
-              ))
+              const message =
+                response.response?.status === 401
+                  ? "Kilo did not accept your login. It may have expired or been revoked. Run /connect or `kilo auth login` to sign in again."
+                  : "Could not load your Kilo profile. Kilo may be unreachable, try again later."
+              dialog.replace(() => <DialogAlert title="Error" message={message} />)
               return
             }
 
@@ -222,12 +221,11 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
             const response = await sdk.client.kilo.profile()
 
             if (response.error || !response.data) {
-              dialog.replace(() => (
-                <DialogAlert
-                  title="Error"
-                  message="Failed to fetch teams. Please ensure you're authenticated with Kilo Gateway."
-                />
-              ))
+              const message =
+                response.response?.status === 401
+                  ? "Kilo did not accept your login. It may have expired or been revoked. Run /connect or `kilo auth login` to sign in again."
+                  : "Could not load your Kilo teams. Kilo may be unreachable, try again later."
+              dialog.replace(() => <DialogAlert title="Error" message={message} />)
               return
             }
 

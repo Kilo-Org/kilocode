@@ -29,7 +29,7 @@ permissions:
 jobs:
   check:
     if: github.repository == 'Kilo-Org/kilocode'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 10
     env:
       # The upstream repository, as owner/name.

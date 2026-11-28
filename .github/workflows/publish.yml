@@ -1,5 +1,5 @@
 name: publish
-run-name: "${{ format('{0} {1}', inputs.pre_release && 'pre-release' || 'release', inputs.bump) }}"
+run-name: "${{ inputs.oidc_check && 'trusted publishing check' || format('{0} {1}', inputs.pre_release && 'pre-release' || 'release', inputs.bump) }}" # kilocode_change
 
 on:
   # push:
@@ -28,63 +28,87 @@ on:
         required: false
         type: boolean
         default: true
+      oidc_check:
+        description: "Only check trusted publishing (no build, no publish)"
+        required: false
+        type: boolean
+        default: false
       # kilocode_change end
 
-concurrency: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.version || inputs.bump }}
+concurrency: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.oidc_check && 'oidc-check' || inputs.version || inputs.bump }} # kilocode_change
 
 permissions:
-  id-token: write
-  contents: write
-  issues: write # kilocode_change - label automated JetBrains CLI pin bump PRs
-  packages: write
-  pull-requests: write # kilocode_change - create automated JetBrains CLI pin bump PRs
+  contents: read # kilocode_change
 
 jobs:
-  version:
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-    if: github.repository == 'Kilo-Org/kilocode'
+  # kilocode_change start - the upstream `version` job is removed: release-draft decides the version
+  # (the bump of the highest vx.y.z among origin's tags and every release, drafts included, or the
+  # requested version, which must be new) and creates the draft release. It holds the job token
+  # with contents: write and runs only this repository's code (Bun from setup-bun, nothing
+  # installed). Every later job reads the version, release id and tag from here.
+  release-draft:
+    name: Create draft release
+    if: github.repository == 'Kilo-Org/kilocode' && !inputs.oidc_check
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 10
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v6 # kilocode_change
+      # Stop before the draft release and tag are created when the workflow is dispatched from a
+      # branch other than main.
+      - name: Require main
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Run the publish workflow from main (got $GITHUB_REF). Nothing was created."
+            exit 1
+          fi
+
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
-          fetch-depth: 0
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/actions/setup-bun/
+            /script/kilocode/bun.json
+            /script/kilocode/bun.ts
+            /script/kilocode/release-draft.ts
 
       - uses: ./.github/actions/setup-bun
+        with:
+          install: false
 
-      # kilocode_change start - install deps for version script workspace resolution
-      - name: Install dependencies
-        run: bun install
-
-      - name: Install Kilo
-        if: inputs.bump || inputs.version
-        run: bun i -g @kilocode/cli
-      # kilocode_change end
-
-      - id: version
-        run: |
-          ./script/version.ts
+      - id: draft
         env:
+          REQUESTED: ${{ inputs.version }}
+          BUMP: ${{ inputs.bump }}
+          PRE_RELEASE: ${{ inputs.pre_release }}
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          KILO_BUMP: ${{ inputs.bump }}
-          KILO_VERSION: ${{ inputs.version }}
-          KILO_PRE_RELEASE: ${{ inputs.pre_release }}
-          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
-          KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
+        run: bun script/kilocode/release-draft.ts
     outputs:
-      version: ${{ steps.version.outputs.version }}
-      release: ${{ steps.version.outputs.release }}
-      tag: ${{ steps.version.outputs.tag }}
+      version: ${{ steps.draft.outputs.version }}
+      release: ${{ steps.draft.outputs.release }}
+      tag: ${{ steps.draft.outputs.tag }}
+  # kilocode_change end
 
   build-cli:
-    needs: version
+    needs: release-draft # kilocode_change
+    timeout-minutes: 90 # kilocode_change
+    permissions: # kilocode_change
+      contents: read # kilocode_change - compilation only stages workflow artifacts
     runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.repository == 'Kilo-Org/kilocode'
     steps:
-      - uses: actions/checkout@v6 # kilocode_change
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0 # kilocode_change
         with:
           fetch-tags: true
+          persist-credentials: false # kilocode_change
 
       - uses: ./.github/actions/setup-bun
+        # kilocode_change start - job holds write scopes, so skip the shared dependency cache
+        with:
+          cache: false
+        # kilocode_change end
 
       - uses: ./.github/actions/setup-sbom # kilocode_change
 
@@ -108,35 +132,45 @@ jobs:
         run: |
           ./packages/opencode/script/build.ts
         env:
-          KILO_VERSION: ${{ needs.version.outputs.version }}
-          KILO_RELEASE: ${{ needs.version.outputs.release }}
+          KILO_VERSION: ${{ needs.release-draft.outputs.version }} # kilocode_change
+          KILO_RELEASE: ${{ needs.release-draft.outputs.release }} # kilocode_change
           KILO_PRE_RELEASE: ${{ inputs.pre_release }}
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
           SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }} # kilocode_change
 
-      # kilocode_change start - CRA evidence. The build already generated and
-      # uploaded a sidecar per archive; this re-checks the published set and
-      # exports the attestation subjects so signing never guesses a digest.
+      # kilocode_change start - verify local release evidence and record the manifest digest that
+      # sbom-cli-windows, upload-cli and publish check.
       - name: Verify CLI SBOM evidence
         id: sbom
-        if: needs.version.outputs.release != ''
+        if: needs.release-draft.outputs.release != ''
         run: |
           bun run script/kilocode/sbom.ts verify --manifest "$MANIFEST" --dir packages/opencode/dist
-          bun run script/kilocode/sbom.ts matrix --manifest "$MANIFEST" --output subjects
+          echo "manifest-sha256=$(shasum -a 256 "$MANIFEST" | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
         env:
           MANIFEST: packages/opencode/dist/cli-sbom-evidence.json
           SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }}
 
       - name: Upload CLI SBOM evidence
-        if: needs.version.outputs.release != ''
-        uses: actions/upload-artifact@v7
+        if: needs.release-draft.outputs.release != ''
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: kilo-cli-sboms
           path: |
             packages/opencode/dist/*.cdx.json
             packages/opencode/dist/cli-sbom-evidence.json
             packages/opencode/dist/kilo-cli-SHA256SUMS
+          if-no-files-found: error
+
+      # The release ships the Windows zips sign-cli-windows packages from the signed executables.
+      - name: Stage CLI release archives
+        if: needs.release-draft.outputs.release != ''
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: kilo-cli-archives
+          path: |
+            packages/opencode/dist/kilo-*.tar.gz
+            packages/opencode/dist/kilo-*.zip
+            !packages/opencode/dist/kilo-windows-*.zip
+          compression-level: 0
           if-no-files-found: error
       # kilocode_change end
 
@@ -149,29 +183,116 @@ jobs:
       # With `archive: false` the `name:` input is ignored; the artifact is named after the
       # file (kilo-cli.tar.zst). zstd + GNU tar are preinstalled on both github-hosted and
       # blacksmith ubuntu-2404. See actions/upload-artifact#36, actions/toolkit#1533.
+      # Any job of the run can replace an artifact, so the consumers check this digest, which only this job sets.
       - name: Pack CLI dist into tar.zst
+        id: pack
         run: |
           find packages/opencode/dist -name '*.map' -delete
-          tar --zstd -cf /tmp/kilo-cli.tar.zst -C packages/opencode/dist .
+          # Signing, validation and VSIX packaging only need the package directories.
+          tar --zstd --exclude='./kilo-*.tar.gz' --exclude='./kilo-*.zip' --exclude='./kilo-*.cdx.json' \
+            -cf /tmp/kilo-cli.tar.zst -C packages/opencode/dist .
+          echo "sha256=$(shasum -a 256 /tmp/kilo-cli.tar.zst | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           path: /tmp/kilo-cli.tar.zst
           archive: false
       # kilocode_change end
 
     outputs:
-      version: ${{ needs.version.outputs.version }}
-      sbom-subjects: ${{ steps.sbom.outputs.subjects }} # kilocode_change
+      version: ${{ needs.release-draft.outputs.version }} # kilocode_change
+      cli-sha256: ${{ steps.pack.outputs.sha256 }} # kilocode_change
+      manifest-sha256: ${{ steps.sbom.outputs.manifest-sha256 }} # kilocode_change
 
-  # kilocode_change start - bind each published CLI archive to its SBOM with a
+  # kilocode_change start
+  # Transfers the CLI release set once, after signing: the build-cli archives except the Windows
+  # zips, the signed zips from sign-cli-windows and the evidence sbom-cli-windows wrote for them.
+  upload-cli:
+    name: Upload CLI assets to draft
+    needs: [release-draft, build-cli, sign-cli-windows, sbom-cli-windows]
+    if: needs.release-draft.outputs.release != ''
+    permissions:
+      contents: write
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 30
+    steps:
+      # Only trusted transfer code from the workflow commit. No dependency install.
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /script/kilocode/cli-assets.ts
+            /script/kilocode/bun.json
+            /script/kilocode/release.ts
+            /script/kilocode/sbom/artifact.ts
+            /script/kilocode/sbom/policy.ts
+
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: kilo-cli-archives
+          path: ${{ runner.temp }}/archives
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: kilo-cli-windows-zips
+          path: ${{ runner.temp }}/archives
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: kilo-cli-sboms
+          path: ${{ runner.temp }}/build
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: kilo-cli-evidence
+          path: ${{ runner.temp }}/evidence
+
+      - name: Verify CLI SBOM manifests
+        env:
+          BUILD_SHA256: ${{ needs.build-cli.outputs.manifest-sha256 }}
+          EVIDENCE_SHA256: ${{ needs.sbom-cli-windows.outputs.manifest-sha256 }}
+        run: |
+          verify() {
+            actual="$(shasum -a 256 "$RUNNER_TEMP/$1/cli-sbom-evidence.json" | cut -d ' ' -f 1)"
+            if [ -z "$2" ] || [ "$actual" != "$2" ]; then
+              echo "::error::$1/cli-sbom-evidence.json has digest $actual; $3 recorded ${2:-none}. Nothing was uploaded."
+              exit 1
+            fi
+          }
+          verify build "$BUILD_SHA256" build-cli
+          verify evidence "$EVIDENCE_SHA256" sbom-cli-windows
+
+      # Uploads only to the draft with the release id the version job recorded. Also records the
+      # attestation subjects: attest-cli attests exactly the archives this step checked, with the
+      # signed digests for the Windows zips.
+      - name: Verify and transfer CLI assets
+        id: assets
+        env:
+          VERSION: ${{ needs.release-draft.outputs.version }}
+          RELEASE: ${{ needs.release-draft.outputs.release }}
+          SIGNED_ZIPS: ${{ needs.sign-cli-windows.outputs.zips-sha256 }}
+          SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }}
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: node script/kilocode/cli-assets.ts "$RUNNER_TEMP/archives" "$RUNNER_TEMP/build" "$RUNNER_TEMP/evidence" "$VERSION"
+    outputs:
+      subjects: ${{ steps.assets.outputs.subjects }}
+
+  # Bind each published CLI archive to its SBOM with a
   # signed attestation. Runs off the small sidecar artifact rather than the ~1 GB
   # CLI build artifact, since attestation needs the digest, not the bytes.
   attest-cli:
     name: Attest CLI SBOM (${{ matrix.artifact }})
-    needs: build-cli
-    if: needs.build-cli.outputs.sbom-subjects != '' && fromJSON(needs.build-cli.outputs.sbom-subjects).include[0] != null
-    runs-on: ubuntu-latest
+    needs: upload-cli
+    if: needs.upload-cli.outputs.subjects != '' && fromJSON(needs.upload-cli.outputs.subjects).include[0] != null
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 15
     continue-on-error: ${{ vars.SBOM_ENFORCE != 'true' }}
     permissions:
       contents: read
@@ -180,12 +301,23 @@ jobs:
       artifact-metadata: write
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.build-cli.outputs.sbom-subjects) }}
+      matrix: ${{ fromJSON(needs.upload-cli.outputs.subjects) }}
     steps:
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: kilo-cli-sboms
+          name: kilo-cli-evidence
           path: sboms
+
+      - name: Verify SBOM
+        env:
+          SBOM: sboms/${{ matrix.sbom }}
+          EXPECTED: ${{ matrix.sbomSha256 }}
+        run: |
+          actual="$(shasum -a 256 "$SBOM" | cut -d ' ' -f 1)"
+          if [ -z "$EXPECTED" ] || [ "$actual" != "$EXPECTED" ]; then
+            echo "::error::$SBOM has digest $actual; upload-cli recorded ${EXPECTED:-none}. Nothing was attested."
+            exit 1
+          fi
 
       - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
@@ -205,7 +337,7 @@ jobs:
       matrix:
         include:
           - target: darwin-arm64
-            runner: macos-15
+            runner: blacksmith-6vcpu-macos-15
             uname: arm64
             package: "@kilocode/cli-darwin-arm64"
             mode: host
@@ -215,33 +347,43 @@ jobs:
             package: "@kilocode/cli-darwin-x64"
             mode: host
           - target: linux-arm64
-            runner: ubuntu-24.04-arm
+            runner: blacksmith-4vcpu-ubuntu-2404-arm
             uname: aarch64
             package: "@kilocode/cli-linux-arm64"
             mode: host
           - target: linux-x64
-            runner: ubuntu-24.04
+            runner: blacksmith-4vcpu-ubuntu-2404
             uname: x86_64
             package: "@kilocode/cli-linux-x64"
             mode: host
           - target: alpine-arm64
-            runner: ubuntu-24.04-arm
+            runner: blacksmith-4vcpu-ubuntu-2404-arm
             uname: aarch64
             package: "@kilocode/cli-linux-arm64-musl"
             mode: alpine
             platform: linux/arm64
           - target: alpine-x64
-            runner: ubuntu-24.04
+            runner: blacksmith-4vcpu-ubuntu-2404
             uname: x86_64
             package: "@kilocode/cli-linux-x64-musl"
             mode: alpine
             platform: linux/amd64
     steps:
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: kilo-cli-signed.tar.zst
           path: /tmp
           skip-decompress: true
+
+      - name: Verify CLI dist
+        env:
+          EXPECTED: ${{ needs.pack-signed-cli.outputs.sha256 }}
+        run: |
+          actual="$(shasum -a 256 /tmp/kilo-cli-signed.tar.zst | cut -d ' ' -f 1)"
+          if [ -z "$EXPECTED" ] || [ "$actual" != "$EXPECTED" ]; then
+            echo "::error::kilo-cli-signed.tar.zst has digest $actual; pack-signed-cli recorded ${EXPECTED:-none}"
+            exit 1
+          fi
 
       - name: Unpack CLI dist
         run: |
@@ -330,17 +472,28 @@ jobs:
       matrix:
         include:
           - arch: arm64
-            runner: windows-11-arm
+            runner: windows-11-arm # kilocode_change - Blacksmith has no native Windows ARM64 image.
             package: "@kilocode/cli-windows-arm64"
           - arch: x64
-            runner: windows-2025
+            runner: blacksmith-4vcpu-windows-2025 # kilocode_change
             package: "@kilocode/cli-windows-x64"
     steps:
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2 # kilocode_change
         with:
           name: kilo-cli-signed.tar.zst # kilocode_change
           path: ${{ runner.temp }}
           skip-decompress: true
+
+      - name: Verify CLI dist
+        shell: pwsh
+        env:
+          EXPECTED: ${{ needs.pack-signed-cli.outputs.sha256 }}
+        run: |
+          $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $env:RUNNER_TEMP 'kilo-cli-signed.tar.zst')).Hash.ToLowerInvariant()
+          if (-not $env:EXPECTED -or $actual -cne $env:EXPECTED) {
+            Write-Output "::error::kilo-cli-signed.tar.zst has digest $actual; pack-signed-cli recorded $env:EXPECTED"
+            exit 1
+          }
 
       - name: Install zstd
         shell: pwsh
@@ -398,16 +551,30 @@ jobs:
   # kilo-cli-signed.tar.zst; all downstream jobs use that.
   sign-cli-windows:
     name: Sign CLI (Windows EV)
-    needs: build-cli
-    runs-on: windows-2025
-    if: github.repository == 'Kilo-Org/kilocode'
+    permissions:
+      contents: read
+      id-token: write # Authenticate to Azure Key Vault.
+    needs: [release-draft, build-cli]
+    runs-on: blacksmith-4vcpu-windows-2025
+    if: github.repository == 'Kilo-Org/kilocode' && needs.release-draft.outputs.release != ''
     timeout-minutes: 20
     steps:
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: kilo-cli.tar.zst
           path: ${{ runner.temp }}
           skip-decompress: true
+
+      - name: Verify CLI dist
+        shell: pwsh
+        env:
+          EXPECTED: ${{ needs.build-cli.outputs.cli-sha256 }}
+        run: |
+          $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $env:RUNNER_TEMP 'kilo-cli.tar.zst')).Hash.ToLowerInvariant()
+          if (-not $env:EXPECTED -or $actual -cne $env:EXPECTED) {
+            Write-Output "::error::kilo-cli.tar.zst has digest $actual; build-cli recorded $env:EXPECTED"
+            exit 1
+          }
 
       - name: Install zstd
         shell: pwsh
@@ -429,7 +596,7 @@ jobs:
           "$env:USERPROFILE\.dotnet\tools" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Az login
-        uses: azure/login@v2
+        uses: azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2.3.1
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -437,6 +604,9 @@ jobs:
 
       - name: Sign Windows binaries with EV certificate
         shell: bash
+        env:
+          AZURE_KEY_VAULT_URI: ${{ secrets.AZURE_KEY_VAULT_URI }}
+          AZURE_CERT_NAME: ${{ secrets.AZURE_CERT_NAME }}
         run: |
           # AzureSignTool requires an explicit auth option (-kva/-kvi/-kvm; there is no
           # DefaultAzureCredential fallback). Mint a Key Vault token from the azure/login
@@ -444,8 +614,8 @@ jobs:
           token="$(az account get-access-token --resource https://vault.azure.net --query accessToken -o tsv)"
           for exe in dist/@kilocode/cli-windows-*/bin/kilo.exe; do
             AzureSignTool sign -v \
-              -kvu "${{ secrets.AZURE_KEY_VAULT_URI }}" \
-              -kvc "${{ secrets.AZURE_CERT_NAME }}" \
+              -kvu "$AZURE_KEY_VAULT_URI" \
+              -kvc "$AZURE_CERT_NAME" \
               -kva "$token" \
               -tr http://timestamp.digicert.com \
               -d "Kilo CLI" \
@@ -474,38 +644,114 @@ jobs:
           # rmt remote-tape "host:path" and dies with "Cannot connect to D".
           tar --zstd --force-local -cf "$RUNNER_TEMP/kilo-windows-signed.tar.zst" ./@kilocode/cli-windows-*/bin/kilo.exe
 
-      - uses: actions/upload-artifact@v7
+      # pack-signed-cli checks this digest before it merges the overlay. Out-File would end the line
+      # with CRLF on Windows, so outputs are written with LF only.
+      - name: Record signed Windows binaries digest
+        id: signed
+        shell: pwsh
+        run: |
+          $sha = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $env:RUNNER_TEMP 'kilo-windows-signed.tar.zst')).Hash.ToLowerInvariant()
+          [IO.File]::AppendAllText($env:GITHUB_OUTPUT, "sha256=$sha`n")
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           path: ${{ runner.temp }}/kilo-windows-signed.tar.zst
           archive: false
 
-      # build-cli already uploaded unsigned Windows zips to the draft release;
-      # replace them with signed copies so release assets match what npm/VSIX ship.
-      # One asset per invocation with retries, for the same reason build-cli uploads
-      # that way: a dropped connection can commit the asset anyway, and the retry
-      # inside gh then dies on "ReleaseAsset.name already exists". --clobber clears
-      # that asset at the start of the next attempt.
-      - name: Re-upload signed Windows release zips
+      # Package the signed zips the release ships and record one sorted `<sha256>  <zip>` line per
+      # zip. sbom-cli-windows describes these zips, upload-cli uploads them and attest-cli attests
+      # them; each checks the zips against this list.
+      - name: Package signed Windows release zips
+        id: zips
         shell: pwsh
         run: |
-          $archives = @()
+          $digests = [System.Collections.Generic.Dictionary[string, string]]::new([StringComparer]::Ordinal)
           foreach ($dir in Get-ChildItem "dist\@kilocode\cli-windows-*" -Directory) {
             $archive = "kilo-" + $dir.Name.Replace("cli-", "") + ".zip"
             Compress-Archive -Path (Join-Path $dir.FullName "bin\*") -DestinationPath $archive -Force
-            $archives += $archive
+            $digests[$archive] = (Get-FileHash -Algorithm SHA256 -LiteralPath $archive).Hash.ToLowerInvariant()
           }
-          foreach ($archive in $archives) {
-            foreach ($attempt in 1..4) {
-              gh release upload "v${{ needs.build-cli.outputs.version }}" $archive --clobber
-              if ($LASTEXITCODE -eq 0) { break }
-              if ($attempt -eq 4) { throw "Could not upload $archive after 4 attempts" }
-              Write-Host "upload: $archive failed (attempt $attempt/4), retrying in 10s"
-              Start-Sleep -Seconds 10
-            }
-          }
+          if ($digests.Count -eq 0) { throw "No signed Windows binaries to package" }
+          $names = [string[]]$digests.Keys
+          [Array]::Sort($names, [StringComparer]::Ordinal)
+          $list = foreach ($name in $names) { "$($digests[$name])  $name" }
+          # LF only: the runner keeps a CR inside a multiline value.
+          $output = @("sha256<<KILO_SIGNED_ZIPS") + $list + @("KILO_SIGNED_ZIPS")
+          [IO.File]::AppendAllText($env:GITHUB_OUTPUT, ($output -join "`n") + "`n")
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: kilo-cli-windows-zips
+          path: kilo-windows-*.zip
+          compression-level: 0
+          if-no-files-found: error
+    outputs:
+      sha256: ${{ steps.signed.outputs.sha256 }}
+      zips-sha256: ${{ steps.zips.outputs.sha256 }}
+
+  # The signed zips are not the zips build-cli described, so their SBOM sidecars, manifest
+  # entries and checksum lines are generated again from the signed bytes. Every other evidence
+  # file stays as build-cli wrote it. upload-cli publishes the result.
+  sbom-cli-windows:
+    name: Describe signed Windows CLI
+    needs: [release-draft, build-cli, sign-cli-windows]
+    permissions:
+      contents: read
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      # Feeds the evidence that upload-cli publishes and attest-cli signs, so restore nothing
+      # from the shared dependency cache.
+      - uses: ./.github/actions/setup-bun
+        with:
+          cache: false
+
+      - uses: ./.github/actions/setup-sbom
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: kilo-cli-sboms
+          path: ${{ runner.temp }}/evidence
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: kilo-cli-windows-zips
+          path: ${{ runner.temp }}/windows
+
+      - name: Verify CLI SBOM manifest
         env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
+          EXPECTED: ${{ needs.build-cli.outputs.manifest-sha256 }}
+        run: |
+          actual="$(shasum -a 256 "$RUNNER_TEMP/evidence/cli-sbom-evidence.json" | cut -d ' ' -f 1)"
+          if [ -z "$EXPECTED" ] || [ "$actual" != "$EXPECTED" ]; then
+            echo "::error::cli-sbom-evidence.json has digest $actual; build-cli recorded ${EXPECTED:-none}"
+            exit 1
+          fi
+
+      # Checks each zip against the digest sign-cli-windows recorded before it describes it.
+      - name: Describe signed Windows zips
+        id: sbom
+        env:
+          KILO_VERSION: ${{ needs.release-draft.outputs.version }}
+          KILO_RELEASE: ${{ needs.release-draft.outputs.release }}
+          KILO_PRE_RELEASE: ${{ inputs.pre_release }}
+          SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }}
+          SIGNED_ZIPS: ${{ needs.sign-cli-windows.outputs.zips-sha256 }}
+        run: |
+          bun packages/opencode/script/kilocode/signed-evidence.ts "$RUNNER_TEMP/evidence" "$RUNNER_TEMP/windows"
+          echo "manifest-sha256=$(shasum -a 256 "$RUNNER_TEMP/evidence/cli-sbom-evidence.json" | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: kilo-cli-evidence
+          path: ${{ runner.temp }}/evidence
+          if-no-files-found: error
+    outputs:
+      manifest-sha256: ${{ steps.sbom.outputs.manifest-sha256 }}
 
   # Overlay the signed Windows exes onto the original Linux-produced dist
   # tarball so POSIX mode bits on the Unix binaries (kilo, bwrap) stay intact.
@@ -514,65 +760,109 @@ jobs:
     needs:
       - build-cli
       - sign-cli-windows
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.repository == 'Kilo-Org/kilocode'
     timeout-minutes: 15
+    outputs:
+      sha256: ${{ steps.pack.outputs.sha256 }}
     steps:
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: kilo-cli.tar.zst
           path: /tmp
           skip-decompress: true
 
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: kilo-windows-signed.tar.zst
           path: /tmp
           skip-decompress: true
 
+      - name: Verify CLI dist and signed Windows binaries
+        env:
+          CLI_SHA256: ${{ needs.build-cli.outputs.cli-sha256 }}
+          SIGNED_SHA256: ${{ needs.sign-cli-windows.outputs.sha256 }}
+        run: |
+          verify() {
+            actual="$(shasum -a 256 "/tmp/$1" | cut -d ' ' -f 1)"
+            if [ -z "$2" ] || [ "$actual" != "$2" ]; then
+              echo "::error::$1 has digest $actual; $3 recorded ${2:-none}"
+              exit 1
+            fi
+          }
+          verify kilo-cli.tar.zst "$CLI_SHA256" build-cli
+          verify kilo-windows-signed.tar.zst "$SIGNED_SHA256" sign-cli-windows
+
       - name: Merge signed binaries and repack
+        id: pack
         run: |
           mkdir -p dist
           tar --zstd -xf /tmp/kilo-cli.tar.zst -C dist
           tar --zstd -xf /tmp/kilo-windows-signed.tar.zst -C dist
           tar --zstd -cf "$RUNNER_TEMP/kilo-cli-signed.tar.zst" -C dist .
+          echo "sha256=$(shasum -a 256 "$RUNNER_TEMP/kilo-cli-signed.tar.zst" | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           path: ${{ runner.temp }}/kilo-cli-signed.tar.zst
           archive: false
   # kilocode_change end
 
   build-vscode:
+    # kilocode_change start - changesets reads commit and PR metadata for the VSIX changelog
+    permissions:
+      contents: read
+      pull-requests: read
+    # kilocode_change end
     needs:
       - build-cli
       - pack-signed-cli # kilocode_change
       - validate-cli-unix
       - validate-cli-windows
     runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 60 # kilocode_change
     if: github.repository == 'Kilo-Org/kilocode'
     steps:
-      - uses: actions/checkout@v6 # kilocode_change
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0 # kilocode_change
+        # kilocode_change start
+        with:
+          persist-credentials: false
+        # kilocode_change end
 
       - uses: ./.github/actions/setup-bun
+        # kilocode_change start - job holds write scopes, so skip the shared dependency cache
+        with:
+          cache: false
+        # kilocode_change end
 
       - uses: ./.github/actions/setup-sbom # kilocode_change - VSIX sidecars scan the packaged archive
 
-      - uses: actions/setup-node@v6 # kilocode_change
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0 # kilocode_change
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false # kilocode_change
 
       - name: Install @vscode/vsce
         run: bun install -g @vscode/vsce@4.1.1 # kilocode_change
 
       # kilocode_change start - download into /tmp and extract the tar.zst packed by build-cli,
       # then apply changesets so the packaged VSIX ships the current changelog
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: kilo-cli-signed.tar.zst
           path: /tmp
           skip-decompress: true
+
+      - name: Verify CLI dist
+        env:
+          EXPECTED: ${{ needs.pack-signed-cli.outputs.sha256 }}
+        run: |
+          actual="$(shasum -a 256 /tmp/kilo-cli-signed.tar.zst | cut -d ' ' -f 1)"
+          if [ -z "$EXPECTED" ] || [ "$actual" != "$EXPECTED" ]; then
+            echo "::error::kilo-cli-signed.tar.zst has digest $actual; pack-signed-cli recorded ${EXPECTED:-none}"
+            exit 1
+          fi
 
       - name: Unpack CLI dist
         run: |
@@ -595,62 +885,570 @@ jobs:
           GH_REPO: ${{ github.repository }}
           SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }} # kilocode_change
 
-      - uses: actions/upload-artifact@v7 # kilocode_change
+      # kilocode_change start - one `<sha256>  <file>` line per file in out/ (VSIXs, SBOM sidecars, manifest,
+      # checksums), sorted by file name. publish compares its download with the whole list.
+      - name: Record VSIX digests
+        id: vsix
+        working-directory: packages/kilo-vscode/out
+        run: |
+          set -euo pipefail
+          shopt -s dotglob
+          {
+            echo "sha256<<KILO_VSIX_SHA256"
+            shasum -a 256 -- * | LC_ALL=C sort -k 2
+            echo "KILO_VSIX_SHA256"
+          } >> "$GITHUB_OUTPUT"
+      # kilocode_change end
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2 # kilocode_change
+        with:
+          name: kilo-vscode
+          path: packages/kilo-vscode/out
+    # kilocode_change start
+    outputs:
+      vsix-sha256: ${{ steps.vsix.outputs.sha256 }}
+    # kilocode_change end
+
+  # kilocode_change start
+  # Downloads the Linux x64 CLI archive from the draft release, by release id, for the smoke test,
+  # and checks it against the digest of the CLI evidence manifest sbom-cli-windows recorded.
+  # Reading a draft needs push access, so this job holds the job token with contents: write; it
+  # checks out nothing and installs nothing (gh, jq and sha256sum of the runner image). The smoke
+  # test, which installs packages, gets the archive as an artifact with read access only.
+  smoke-cli:
+    name: Fetch CLI archive for the smoke test
+    needs: [release-draft, sbom-cli-windows, upload-cli]
+    if: github.repository == 'Kilo-Org/kilocode' && needs.release-draft.outputs.release != ''
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: kilo-cli-evidence
+          path: ${{ runner.temp }}/evidence
+
+      - name: Download the archive from the draft
+        id: archive
+        env:
+          EVIDENCE_SHA256: ${{ needs.sbom-cli-windows.outputs.manifest-sha256 }}
+          RELEASE: ${{ needs.release-draft.outputs.release }}
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          name=kilo-linux-x64.tar.gz
+          manifest="$RUNNER_TEMP/evidence/cli-sbom-evidence.json"
+          actual="$(sha256sum "$manifest" | cut -d ' ' -f 1)"
+          if [ -z "$EVIDENCE_SHA256" ] || [ "$actual" != "$EVIDENCE_SHA256" ]; then
+            echo "::error::cli-sbom-evidence.json has digest $actual; sbom-cli-windows recorded ${EVIDENCE_SHA256:-none}."
+            exit 1
+          fi
+          want="$(jq -r --arg name "$name" '[.entries[] | select(.artifact == $name) | .sha256] | if length == 1 then .[0] else "" end' "$manifest")"
+          if ! [[ "$want" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "::error::The CLI evidence manifest records no single digest for $name."
+            exit 1
+          fi
+          id="$(gh api --paginate "repos/$GH_REPO/releases/$RELEASE/assets" --jq ".[] | select(.name == \"$name\") | .id")"
+          if ! [[ "$id" =~ ^[0-9]+$ ]]; then
+            echo "::error::Draft release $RELEASE holds no single $name."
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/smoke-cli"
+          gh api -H "Accept: application/octet-stream" "repos/$GH_REPO/releases/assets/$id" > "$RUNNER_TEMP/smoke-cli/$name"
+          got="$(sha256sum "$RUNNER_TEMP/smoke-cli/$name" | cut -d ' ' -f 1)"
+          if [ "$got" != "$want" ]; then
+            echo "::error::The draft's $name has digest $got; the CLI evidence manifest records $want."
+            exit 1
+          fi
+          echo "sha256=$want" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: smoke-cli
+          path: ${{ runner.temp }}/smoke-cli
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+    outputs:
+      sha256: ${{ steps.archive.outputs.sha256 }}
+
+  # Run smoke tests against the CLI archive smoke-cli took from the draft GitHub release and
+  # checked, before publishing the release and package artifacts.
+  smoke-test:
+    name: Smoke Test (pre-publish gate)
+    permissions:
+      contents: read
+    needs:
+      - release-draft
+      - build-cli
+      - upload-cli
+      - smoke-cli
+    if: github.repository == 'Kilo-Org/kilocode' && needs.release-draft.outputs.release != ''
+    uses: ./.github/workflows/smoke-test.yml
+    with:
+      cli_artifact: smoke-cli
+      cli_sha256: ${{ needs.smoke-cli.outputs.sha256 }}
+    secrets:
+      KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
+      KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
+      BENCH_GITHUB_TOKEN: ${{ secrets.BENCH_GITHUB_TOKEN }}
+  # kilocode_change end
+
+  # kilocode_change start - the version commit and tag of the release. This job runs the version bump,
+  # which installs packages and runs `changeset version`, so it holds no secret and no OIDC
+  # permission (only read access for the changelog's commit and pull request metadata). It packs the
+  # commit and tag into a git bundle; release-push checks the bundle and pushes it.
+  release-commit:
+    name: Write release commit
+    needs: release-draft
+    if: github.repository == 'Kilo-Org/kilocode' && needs.release-draft.outputs.release != ''
+    permissions:
+      contents: read
+      pull-requests: read
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 20
+    steps:
+      # The commit history of the dispatch commit without file contents: changesets looks up the
+      # commit that added each changeset, and the release commit check follows its links into the
+      # history. Only that history, not every branch and tag.
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+          filter: blob:none
+
+      - name: Fetch the history of the dispatch commit
+        run: git fetch --quiet --no-tags --filter=blob:none --unshallow origin "$GITHUB_SHA"
+
+      - uses: ./.github/actions/setup-bun
+        with:
+          cache: false # the bundle feeds a job that holds the Kilo Maintainer app key
+
+      - name: Write the release commit
+        id: commit
+        env:
+          KILO_VERSION: ${{ needs.release-draft.outputs.version }}
+          KILO_RELEASE: ${{ needs.release-draft.outputs.release }}
+          KILO_PRE_RELEASE: ${{ inputs.pre_release }}
+          GH_REPO: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: bun script/kilocode/release-bundle.ts "$RUNNER_TEMP/release-commit"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-commit
+          path: ${{ runner.temp }}/release-commit
+          if-no-files-found: error
+    outputs:
+      bundle-sha256: ${{ steps.commit.outputs.bundle-sha256 }}
+
+  # Pushes the release commit to main and its tag, once every gate before publishing passed. It
+  # reads the Kilo Maintainer app key from the STS bundle of ci-kilocode-release (environment
+  # release-keys, main only) and runs only pinned actions from GitHub's actions organisation and this
+  # repository's code: Bun from setup-bun without installing packages, and
+  # script/kilocode/release-push.ts, which checks the bundle (release-check.ts), writes the release
+  # commit from the checked tree and pushes it. Read .github/actions/kilo-credentials/README.md
+  # before adding or moving a step.
+  release-push:
+    name: Push release commit
+    needs:
+      - release-draft
+      - build-cli
+      - upload-cli
+      - sign-cli-windows
+      - sbom-cli-windows
+      - build-vscode
+      - pack-signed-cli
+      - validate-cli-unix
+      - validate-cli-windows
+      - smoke-test
+      - release-commit
+      - release-assets
+    if: github.repository == 'Kilo-Org/kilocode' && needs.release-draft.outputs.release != ''
+    runs-on: ubuntu-24.04-8core-x64 # GitHub-hosted because the job holds release keys; static egress for the org IP allow list.
+    environment: release-keys
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      # Abort a git transfer that stays below 1000 bytes/s for 30 s instead of hanging.
+      GIT_HTTP_LOW_SPEED_LIMIT: "1000"
+      GIT_HTTP_LOW_SPEED_TIME: "30"
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/actions/kilo-credentials/
+            /.github/actions/setup-bun/
+            /.github/actions/setup-git-committer/
+            /script/kilocode/bun.json
+            /script/kilocode/bun.ts
+            /script/kilocode/release-check.ts
+            /script/kilocode/release-push.ts
+
+      - uses: ./.github/actions/setup-bun
+        with:
+          install: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-commit
+          path: ${{ runner.temp }}/release-commit
+
+      # The release commit check follows changelog links into the history of the dispatch commit.
+      # Fetched here (commits only) so that the job holds its keys for less time.
+      - name: Fetch the history of the dispatch commit
+        run: git fetch --quiet --no-tags --filter=tree:0 --unshallow origin "$GITHUB_SHA"
+
+      - name: Read the STS bundle
+        id: creds
+        uses: ./.github/actions/kilo-credentials
+        with:
+          workload: ci-kilocode-release
+          secrets: KILOCODE_MAINTAINER_APP_KEY
+
+      - name: Setup Git Committer
+        uses: ./.github/actions/setup-git-committer
+        with:
+          kilo-maintainer-app-id: ${{ vars.KILO_MAINTAINER_APP_ID }}
+          kilo-maintainer-app-secret: ${{ steps.creds.outputs.KILOCODE_MAINTAINER_APP_KEY }}
+          repositories: kilocode
+          permission-contents: write
+
+      - name: Push the release commit and tag
+        id: push
+        env:
+          BUNDLE_SHA256: ${{ needs.release-commit.outputs.bundle-sha256 }}
+          VERSION: ${{ needs.release-draft.outputs.version }}
+          BASE: ${{ github.sha }}
+        run: bun script/kilocode/release-push.ts "$RUNNER_TEMP/release-commit/release.bundle"
+    outputs:
+      commit: ${{ steps.push.outputs.commit }}
+
+  # Puts the VS Code packages on the draft release and checks that the draft holds exactly the CLI
+  # assets of the checked evidence manifest and the VS Code packages build-vscode recorded.
+  # Distribution evidence that a failed earlier run left on the draft is removed first. On a re-run
+  # after the release was published it uploads nothing and checks the published assets. Reading
+  # and writing a draft needs push access, so this job holds the job token with contents: write
+  # and runs only this repository's code (Bun from setup-bun, nothing installed).
+  release-assets:
+    name: Upload VS Code packages to draft
+    needs:
+      - release-draft
+      - build-cli
+      - upload-cli
+      - sign-cli-windows
+      - sbom-cli-windows
+      - build-vscode
+      - pack-signed-cli
+      - validate-cli-unix
+      - validate-cli-windows
+      - smoke-test
+    if: github.repository == 'Kilo-Org/kilocode' && needs.release-draft.outputs.release != ''
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/actions/setup-bun/
+            /script/kilocode/bun.json
+            /script/kilocode/bun.ts
+            /script/kilocode/draft-assets.ts
+            /script/kilocode/release-notes.ts
+            /script/kilocode/release.ts
+            /script/kilocode/sbom/artifact.ts
+            /script/kilocode/vsix-assets.ts
+
+      - uses: ./.github/actions/setup-bun
+        with:
+          install: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: kilo-vscode
           path: packages/kilo-vscode/out
 
-  # kilocode_change start
-  # Run smoke tests against CLI assets uploaded to the draft GitHub release
-  # before publishing the release and package artifacts.
-  smoke-test:
-    name: Smoke Test (pre-publish gate)
-    needs:
-      - version
-      - build-cli
-      - sign-cli-windows
-    if: github.repository == 'Kilo-Org/kilocode'
-    uses: ./.github/workflows/smoke-test.yml
-    with:
-      cli_version: ${{ needs.version.outputs.version }}
-    secrets: inherit
-  # kilocode_change end
+      - name: Verify VSIX packages
+        working-directory: packages/kilo-vscode/out
+        env:
+          EXPECTED: ${{ needs.build-vscode.outputs.vsix-sha256 }}
+        run: |
+          shopt -s dotglob
+          actual="$(shasum -a 256 -- * | LC_ALL=C sort -k 2)"
+          if [ -z "$EXPECTED" ] || [ "$actual" != "$EXPECTED" ]; then
+            echo "::error::The downloaded VS Code packages do not match the digests build-vscode recorded. Nothing was published."
+            printf 'expected:\n%s\nactual:\n%s\n' "$EXPECTED" "$actual"
+            exit 1
+          fi
 
-  publish:
+      - name: Upload VS Code packages to draft
+        env:
+          VERSION: ${{ needs.release-draft.outputs.version }}
+          KILO_RELEASE: ${{ needs.release-draft.outputs.release }}
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          VSIX_SHA256: ${{ needs.build-vscode.outputs.vsix-sha256 }}
+        run: bun script/kilocode/vsix-assets.ts packages/kilo-vscode/out "v$VERSION"
+
+      - name: Verify release assets
+        env:
+          VERSION: ${{ needs.release-draft.outputs.version }}
+          KILO_RELEASE: ${{ needs.release-draft.outputs.release }}
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          CLI_MANIFEST_SHA256: ${{ needs.sbom-cli-windows.outputs.manifest-sha256 }}
+          VSIX_SHA256: ${{ needs.build-vscode.outputs.vsix-sha256 }}
+        run: bun script/kilocode/draft-assets.ts "v$VERSION"
+
+  # Packs and describes the CLI npm tarballs, pushes and describes the container images and writes
+  # the distribution evidence, on the pushed release tag. It installs packages, so it holds no
+  # OIDC permission and only read access to the repository (plus GHCR). It hands over the stage file
+  # and the evidence as the artifact publish-build (small; release-undraft and publish) and the npm
+  # tarballs as publish-tarballs (publish only), see script/kilocode/publish-stage.ts, and records
+  # the stage file's sha256.
+  publish-build:
+    name: Build packages and images
     needs:
-      - version
+      - release-draft
       - build-cli
+      - sbom-cli-windows
       - build-vscode
-      - pack-signed-cli # kilocode_change
-      - validate-cli-unix # kilocode_change
-      - validate-cli-windows # kilocode_change
-      - smoke-test
-    runs-on: ubuntu-24.04
+      - pack-signed-cli
+      - release-push
+    runs-on: ubuntu-24.04-8core-x64 # GitHub-hosted, as the publish job was for the image builds.
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write # Push to GHCR.
     steps:
-      - uses: actions/checkout@v6 # kilocode_change
-        # kilocode_change start
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           persist-credentials: false
-        # kilocode_change end
+          ref: refs/tags/v${{ needs.release-draft.outputs.version }}
+
+      - name: Verify the release tag
+        env:
+          COMMIT: ${{ needs.release-push.outputs.commit }}
+        run: |
+          actual="$(git rev-parse HEAD)"
+          if [ -z "$COMMIT" ] || [ "$actual" != "$COMMIT" ]; then
+            echo "::error::The release tag checks out $actual; release-push pushed ${COMMIT:-nothing}. Nothing was published."
+            exit 1
+          fi
 
       - uses: ./.github/actions/setup-bun
+        with:
+          cache: false # the job pushes images, and its artifact feeds the publishing jobs
 
-      - uses: ./.github/actions/setup-sbom # kilocode_change - npm and OCI sidecars scan the published bytes
+      - uses: ./.github/actions/setup-sbom # npm and OCI sidecars scan the published bytes
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Restore nothing from the shared cache and run the binfmt image by digest (the action's
+      # default tag, latest on 2026-11-26).
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+        with:
+          cache-image: false
+          image: docker.io/tonistiigi/binfmt:latest@sha256:400a4873b838d1b89194d982c45e5fb3cda4593fbfd7e08a02e76b03b21166f0
 
+      # Restore nothing from the shared cache and run BuildKit by digest (buildx's default tag,
+      # buildx-stable-1 on 2026-11-26).
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+        with:
+          cache-binary: false
+          driver-opts: image=moby/buildkit:buildx-stable-1@sha256:baf6138eb8c37644800c7c913fba051e840ebb9ba13eaf92d92ef9a1712d0b4c
 
-      - uses: actions/setup-node@v6 # kilocode_change
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: kilo-cli-signed.tar.zst
+          path: /tmp
+          skip-decompress: true
+
+      - name: Verify CLI dist
+        env:
+          EXPECTED: ${{ needs.pack-signed-cli.outputs.sha256 }}
+        run: |
+          actual="$(shasum -a 256 /tmp/kilo-cli-signed.tar.zst | cut -d ' ' -f 1)"
+          if [ -z "$EXPECTED" ] || [ "$actual" != "$EXPECTED" ]; then
+            echo "::error::kilo-cli-signed.tar.zst has digest $actual; pack-signed-cli recorded ${EXPECTED:-none}. Nothing was published."
+            exit 1
+          fi
+
+      - name: Unpack CLI dist
+        run: |
+          mkdir -p packages/opencode/dist
+          tar --zstd -xf /tmp/kilo-cli-signed.tar.zst -C packages/opencode/dist
+
+      - name: Build packages and images
+        id: stage
+        env:
+          KILO_PUBLISH_STAGE: build
+          KILO_PUBLISH_DIR: ${{ runner.temp }}/publish-build
+          KILO_PUBLISH_TARBALLS: ${{ runner.temp }}/publish-tarballs
+          KILO_VERSION: ${{ needs.release-draft.outputs.version }}
+          KILO_RELEASE: ${{ needs.release-draft.outputs.release }}
+          KILO_PRE_RELEASE: ${{ inputs.pre_release }}
+          GH_REPO: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ github.token }}
+          SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }}
+          CLI_MANIFEST_SHA256: ${{ needs.sbom-cli-windows.outputs.manifest-sha256 }}
+          VSIX_SHA256: ${{ needs.build-vscode.outputs.vsix-sha256 }}
+        run: ./script/publish.ts
+
+      # Tarballs, zips and small JSON files: compression saves little and costs time.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: publish-build
+          path: ${{ runner.temp }}/publish-build
+          if-no-files-found: error
+          compression-level: 0
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: publish-tarballs
+          path: ${{ runner.temp }}/publish-tarballs
+          if-no-files-found: error
+          compression-level: 0
+    outputs:
+      stage-sha256: ${{ steps.stage.outputs.stage-sha256 }}
+
+  # Puts the distribution evidence on the draft, checks the complete draft (every expected asset,
+  # each with its recorded digest, nothing else) and only then publishes the GitHub release with its
+  # notes, from the changelogs of the release tag. No asset is uploaded after this, so the published
+  # release never changes. A re-run after the release was published uploads nothing: it checks the
+  # published assets and that the npm tarballs are the ones its evidence names. The job holds the job
+  # token with contents: write and runs only this repository's code (Bun from setup-bun, nothing
+  # installed).
+  release-undraft:
+    name: Publish GitHub release
+    needs:
+      - release-draft
+      - sbom-cli-windows
+      - build-vscode
+      - release-push
+      - release-assets
+      - publish-build
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+          ref: refs/tags/v${{ needs.release-draft.outputs.version }}
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/actions/setup-bun/
+            /packages/kilo-vscode/CHANGELOG.md
+            /packages/opencode/CHANGELOG.md
+            /script/kilocode/bun.json
+            /script/kilocode/bun.ts
+            /script/kilocode/draft-assets.ts
+            /script/kilocode/publish-stage.ts
+            /script/kilocode/release-notes.ts
+            /script/kilocode/release-undraft.ts
+            /script/kilocode/release.ts
+            /script/kilocode/sbom/artifact.ts
+
+      - name: Verify the release tag
+        env:
+          COMMIT: ${{ needs.release-push.outputs.commit }}
+        run: |
+          actual="$(git rev-parse HEAD)"
+          if [ -z "$COMMIT" ] || [ "$actual" != "$COMMIT" ]; then
+            echo "::error::The release tag checks out $actual; release-push pushed ${COMMIT:-nothing}. Nothing was published."
+            exit 1
+          fi
+
+      - uses: ./.github/actions/setup-bun
+        with:
+          install: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: publish-build
+          path: ${{ runner.temp }}/publish-build
+
+      - name: Publish the release
+        env:
+          VERSION: ${{ needs.release-draft.outputs.version }}
+          PRE_RELEASE: ${{ inputs.pre_release }}
+          KILO_PUBLISH_SHA256: ${{ needs.publish-build.outputs.stage-sha256 }}
+          KILO_RELEASE: ${{ needs.release-draft.outputs.release }}
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          CLI_MANIFEST_SHA256: ${{ needs.sbom-cli-windows.outputs.manifest-sha256 }}
+          VSIX_SHA256: ${{ needs.build-vscode.outputs.vsix-sha256 }}
+        run: bun script/kilocode/release-undraft.ts "$RUNNER_TEMP/publish-build"
+  # kilocode_change end
+
+  publish:
+    # kilocode_change start - publishes the npm packages, the SDK, the plugin and the VS Code packages
+    # after release-undraft published the GitHub release, with OIDC (npm, VS Code Marketplace and
+    # Open VSX trusted publishing). It installs packages, so it holds only read access to the
+    # repository and no app token.
+    permissions:
+      contents: read
+      id-token: write # Trusted publishing to npm, VS Code Marketplace and Open VSX.
+    needs:
+      - release-draft
+      - build-vscode
+      - release-push
+      - publish-build
+      - release-undraft
+    # kilocode_change end
+    runs-on: ubuntu-24.04-8core-x64 # kilocode_change - GitHub-hosted publisher with static egress for the org IP allow list.
+    timeout-minutes: 30 # kilocode_change
+    environment: release # kilocode_change - VS Code Marketplace trusted publishing policy
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0 # kilocode_change
+        # kilocode_change start - the pushed release tag: the built source plus the version commit
+        with:
+          persist-credentials: false
+          ref: refs/tags/v${{ needs.release-draft.outputs.version }}
+
+      - name: Verify the release tag
+        env:
+          COMMIT: ${{ needs.release-push.outputs.commit }}
+        run: |
+          actual="$(git rev-parse HEAD)"
+          if [ -z "$COMMIT" ] || [ "$actual" != "$COMMIT" ]; then
+            echo "::error::The release tag checks out $actual; release-push pushed ${COMMIT:-nothing}. Nothing was published."
+            exit 1
+          fi
+        # kilocode_change end
+
+      - uses: ./.github/actions/setup-bun
+        # kilocode_change start - job publishes with OIDC, so skip the shared dependency cache
+        with:
+          cache: false
+        # kilocode_change end
+
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0 # kilocode_change
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
@@ -659,137 +1457,294 @@ jobs:
       - name: Install @vscode/vsce
         run: bun install -g @vscode/vsce@4.1.1 # kilocode_change
 
-      - name: Setup Git Committer
-        id: committer
-        uses: ./.github/actions/setup-git-committer
-        with:
-          # kilocode_change start
-          kilo-maintainer-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
-          kilo-maintainer-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
-          # kilocode_change end
-
-      # kilocode_change start - download into /tmp and extract the tar.zst packed by build-cli
-      - uses: actions/download-artifact@v8
-        with:
-          name: kilo-cli-signed.tar.zst
-          path: /tmp
-          skip-decompress: true
-
-      - name: Unpack CLI dist
-        run: |
-          mkdir -p packages/opencode/dist
-          tar --zstd -xf /tmp/kilo-cli-signed.tar.zst -C packages/opencode/dist
-      # kilocode_change end
-      - uses: actions/download-artifact@v8
+      # kilocode_change start - the VS Code packages build-vscode recorded and the npm tarballs
+      # publish-build packed
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: kilo-vscode
           path: packages/kilo-vscode/out
 
-      - name: Cache apt packages (AUR)
-        uses: actions/cache@v5 # kilocode_change
-        with:
-          path: /var/cache/apt/archives
-          key: ${{ runner.os }}-apt-aur-${{ hashFiles('.github/workflows/publish.yml') }}
-          restore-keys: |
-            ${{ runner.os }}-apt-aur-
-
-      - name: Setup SSH for AUR
+      - name: Verify VSIX packages
+        working-directory: packages/kilo-vscode/out
+        env:
+          EXPECTED: ${{ needs.build-vscode.outputs.vsix-sha256 }}
         run: |
-          sudo apt-get update
-          sudo apt-get install -y pacman-package-manager
-          mkdir -p ~/.ssh
-          echo "${{ secrets.AUR_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          git config --global user.email "kilo-maintainer[bot]@users.noreply.github.com"
-          git config --global user.name "kilo-maintainer[bot]"
-          ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts || true
+          shopt -s dotglob
+          actual="$(shasum -a 256 -- * | LC_ALL=C sort -k 2)"
+          if [ -z "$EXPECTED" ] || [ "$actual" != "$EXPECTED" ]; then
+            echo "::error::The downloaded VS Code packages do not match the digests build-vscode recorded. Nothing was published."
+            printf 'expected:\n%s\nactual:\n%s\n' "$EXPECTED" "$actual"
+            exit 1
+          fi
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: publish-build
+          path: ${{ runner.temp }}/publish-build
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: publish-tarballs
+          path: ${{ runner.temp }}/publish-tarballs
+      # kilocode_change end
 
       - run: ./script/publish.ts
         env:
-          KILO_VERSION: ${{ needs.version.outputs.version }}
-          KILO_RELEASE: ${{ needs.version.outputs.release }}
+          KILO_PUBLISH_STAGE: npm # kilocode_change
+          KILO_PUBLISH_DIR: ${{ runner.temp }}/publish-build # kilocode_change
+          KILO_PUBLISH_TARBALLS: ${{ runner.temp }}/publish-tarballs # kilocode_change
+          KILO_PUBLISH_SHA256: ${{ needs.publish-build.outputs.stage-sha256 }} # kilocode_change
+          KILO_VERSION: ${{ needs.release-draft.outputs.version }}
+          KILO_RELEASE: ${{ needs.release-draft.outputs.release }}
           KILO_PRE_RELEASE: ${{ inputs.pre_release }}
           GH_REPO: ${{ github.repository }}
-          AUR_KEY: ${{ secrets.AUR_KEY }}
-          GITHUB_TOKEN: ${{ steps.committer.outputs.token }}
           NPM_CONFIG_PROVENANCE: true
-          VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
-          OPENVSX_TOKEN: ${{ secrets.OVSX_TOKEN }}
-          SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }} # kilocode_change
 
-      # kilocode_change start - repackage the already-built release archives as a
-      # conda package via rattler-build (no compilation; see
-      # packages/opencode/script/kilocode/conda-recipe/). Cross-builds every
-      # target platform from this single Linux runner, then uploads below. Runs
-      # after ./script/publish.ts because the recipe downloads the archives from
-      # the GitHub release by URL, and that script is what publishes (un-drafts)
-      # the draft release created by the version job.
-      - name: Install rattler-build
-        if: ${{ needs.version.outputs.tag != '' }}
-        run: |
-          curl --fail --location --retry 3 \
-            https://github.com/prefix-dev/rattler-build/releases/download/v0.76.1/rattler-build-x86_64-unknown-linux-musl \
-            --output "$RUNNER_TEMP/rattler-build"
-          echo "38359a75f4a880442432923d6e984d349bb4134d330edd712eb1cfb2fa80581a  $RUNNER_TEMP/rattler-build" | sha256sum --check --status
-          chmod +x "$RUNNER_TEMP/rattler-build"
-          echo "RATTLER_BUILD=$RUNNER_TEMP/rattler-build" >> "$GITHUB_ENV"
+  # kilocode_change start - stable releases update the AUR package kilo-bin and the Homebrew formula
+  # in Kilo-Org/homebrew-tap once the release is public. This job reads the AUR key and the Kilo
+  # Maintainer app key from the STS bundle of ci-kilocode-release, which needs environment
+  # release-keys (main only) and id-token: write. STS tells jobs apart only by their environment, so
+  # only release-push, package-managers and jetbrains-pin use release-keys, and each runs only pinned
+  # actions from GitHub's actions organisation and this repository's code: none installs packages.
+  # Read .github/actions/kilo-credentials/README.md before adding or moving a step.
+  package-managers:
+    name: Update AUR and Homebrew
+    needs: [release-draft, build-cli, publish]
+    if: github.repository == 'Kilo-Org/kilocode' && needs.release-draft.outputs.release != '' && !inputs.pre_release
+    runs-on: ubuntu-24.04-8core-x64 # GitHub-hosted because the job holds release keys; static egress for the org IP allow list.
+    environment: release-keys
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/actions/kilo-credentials/
+            /.github/actions/setup-git-committer/
+            /script/kilocode/package-managers.ts
 
-      - name: Build conda package
-        if: ${{ needs.version.outputs.tag != '' }}
-        working-directory: packages/opencode
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: kilo-cli-sboms
+          path: ${{ runner.temp }}/build
+
+      # The recipes take the archive digests from the evidence manifest build-cli recorded.
+      - name: Verify package recipe manifest
         env:
-          KILO_VERSION: ${{ needs.version.outputs.version }}
-          KILO_TAG: ${{ needs.version.outputs.tag }}
+          EXPECTED: ${{ needs.build-cli.outputs.manifest-sha256 }}
+          MANIFEST: ${{ runner.temp }}/build/cli-sbom-evidence.json
+        run: |
+          actual="$(sha256sum < "$MANIFEST" | cut -d ' ' -f 1)"
+          if [ -z "$EXPECTED" ] || [ "$actual" != "$EXPECTED" ]; then
+            echo "::error::cli-sbom-evidence.json has digest $actual; build-cli recorded ${EXPECTED:-none}. Nothing was updated."
+            exit 1
+          fi
+
+      - name: Read the STS bundle
+        id: creds
+        uses: ./.github/actions/kilo-credentials
+        with:
+          workload: ci-kilocode-release
+          secrets: |
+            KILOCODE_AUR_KEY
+            KILOCODE_MAINTAINER_APP_KEY
+
+      # Also sets the git identity of the AUR and Homebrew commits.
+      - name: Setup Git Committer
+        id: committer
+        uses: ./.github/actions/setup-git-committer
+        with:
+          kilo-maintainer-app-id: ${{ vars.KILO_MAINTAINER_APP_ID }}
+          kilo-maintainer-app-secret: ${{ steps.creds.outputs.KILOCODE_MAINTAINER_APP_KEY }}
+          repositories: homebrew-tap
+          permission-contents: write
+
+      - name: Update AUR
+        env:
+          AUR_KEY_FILE: ${{ steps.creds.outputs.KILOCODE_AUR_KEY_FILE }}
+          MANIFEST: ${{ runner.temp }}/build/cli-sbom-evidence.json
+          VERSION: ${{ needs.release-draft.outputs.version }}
+          # Read-only, to tell a re-run of an older release from a recipe that is wrongly ahead.
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node script/kilocode/package-managers.ts aur "$MANIFEST" "$VERSION"
+
+      # Runs even when the AUR update failed; either failure fails the job.
+      - name: Update Homebrew
+        if: ${{ !cancelled() && steps.committer.conclusion == 'success' }}
+        env:
+          MANIFEST: ${{ runner.temp }}/build/cli-sbom-evidence.json
+          VERSION: ${{ needs.release-draft.outputs.version }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node script/kilocode/package-managers.ts homebrew "$MANIFEST" "$VERSION"
+
+      - name: Remove key files
+        if: always()
+        env:
+          AUR_KEY_FILE: ${{ steps.creds.outputs.KILOCODE_AUR_KEY_FILE }}
+        run: rm -f -- "$AUR_KEY_FILE"
+
+  # Opens or updates the pull request that bumps the JetBrains CLI pin to this release, once the
+  # release and its assets are public. A pull request opened with the job token starts no checks, so
+  # it uses a Kilo Maintainer app token from the STS bundle of ci-kilocode-release (environment
+  # release-keys) and runs only pinned actions from GitHub's actions organisation and this
+  # repository's code: Bun from setup-bun without installing packages, and set-pin.ts, which imports
+  # only Bun and Node built-ins and script/kilocode/jetbrains-version.ts. Read
+  # .github/actions/kilo-credentials/README.md before adding or moving a step. A failure leaves the
+  # release as it is and reports a warning, as before.
+  jetbrains-pin:
+    name: Open JetBrains CLI pin PR
+    needs: [release-draft, publish]
+    if: github.repository == 'Kilo-Org/kilocode' && needs.release-draft.outputs.release != ''
+    runs-on: ubuntu-24.04-8core-x64 # GitHub-hosted because the job holds release keys; static egress for the org IP allow list.
+    environment: release-keys
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      # Abort a git transfer that stays below 1000 bytes/s for 30 s instead of hanging.
+      GIT_HTTP_LOW_SPEED_LIMIT: "1000"
+      GIT_HTTP_LOW_SPEED_TIME: "30"
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/actions/kilo-credentials/
+            /.github/actions/setup-bun/
+            /.github/actions/setup-git-committer/
+            /.kilo/skills/release-jetbrains/script/pin-common.ts
+            /.kilo/skills/release-jetbrains/script/set-pin.ts
+            /script/kilocode/bun.json
+            /script/kilocode/bun.ts
+            /script/kilocode/jetbrains-version.ts
+
+      - uses: ./.github/actions/setup-bun
+        with:
+          install: false
+
+      - name: Read the STS bundle
+        id: creds
+        uses: ./.github/actions/kilo-credentials
+        with:
+          workload: ci-kilocode-release
+          secrets: KILOCODE_MAINTAINER_APP_KEY
+
+      - name: Setup Git Committer
+        id: committer
+        uses: ./.github/actions/setup-git-committer
+        with:
+          kilo-maintainer-app-id: ${{ vars.KILO_MAINTAINER_APP_ID }}
+          kilo-maintainer-app-secret: ${{ steps.creds.outputs.KILOCODE_MAINTAINER_APP_KEY }}
+          repositories: kilocode
+          permission-contents: write
+          permission-pull-requests: write
+
+      # A failure only warns: the release is complete at this point.
+      - name: Open the JetBrains CLI pin bump PR
+        env:
+          GH_TOKEN: ${{ steps.committer.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ needs.release-draft.outputs.version }}
+          PRE_RELEASE: ${{ inputs.pre_release }}
+        run: |
+          args=(--version "$VERSION" --pr)
+          if [ "$PRE_RELEASE" = "true" ]; then args+=(--pre-release); fi
+          rc=0
+          out="$(bun .kilo/skills/release-jetbrains/script/set-pin.ts "${args[@]}" 2>&1)" || rc=$?
+          printf '%s\n' "$out"
+          if [ "$rc" -ne 0 ]; then
+            echo "::warning title=JetBrains CLI pin bump PR failed::Release completed, but the JetBrains CLI pin bump PR was not created (exit $rc). Check the log above and create it manually if needed."
+            exit 0
+          fi
+          url="$(printf '%s\n' "$out" | grep -oE 'https://github\.com/[^ ]+/pull/[0-9]+' | head -n 1 || true)"
+          if [ -n "$url" ]; then echo "::notice title=JetBrains CLI pin bump PR::$url"; fi
+  # kilocode_change end
+  # kilocode_change start - check VS Code Marketplace trusted publishing without
+  # building or publishing anything. Exchanges the GitHub OIDC token for a
+  # Marketplace credential exactly as `vsce publish --oidc` does, then checks
+  # that the credential may publish as kilocode. Runs only curl and jq from the
+  # runner image, no third-party packages.
+  oidc-check:
+    name: Check Marketplace trusted publishing
+    if: inputs.oidc_check && github.repository == 'Kilo-Org/kilocode'
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    environment: release
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Exchange OIDC token and verify publisher access
         run: |
           set -euo pipefail
-          # conda versions cannot contain '-'; e.g. 0.0.0-rc-202609221200 -> 0.0.0.rc.202609221200
-          conda_version="${KILO_VERSION//-/.}"
-          declare -A archives=(
-            [linux-64]=kilo-linux-x64.tar.gz
-            [linux-aarch64]=kilo-linux-arm64.tar.gz
-            [osx-64]=kilo-darwin-x64.zip
-            [osx-arm64]=kilo-darwin-arm64.zip
-            [win-64]=kilo-windows-x64.zip
-          )
-          mkdir -p dist/conda
-          src="$(mktemp -d)"
-          for platform in "${!archives[@]}"; do
-            archive="${archives[$platform]}"
-            # Re-download the exact bytes the recipe fetches so KILO_SHA256
-            # matches. The local dist copy for win-64 is stale: sign-cli-windows
-            # re-uploads a signed zip to the release that differs from the
-            # unsigned one build-cli packaged.
-            curl --fail --location --retry 3 \
-              "https://github.com/Kilo-Org/kilocode/releases/download/$KILO_TAG/$archive" \
-              --output "$src/$archive"
-            sha="$(sha256sum "$src/$archive" | cut -d' ' -f1)"
-            echo "building conda package for $platform ($archive)"
-            KILO_VERSION="$conda_version" KILO_ARCHIVE="$archive" KILO_SHA256="$sha" "$RATTLER_BUILD" build \
-              --recipe script/kilocode/conda-recipe/recipe.yaml \
-              --target-platform "$platform" \
-              --output-dir dist/conda \
-              --test skip
-          done
-          # smoke-test the packaged linux-64 wrapper (the only target that can
-          # execute on this runner); catches wrong install layout or a broken
-          # KILO_TREE_SITTER_WASM_DIR wrapper path
-          smoke="$(mktemp -d)"
-          unzip -q -o dist/conda/linux-64/kilo-cli-*.conda "pkg-*" -d "$smoke"
-          tar --zstd -xf "$smoke"/pkg-*.tar.zst -C "$smoke"
-          "$smoke/bin/kilo" --version
-      # kilocode_change end
+          umask 077
+          # Tokens go to curl through --config on stdin, never on its command line.
+          oidc="$(curl --fail --silent --show-error --get --config - \
+            --header "Accept: application/json" \
+            --data-urlencode "audience=marketplace.visualstudio.com" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL" <<EOF | jq -r '.value // empty'
+          header = "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN"
+          EOF
+          )"
+          if [ -z "$oidc" ]; then
+            echo "::error::GitHub returned no OIDC token"
+            exit 1
+          fi
+          echo "::add-mask::$oidc"
+          echo "OIDC token received"
 
-      # kilocode_change start - upload the conda packages built above to
-      # Anaconda.org. The `channel` input is the Anaconda.org org to publish
-      # under (mirrors ana-cli's `channel: anaconda-cloud`). Pre-releases go
-      # to the `rc` label, stable releases to `main`.
-      - name: Upload conda package to Anaconda.org
-        if: ${{ needs.version.outputs.tag != '' }}
-        uses: anaconda/actions/upload-package@a6f488910b4a1e4f3fe01736241ca1b92b4b355a # v0.3.1
-        with:
-          token: ${{ secrets.ANACONDA_API_KEY }}
-          packages: packages/opencode/dist/conda/**/*.conda
-          channel: anaconda-cloud
-          labels: ${{ inputs.pre_release && 'rc' || 'main' }}
-          force: "true"
-      # kilocode_change end
+          body="$RUNNER_TEMP/marketplace-token.json"
+          status="$(curl --silent --show-error --output "$body" --write-out '%{http_code}' \
+            --request POST --config - \
+            --header "Accept: application/json" \
+            --header "Content-Type: application/json" \
+            --header "User-Agent: vsce" \
+            --data '{"publisherName":"kilocode"}' \
+            "https://marketplace.visualstudio.com/_apis/gallery/token?api-version=7.2-preview.1" <<EOF
+          header = "Authorization: FederatedToken $oidc"
+          EOF
+          )"
+          echo "Marketplace token exchange: HTTP $status"
+          credential="$(jq -r '.credential // empty' "$body" 2>/dev/null || true)"
+          if [ "$status" != "200" ] || [ -z "$credential" ]; then
+            message="$(jq -j '.message // empty' "$body" 2>/dev/null | tr '\r\n' '  ' | cut -c1-300 || true)"
+            rm -f "$body"
+            echo "::error::Marketplace returned no credential${message:+: $message}"
+            exit 1
+          fi
+          rm -f "$body"
+          echo "::add-mask::$credential"
+          echo "credential received"
+
+          # The same request as `vsce verify-pat kilocode` (vsce 4.1.x): the publisher's role assignments answer 200
+          # when the credential holds any role on it (Creator, Owner, Contributor, Reader) and 403 otherwise.
+          roles="$RUNNER_TEMP/marketplace-roles.json"
+          status="$(curl --silent --show-error --output "$roles" --write-out '%{http_code}' --config - \
+            --header "Accept: application/json;api-version=3.2-preview.1" \
+            --header "User-Agent: vsce" \
+            "https://marketplace.visualstudio.com/_apis/securityroles/scopes/gallery.publisher/roleassignments/resources/kilocode" <<EOF
+          user = "OAuth:$credential"
+          EOF
+          )"
+          echo "Marketplace publisher role check: HTTP $status"
+          if [ "$status" != "200" ]; then
+            message="$(jq -j '.message // empty' "$roles" 2>/dev/null | tr '\r\n' '  ' | cut -c1-300 || true)"
+            rm -f "$roles"
+            echo "::error::The Marketplace credential has no role on publisher kilocode${message:+: $message}"
+            exit 1
+          fi
+          rm -f "$roles"
+          echo "The Marketplace credential may publish as kilocode"
+  # kilocode_change end
