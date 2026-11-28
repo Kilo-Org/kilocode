@@ -22,8 +22,6 @@ internal interface AgentManagerRowData {
     val search: String?
     val progress: String?
     val section: String?
-    /** Cloud's only additional row presentation: its passive compute status. */
-    val compute: ActiveBadge? get() = null
 }
 
 internal data class LocalWorkspaceRowData(
@@ -67,7 +65,7 @@ internal class AgentManagerWorkspaceRow<T : AgentManagerRowData> @RequiresEdt co
     override val progress get() = data.progress
     override val section get() = data.section
     override val badges: List<ActiveBadge>
-        get() = if (progress == null && !marks.state.busy) listOfNotNull(data.compute) + marks.primary else emptyList()
+        get() = if (progress == null && !marks.state.busy) marks.primary else emptyList()
     override val secondaryBadges: List<ActiveBadge>
         get() = if (progress == null && !marks.state.busy) marks.secondary else emptyList()
     override val metrics: ActiveMetrics?

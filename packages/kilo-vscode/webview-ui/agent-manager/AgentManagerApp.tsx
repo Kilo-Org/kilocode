@@ -52,7 +52,7 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { Popover } from "@kilocode/kilo-ui/popover"
 import { VSCodeProvider, useVSCode } from "../src/context/vscode"
-import { ServerProvider } from "../src/context/server"
+import { interceptLogin, ServerProvider } from "../src/context/server"
 import { ProviderProvider } from "../src/context/provider"
 import { ConfigProvider } from "../src/context/config"
 import { DisplayProvider } from "../src/context/display"
@@ -1151,6 +1151,7 @@ const AgentManagerContent: Component = () => {
     const handler = (event: MessageEvent) => {
       const msg = event.data
       if (msg?.type === "navigate" && msg.view === "history") return openHistory()
+      if (msg?.type === "navigate" && msg.view === "profile") return vscode.postMessage({ type: "openProfilePanel" })
       if (msg?.type !== "action") return
       if (msg.action === "sessionPrevious") projectNav.step("up")
       else if (msg.action === "sessionNext") projectNav.step("down")
@@ -1245,6 +1246,7 @@ const AgentManagerContent: Component = () => {
     })
     window.addEventListener("keydown", deleteKeyHandler)
     onCleanup(diffPanels.listen())
+    onCleanup(interceptLogin(() => vscode.postMessage({ type: "openProfilePanel", login: true })))
     onCleanup(() => window.removeEventListener("agentManager.openSubagent", subagent))
     // Pointer movement repairs a lost keyup before hover actions are revealed.
     const stopModifier = modifier.watch(window, isMac, setHeld)

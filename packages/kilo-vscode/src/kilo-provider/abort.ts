@@ -54,6 +54,10 @@ export class SessionAbort {
     return known
   }
 
+  has(sessionID: string) {
+    return this.active.has(sessionID)
+  }
+
   dispose(dir: string) {
     const idle: string[] = []
     for (const [sessionID, dirs] of this.active) {
@@ -64,6 +68,12 @@ export class SessionAbort {
       this.active.delete(sessionID)
       idle.push(sessionID)
     }
+    return idle
+  }
+
+  disposeAll() {
+    const idle = [...this.active.keys()]
+    this.active.clear()
     return idle
   }
 

@@ -16,6 +16,7 @@ import {
   fetchKiloPassState,
   fetchOrganizationModes,
   fetchProfile,
+  InvalidTokenError,
 } from "@kilocode/kilo-gateway"
 import { DIRECT_FIM_ENV, requestMistralFim, resolveFimTarget } from "@kilocode/kilo-gateway/fim"
 import { buildKiloHeaders } from "@kilocode/kilo-gateway"
@@ -72,7 +73,8 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
             fetchBalance(info.access, currentOrgId ?? undefined, log),
             fetchKiloPassState(info.access),
           ]),
-        catch: () => new HttpApiError.BadRequest({}),
+        catch: (err) =>
+          err instanceof InvalidTokenError ? new HttpApiError.Unauthorized({}) : new HttpApiError.BadRequest({}),
       })
       return { profile, balance, kiloPass, currentOrgId }
     })

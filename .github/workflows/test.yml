@@ -68,7 +68,7 @@ jobs:
           # kilocode_change - Windows runs 6 shards at KILO_TEST_CONCURRENCY=2. Measured: a
           # 5-shard matrix was worse on both wall-clock (slowest job 9.3m vs 6.7m) and machine
           # minutes (43 vs 37) — with 2 workers per shard, packing more work per shard loses.
-          echo 'settings=[{"os":"linux","index":1,"total":2,"host":"blacksmith-4vcpu-ubuntu-2404","run":true,"packages":true,"pty":true},{"os":"linux","index":2,"total":2,"host":"blacksmith-4vcpu-ubuntu-2404","run":true,"packages":false,"pty":false},{"os":"macos","index":1,"total":1,"host":"macos-15","run":true,"packages":true,"pty":true},{"os":"windows","index":1,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":true,"pty":true},{"os":"windows","index":2,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false,"pty":false},{"os":"windows","index":3,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false,"pty":false},{"os":"windows","index":4,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false,"pty":false},{"os":"windows","index":5,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false,"pty":false},{"os":"windows","index":6,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false,"pty":false}]' >> "$GITHUB_OUTPUT"
+          echo 'settings=[{"os":"linux","index":1,"total":2,"host":"blacksmith-4vcpu-ubuntu-2404","run":true,"packages":true,"pty":true},{"os":"linux","index":2,"total":2,"host":"blacksmith-4vcpu-ubuntu-2404","run":true,"packages":false,"pty":false},{"os":"macos","index":1,"total":1,"host":"blacksmith-6vcpu-macos-15","run":true,"packages":true,"pty":true},{"os":"windows","index":1,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":true,"pty":true},{"os":"windows","index":2,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false,"pty":false},{"os":"windows","index":3,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false,"pty":false},{"os":"windows","index":4,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false,"pty":false},{"os":"windows","index":5,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false,"pty":false},{"os":"windows","index":6,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false,"pty":false}]' >> "$GITHUB_OUTPUT"
   # kilocode_change end
   unit:
     # kilocode_change start
@@ -81,11 +81,11 @@ jobs:
         settings: ${{ fromJSON(needs.changes.outputs.settings) }} # kilocode_change
     runs-on: ${{ matrix.settings.host }}
     timeout-minutes: 45 # kilocode_change
-    # kilocode_change start - manual dispatches exist to validate real execution (soak runs,
-    # timing measurements); every turbo step in this job bypasses the cache on dispatch
-    # instead of replaying a same-commit hit and executing nothing.
+    # kilocode_change start - this job reports results with checks: write, so turbo never
+    # reads a cache: local:w executes every task and keeps turbo off the remote cache.
+    # (TURBO_FORCE is left unset: turbo 2.10 turns it into local:w,remote:w and writes remotely.)
     env:
-      TURBO_FORCE: ${{ github.event_name == 'workflow_dispatch' && 'true' || '' }}
+      TURBO_CACHE: local:w
     # kilocode_change end
     defaults:
       run:
@@ -145,11 +145,15 @@ jobs:
       - name: Setup Bun
         if: matrix.settings.run # kilocode_change
         uses: ./.github/actions/setup-bun
+        # kilocode_change start - job holds checks: write, so skip the shared dependency cache
+        with:
+          cache: false
+        # kilocode_change end
 
       # kilocode_change start
       - name: Setup Linux sandbox helper
         if: matrix.settings.run && runner.os == 'Linux'
-        timeout-minutes: 5
+        timeout-minutes: 15 # the Zig archive is downloaded on every run
         uses: ./.github/actions/setup-linux-sandbox
       # kilocode_change end
       - name: Configure git identity
@@ -160,18 +164,7 @@ jobs:
           git config --global user.name "kilo-maintainer[bot]"
         # kilocode_change end
 
-      - name: Cache Turbo
-        if: matrix.settings.run # kilocode_change
-        uses: actions/cache@v5 # kilocode_change
-        with:
-          path: .turbo/cache # kilocode_change
-          key: turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-${{ matrix.settings.os }}-${{ matrix.settings.index }}-${{ github.sha }} # kilocode_change
-          # kilocode_change start
-          restore-keys: |
-            turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-${{ matrix.settings.os }}-${{ matrix.settings.index }}-
-            turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-
-            turbo-${{ runner.os }}-
-          # kilocode_change end
+      # kilocode_change - no Turbo cache restore: the job runs turbo with TURBO_CACHE=local:w (see env above)
 
       # kilocode_change start - test non-CLI packages separately from sharded CLI tests
       - name: Verify package test scheduling
@@ -272,6 +265,10 @@ jobs:
     if: needs.changes.outputs.general == 'true'
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
+    # Reports results with checks: write, so turbo never reads a cache: local:w executes every
+    # task and keeps turbo off the remote cache. TURBO_FORCE would re-enable remote writes.
+    env:
+      TURBO_CACHE: local:w
     defaults:
       run:
         shell: bash
@@ -281,9 +278,13 @@ jobs:
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
+        # kilocode_change start - job holds checks: write, so skip the shared dependency cache
+        with:
+          cache: false
+        # kilocode_change end
 
       - name: Setup Linux sandbox helper
-        timeout-minutes: 5
+        timeout-minutes: 15 # the Zig archive is downloaded on every run
         uses: ./.github/actions/setup-linux-sandbox
 
       - name: Configure git identity
@@ -291,15 +292,7 @@ jobs:
           git config --global user.email "kilo-maintainer[bot]@users.noreply.github.com"
           git config --global user.name "kilo-maintainer[bot]"
 
-      - name: Cache Turbo
-        uses: actions/cache@v5
-        with:
-          path: .turbo/cache
-          key: turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-httpapi-${{ github.sha }}
-          restore-keys: |
-            turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-httpapi-
-            turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-
-            turbo-${{ runner.os }}-
+      # kilocode_change - no Turbo cache restore: the job runs turbo with TURBO_CACHE=local:w (see env above)
 
       - name: Check generated client
         if: runner.os == 'Linux'
