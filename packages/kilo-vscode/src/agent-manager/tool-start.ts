@@ -5,7 +5,7 @@ import type { WorktreeStateManager } from "./WorktreeStateManager"
 import type { PanelContext } from "./host"
 import { PLATFORM, SNAPSHOT_INITIALIZATION } from "./constants"
 import { sameDirectory } from "../kilo-provider-utils"
-import { attribute } from "./prompt-attribution"
+import { attribute, stamp } from "./prompt-attribution"
 import { beginBoot, prepareSession, type CreationBoot } from "./provider-lifecycle"
 import { Timing } from "./creation-timing"
 import { plan } from "./creation-plan"
@@ -38,6 +38,7 @@ export interface ToolRequest {
 
 export interface ToolSource {
   sessionID?: string
+  requestID?: string
   sandboxInheritanceToken?: string
 }
 
@@ -175,7 +176,7 @@ async function local(
     return false
   }
   const target = wt?.path ?? root
-  const metadata = await deps.sessionMetadata(client, target)
+  const metadata = stamp(await deps.sessionMetadata(client, target), source)
   const { data } = await client.session.create(
     sessionCreateBody({
       directory: target,
@@ -236,7 +237,7 @@ async function worktree(
       timing.mark("setup")
     },
     () => {
-      const boot = beginBoot(() => deps.sessionMetadata(client, created.result.path), timing)
+      const boot = beginBoot(async () => stamp(await deps.sessionMetadata(client, created.result.path), source), timing)
       return deps.createSessionInWorktree(
         created.result.path,
         created.result.branch,
@@ -308,7 +309,11 @@ export async function startFromTool(deps: ToolDeps, req: ToolRequest): Promise<v
   const versions = req.mode === "worktree" && req.versions === true && total > 1
   const groupId = versions ? `grp-${Date.now()}` : undefined
   const state = { ok: 0 }
-  const source = { sessionID: req.sessionID, sandboxInheritanceToken: req.sandboxInheritanceToken }
+  const source = {
+    sessionID: req.sessionID,
+    requestID: req.requestID,
+    sandboxInheritanceToken: req.sandboxInheritanceToken,
+  }
 
   deps.post({
     type: "agentManager.multiVersionProgress",

@@ -39,28 +39,39 @@ Key features include:
 
 ## Background agents
 
-When Kilo starts an agent in the background, a collapsible status strip appears in the chat header. The strip stays visible while the transcript scrolls, so you can check background work without searching the conversation. Click the strip to expand it and see each agent.
+When Kilo starts agents in the background, the agent map button appears in the row above the prompt, next to the working indicator or the session actions. It shows how many background agents are still running, so you can check background work without searching the conversation. A dot on the button marks an agent that needs your input (amber) or new posts on the shared agent board (blue). Click the button to open the [agent map](#agent-map).
 
-Each agent shows one of these states:
+An agent needs input when it is waiting for a permission decision or an answer to a question. Open its transcript from the agent map to handle the request. In the sidebar and Kilo tab, the transcript opens in a read-only editor tab. In Agent Manager, it opens in the right-hand inspector.
 
-| State | Meaning |
+Use these controls to manage background work:
+
+- **Stop agent** in the agent map cancels a running agent and anything it started.
+- **Stop all (N)** in the agent map cancels every running agent the session started, without stopping the main session.
+- **Hide finished** in the agent map shows only the agents that are still running.
+- **Continue in background** appears on a running foreground subagent's task card. It detaches that work so the parent session can continue while the subagent runs in the background.
+
+Stopping the main session with **Stop** or `Esc` ends its current response but leaves background agents running. Use **Stop all (N)** or an agent's **Stop agent** to cancel background work. Completed background results are available when you send the next message or use **Continue**.
+
+## Agent map
+
+The agent map shows the current session and everything it started, directly or through another agent: subagents, Agent Manager sessions, and the background processes they run. Open it with **Show agent map** in the chat header, or with the agent map button above the prompt. The header button appears once the session has started a subagent, an Agent Manager session, or a background process. Opened from a subagent's view, the map starts at that subagent.
+
+The session sits on the left and each generation fans out to the right. In a narrow panel, such as the sidebar, the map stacks vertically. Each agent carries the same avatar as its task card in the conversation, and each node shows its agent, run time, and token count. A filled dot means the node is running (green), waiting for your input (amber), or failed (red). A hollow dot means it finished, and a dashed one that it was stopped. Turn on **Hide finished** to show only the work that is still running, along with the agents that started it. The map refreshes while it is open.
+
+| Node | What it is |
 |---|---|
-| **Running** | The agent is still working. |
-| **Done** | The agent completed successfully. |
-| **Cancelled** | The agent was stopped before it completed. |
-| **Error** | The agent stopped because it encountered an error. |
+| **Main agent** | The session you opened the map from. |
+| **Subagent** | An agent started with the Task tool, in the foreground or the background. |
+| **Agent Manager session** | A session started by the `agent_manager` tool, for example in a new worktree. |
+| **Background process** | A long-running command, such as a dev server, started by the background process tool. |
 
-An agent can also show **Needs input** when it is waiting for a permission decision or an answer to a question. Open the agent row to inspect its read-only transcript and handle the request in the child-agent view. In the sidebar and Kilo tab, the transcript opens in a read-only editor tab. In Agent Manager, it opens in the right-hand inspector.
+Select a node to see who started it, how long it ran, its tokens and cost, and the prompt it received. **Open transcript** opens the agent's conversation, and **Stop agent** or **Stop process** cancels it together with anything it started.
 
-Use these controls in the background-agent strip:
+When the session has a shared agent board, the dialog has a **Board** tab next to the **Map** tab, where agents post their questions and results. A dot on the tab marks unread posts. **Refresh** reloads the board, and **Reset board** clears every post after you confirm. **Board posts (N)** on a node opens the tab filtered to the posts that agent sent or received. Selecting a sender in a post opens that agent on the map.
 
-- **Stop** cancels a running agent and its child session.
-- **Stop all (N)** cancels every running background agent for the current session without stopping the main session.
-- **Dismiss** hides one finished agent from the strip. It does not delete the transcript or the agent record.
-- **Clear finished** hides all agents that are no longer running.
-- **Continue in background** appears when a foreground subagent is running. It detaches that work so the parent session can continue while the subagent runs in the background.
+When you revert a turn, the agents and processes that turn started leave the map once they have stopped. Anything from that turn that is still running stays, so you can stop it. Reverting does not remove board posts: use **Reset board** to clear posts from reverted work.
 
-Stopping the main session with **Stop** or `Esc` ends its current response but leaves background agents running. Use **Stop all (N)** or an individual agent's **Stop** to cancel background work. Completed background results are available when you send the next message or use **Continue**.
+Agent Manager sessions started by earlier versions of Kilo do not record which session started them, so they do not appear in the map.
 
 ## Follow-up messages
 
