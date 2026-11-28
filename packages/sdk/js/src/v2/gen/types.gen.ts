@@ -8965,6 +8965,10 @@ export type ModelV2Info = {
     input?: number
     output: number
   }
+  rateLimit?: {
+    rpm?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    rps?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+  }
 }
 
 export type ProviderAisdk = {
@@ -8993,6 +8997,10 @@ export type ProviderV2Info = {
   disabled?: boolean
   api: ProviderApi
   request: ProviderRequest
+  rateLimit?: {
+    rpm?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    rps?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+  }
 }
 
 export type IntegrationWhen = {
