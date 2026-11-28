@@ -1,7 +1,7 @@
 import type { EmbedderInfo, EmbeddingResponse, IEmbedder } from "../interfaces"
 import { getModelQueryPrefix } from "../model-registry"
 import { MAX_ITEM_TOKENS, OLLAMA_EMBEDDER_REQUEST_TIMEOUT_MS } from "../constants"
-import { withValidationErrorHandling, sanitizeErrorMessage } from "../shared/validation-helpers"
+import { withValidationErrorHandling, sanitizeErrorMessage, extractStatusCode } from "../shared/validation-helpers"
 import { Log } from "../../util/log"
 
 const log = Log.create({ service: "embedder-ollama" })
@@ -94,7 +94,11 @@ export class CodeIndexOllamaEmbedder implements IEmbedder {
         } catch (e) {
           // Ignore error reading body
         }
-        throw new Error(`Ollama request failed: ${response.status} ${response.statusText} - ${errorBody}`)
+        // Keep the HTTP status on the error so the scanner can tell deterministic 4xx rejections from transient failures.
+        throw Object.assign(
+          new Error(`Ollama request failed: ${response.status} ${response.statusText} - ${errorBody}`),
+          { status: response.status },
+        )
       }
 
       const data = (await response.json()) as OllamaEmbeddingResult
@@ -127,7 +131,11 @@ export class CodeIndexOllamaEmbedder implements IEmbedder {
       }
 
       // Re-throw a more specific error for the caller
-      throw new Error(`Ollama embedding failed: ${error instanceof Error ? error.message : String(error)}`)
+      const status = extractStatusCode(error)
+      throw Object.assign(
+        new Error(`Ollama embedding failed: ${error instanceof Error ? error.message : String(error)}`),
+        status === undefined ? {} : { status },
+      )
     }
   }
 

@@ -110,6 +110,21 @@ export function extractStatusCode(error: any): number | undefined {
 }
 
 /**
+ * Status used by the scanner to decide whether a provider refused a request.
+ * Also reads the AWS SDK (Bedrock) status under `$metadata`. This is kept out of
+ * `extractStatusCode` so validation errors keep their specific AWS message.
+ */
+export function rejectionStatus(error: unknown): number | undefined {
+  const status = extractStatusCode(error)
+  if (status) return status
+  if (typeof error !== "object" || error === null || !("$metadata" in error)) return undefined
+  const metadata = error.$metadata
+  if (typeof metadata !== "object" || metadata === null || !("httpStatusCode" in metadata)) return undefined
+  const sdkStatus = metadata.httpStatusCode
+  return typeof sdkStatus === "number" && sdkStatus > 0 ? sdkStatus : undefined
+}
+
+/**
  * Extracts error message from various error formats
  */
 export function extractErrorMessage(error: any): string {
@@ -205,13 +220,17 @@ export async function withValidationErrorHandling<T extends { valid: boolean; er
  */
 export function formatEmbeddingError(error: any, maxRetries: number): Error {
   const errorMessage = extractErrorMessage(error)
-  const statusCode = extractStatusCode(error)
+  const statusCode = rejectionStatus(error)
 
   if (statusCode === 401) {
-    return new Error("Authentication failed. Please check your API key.")
+    return Object.assign(new Error("Authentication failed. Please check your API key."), { status: statusCode })
   }
   if (statusCode) {
-    return new Error(`Embedding request failed after ${maxRetries} attempts with status ${statusCode}: ${errorMessage}`)
+    // Keep the status on the error so callers can tell deterministic 4xx rejections from transient failures.
+    return Object.assign(
+      new Error(`Embedding request failed after ${maxRetries} attempts with status ${statusCode}: ${errorMessage}`),
+      { status: statusCode },
+    )
   }
   return new Error(`Embedding request failed after ${maxRetries} attempts: ${errorMessage}`)
 }
