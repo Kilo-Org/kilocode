@@ -1354,7 +1354,7 @@ describe("session.message-v2.toModelMessage", () => {
     expect((result[1].content as any[]).find((p) => p.type === "text").text).toBe("the answer")
   })
 
-  test("leaves empty text alone when reasoning signature is under 'bedrock' namespace", async () => {
+  test("drops empty text when reasoning signature is under 'bedrock' namespace", async () => { // kilocode_change - empty text is dropped (#16139)
     // Bedrock signed reasoning is preserved as reasoning metadata, but unlike the
     // direct Anthropic path we do not preserve empty text separators for Bedrock.
     const assistantID = "m-assistant-bedrock"
@@ -1378,10 +1378,10 @@ describe("session.message-v2.toModelMessage", () => {
 
     expect(result).toHaveLength(1)
     const texts = (result[0].content as any[]).filter((p) => p.type === "text")
-    expect(texts.map((t) => t.text)).toStrictEqual(["", "answer"])
+    expect(texts.map((t) => t.text)).toStrictEqual(["answer"]) // kilocode_change
   })
 
-  test("leaves empty text alone when reasoning has no Anthropic signature", async () => {
+  test("drops empty text when reasoning has no Anthropic signature", async () => { // kilocode_change - empty text is dropped (#16139)
     // Non-Anthropic providers' reasoning doesn't position-validate, so empty text
     // should be filtered normally rather than substituted.
     const assistantID = "m-assistant-unsigned"
@@ -1400,10 +1400,10 @@ describe("session.message-v2.toModelMessage", () => {
 
     expect(result).toHaveLength(1)
     const texts = (result[0].content as any[]).filter((p) => p.type === "text")
-    expect(texts.map((t) => t.text)).toStrictEqual(["", "answer"])
+    expect(texts.map((t) => t.text)).toStrictEqual(["answer"]) // kilocode_change
   })
 
-  test("leaves empty text alone in assistant messages without reasoning", async () => {
+  test("drops empty text in assistant messages without reasoning", async () => { // kilocode_change - empty text is dropped (#16139)
     const assistantID = "m-assistant-no-reasoning"
     const input: SessionV1.WithParts[] = [
       {
@@ -1419,7 +1419,7 @@ describe("session.message-v2.toModelMessage", () => {
 
     expect(result).toHaveLength(1)
     const texts = (result[0].content as any[]).filter((p) => p.type === "text")
-    expect(texts.map((t) => t.text)).toStrictEqual(["", "hello"])
+    expect(texts.map((t) => t.text)).toStrictEqual(["hello"]) // kilocode_change
   })
 })
 
