@@ -470,6 +470,7 @@ describe("agent manager tool start", () => {
       expect.any(Object),
       expect.any(Object),
       undefined,
+      undefined,
     )
     expect(c.registerWorktreeSession).toHaveBeenCalledWith("s-wt", "/repo/.kilo/worktrees/wt-1")
     expect(c.notifyReady).toHaveBeenCalled()
@@ -677,6 +678,34 @@ describe("agent manager tool start", () => {
     })
   })
 
+  it.each([
+    ["uses the task name as the local session title", { name: " Self-test docs:index " }, "Self-test docs:index"],
+    ["keeps the server placeholder when no name is given", { prompt: "Fix it" }, undefined],
+  ])("%s", async (_label, task, title) => {
+    const client = {
+      session: {
+        create: mock(async () => ({ data: session("s-local") })),
+        promptAsync: mock(async () => ({})),
+      },
+    }
+    const c = deps({ getClient: () => client as never })
+
+    await startFromTool(c, { requestID: "am-local-title", mode: "local", tasks: [task] })
+
+    const body = (client.session.create.mock.calls[0] as unknown[])[0] as Record<string, unknown>
+    expect(body.title).toBe(title)
+    expect("title" in body).toBe(title !== undefined)
+  })
+
+  it("passes the task name as the title to worktree session creation", async () => {
+    const c = deps()
+
+    await startFromTool(c, { requestID: "am-wt-title", mode: "worktree", tasks: [{ name: "Self-test docs:index" }] })
+
+    const args = (c.createSessionInWorktree as ReturnType<typeof mock>).mock.calls[0] as unknown[]
+    expect(args[7]).toBe("Self-test docs:index")
+  })
+
   it("omits agent from session.create for local sessions when not specified", async () => {
     const client = {
       session: {
@@ -729,6 +758,7 @@ describe("agent manager tool start", () => {
       expect.any(Object),
       expect.any(Object),
       "candidate",
+      undefined,
     )
   })
 

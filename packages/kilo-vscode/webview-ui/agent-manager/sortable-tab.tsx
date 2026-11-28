@@ -2,6 +2,7 @@
  * Drag-and-drop sortable tab components for the agent manager tab bar.
  */
 
+import { displayTitle } from "../../src/shared/session-title"
 import { Component } from "solid-js"
 import type { JSX } from "solid-js"
 import type { SessionInfo } from "../src/types/messages"
@@ -58,7 +59,7 @@ export const SortableTab: Component<{
         }
       >
         <SessionTab
-          title={props.tab().title || t("agentManager.session.untitled")}
+          title={displayTitle(props.tab(), t("agentManager.session.untitled"))}
           active={props.active}
           pinned={props.pinned}
           pinnedLabel={t("agentManager.tab.pinned")}
