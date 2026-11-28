@@ -33,6 +33,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, wri
 import { homedir, tmpdir } from "node:os"
 import { delimiter, join, resolve } from "node:path"
 import { spawn } from "node:child_process"
+import { editorSpawn } from "./editor-spawn"
 
 const win = process.platform === "win32"
 const root = join(import.meta.dir, "..")
@@ -298,7 +299,13 @@ async function packageVsix(out: string): Promise<string> {
 
 async function installVsix(path: string, app: string) {
   const cmd = codeCli(app)
-  await $`${cmd} --extensions-dir ${extDir} --user-data-dir ${userDir} --install-extension ${path} --force`.cwd(root)
+  // Bun shell loses quoting for shim paths with spaces (e.g. `C:\Program Files\nodejs\code.cmd`),
+  // so pass the arguments as an array instead.
+  const result = Bun.spawnSync(
+    [cmd, `--extensions-dir=${extDir}`, `--user-data-dir=${userDir}`, "--install-extension", path, "--force"],
+    { cwd: root, stderr: "pipe" },
+  )
+  if (result.exitCode !== 0) throw new Error(`Failed to install VSIX: ${result.stderr.toString().trim()}`)
 }
 
 // ---------------------------------------------------------------------------
@@ -416,13 +423,9 @@ async function launch() {
     return
   }
 
-  const child = spawn(app, args, {
-    cwd: workspace,
-    detached: !win,
-    env,
-    stdio: "ignore",
-    ...(win ? { shell: true } : {}),
-  })
+  // Argument arrays keep paths with spaces intact; see editorSpawn for the rationale.
+  const editor = editorSpawn(app, args, workspace, env)
+  const child = spawn(editor.command, editor.args, editor.options)
   child.unref()
 
   console.log(`[launch] VS Code launched (pid ${child.pid})`)
