@@ -102,14 +102,15 @@ export function createUnstagedDiffSource(opts: UnstagedDiffSourceOptions = {}): 
   }
 
   const listUntracked = async (dir: string): Promise<FileEntry[]> => {
-    const result = await git.execGit(["ls-files", "--others", "--exclude-standard"], dir)
+    // `-z` keeps real names; text output C-quotes non-ASCII names, which then fail `lstat`.
+    const result = await git.execGit(["ls-files", "--others", "--exclude-standard", "-z"], dir)
     if (result.code !== 0) {
       log("git ls-files --others failed", { code: result.code, stderr: result.stderr.trim() })
       return []
     }
     const out: FileEntry[] = []
-    for (const file of result.stdout.split("\n")) {
-      if (!file.trim()) continue
+    for (const file of result.stdout.split("\0")) {
+      if (!file) continue
       const full = resolveInside(dir, file)
       if (!full) continue
       // `lstat` so an untracked symlink listed by `ls-files --others` is
@@ -286,8 +287,8 @@ async function fileEntry(
     log("Unstaged file rejected: outside workspace", { file })
     return undefined
   }
-  const untracked = await git.execGit(["ls-files", "--others", "--exclude-standard", "--", file], dir)
-  if (untracked.code !== 0 || !untracked.stdout.split("\n").includes(file)) return undefined
+  const untracked = await git.execGit(["ls-files", "--others", "--exclude-standard", "-z", "--", file], dir)
+  if (untracked.code !== 0 || !untracked.stdout.split("\0").includes(file)) return undefined
   const stat = await fs.lstat(full).catch(() => undefined)
   if (!stat) {
     log("Unstaged file not found", { file })

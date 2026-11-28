@@ -649,6 +649,22 @@ describe("diffFile", () => {
     })
   })
 
+  it("lists and loads untracked files whose names git quotes", async () => {
+    await withRepo(async (dir, base) => {
+      // Default setting: git C-quotes non-ASCII names in text output.
+      runSync(dir, ["config", "core.quotepath", "true"])
+      await fs.writeFile(path.join(dir, "résumé.txt"), "one\ntwo\n")
+      await fs.writeFile(path.join(dir, "trailing "), "x\n")
+      const summary = await diffSummary(git(), dir, base)
+      expect(summary.map((entry) => entry.file).sort()).toEqual(["résumé.txt", "trailing "])
+      expect(summary.find((entry) => entry.file === "résumé.txt")?.additions).toBe(2)
+      const result = await diffFile(git(), dir, base, "résumé.txt")
+      expect(result?.status).toBe("added")
+      expect(result?.tracked).toBe(false)
+      expect(result?.after).toBe("one\ntwo\n")
+    })
+  })
+
   it("loads full detail from the latest summary snapshot", async () => {
     await withRepo(async (dir, base) => {
       await fs.writeFile(path.join(dir, "seed.txt"), "seed\ncached\n")
