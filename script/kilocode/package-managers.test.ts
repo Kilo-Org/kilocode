@@ -221,7 +221,7 @@ test("update leaves a clone that publishes a newer version alone", async () => {
   expect(repo.show("kilo.rb")).toBe(newest)
 })
 
-test("a pre-release formula is updated by the next pre-release and not by the previous one", async () => {
+test("a hand-edited pre-release recipe counts as a newer recipe", async () => {
   const repo = await remote("main")
   const base = {
     remote: repo.bare,
@@ -230,34 +230,76 @@ test("a pre-release formula is updated by the next pre-release and not by the pr
     env: repo.env,
     wait: 0,
   }
-  await withEnv({ KILO_LATEST_RELEASE: "7.9.0-rc.2" }, async () => {
+  // Someone put a pre-release formula on the tap by hand.
+  expect(
+    await update({
+      ...base,
+      version: "1.2.3-rc.1",
+      files: { "kilo.rb": formula("1.2.3-rc.1", sample) },
+      message: "Update to v1.2.3-rc.1",
+    }),
+  ).toBe("pushed")
+  await withEnv({ KILO_LATEST_RELEASE: "1.2.3" }, async () => {
+    // The final release replaces the pre-release it follows.
     expect(
       await update({
         ...base,
-        version: "7.9.0-rc.1",
-        files: { "kilo.rb": formula("7.9.0-rc.1", sample) },
-        message: "Update to v7.9.0-rc.1",
+        version: "1.2.3",
+        files: { "kilo.rb": formula("1.2.3", sample) },
+        message: "Update to v1.2.3",
       }),
     ).toBe("pushed")
-    expect(
-      await update({
-        ...base,
-        version: "7.9.0-rc.2",
-        files: { "kilo.rb": formula("7.9.0-rc.2", sample) },
-        message: "Update to v7.9.0-rc.2",
-      }),
-    ).toBe("pushed")
-    expect(
-      await update({
-        ...base,
-        version: "7.9.0-rc.1",
-        files: { "kilo.rb": formula("7.9.0-rc.1", sample) },
-        message: "Update to v7.9.0-rc.1",
-      }),
-    ).toBe("skipped")
   })
-  expect(repo.log()).toBe("Update to v7.9.0-rc.2\nUpdate to v7.9.0-rc.1\nseed")
-  expect(repo.show("kilo.rb")).toBe(formula("7.9.0-rc.2", sample))
+  expect(repo.show("kilo.rb")).toBe(formula("1.2.3", sample))
+  // A pre-release ahead of the latest release cannot come from this job, so it fails the update.
+  expect(
+    await update({
+      ...base,
+      version: "1.2.4-rc.1",
+      files: { "kilo.rb": formula("1.2.4-rc.1", sample) },
+      message: "Update to v1.2.4-rc.1",
+    }),
+  ).toBe("pushed")
+  await withEnv({ KILO_LATEST_RELEASE: "1.2.3" }, async () => {
+    const error = await update({
+      ...base,
+      version: "1.2.3",
+      files: { "kilo.rb": formula("1.2.3", sample) },
+      message: "Update to v1.2.3",
+    }).then(
+      () => undefined,
+      (err: unknown) => err,
+    )
+    expect(error).toBeInstanceOf(RecipeAheadError)
+    expect(String(error)).toContain("publishes v1.2.4-rc.1")
+  })
+  expect(repo.log()).toBe("Update to v1.2.4-rc.1\nUpdate to v1.2.3\nUpdate to v1.2.3-rc.1\nseed")
+  expect(repo.show("kilo.rb")).toBe(formula("1.2.4-rc.1", sample))
+})
+
+test("the package managers publish final releases only", async () => {
+  const key = path.join(await temp(), "aur_key")
+  await writeFile(key, "stand-in key\n")
+  for (const version of ["1.2.3-rc.1", "1.2.3-beta.2"]) {
+    const fromAur = await aur(version, sample, key, "/nonexistent/kilo-bin.git").then(
+      () => undefined,
+      (err: unknown) => err,
+    )
+    expect(String(fromAur)).toContain("publish final releases only")
+    const fromHomebrew = await homebrew(version, sample, "/nonexistent/homebrew-tap.git").then(
+      () => undefined,
+      (err: unknown) => err,
+    )
+    expect(String(fromHomebrew)).toContain("publish final releases only")
+  }
+  // The command line refuses one before it reads the manifest or the key.
+  const run = Bun.spawnSync(
+    ["bun", path.join(import.meta.dir, "package-managers.ts"), "homebrew", "/nonexistent/manifest.json", "1.2.3-rc.1"],
+    { stdout: "pipe", stderr: "pipe" },
+  )
+  expect(run.exitCode).not.toBe(0)
+  expect(run.stderr.toString()).toContain("publish final releases only")
+  expect(await readFile(key, "utf8")).toBe("stand-in key\n")
 })
 
 test("update fails when the recipe is ahead of the latest release it is publishing", async () => {

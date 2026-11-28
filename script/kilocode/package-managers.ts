@@ -11,8 +11,9 @@
  *   node script/kilocode/package-managers.ts homebrew <cli-sbom-evidence.json> <version>
  *
  * `aur` reads the SSH key path from AUR_KEY_FILE. `homebrew` clones over HTTPS and gets its token from
- * the git credential helper that setup-git-committer registers. Each target is left unchanged when it
- * already has the files of this version, so a re-run pushes nothing new.
+ * the git credential helper that setup-git-committer registers. Both refuse a pre-release version:
+ * the job runs for final releases only. Each target is left unchanged when it already has the files
+ * of this version, so a re-run pushes nothing new.
  *
  * Both targets refuse to move a recipe backwards: when the clone already publishes a newer version
  * than the one this run publishes, the update is skipped with a warning, or fails when the run
@@ -103,7 +104,10 @@ export function compare(a: string, b: string) {
   return left.localeCompare(right, "en", { numeric: true })
 }
 
-/** A version read back from a recipe, or undefined unless it is one this script publishes. */
+/**
+ * A version read back from a recipe, or undefined unless it is one this script publishes. A recipe
+ * can carry a pre-release when someone edited it by hand; it then compares like any other version.
+ */
 function accepted(value: string | undefined) {
   return value !== undefined && VERSION.test(value) ? value : undefined
 }
@@ -399,7 +403,16 @@ export function sshCommand(key: string, known: string) {
   ].join(" ")
 }
 
+/** Refuses anything but a final release version: the package-managers job runs for finals only. */
+function requireFinal(version: string) {
+  if (!VERSION.test(version)) throw new Error(`Invalid release version ${JSON.stringify(version)}`)
+  if (version.includes("-")) {
+    throw new Error(`Package managers publish final releases only, not pre-release ${JSON.stringify(version)}`)
+  }
+}
+
 export async function aur(version: string, digest: Digests, key: string, remote = AUR_REMOTE) {
+  requireFinal(version)
   // ssh rejects a private key without its final newline; the secret store may have dropped it.
   if (!(await readFile(key, "utf8")).endsWith("\n")) await appendFile(key, "\n")
   const root = await mkdtemp(path.join(process.env.RUNNER_TEMP || os.tmpdir(), "aur-hosts-"))
@@ -421,6 +434,7 @@ export async function aur(version: string, digest: Digests, key: string, remote 
 }
 
 export async function homebrew(version: string, digest: Digests, remote = TAP_REMOTE) {
+  requireFinal(version)
   return update({
     remote,
     version,
@@ -435,7 +449,7 @@ if (import.meta.main) {
   if ((target !== "aur" && target !== "homebrew") || !manifest || !version) {
     throw new Error("Usage: package-managers.ts aur|homebrew <cli-sbom-evidence.json> <version>")
   }
-  if (!VERSION.test(version)) throw new Error(`Invalid release version ${JSON.stringify(version)}`)
+  requireFinal(version)
   const digest = digests(await readFile(manifest, "utf8"), version)
   if (target === "aur") {
     const key = process.env.AUR_KEY_FILE

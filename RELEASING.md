@@ -100,7 +100,15 @@ Runs after `publish`, once the release is public, in the `release-keys` environm
 - **AUR (Arch Linux)**: Clones `kilo-bin` from the AUR over SSH (host keys pinned in the script), writes the `PKGBUILD` and `.SRCINFO` with the new version and SHA256 checksums, and pushes.
 - **Homebrew**: Clones `Kilo-Org/homebrew-tap` with an app token that may write only that repository, updates the `kilo.rb` formula with the new version, download URLs, and SHA256 checksums, and pushes.
 
-Each update is retried from a new clone up to three times. A repository that already has the files of this version is left unchanged, so the job can be re-run on its own (**Re-run failed jobs**). A repository that already publishes a newer version is skipped with a warning, which happens only when an older release is re-run; when the release being published is the latest one, a newer recipe fails the job instead, because the recipe must then be checked by hand. The latest release is read from the GitHub API with the job's read-only token. A failure fails the job but does not touch the release or the npm packages.
+Each update is retried from a new clone up to three times. A repository that already has the files of this version is left unchanged, so the job can be re-run on its own (**Re-run failed jobs**). A repository that already publishes a newer version is left alone, in one of three ways:
+
+- A re-run of an older release skips the update with a warning, because the recipe already has the newer release.
+- When the release being published is the latest one, the job fails instead: the recipe is then ahead of a release it should have, so it needs a hand edit.
+- When the latest release cannot be read from the GitHub API, the update is skipped with a warning as well; an API outage must not fail a release. The latest release is read with the job's read-only token.
+
+The job publishes final releases only; a pre-release version is refused.
+
+A failure fails the job but does not touch the release or the npm packages.
 
 ### Recovering from a Failed `publish` Job
 
