@@ -12,6 +12,7 @@ import type { Session } from "@/session/session"
 import { Token } from "@/util/token"
 import * as Log from "@opencode-ai/core/util/log"
 import { Database } from "@opencode-ai/core/database/database"
+import { SessionV1 } from "@opencode-ai/core/v1/session"
 
 type Update = <T extends MessageV2.Part>(part: T) => Effect.Effect<T>
 type UpdateMessage = <T extends MessageV2.Info>(msg: T) => Effect.Effect<T>
@@ -31,6 +32,14 @@ export namespace KiloCompactionChunks {
     "Compaction did not run: the model returned an empty summary. Retry with /compact. If it keeps failing, start a new session to continue."
   export const TRUNCATED_SUMMARY =
     "Compaction did not run: the summary was cut off at the output limit. Retry with /compact. If it keeps failing, start a new session to continue."
+  export const CONTENT_FILTERED =
+    "Compaction did not run: the provider's content filter blocked the summary. Start a new session to continue."
+
+  export function filtered(
+    error: MessageV2.Assistant["error"],
+  ): error is Extract<NonNullable<MessageV2.Assistant["error"]>, { name: "ContentFilterError" }> {
+    return error?.name === "ContentFilterError"
+  }
 
   export function incomplete(
     error: MessageV2.Assistant["error"],
@@ -40,12 +49,30 @@ export namespace KiloCompactionChunks {
     )
   }
 
+  // Every failure a user has to act on needs a rendered message; retrying cannot
+  // help when the provider refused to summarize.
+  export function reported(
+    error: MessageV2.Assistant["error"],
+  ): error is Extract<NonNullable<MessageV2.Assistant["error"]>, { name: "APIError" | "ContentFilterError" }> {
+    return incomplete(error) || filtered(error)
+  }
+
   export function recover(input: {
     result: SessionProcessor.Result
     message: MessageV2.Assistant
     session: Pick<Session.Interface, "removePart" | "updateMessage">
   }) {
     return Effect.gen(function* () {
+      // The single-request path leaves a content-filter finish without an error of
+      // its own, and the empty answer that follows would be reported as a retryable
+      // empty summary. Name the failure here so one rule covers both paths (#15806).
+      if (!input.message.error && input.message.finish === "content-filter") {
+        input.message.error = new SessionV1.ContentFilterError({ message: CONTENT_FILTERED }).toObject()
+        input.message.finish = "error"
+        input.message.time.completed = Date.now()
+        yield* input.session.updateMessage(input.message)
+        return "stop" as const
+      }
       if (input.message.finish !== "length") return input.result
       const parts = yield* MessageV2.parts(input.message.id)
       for (const part of parts)
@@ -324,6 +351,14 @@ export namespace KiloCompactionChunks {
       )
       const result = out.result
       const output = out.output
+      // A content-filter finish is not an empty answer: the provider refused to
+      // summarize the transcript, so retrying the same conversation cannot help.
+      if (!out.error && out.finish === "content-filter")
+        return {
+          result: "stop" as const,
+          output: undefined,
+          error: new SessionV1.ContentFilterError({ message: CONTENT_FILTERED }).toObject(),
+        }
       if (out.error || (result !== "continue" && out.finish !== "length"))
         return { result, output: undefined, error: out.error }
       if (!output || out.finish === "length")
@@ -393,7 +428,8 @@ export namespace KiloCompactionChunks {
       const result = yield* run({ ...input, data: [], text: input.prompt(context({ summaries: input.summaries })) })
       if (
         result.result === "continue" ||
-        (result.error?.name === "APIError" && result.error.data.message === TRUNCATED_SUMMARY)
+        (result.error?.name === "APIError" && result.error.data.message === TRUNCATED_SUMMARY) ||
+        filtered(result.error)
       )
         return result
       if (input.depth >= DEPTH || input.summaries.length <= 1) return result
