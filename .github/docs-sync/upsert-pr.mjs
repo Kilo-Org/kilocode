@@ -1,9 +1,10 @@
 // kilocode_change - new file
 
 /**
- * Commits the agent's packages/kilo-docs changes, pushes the rolling
- * integration branch, and maintains one auto-docs PR per product surface
- * (plus one `other` PR).
+ * Publishes the docs commit the agent job handed over (INTEGRATION_SHA, checked
+ * by handoff.mjs in the publish job): pushes the rolling integration branch and
+ * maintains one auto-docs PR per product surface (plus one `other` PR). It also
+ * writes a learned-through marker that learn.mjs handed over (MARKER_PATCH).
  *
  * The integration branch (`BRANCH`, normally `docs/auto-sync`) accumulates the
  * whole docs tree and has no PR of its own. Every surface PR is rebuilt in a
@@ -30,6 +31,7 @@ import {
   OTHER,
   derivation,
   groupBySurface,
+  isSurfaceBranch,
   loadSurfaceMap,
   otherDocPrefixes,
   surfaceBranch,
@@ -39,17 +41,12 @@ import {
   surfaceNames,
   surfaceSourceEntries,
 } from "./surfaces.mjs"
+import { durableBranch } from "./handoff.mjs"
 import { computeSurfaceReviewers } from "./reviewers.mjs"
 
 export { surfaceBranch }
 
 const BRANCH = process.env.BRANCH || "docs/auto-sync"
-// Git refs cannot hold both `docs/auto-sync` and `docs/auto-sync/<surface>`: a
-// ref may not be a path prefix of another ref. Surface PRs therefore use the
-// required `docs/auto-sync/<surface>` heads, and the integration tree is pushed
-// to this sibling ref purely for durability (a failed surface cannot lose the
-// run's changes).
-const INTEGRATION_BRANCH = process.env.INTEGRATION_BRANCH || "docs/auto-sync-integration"
 const FILE_CAP = 15
 const ROW_CAP = 150
 const PENDING_DISPLAY_CAP = 60
@@ -63,11 +60,15 @@ const git = (args, cwd) =>
 
 // Agent-generated strings land in the PR body next to machine-read markers.
 // Strip HTML-comment sequences so a crafted/adversarial value cannot forge
-// section boundaries or the processed-through watermark.
-function clean(value) {
-  return String(value ?? "")
-    .replaceAll("<!--", "")
-    .replaceAll("-->", "")
+// section boundaries or the processed-through watermark. Repeat until nothing
+// changes: one pass over `<!<!----` leaves a new `<!--`.
+export function clean(value) {
+  let text = String(value ?? "")
+  for (;;) {
+    const next = text.replaceAll("<!--", "").replaceAll("-->", "")
+    if (next === text) return text
+    text = next
+  }
 }
 
 function shortRef(url) {
@@ -75,18 +76,19 @@ function shortRef(url) {
 }
 
 function changeRow(e) {
-  return `| ${clean(e.action).replaceAll("|", "\\|")} | [${shortRef(e.url)}](${clean(e.url)}) |`
+  const action = clean(e.action).replaceAll("|", "\\|").replace(/[\r\n]+/g, " ")
+  return `| ${action} | [${shortRef(e.url)}](${clean(e.url)}) |`
 }
 
 function skippedRow(e) {
-  const reason = clean(e.reason).replaceAll("|", "\\|").replaceAll("\n", " ")
+  const reason = clean(e.reason).replaceAll("|", "\\|").replace(/[\r\n]+/g, " ")
   return `| [${shortRef(e.url)}](${clean(e.url)}) | ${reason} |`
 }
 
 function pendingRow(e) {
   const reason = clean(e.reason ?? e.cause ?? "")
     .replaceAll("|", "\\|")
-    .replaceAll("\n", " ")
+    .replace(/[\r\n]+/g, " ")
   return `| [${shortRef(e.url)}](${clean(e.url)}) | ${reason} |`
 }
 
@@ -491,21 +493,24 @@ function partitionByPresence(git, sha, files) {
 /**
  * Build the surface branch in a throwaway worktree and push it. On update the
  * base is the open PR's remote branch (so human commits survive), merged with
- * origin/main; otherwise it is a fresh branch from origin/main.
+ * `baseMain`; otherwise it is a fresh branch from `baseMain`. `baseMain` is the
+ * main commit the integration tree was built on, not main as it is now: whole
+ * files are copied from the integration tree, so a newer base would silently
+ * revert main's later edits to those files.
  */
-function buildSurfaceBranch({ name, files, branch, integrationSha, update, date }) {
+function buildSurfaceBranch({ name, files, branch, integrationSha, baseMain, update, date }) {
   try {
     git(["fetch", "origin", `+refs/heads/${branch}:refs/remotes/origin/${branch}`])
   } catch {
     // Branch may not exist yet; --force-with-lease will create it.
   }
-  const base = update ? `origin/${branch}` : "origin/main"
+  const base = update ? `origin/${branch}` : baseMain
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "docs-sync-wt-"))
   try {
     git(["worktree", "add", "--detach", tmp, base])
     if (update) {
       // Preserve human commits on the open PR branch.
-      git(["merge", "origin/main", "--no-edit"], tmp)
+      git(["merge", baseMain, "--no-edit"], tmp)
     }
     // Remove deletions before restoring the rest, so a file→directory change
     // cannot block the checkout of a path under the removed file.
@@ -561,6 +566,7 @@ async function upsertSurface({
   rows,
   openPr,
   integrationSha,
+  baseMain,
 }) {
   const branch = surfaceBranch(name)
   const reviewed = await computeSurfaceReviewers(name, { api, repo, now, map })
@@ -579,7 +585,7 @@ async function upsertSurface({
   const draft = draftReasons.length > 0
 
   const update = Boolean(openPr)
-  buildSurfaceBranch({ name, files, branch, integrationSha, update, date })
+  buildSurfaceBranch({ name, files, branch, integrationSha, baseMain, update, date })
 
   // Append-only: carry rows already on the surface PR body forward.
   let oldChanges = []
@@ -648,60 +654,121 @@ async function upsertSurface({
   }
 }
 
+/**
+ * Write the learned-through marker into the surface PRs learn.mjs read for it
+ * (`numbers`). learn.mjs hands it over when it found nothing new to learn (no
+ * candidate correction, or a validated delta that adds and removes nothing);
+ * the agent job's token is read-only, so this job writes it. Each PR is re-read
+ * just before its PATCH, so an edit made while the agent job ran survives;
+ * GitHub has no conditional update for a pull request body, so a short
+ * read-to-PATCH race remains. Only this repository's own open auto-docs PRs on
+ * a `docs/auto-sync/<surface>` head are patched. One PR's failure warns and
+ * does not skip the rest: a stale marker only re-reads a range already learned
+ * from.
+ */
+async function patchLearnedMarkers({ api, repo, marker, numbers }) {
+  for (const number of numbers) {
+    try {
+      const detail = await api(`/repos/${repo}/pulls/${number}`)
+      const own =
+        detail?.state === "open" &&
+        detail?.head?.repo?.full_name === repo &&
+        isSurfaceBranch(detail?.head?.ref) &&
+        (detail?.labels ?? []).some((l) => l?.name === "auto-docs")
+      if (!own) {
+        console.log(`PR #${number} is not an open auto-docs surface PR of ${repo}; marker not written`)
+        continue
+      }
+      await api(`/repos/${repo}/pulls/${number}`, {
+        method: "PATCH",
+        body: { body: patchLearnedThrough(detail.body ?? "", marker) },
+      })
+      console.log(`PATCHed learned-through marker on PR #${number}`)
+    } catch (err) {
+      console.warn(`::warning::docs-sync: could not PATCH the learned-through marker on PR #${number}: ${err.message}`)
+    }
+  }
+}
+
+/** Most pull request numbers a marker handoff may name (one per surface is the norm). */
+export const MARKER_PRS_MAX = 50
+
 async function main() {
   const { api, appendOutput, appendSummary, repo, searchIssues } = await import("./lib.mjs")
 
   const now = process.env.PROCESSED_THROUGH ?? new Date().toISOString()
   const since = process.env.SINCE ?? "unknown"
   const sinceOverride = process.env.SINCE_OVERRIDE === "true"
-  const mode = ["update", "conflict"].includes(process.env.PREP_MODE) ? process.env.PREP_MODE : "fresh"
   const verified = process.env.VERIFIED === "true"
   const date = now.slice(0, 10)
 
   // The surface map is data, loaded once for the whole run.
   const map = loadSurfaceMap()
 
-  // The agent's run summary is consumed here and never committed.
+  // The agent's run summary, staged by handoff.mjs check, is consumed here and
+  // never committed.
   const agentSummary = readJson(SUMMARY_FILE, [])
   fs.rmSync(SUMMARY_FILE, { force: true })
   const triage = readJson("docs-sync-out/triage.json", [])
   const worthy = readJson("docs-sync-out/worthy.json", [])
   const digest = readJson("docs-sync-out/digest-full.json", [])
 
+  const marker = process.env.MARKER_PATCH ?? ""
+  if (marker) {
+    const list = process.env.MARKER_PRS ?? ""
+    const numbers = /^\d{1,10}(,\d{1,10})*$/.test(list) ? list.split(",") : []
+    if (numbers.length === 0 || numbers.length > MARKER_PRS_MAX) {
+      throw new Error(
+        `MARKER_PRS must list 1 to ${MARKER_PRS_MAX} pull request numbers learn read; got ${JSON.stringify(list.slice(0, 200))}`,
+      )
+    }
+    await patchLearnedMarkers({ api, repo: repo(), marker, numbers })
+  }
+
   // Order matters: compute uncovered BEFORE the no-diff early return so
   // noDiffReport can name every held-back PR.
   const uncovered = computeUncovered({ worthy, summary: agentSummary, triage })
 
-  if (git(["status", "--porcelain", "--", DOCS_PATH]) === "") {
-    console.log("no packages/kilo-docs changes produced; nothing to commit")
+  if (process.env.HAS_EDITS !== "true") {
+    console.log("no packages/kilo-docs changes produced; nothing to publish")
     const { summary, warning } = noDiffReport({ uncovered, sinceOverride })
     appendSummary(summary)
     if (warning) console.warn(`::warning::${warning}`)
     return
   }
 
-  // Git identity is configured once in docs-sync.yml (Configure git identity)
-  // before any commit-creating step, including prepare-branch's merge.
-  git(["add", DOCS_PATH])
-  git(["commit", "-m", `docs: sync with merged PRs (${date})`])
-  const integrationSha = git(["rev-parse", "HEAD"])
+  // The agent job committed the docs diff on the integration branch
+  // (handoff.mjs pack), and handoff.mjs check fetched that commit here.
+  const integrationSha = process.env.INTEGRATION_SHA ?? ""
+  if (!/^[0-9a-f]{40}$/.test(integrationSha)) {
+    throw new Error(`INTEGRATION_SHA must be a commit id when HAS_EDITS is true; got ${JSON.stringify(integrationSha)}`)
+  }
+  const baseMain = process.env.BASE_MAIN ?? ""
+  if (!/^[0-9a-f]{40}$/.test(baseMain)) {
+    throw new Error(`BASE_MAIN must be a commit id when HAS_EDITS is true; got ${JSON.stringify(baseMain)}`)
+  }
 
   // Watermark: now when fully covered; else earliest uncovered merged_at − 1ms.
   // Pass SINCE as fallback so missing digest-full cannot strand uncovered PRs.
   // Computed once (global); per-surface failures never touch it.
   const through = computeProcessedThrough({ uncovered, digest, now, fallback: since })
 
-  // Commit the full diff to the integration branch and push it first, so a
-  // single surface's later failure cannot lose the run's changes. A conflicted
-  // run pushes its dated fallback branch; a normal run pushes the durability
-  // ref (see INTEGRATION_BRANCH).
-  const changedFiles = git(["diff", "--name-only", "origin/main...HEAD", "--", DOCS_PATH]).split("\n").filter(Boolean)
-  const durableBranch = mode === "conflict" ? BRANCH : INTEGRATION_BRANCH
-  git(
-    mode === "update"
-      ? ["push", "origin", `HEAD:refs/heads/${durableBranch}`]
-      : ["push", "--force-with-lease", "origin", `HEAD:refs/heads/${durableBranch}`],
-  )
+  // Push the full diff to the integration branch first, so a single surface's
+  // later failure cannot lose the run's changes. A conflicted run pushes its
+  // dated fallback branch; a normal run pushes the durability ref (see
+  // durableBranch in handoff.mjs). The lease is the tip the agent job built on
+  // (empty: the branch did not exist), so a change pushed to that branch while
+  // the run was going is refused instead of overwritten. It guards honest races
+  // only: the agent job chooses the value, so it is no security check.
+  const changedFiles = git(["diff", "--name-only", `${baseMain}...${integrationSha}`, "--", DOCS_PATH])
+    .split("\n")
+    .filter(Boolean)
+  const durable = durableBranch(BRANCH)
+  const lease = process.env.DURABLE_BASE ?? ""
+  if (!/^([0-9a-f]{40})?$/.test(lease)) {
+    throw new Error(`DURABLE_BASE must be a commit id or empty; got ${JSON.stringify(lease)}`)
+  }
+  git(["push", `--force-with-lease=refs/heads/${durable}:${lease}`, "origin", `${integrationSha}:refs/heads/${durable}`])
 
   try {
     await api(`/repos/${repo()}/labels`, {
@@ -745,6 +812,7 @@ async function main() {
         rows,
         openPr: open.get(name) ?? null,
         integrationSha,
+        baseMain,
       })
       results.push(result)
       console.log(`surface ${name}: ${result.created ? "created" : "updated"} ${result.url} reviewers=${result.reviewers.join(",") || "none"}`)

@@ -3,10 +3,12 @@
 /**
  * Prepares the rolling docs-sync integration branch before the edit pass.
  *
- * The integration branch is always `DEFAULT_BRANCH` (`docs/auto-sync`) and
- * carries the accumulating tree; it has no PR of its own. This step:
- *   - checks it out (fetching it when it exists on origin, else creating it
- *     from origin/main) and merges origin/main via mergeOrFallback
+ * The integration branch is always `DEFAULT_BRANCH` (`docs/auto-sync`, a local
+ * branch only) and carries the accumulating tree; it has no PR of its own.
+ * This step:
+ *   - checks it out from the durability ref `docs/auto-sync-integration` when
+ *     that exists on origin, else from origin/main, and merges origin/main via
+ *     mergeOrFallback
  *   - merges each open per-surface `docs/auto-sync/<surface>` PR branch
  *     (best effort; a per-branch conflict is aborted and skipped)
  *
@@ -135,29 +137,21 @@ async function main() {
   let branch = DEFAULT_BRANCH
   let mode = "fresh"
 
-  // Integration base order: the durability ref, then the bare `docs/auto-sync`
-  // integration ref, then a fresh checkout of origin/main. A dated legacy
-  // branch is never one of these.
+  // Integration base: the durability ref, else a fresh checkout of origin/main.
+  // A bare `docs/auto-sync` branch on origin cannot exist while any
+  // `docs/auto-sync/<surface>` branch does (git refuses a ref that is a path
+  // prefix of another), so it is no base. A dated legacy branch is none either.
   let base = null
-  const bases = [
-    { remote: INTEGRATION_BRANCH, local: INTEGRATION_BRANCH },
-    { remote: DEFAULT_BRANCH, local: `${DEFAULT_BRANCH}-legacy` },
-  ]
-  for (const candidate of bases) {
-    if (base) break
-    try {
-      git(["fetch", "origin", `+refs/heads/${candidate.remote}:refs/remotes/origin/${candidate.local}`])
-      base = `origin/${candidate.local}`
-    } catch {
-      console.log(`branch ${candidate.remote} does not exist on origin yet`)
-    }
+  try {
+    git(["fetch", "origin", `+refs/heads/${INTEGRATION_BRANCH}:refs/remotes/origin/${INTEGRATION_BRANCH}`])
+    base = `origin/${INTEGRATION_BRANCH}`
+  } catch {
+    console.log(`branch ${INTEGRATION_BRANCH} does not exist on origin yet`)
   }
 
+  git(["checkout", "-B", DEFAULT_BRANCH, base ?? "origin/main"])
   if (base) {
-    git(["checkout", "-B", DEFAULT_BRANCH, base])
     ;({ branch, mode } = mergeOrFallback({ branch: DEFAULT_BRANCH, git }))
-  } else {
-    git(["checkout", "-B", DEFAULT_BRANCH, "origin/main"])
   }
 
   // Human commits on a surface PR must stay in the integration tree. A single
@@ -166,34 +160,6 @@ async function main() {
     const ref = String(pr.head?.ref ?? "")
     const name = surfaceNameFromBranch(ref) ?? "unknown"
     if (mergeSurface(git, ref, name)) console.log(`merged ${ref} into ${branch}`)
-  }
-
-  // A ref may not be a path prefix of another ref, so `docs/auto-sync` must be
-  // gone for `docs/auto-sync/<surface>` to exist. Its content already lives in
-  // the integration base and the per-surface branches. Delete it whether or not
-  // an open legacy PR was found: a lingering branch (a closed PR, a partial
-  // cleanup) still blocks every surface push.
-  try {
-    const stale = git(["ls-remote", "--heads", "origin", DEFAULT_BRANCH])
-      .split("\n")
-      .some((line) => line.endsWith(`refs/heads/${DEFAULT_BRANCH}`))
-    if (stale) {
-      try {
-        git(["push", "origin", "--delete", DEFAULT_BRANCH])
-      } catch (err) {
-        console.warn(`::warning::docs-sync: could not delete the legacy branch ${DEFAULT_BRANCH}: ${err.message}`)
-      }
-    }
-  } catch (err) {
-    console.warn(`::warning::docs-sync: could not check for the legacy branch ${DEFAULT_BRANCH}: ${err.message}`)
-  }
-  // Drop the stale remote-tracking ref too, otherwise fetching or pushing a
-  // `docs/auto-sync/<surface>` branch later in the run fails on the
-  // directory/file ref conflict. Deleting a ref that is not present is a no-op.
-  try {
-    git(["update-ref", "-d", `refs/remotes/origin/${DEFAULT_BRANCH}`])
-  } catch (err) {
-    console.warn(`::warning::docs-sync: could not remove the stale ref for ${DEFAULT_BRANCH}: ${err.message}`)
   }
 
   appendOutput("branch", branch)

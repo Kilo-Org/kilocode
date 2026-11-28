@@ -10,16 +10,23 @@
  *   node learn.mjs --apply   — apply: write learnings.json into LEARNINGS.md
  *
  * Env: TRIAGE_MODEL (provider/model, reused), DOCS_SYNC_VARIANT (reasoning effort, default max),
- * GH_TOKEN (or GITHUB_TOKEN).
+ * GH_TOKEN (or GITHUB_TOKEN, read-only: this script makes no GitHub write).
  * Budget: LEARNINGS_BUDGET_MINUTES (default 10).
+ *
+ * Marker routes: a non-empty validated delta sets the `learned_through` output,
+ * which upsert-pr.mjs writes into the surface PR bodies next to the new
+ * LEARNINGS.md. A run that learns nothing new (no candidate correction, or an
+ * empty validated delta) sets `marker_patch`, which the publish job writes into
+ * every open surface PR (upsert-pr.mjs, MARKER_PATCH).
+ *
  * Test hook: DOCS_SYNC_FIXTURE. When set to a fixture JSON path, skips every
- * GitHub API call and writes any marker PATCH to <fixture>.patched instead of
- * the network. The workflow never sets it — only selftests do.
+ * GitHub API call and also writes a handed-over marker to <fixture>.patched.
+ * The workflow never sets it — only selftests do.
  *
  * Test hook: DOCS_SYNC_BACKOFF_MS replaces wait between extraction retries, same as
  * lib.mjs:138 documents for triage.mjs and edit.mjs.
  *
- * Patch suppression: DRY_RUN=true or LEARNINGS_NO_PATCH=1 suppress the marker PATCH.
+ * Patch suppression: DRY_RUN=true or LEARNINGS_NO_PATCH=1 suppress both marker outputs.
  */
 
 import { execFileSync } from "node:child_process"
@@ -44,11 +51,15 @@ const LINE_RE =
 const LEARNED_THROUGH_RE = /<!--\s*docs-sync:\s*learned-through\s+commit=(\S+)\s+comment=(\S+)\s*-->/
 
 // Agent-generated strings land in the PR body next to machine-read markers.
-// Identical to clean() at upsert-pr.mjs:37.
+// Identical to clean() in upsert-pr.mjs: repeat until nothing changes, because
+// one pass over `<!<!----` leaves a new `<!--`.
 function clean(value) {
-  return String(value ?? "")
-    .replaceAll("<!--", "")
-    .replaceAll("-->", "")
+  let text = String(value ?? "")
+  for (;;) {
+    const next = text.replaceAll("<!--", "").replaceAll("-->", "")
+    if (next === text) return text
+    text = next
+  }
 }
 
 function warn(msg) {
@@ -131,15 +142,6 @@ export function renderLearnedThrough({ commit, comment }) {
   const c = commit ?? "none"
   const m = comment ?? "none"
   return `<!-- docs-sync: learned-through commit=${c} comment=${m} -->`
-}
-
-/** Replace or append the learned-through marker in a PR body. Pure — no API call. */
-export function patchMarkerIntoBody(body, marker) {
-  const b = String(body ?? "")
-  if (LEARNED_THROUGH_RE.test(b)) {
-    return b.replace(LEARNED_THROUGH_RE, marker)
-  }
-  return b + "\n" + marker + "\n"
 }
 
 /**
@@ -761,7 +763,7 @@ async function extract() {
   const hasCandidates = candidates.length > 0
 
   if (!hasCandidates) {
-    log("no candidate corrections; advancing marker with no model call")
+    log("no candidate corrections; handing the marker to the publish job with no model call")
     writeEmptyStateArtifacts(existing)
     appendOutput("count", String(existing.length))
     appendSummary(
@@ -769,7 +771,7 @@ async function extract() {
     )
 
     const marker = renderLearnedThrough({ commit: learnedCommit, comment: maxCommentAt })
-    await patchOrLogMarker({ targets, marker, fixture, patchFile })
+    handOffMarker({ marker, targets, fixture, patchFile, appendOutput })
     return
   }
 
@@ -878,17 +880,17 @@ async function extract() {
     // Marker rides through LEARNED_THROUGH into upsert-pr.mjs. No direct PATCH.
   } else {
     // Empty validated delta (nothing added, nothing removed, including every-add-rejected).
-    log("empty validated delta; advancing marker directly")
+    log("empty validated delta; handing the marker to the publish job")
     fs.writeFileSync(`${OUT_DIR}/learnings.json`, JSON.stringify(existing, null, 2))
     writePromptArtifacts(existing)
     appendOutput("count", String(existing.length))
 
     const marker = renderLearnedThrough({ commit: learnedCommit, comment: maxCommentAt })
-    await patchOrLogMarker({ targets, marker, fixture, patchFile })
+    handOffMarker({ marker, targets, fixture, patchFile, appendOutput })
 
     const rejected = validated.rejected.length
     appendSummary(
-      `### docs-sync learnings\n\n- added: 0\n- removed: 0\n- rejected: ${rejected}\n- candidates: ${candidates.length}\n- marker route: direct PATCH (empty delta)\n`,
+      `### docs-sync learnings\n\n- added: 0\n- removed: 0\n- rejected: ${rejected}\n- candidates: ${candidates.length}\n- marker route: publish job (empty delta)\n`,
     )
   }
 }
@@ -920,7 +922,12 @@ function readFileOrEmpty(file) {
   }
 }
 
-async function patchOrLogMarker({ targets, marker, fixture, patchFile }) {
+/**
+ * Hand the marker of a run that learned nothing new to the publish job, with
+ * the numbers of the surface PRs it was computed from; the publish job re-reads
+ * those PRs and PATCHes the marker in. This job's token is read-only.
+ */
+function handOffMarker({ marker, targets, fixture, patchFile, appendOutput }) {
   const suppressed = process.env.DRY_RUN === "true" || process.env.LEARNINGS_NO_PATCH === "1"
 
   if (suppressed) {
@@ -931,39 +938,16 @@ async function patchOrLogMarker({ targets, marker, fixture, patchFile }) {
     return
   }
 
-  if (fixture) {
-    // Write to the fixture patch file instead of the network.
-    fs.writeFileSync(patchFile, marker)
-    log(`wrote marker to ${patchFile}`)
+  const numbers = [...new Set(targets.map((t) => String(t.prNumber)).filter((n) => /^\d{1,10}$/.test(n)))]
+  if (numbers.length === 0 || numbers.length > 50) {
+    warn(`cannot hand over the learned-through marker with ${numbers.length} surface PR numbers (1 to 50 allowed)`)
     return
   }
-
-  // Live PATCH: body-only, one line changed. The job already holds pull-requests: write.
-  // Re-read each body first. The body in hand was fetched before the extraction call, so
-  // patching that copy would drop any edit made in the minutes since. GitHub has no
-  // conditional update for a pull request body, so a short fetch-to-PATCH race remains.
-  const { api, repo } = await import("./lib.mjs")
-  for (const t of targets) {
-    let latestBody = t.prBody
-    try {
-      const fresh = await api(`/repos/${repo()}/pulls/${t.prNumber}`)
-      latestBody = fresh.body ?? ""
-    } catch (err) {
-      warn(`could not re-read PR #${t.prNumber} before the marker PATCH: ${err.message}. Using the earlier body.`)
-    }
-    const newBody = patchMarkerIntoBody(latestBody, marker)
-    try {
-      await api(`/repos/${repo()}/pulls/${t.prNumber}`, {
-        method: "PATCH",
-        body: { body: newBody },
-      })
-      log(`PATCHed learned-through marker on PR #${t.prNumber}`)
-    } catch (err) {
-      // One target's failed PATCH must not skip the remaining targets. On the
-      // next run a stale marker only re-reads a range already learned from, and
-      // the duplicate-rule-text rejection blocks a re-added rule.
-      warn(`could not PATCH the learned-through marker on PR #${t.prNumber}: ${err.message}`)
-    }
+  appendOutput("marker_patch", marker)
+  appendOutput("marker_prs", numbers.join(","))
+  if (fixture) {
+    fs.writeFileSync(patchFile, marker)
+    log(`wrote marker to ${patchFile}`)
   }
 }
 

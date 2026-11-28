@@ -5,18 +5,29 @@ name: docs-sync
 # triages them for docs relevance, runs Kilo CLI headless to update
 # packages/kilo-docs, and maintains one rolling PR for human review.
 #
-# Security posture: scheduled/manual runs check out the dispatched ref and may
-# push/comment with write permissions and org secrets. PR runs (paths-limited to
-# this workflow and .github/docs-sync/**) execute branch code only in a
-# read-only, secretless `selftest` job that never pushes, comments, or calls an
-# LLM. `pull_request` (not `pull_request_target`) keeps fork tokens read-only.
+# Security posture: scheduled/manual runs use two jobs. `sync` checks out the
+# dispatched ref and runs the headless Kilo CLI passes and the docs build in
+# environment `agent`, which admits only main, with a read-only job token and
+# no secret beyond the gateway credentials. `publish` (environment
+# `automation`) downloads its output, checks it with handoff.mjs before any
+# step holds a credential, and only then pushes the docs branches and updates
+# the surface PRs with a write job token. It calls no LLM, installs no package
+# and runs no file from the handoff. PR runs (paths-limited to this workflow and
+# .github/docs-sync/**) execute branch code only in a read-only, secretless
+# `selftest` job that never pushes, comments, or calls an LLM. `pull_request`
+# (not `pull_request_target`) keeps fork tokens read-only.
+#
+# Residual: `sync` still has the Actions cache write that every job of a run
+# gets, and its entries land in main's cache scope. Workflows on main must not
+# trust cache entries as security state (for example, a record of what was
+# already reported or checked).
 #
 # Every headless Kilo CLI pass runs under the committed policy in
 # .github/docs-sync/agent-permissions.json (exported as KILO_CONFIG_CONTENT), so
 # the CLI itself bounds the agent's tools and write paths. Each pass carries only
-# the gateway credentials it calls, the checkout persists no git credential, and
-# the steps that need git authentication get the token from their own
-# environment through the credential helper installed below.
+# the gateway credentials it calls, and no checkout persists a git credential:
+# the publish step that pushes gets the token from its own environment through
+# the credential helper installed in that job.
 #
 # State is derived from the bot's own PRs (watermark marker in the PR body), so
 # missed or failed runs self-heal on the next run.
@@ -39,10 +50,7 @@ on:
       - ".github/docs-sync/**"
       - ".github/workflows/docs-sync.yml"
 
-permissions:
-  contents: write # push the rolling branch, create the auto-docs label
-  pull-requests: write # create/update the rolling PR
-  issues: write # comment on the rolling PR
+permissions: {} # each job declares its own
 
 concurrency:
   group: ${{ github.event_name == 'pull_request' && format('docs-sync-pr-{0}', github.event.pull_request.number) || 'docs-sync' }}
@@ -84,31 +92,28 @@ jobs:
   sync:
     if: github.repository == 'Kilo-Org/kilocode' && github.event_name != 'pull_request'
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    # Budget: 4 setup/collect + 10 learn + 90 triage + 120 edit + 2 verify + 10 fix + 10 re-verify + 2 upsert = 248 min, 2-minute reserve.
+    # Budget: 4 setup/collect + 10 learn + 90 triage + 120 edit + 2 verify + 10 fix + 10 re-verify + 1 handoff = 247 min, 3-minute reserve.
     # These are ceilings, not costs: a caught-up run triages ~2 chunks and edits
     # ~1 batch and finishes in ~25 min. The old 35/50 pair was the binding
     # constraint on backlog drain — run 30306629290 deferred 54 PRs untriaged and
     # 31 unedited purely on budget, with no attempt made. See the throughput note
     # in the PR description for the arithmetic.
     timeout-minutes: 250
+    # The agent job. Environment agent admits only main, so a dispatch on another
+    # branch stops here. The job token only reads: the repository is public, and
+    # every write happens in publish.
+    environment: agent
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      publish: ${{ steps.pack.outputs.publish }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
           fetch-depth: 0 # prepare-branch merges main into the rolling branch
-          persist-credentials: false # git steps authenticate per step, see Install git credential helper
-
-      - name: Install git credential helper
-        # Written outside the worktree, so prepare-branch's branch switches cannot
-        # replace it mid-step. The helper reads the token from the calling step's
-        # own environment, so no credential is written to .git/config.
-        run: |
-          cat > "$RUNNER_TEMP/docs-sync-credential.sh" <<'HELPER'
-          test "$1" = get || exit 0
-          test -n "$GH_TOKEN" || exit 0
-          printf 'username=x-access-token\npassword=%s\n' "$GH_TOKEN"
-          HELPER
-          chmod +x "$RUNNER_TEMP/docs-sync-credential.sh"
+          persist-credentials: false # no step in this job authenticates git; the repository is public
 
       - name: Configure git identity
         run: |
@@ -144,9 +149,6 @@ jobs:
           # The CLI reads these natively; only the steps that call it carry them.
           KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
           KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
-          GIT_CONFIG_COUNT: "1"
-          GIT_CONFIG_KEY_0: credential.helper
-          GIT_CONFIG_VALUE_0: ${{ runner.temp }}/docs-sync-credential.sh
           LEARNINGS_BUDGET_MINUTES: "10"
           DRY_RUN: ${{ inputs.dry_run }}
         run: node .github/docs-sync/learn.mjs
@@ -185,23 +187,20 @@ jobs:
         if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
         uses: ./.github/actions/setup-bun
         with:
-          cache: false # job holds write scopes and secrets
+          cache: false # job holds secrets
 
       - name: Prepare rolling branch
         id: prep
         if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
         env:
           GH_TOKEN: ${{ github.token }}
-          GIT_CONFIG_COUNT: "1"
-          GIT_CONFIG_KEY_0: credential.helper
-          GIT_CONFIG_VALUE_0: ${{ runner.temp }}/docs-sync-credential.sh
         run: node .github/docs-sync/prepare-branch.mjs
 
       # After prepare-branch checks out the rolling branch and merges main, the
-      # worktree holds main's scripts. Restore the dispatched ref's copies so a
-      # branch-dispatch AC9 run actually exercises the fixed code. git restore
-      # (not checkout) leaves them unstaged so upsert-pr's bare commit won't
-      # include them in the docs PR.
+      # worktree holds main's scripts. Restore the dispatched ref's copies so the
+      # rest of the job runs the scripts it started with. git restore (not
+      # checkout) leaves them unstaged so the handoff commit, which adds only
+      # packages/kilo-docs, won't include them in the docs PR.
       - name: Restore docs-sync scripts from the dispatched ref
         if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
         run: git restore --source=${{ github.sha }} -- .github/docs-sync
@@ -285,24 +284,30 @@ jobs:
         if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
         run: node .github/docs-sync/learn.mjs --apply
 
-      - name: Upsert rolling PR
-        if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
+      - name: Package the handoff
+        id: pack
+        if: inputs.dry_run != true
         env:
-          GH_TOKEN: ${{ github.token }}
-          GIT_CONFIG_COUNT: "1"
-          GIT_CONFIG_KEY_0: credential.helper
-          GIT_CONFIG_VALUE_0: ${{ runner.temp }}/docs-sync-credential.sh
-          # Read-only token for the Kilo-Org/cloud history; a cloud surface
-          # falls back to the fixed `other` reviewers when it is unset.
-          CLOUD_REPO_TOKEN: ${{ secrets.CROSS_REPO_ACCESS_TOKEN }}
-          LEARNED_THROUGH: ${{ steps.learn.outputs.learned_through }}
-          PROCESSED_THROUGH: ${{ steps.wm.outputs.now }}
+          HANDOFF_DIR: ${{ runner.temp }}/docs-sync-handoff
+          WORTHY_COUNT: ${{ steps.worthy.outputs.count || '0' }}
           SINCE: ${{ steps.wm.outputs.since }}
+          NOW: ${{ steps.wm.outputs.now }}
           SINCE_OVERRIDE: ${{ steps.wm.outputs.since_override }}
+          LEARNED_THROUGH: ${{ steps.learn.outputs.learned_through }}
+          MARKER_PATCH: ${{ steps.learn.outputs.marker_patch }}
+          MARKER_PRS: ${{ steps.learn.outputs.marker_prs }}
           BRANCH: ${{ steps.prep.outputs.branch }}
-          PREP_MODE: ${{ steps.prep.outputs.mode }}
           VERIFIED: ${{ steps.verified.outputs.ok }}
-        run: node .github/docs-sync/upsert-pr.mjs
+        run: node .github/docs-sync/handoff.mjs pack
+
+      - name: Upload the handoff
+        if: steps.pack.outputs.publish == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: docs-sync-handoff
+          path: ${{ runner.temp }}/docs-sync-handoff/
+          retention-days: 3
+          if-no-files-found: error
 
       - name: Upload run artifacts
         if: always()
@@ -312,3 +317,92 @@ jobs:
           path: docs-sync-out/
           retention-days: 14
           if-no-files-found: ignore
+
+  publish:
+    needs: sync
+    if: >-
+      github.repository == 'Kilo-Org/kilocode' && github.event_name != 'pull_request' &&
+      inputs.dry_run != true && needs.sync.outputs.publish == 'true'
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 15
+    # The publish job: no LLM, no package install, and no file from the handoff
+    # is ever run. handoff.mjs check validates the handoff before the first step
+    # that holds a credential. Read the security posture at the top first.
+    environment: automation
+    permissions:
+      contents: write # push the docs branches, create the auto-docs label
+      pull-requests: write # create and update the surface PRs
+      issues: write # labels, assignees and the PR bodies' markers
+    steps:
+      - name: Require main
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::publish runs only on refs/heads/main, not $GITHUB_REF"
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0 # the handoff bundle's base and the docs branches
+          persist-credentials: false # the upsert step authenticates from its own environment
+
+      - name: Setup Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Download the handoff
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: docs-sync-handoff
+          path: ${{ runner.temp }}/docs-sync-handoff # outside the workspace
+
+      - name: Check the handoff
+        id: check
+        env:
+          HANDOFF_DIR: ${{ runner.temp }}/docs-sync-handoff
+        run: node .github/docs-sync/handoff.mjs check
+
+      - name: Install git credential helper
+        # Written outside the worktree, so upsert-pr's worktrees cannot replace
+        # it. The helper reads the token from the calling step's own environment,
+        # so no credential is written to .git/config.
+        run: |
+          cat > "$RUNNER_TEMP/docs-sync-credential.sh" <<'HELPER'
+          test "$1" = get || exit 0
+          test -n "$GH_TOKEN" || exit 0
+          printf 'username=x-access-token\npassword=%s\n' "$GH_TOKEN"
+          HELPER
+          chmod +x "$RUNNER_TEMP/docs-sync-credential.sh"
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Upsert rolling PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GIT_CONFIG_COUNT: "1"
+          GIT_CONFIG_KEY_0: credential.helper
+          GIT_CONFIG_VALUE_0: ${{ runner.temp }}/docs-sync-credential.sh
+          # Read-only token for the Kilo-Org/cloud history; a cloud surface
+          # falls back to the fixed `other` reviewers when it is unset.
+          CLOUD_REPO_TOKEN: ${{ secrets.CROSS_REPO_ACCESS_TOKEN }}
+          # Every value below comes from the checked handoff, never straight
+          # from the agent job.
+          HAS_EDITS: ${{ steps.check.outputs.has_edits }}
+          INTEGRATION_SHA: ${{ steps.check.outputs.integration_sha }}
+          BASE_MAIN: ${{ steps.check.outputs.base_main }}
+          LEARNED_THROUGH: ${{ steps.check.outputs.learned_through }}
+          MARKER_PATCH: ${{ steps.check.outputs.marker_patch }}
+          MARKER_PRS: ${{ steps.check.outputs.marker_prs }}
+          PROCESSED_THROUGH: ${{ steps.check.outputs.now }}
+          SINCE: ${{ steps.check.outputs.since }}
+          SINCE_OVERRIDE: ${{ steps.check.outputs.since_override }}
+          BRANCH: ${{ steps.check.outputs.branch }}
+          DURABLE_BASE: ${{ steps.check.outputs.durable_base }}
+          VERIFIED: ${{ steps.check.outputs.verified }}
+        run: node .github/docs-sync/upsert-pr.mjs

@@ -27,9 +27,11 @@ import {
   nonContentFiles,
   resolveLearnedThrough,
   patchProcessedThrough,
+  patchLearnedThrough,
   renderBody,
   extractSectionRows,
   surfaceBranch,
+  clean,
 } from "./upsert-pr.mjs"
 import {
   revertTitleKind,
@@ -42,7 +44,6 @@ import {
   parseLearnings,
   renderLearnings,
   parseLearnedThrough,
-  patchMarkerIntoBody,
   parseDelta,
   validateDelta,
   applyDelta,
@@ -1141,6 +1142,30 @@ function case4_routing() {
     })
     assert.ok(!forgedRows.skippedRows[0].includes("<!--"), "clean() must strip <!-- from reasons")
     assert.ok(!forgedRows.skippedRows[0].includes("-->"), "clean() must strip --> from reasons")
+    // One pass over `<!<!----` leaves a new `<!--`; clean() repeats until stable.
+    assert.equal(clean("<!<!----"), "", "clean() must not leave a marker that one pass rebuilds")
+    const nested = clean("a <!<!-- docs-sync:x -->--> b")
+    assert.ok(!nested.includes("<!--") && !nested.includes("-->"), `nested markers must not survive; got ${nested}`)
+    const multiline = routeRows({
+      summary: [{ pr: 10, url: "https://github.com/Kilo-Org/cloud/pull/10", action: "added\n| forged | row |" }],
+      triage: [],
+      uncovered: [],
+    })
+    assert.ok(!multiline.changesRows[0].includes("\n"), "a change row must stay on one line")
+    // A lone carriage return also splits a markdown table row.
+    const lineBreaks = /[\r\n]/
+    const lonelyCr = routeRows({
+      summary: [
+        { pr: 11, url: "https://github.com/Kilo-Org/cloud/pull/11", action: "added\r| forged | row |" },
+        { pr: 12, url: "https://github.com/Kilo-Org/cloud/pull/12", action: "skipped", reason: "no docs\r| forged | row |" },
+      ],
+      triage: [],
+      uncovered: [{ url: "https://github.com/Kilo-Org/cloud/pull/13", reason: "pending\r| forged | row |" }],
+    })
+    for (const row of [...lonelyCr.changesRows, ...lonelyCr.skippedRows, ...lonelyCr.pendingRows]) {
+      assert.ok(!lineBreaks.test(row), `a lone \\r must not split a row; got ${JSON.stringify(row)}`)
+    }
+    assert.equal(lonelyCr.changesRows.length + lonelyCr.skippedRows.length + lonelyCr.pendingRows.length, 3)
     const forgedBody = renderBody({
       date: "2026-07-27",
       since: "s",
@@ -2751,11 +2776,11 @@ Just prose, not a rule line.
     })
     assert.equal(fs.readFileSync(learningsPath, "utf8"), before, "LEARNINGS.md must be byte-unchanged after apply")
 
-    // patchMarkerIntoBody: existing marker → replaced in place
+    // patchLearnedThrough (the publish job's marker PATCH): existing marker → replaced in place
     {
       const oldBody = "some text\n<!-- docs-sync: learned-through commit=old comment=old -->\nmore text\n"
       const newLine = "<!-- docs-sync: learned-through commit=abc comment=2026-01-01 -->"
-      const patched = patchMarkerIntoBody(oldBody, newLine)
+      const patched = patchLearnedThrough(oldBody, newLine)
       assert.ok(patched.includes(newLine), "new marker must be in body")
       assert.ok(!patched.includes("commit=old"), "old marker must be gone")
       assert.equal(
@@ -2765,11 +2790,11 @@ Just prose, not a rule line.
       )
     }
 
-    // patchMarkerIntoBody: no marker → appended
+    // patchLearnedThrough: no marker → appended
     {
       const oldBody = "no marker here\n"
       const newLine = "<!-- docs-sync: learned-through commit=abc comment=2026-01-01 -->"
-      const patched = patchMarkerIntoBody(oldBody, newLine)
+      const patched = patchLearnedThrough(oldBody, newLine)
       assert.ok(patched.includes(newLine))
     }
   }
@@ -3224,11 +3249,11 @@ Just prose, not a rule line.
     assert.ok(!fs.existsSync(editPath), "an empty learnings file must remove learnings-edit.md")
   }
 
-  // 10t — the direct marker PATCH must not overwrite a concurrent body edit
-  // The body read at step 1 predates the extraction call, so learn.mjs must re-read
-  // the body immediately before the PATCH.
+  // 10t — the handed-over marker PATCH must not overwrite a concurrent body edit
+  // learn.mjs makes no GitHub write: it hands the marker over, and the publish
+  // job (upsert-pr.mjs) re-reads each body immediately before its PATCH.
   {
-    console.log("  10t — marker PATCH preserves a concurrent body edit")
+    console.log("  10t — learn hands the marker over; the publish PATCH preserves a concurrent body edit")
     const dir = mktemp("docs-sync-learn-t-")
     initRepoWithIdentity(dir)
     fs.writeFileSync(path.join(dir, "base.txt"), "base\n")
@@ -3237,7 +3262,7 @@ Just prose, not a rule line.
     gitIn(dir, ["checkout", "-b", "docs/auto-sync/cli"])
 
     // github-actions[bot] authored the only branch commit, so there is no candidate
-    // correction and no model call. The run goes straight to the direct marker PATCH.
+    // correction and no model call. The run goes straight to the marker handoff.
     const learningsPath = path.join(dir, "packages", "kilo-docs", "LEARNINGS.md")
     fs.mkdirSync(path.dirname(learningsPath), { recursive: true })
     fs.writeFileSync(learningsPath, renderLearnings([]))
@@ -3273,7 +3298,9 @@ const server = http.createServer((req, res) => {
       return json(res, {
         number: 1,
         body,
-        head: { ref: "docs/auto-sync/cli" },
+        state: "open",
+        head: { ref: "docs/auto-sync/cli", repo: { full_name: "acme/repo" } },
+        labels: [{ name: "auto-docs" }],
         user: { login: "github-actions[bot]" },
       })
     }
@@ -3319,8 +3346,32 @@ server.listen(0, "127.0.0.1", () => fs.writeFileSync(process.env.PORT_FILE, Stri
         },
       })
       assert.equal(result.status, 0, `learn.mjs must succeed against the stub API: ${result.output}`)
+      assert.ok(!fs.existsSync(patchFile), "learn.mjs must not PATCH: its token is read-only")
 
-      assert.ok(fs.existsSync(patchFile), "the run must PATCH the pull request body")
+      const outputs = fs.readFileSync(path.join(dir, "gh-output-t"), "utf8")
+      const marker = outputs.match(/^marker_patch=(.*)$/m)?.[1] ?? ""
+      assert.ok(marker.includes(tip), `learn.mjs must hand over a marker with the new tip; got ${outputs}`)
+      const markerPrs = outputs.match(/^marker_prs=(.*)$/m)?.[1] ?? ""
+      assert.equal(markerPrs, "1", "learn.mjs must hand over the PR numbers it read")
+
+      const publish = runNodeScript(UPSERT_SCRIPT, {
+        cwd,
+        env: {
+          GITHUB_REPOSITORY: "acme/repo",
+          GH_TOKEN: "stub-token",
+          DOCS_SYNC_API_BASE: `http://127.0.0.1:${port}`,
+          PROCESSED_THROUGH: "2026-09-01T00:00:00.000Z",
+          SINCE: "2026-08-01T00:00:00.000Z",
+          HAS_EDITS: "false",
+          MARKER_PATCH: marker,
+          MARKER_PRS: markerPrs,
+          GITHUB_OUTPUT: path.join(dir, "gh-output-t-publish"),
+          GITHUB_STEP_SUMMARY: path.join(dir, "gh-summary-t-publish"),
+        },
+      })
+      assert.equal(publish.status, 0, `upsert-pr.mjs must succeed against the stub API: ${publish.output}`)
+
+      assert.ok(fs.existsSync(patchFile), "the publish run must PATCH the pull request body")
       const patchedBody = JSON.parse(fs.readFileSync(patchFile, "utf8")).body
       assert.ok(patchedBody.includes(humanEdit), "the concurrent body edit must survive the marker PATCH")
       assert.ok(patchedBody.includes(tip), "the PATCH must carry the new tip SHA")
@@ -3506,7 +3557,15 @@ const server = http.createServer((req, res) => {
     if (req.method === "GET" && pullMatch) {
       const n = Number(pullMatch[1])
       const pr = (config.openPrs || []).find((p) => p.number === n) || {}
-      return send(res, 200, { number: n, head: { ref: pr.head || "" }, body: pr.body || "", html_url: "https://example.test/pull/" + n })
+      const repoName = (config.forkPrs || []).includes(n) ? "fork/repo" : "acme/repo"
+      return send(res, 200, {
+        number: n,
+        state: "open",
+        head: { ref: pr.head || "", repo: { full_name: repoName } },
+        labels: [{ name: "auto-docs" }],
+        body: pr.body || "",
+        html_url: "https://example.test/pull/" + n,
+      })
     }
     if (req.method === "GET" && /\\/pulls\\/\\d+\\/comments$/.test(path)) return send(res, 200, [])
     if (req.method === "GET" && path.endsWith("/commits")) {
@@ -3613,7 +3672,27 @@ function setupSurfaceRepo() {
   return { root, repoDir }
 }
 
+// The agent job commits the docs diff (handoff.mjs pack) and the publish job
+// passes the commit and the integration tip it built on (the push lease) to
+// upsert; do the same here before each run.
 function runUpsert(repoDir, root, port, extraEnv = {}) {
+  const dirty = gitIn(repoDir, ["status", "--porcelain", "--", "packages/kilo-docs"]) !== ""
+  if (dirty) {
+    gitIn(repoDir, ["add", "packages/kilo-docs"])
+    gitIn(repoDir, ["commit", "-q", "-m", "docs: sync with merged PRs (test)"])
+  }
+  let durableBase = ""
+  try {
+    durableBase = gitIn(repoDir, ["rev-parse", "--verify", "-q", "refs/remotes/origin/docs/auto-sync-integration"])
+  } catch {
+    durableBase = ""
+  }
+  let baseMain = ""
+  try {
+    baseMain = gitIn(repoDir, ["rev-parse", "--verify", "-q", "refs/remotes/origin/main"])
+  } catch {
+    baseMain = ""
+  }
   return runNodeScript(UPSERT_SCRIPT, {
     cwd: repoDir,
     env: {
@@ -3624,7 +3703,10 @@ function runUpsert(repoDir, root, port, extraEnv = {}) {
       SINCE: "2026-08-01T00:00:00.000Z",
       VERIFIED: "true",
       BRANCH: "docs/auto-sync",
-      PREP_MODE: "update",
+      DURABLE_BASE: dirty ? durableBase : "",
+      BASE_MAIN: dirty ? baseMain : "",
+      HAS_EDITS: dirty ? "true" : "false",
+      INTEGRATION_SHA: dirty ? gitIn(repoDir, ["rev-parse", "HEAD"]) : "",
       GITHUB_OUTPUT: path.join(root, "gh-output"),
       GITHUB_STEP_SUMMARY: path.join(root, "gh-summary"),
       ...extraEnv,
@@ -4038,75 +4120,6 @@ function case17_learnAllSurfaces() {
 }
 
 // ---------------------------------------------------------------------------
-// Case 18 — a lingering legacy ref is deleted without an open legacy PR
-// ---------------------------------------------------------------------------
-function case18_legacyRefDeletedWithoutPr() {
-  console.log("case 18 — a lingering legacy ref is deleted without an open legacy PR")
-  const root = mktemp("docs-sync-prep-legacy-")
-  const originDir = path.join(root, "origin.git")
-  gitIn(root, ["init", "--bare", "origin.git"])
-  const repoDir = path.join(root, "repo")
-  fs.mkdirSync(repoDir)
-  initRepoWithIdentity(repoDir)
-
-  const write = (rel, text) => {
-    const p = path.join(repoDir, rel)
-    fs.mkdirSync(path.dirname(p), { recursive: true })
-    fs.writeFileSync(p, text)
-  }
-  write("packages/kilo-docs/pages/getting-started/base.md", "# base\n")
-  gitIn(repoDir, ["add", "packages/kilo-docs"])
-  gitIn(repoDir, ["commit", "-m", "base"])
-  gitIn(repoDir, ["remote", "add", "origin", originDir])
-  gitIn(repoDir, ["push", "-q", "origin", "main"])
-
-  gitIn(repoDir, ["checkout", "-q", "-b", "docs/auto-sync-integration"])
-  write("packages/kilo-docs/pages/getting-started/integ.md", "# integ\n")
-  gitIn(repoDir, ["add", "packages/kilo-docs"])
-  gitIn(repoDir, ["commit", "-m", "integ"])
-  gitIn(repoDir, ["push", "-q", "origin", "docs/auto-sync-integration"])
-
-  // A legacy docs/auto-sync branch lingers on origin with no open legacy PR.
-  // It must be pushed from a temp branch: origin (like a local repo) refuses to
-  // hold both `docs/auto-sync` and `docs/auto-sync/cli`.
-  gitIn(repoDir, ["checkout", "-q", "-b", "legacy-tmp", "main"])
-  write("packages/kilo-docs/pages/getting-started/legacy.md", "# legacy\n")
-  gitIn(repoDir, ["add", "packages/kilo-docs"])
-  gitIn(repoDir, ["commit", "-m", "legacy"])
-  const legacySha = gitIn(repoDir, ["rev-parse", "HEAD"])
-  gitIn(repoDir, ["push", "-q", "origin", "HEAD:refs/heads/docs/auto-sync"])
-
-  // actions/checkout leaves the remote-tracking ref for every origin branch.
-  gitIn(repoDir, ["update-ref", "refs/remotes/origin/docs/auto-sync", legacySha])
-  gitIn(repoDir, ["checkout", "-q", "main"])
-  gitIn(repoDir, ["branch", "-D", "legacy-tmp"])
-
-  const stub = startSurfaceStub({ openPrs: [{ number: 7, head: "docs/auto-sync/cli", body: "" }] })
-  try {
-    const outputFile = path.join(root, "gh-output")
-    const result = runNodeScript(PREP_SCRIPT, {
-      cwd: repoDir,
-      env: {
-        GITHUB_REPOSITORY: "acme/repo",
-        GH_TOKEN: "stub-token",
-        DOCS_SYNC_API_BASE: `http://127.0.0.1:${stub.port}`,
-        GITHUB_OUTPUT: outputFile,
-      },
-    })
-    assert.equal(result.status, 0, `prepare-branch must exit 0: ${result.output}`)
-
-    const remote = gitIn(repoDir, ["ls-remote", "--heads", "origin", "docs/auto-sync"])
-    assert.equal(remote, "", `the lingering legacy remote branch must be deleted; got:\n${remote}`)
-    assert.throws(
-      () => gitIn(repoDir, ["rev-parse", "--verify", "refs/remotes/origin/docs/auto-sync"]),
-      "the stale remote-tracking ref must be removed",
-    )
-  } finally {
-    stub.child.kill()
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Case 19 — watermark pick and processed-through refresh helpers
 // ---------------------------------------------------------------------------
 function case19_watermarkAndMarkerHelpers() {
@@ -4505,13 +4518,13 @@ function case25_surfaceBranchRecognized() {
 }
 
 // ---------------------------------------------------------------------------
-// Case 26/27 — learn.mjs against the live API path
+// Case 26/27 — learn.mjs against the live API path, then the publish job's marker PATCH
 // ---------------------------------------------------------------------------
 
 /**
  * Repo with a bare origin, `main`, and one bot-authored commit per branch. The
  * only commits past main are the sync job's own, so every branch yields no
- * candidate correction and the run takes the direct marker-PATCH route.
+ * candidate correction and the run takes the marker-handoff route.
  */
 function setupLearnLiveRepo(branches) {
   const root = mktemp("docs-sync-learn-live-")
@@ -4563,22 +4576,72 @@ function runLearnLive(repoDir, root, port) {
   })
 }
 
+/**
+ * The publish half of the marker route: assert learn.mjs made no GitHub write,
+ * then run upsert-pr.mjs with the marker and PR numbers it handed over and no
+ * docs commit. Returns the run and the requests the publish run made.
+ */
+function runPublishMarker(repoDir, root, port, logFile) {
+  const learnLog = readStubLog(logFile)
+  assert.ok(!learnLog.some((e) => e.method !== "GET"), "learn.mjs must make no GitHub write: its token is read-only")
+  const outputs = fs.readFileSync(path.join(root, "gh-output"), "utf8")
+  const marker = outputs.match(/^marker_patch=(.*)$/m)?.[1] ?? ""
+  const markerPrs = outputs.match(/^marker_prs=(.*)$/m)?.[1] ?? ""
+  assert.ok(marker.startsWith("<!-- docs-sync: learned-through"), "learn.mjs must hand over the marker")
+  const result = runNodeScript(UPSERT_SCRIPT, {
+    cwd: repoDir,
+    env: {
+      GITHUB_REPOSITORY: "acme/repo",
+      GH_TOKEN: "stub-token",
+      DOCS_SYNC_API_BASE: `http://127.0.0.1:${port}`,
+      PROCESSED_THROUGH: SURFACE_NOW,
+      SINCE: "2026-08-01T00:00:00.000Z",
+      HAS_EDITS: "false",
+      MARKER_PATCH: marker,
+      MARKER_PRS: markerPrs,
+      GITHUB_OUTPUT: path.join(root, "gh-output-publish"),
+      GITHUB_STEP_SUMMARY: path.join(root, "gh-summary-publish"),
+    },
+  })
+  return { ...result, markerPrs, requests: readStubLog(logFile).slice(learnLog.length) }
+}
+
 // ---------------------------------------------------------------------------
 // Case 26 — a legacy dated auto-sync PR is not a learnings target
 // ---------------------------------------------------------------------------
 function case26_learnIgnoresLegacyPr() {
   console.log("case 26 — learn.mjs ignores a legacy dated auto-sync PR")
-  const { root, repoDir } = setupLearnLiveRepo(["docs/auto-sync/cli", "docs/auto-sync-2026-09-11"])
+  const { root, repoDir } = setupLearnLiveRepo([
+    "docs/auto-sync/cli",
+    "docs/auto-sync/vscode",
+    "docs/auto-sync-2026-09-11",
+  ])
 
+  // #99 has a surface head but comes from a fork: learn may read it, publish
+  // must not write to it.
   const stub = startSurfaceStub({
     openPrs: [
       { number: 14043, head: "docs/auto-sync-2026-09-11", body: "" },
       { number: 77, head: "docs/auto-sync/cli", body: "" },
+      { number: 99, head: "docs/auto-sync/vscode", body: "" },
     ],
+    forkPrs: [99],
   })
   try {
     const result = runLearnLive(repoDir, root, stub.port)
     assert.equal(result.status, 0, `learn.mjs must exit 0: ${result.output}`)
+    const publish = runPublishMarker(repoDir, root, stub.port, stub.logFile)
+    assert.equal(publish.status, 0, `upsert must exit 0: ${publish.output}`)
+    assert.equal(publish.markerPrs, "77,99", "learn hands over exactly the surface PRs it read")
+    assert.ok(
+      !publish.requests.some((e) => e.url.startsWith("/search/issues")),
+      "publish must not search again: it re-reads only the handed-over PRs",
+    )
+    assert.ok(!publish.requests.some((e) => e.url.includes("/pulls/14043")), "publish must not read the dated PR")
+    assert.ok(
+      !publish.requests.some((e) => e.method === "PATCH" && e.url.includes("/pulls/99")),
+      "publish must not write to a PR whose head is in another repository",
+    )
 
     const log = readStubLog(stub.logFile)
     assert.ok(
@@ -4614,12 +4677,109 @@ function case27_patchFailureIsolated() {
   })
   try {
     const result = runLearnLive(repoDir, root, stub.port)
-    assert.equal(result.status, 0, `a failed marker PATCH must not fail the run: ${result.output}`)
+    assert.equal(result.status, 0, `learn.mjs must exit 0: ${result.output}`)
+    const publish = runPublishMarker(repoDir, root, stub.port, stub.logFile)
+    assert.equal(publish.status, 0, `a failed marker PATCH must not fail the run: ${publish.output}`)
 
     const log = readStubLog(stub.logFile)
     assert.ok(
       log.some((e) => e.method === "PATCH" && e.url.includes("/pulls/2")),
       "the remaining target's marker must still be published",
+    )
+
+    // The marker handoff names at most 50 pull requests; 51 fails the run
+    // before any request.
+    const before = readStubLog(stub.logFile).length
+    const tooMany = runNodeScript(UPSERT_SCRIPT, {
+      cwd: repoDir,
+      env: {
+        GITHUB_REPOSITORY: "acme/repo",
+        GH_TOKEN: "stub-token",
+        DOCS_SYNC_API_BASE: `http://127.0.0.1:${stub.port}`,
+        PROCESSED_THROUGH: SURFACE_NOW,
+        SINCE: "2026-08-01T00:00:00.000Z",
+        HAS_EDITS: "false",
+        MARKER_PATCH: "<!-- docs-sync: learned-through commit=none comment=none -->",
+        MARKER_PRS: Array.from({ length: 51 }, (_, i) => i + 1).join(","),
+        GITHUB_OUTPUT: path.join(root, "gh-output-too-many"),
+        GITHUB_STEP_SUMMARY: path.join(root, "gh-summary-too-many"),
+      },
+    })
+    assert.notEqual(tooMany.status, 0, "51 marker PR numbers must be refused")
+    assert.match(tooMany.output, /MARKER_PRS must list 1 to 50 pull request numbers/)
+    assert.equal(readStubLog(stub.logFile).length, before, "a refused list makes no request")
+  } finally {
+    stub.child.kill()
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Case 28 — a durable branch that moved during the run is not overwritten
+// ---------------------------------------------------------------------------
+function case28_movedDurableBranchRefused() {
+  console.log("case 28 — a durable branch that moved during the run is not overwritten")
+  const stub = startSurfaceStub({ openPrs: [] })
+  try {
+    const { root, repoDir } = setupSurfaceRepo()
+    // The agent job saw no integration branch (empty lease); someone pushed one
+    // while the run was going.
+    const mainSha = gitIn(repoDir, ["rev-parse", "main"])
+    gitIn(repoDir, ["push", "-q", "origin", "main:refs/heads/docs/auto-sync-integration"])
+    gitIn(repoDir, ["update-ref", "-d", "refs/remotes/origin/docs/auto-sync-integration"])
+
+    const result = runUpsert(repoDir, root, stub.port)
+    assert.notEqual(result.status, 0, `the lease must refuse the push: ${result.output}`)
+    assert.match(result.output, /stale info|rejected/, "git must report the refused lease")
+    const remote = gitIn(repoDir, ["ls-remote", "--heads", "origin", "docs/auto-sync-integration"])
+    assert.ok(remote.startsWith(mainSha), `the moved branch must keep its tip; got ${remote}`)
+    assert.ok(
+      !readStubLog(stub.logFile).some((e) => e.kind === "create"),
+      "no surface PR may be opened after a refused integration push",
+    )
+  } finally {
+    stub.child.kill()
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Case 29 — surface branches build on the handed-over main, not a newer one
+// ---------------------------------------------------------------------------
+// handoff.mjs check fetches main as it is now, which may be newer than the main
+// the integration tree was built on. A surface branch built on that newer main
+// with the integration's whole files would silently revert main's later edits
+// to those files; built on base_main, the PR shows a conflict instead.
+function case29_surfaceBaseIsHandedOverMain() {
+  console.log("case 29 — surface branches build on the handed-over main, not a newer one")
+  const stub = startSurfaceStub({ openPrs: [] })
+  try {
+    const { root, repoDir } = setupSurfaceRepo()
+    for (const name of ["vscode", "gateway", "other"]) fs.rmSync(path.join(repoDir, SURFACE_PAGE_FILES[name]))
+    const baseMain = gitIn(repoDir, ["rev-parse", "refs/remotes/origin/main"])
+
+    // Main moves on between the jobs and edits the same page the agent wrote.
+    const other = path.join(root, "other")
+    gitIn(root, ["clone", "-q", "-b", "main", path.join(root, "origin.git"), "other"])
+    gitIn(other, ["config", "user.name", "docs-sync-selftest"])
+    gitIn(other, ["config", "user.email", "docs-sync-selftest@example.com"])
+    gitIn(other, ["config", "commit.gpgsign", "false"])
+    const page = path.join(other, SURFACE_PAGE_FILES.cli)
+    fs.mkdirSync(path.dirname(page), { recursive: true })
+    fs.writeFileSync(page, "# written on main after the agent job started\n")
+    gitIn(other, ["add", "-A"])
+    gitIn(other, ["commit", "-q", "-m", "main moves on"])
+    gitIn(other, ["push", "-q", "origin", "HEAD:refs/heads/main"])
+    gitIn(repoDir, ["fetch", "-q", "origin", "main"]) // what handoff.mjs check does
+    const newerMain = gitIn(repoDir, ["rev-parse", "refs/remotes/origin/main"])
+    assert.notEqual(newerMain, baseMain)
+
+    const result = runUpsert(repoDir, root, stub.port, { BASE_MAIN: baseMain })
+    assert.equal(result.status, 0, `upsert must exit 0: ${result.output}`)
+    const cli = gitIn(repoDir, ["ls-remote", "--heads", "origin", "docs/auto-sync/cli"]).split("\t")[0]
+    assert.ok(cli, "the cli surface branch must be pushed")
+    assert.equal(gitIn(repoDir, ["rev-parse", `${cli}^`]), baseMain, "the surface branch must start from base_main")
+    assert.throws(
+      () => gitIn(repoDir, ["merge-base", "--is-ancestor", newerMain, cli]),
+      "the surface branch must not be built on the newer main",
     )
   } finally {
     stub.child.kill()
@@ -4656,7 +4816,6 @@ function main() {
     case15_surfaceUpdate,
     case16_surfaceDeletion,
     case17_learnAllSurfaces,
-    case18_legacyRefDeletedWithoutPr,
     case19_watermarkAndMarkerHelpers,
     case20_upsertRefreshesSkippedMarker,
     case21_twoSurfacesOneUnmapped,
@@ -4666,6 +4825,8 @@ function main() {
     case25_surfaceBranchRecognized,
     case26_learnIgnoresLegacyPr,
     case27_patchFailureIsolated,
+    case28_movedDurableBranchRefused,
+    case29_surfaceBaseIsHandedOverMain,
   ]
   let failed = 0
   for (const fn of cases) {
