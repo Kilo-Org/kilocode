@@ -51,6 +51,7 @@ import { McpEvent } from "@opencode-ai/schema/mcp-event"
 import { McpBrowser } from "./browser"
 import { authFailure } from "@/kilocode/mcp/auth-failure" // kilocode_change
 import * as KiloAuthTelemetry from "@/kilocode/mcp/auth-telemetry" // kilocode_change
+import * as KiloSignIn from "@/kilocode/mcp/sign-in" // kilocode_change
 
 const DEFAULT_TIMEOUT = 30_000
 const CLIENT_OPTIONS = {
@@ -189,6 +190,7 @@ interface AuthResult {
   // kilocode_change start - identifies the flow that opened the browser
   provider?: McpOAuthPendingProvider
   transport?: TransportWithAuth
+  error?: string // why an explicit sign-in obtained no credentials
   // kilocode_change end
 }
 
@@ -992,7 +994,28 @@ const layer = Layer.effect(
       return yield* Effect.tryPromise({
         try: () => {
           const client = createClient(directory)
-          return client.connect(transport).then(async () => {
+          return client.connect(transport).then(async (): Promise<AuthResult> => { // kilocode_change
+            // kilocode_change start - a connection that obtained no credentials is not a sign-in
+            const outcome = await KiloSignIn.settle({
+              name: mcpName,
+              url,
+              provider: authProvider,
+              scope: oauthConfig?.scope,
+            })
+            if (outcome.type !== "authorized") {
+              // The token exchange needs no open session, so the closed transport still completes the flow.
+              await client.close().catch(() => undefined)
+              if (outcome.type === "failed") return { authorizationUrl: "", oauthState, error: outcome.error }
+              if (!capturedUrl)
+                return {
+                  authorizationUrl: "",
+                  oauthState,
+                  error: `MCP server "${mcpName}" did not provide an authorization URL`,
+                }
+              pendingOAuthTransports.set(mcpName, { transport, provider: authProvider })
+              return { authorizationUrl: capturedUrl.toString(), oauthState, provider: authProvider, transport }
+            }
+            // kilocode_change end
             await authProvider.commit()
             return { authorizationUrl: "", oauthState, client } satisfies AuthResult
           })
@@ -1021,6 +1044,12 @@ const layer = Layer.effect(
     ) {
       const result: AuthResult = yield* startAuth(mcpName, { callback: false }) // kilocode_change
       yield* KiloAuthTelemetry.redirect(!!result.authorizationUrl) // kilocode_change
+      // kilocode_change start
+      if (result.error) {
+        yield* KiloAuthTelemetry.uncredentialed()
+        return { status: "failed", error: result.error } satisfies Status
+      }
+      // kilocode_change end
       if (!result.authorizationUrl) {
         const client = "client" in result ? result.client : undefined
         const mcpConfig = yield* requireMcpConfig(mcpName).pipe(
