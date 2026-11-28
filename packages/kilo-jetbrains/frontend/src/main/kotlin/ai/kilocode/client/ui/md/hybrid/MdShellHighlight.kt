@@ -16,7 +16,10 @@ internal object MdShellHighlight {
     private val commit = Regex("^[0-9a-f]{7,40}(?:\\s|$)")
     private val file = Regex("^\\s+.+\\s+\\|\\s+\\d+")
     private val summary = Regex("^\\d+ files? changed(?:,|$)")
-    private val refs = Regex("\\((?:HEAD|origin|main|master|develop|release|feature|bugfix|hotfix|[^)]+/[^)]+)[^)]*\\)")
+    // One group per line, checked in code: a single regex with nested `[^)]+` quantifiers
+    // backtracked cubically on an unclosed "(" in large shell output (#15507).
+    private val group = Regex("\\([^()\\n]*\\)")
+    private val names = listOf("HEAD", "origin", "main", "master", "develop", "release", "feature", "bugfix", "hotfix")
     private val plus = Regex("\\+{2,}")
     private val minus = Regex("-{2,}")
     private val insertions = Regex("\\b\\d+ insertions?\\(\\+\\)")
@@ -63,7 +66,13 @@ internal object MdShellHighlight {
 
     fun applyCommand(editor: EditorEx, text: String) = BashCommandHighlighter.apply(editor, text)
 
-    fun ranges(text: String): List<ShellRange> = buildList {
+    /** True for a git ref decoration such as `(HEAD -> main, origin/main)` or `(feature/x)`. */
+    private fun ref(group: String): Boolean {
+        val inner = group.substring(1, group.length - 1)
+        return names.any { inner.startsWith(it) } || (1 until inner.length - 1).any { inner[it] == '/' }
+    }
+
+    fun ranges(text: CharSequence): List<ShellRange> = buildList {
         fun add(regex: Regex, key: TextAttributesKey) {
             regex.findAll(text).forEach { match ->
                 add(ShellRange(match.range.first, match.range.last + 1, key))
@@ -71,7 +80,9 @@ internal object MdShellHighlight {
         }
 
         add(hash, DefaultLanguageHighlighterColors.NUMBER)
-        add(refs, DefaultLanguageHighlighterColors.KEYWORD)
+        group.findAll(text).forEach { match ->
+            if (ref(match.value)) add(ShellRange(match.range.first, match.range.last + 1, DefaultLanguageHighlighterColors.KEYWORD))
+        }
         add(insertions, DefaultLanguageHighlighterColors.STRING)
         add(deletions, DefaultLanguageHighlighterColors.LINE_COMMENT)
         add(plus, DefaultLanguageHighlighterColors.STRING)
