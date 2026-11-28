@@ -42,6 +42,7 @@ export const AiProvidersNav: NavSection[] = [
         children: "Vercel AI Gateway",
       },
       { href: "/ai-providers/edenai", children: "Eden AI" },
+      { href: "/ai-providers/aistupidlevel", children: "AI Stupid Level" },
     ],
   },
   {
