@@ -187,6 +187,17 @@ test("a marker-only handoff passes without a bundle", () => {
   assert.equal(outputs.integration_sha, "")
 })
 
+test("a marker names at most 50 pull requests", () => {
+  const numbers = (n) => Array.from({ length: n }, (_, i) => i + 1).join(",")
+  const s = scenario()
+  pack({ cwd: s.agent, env: packEnv(s, { WORTHY_COUNT: "0", MARKER_PATCH: MARKER, MARKER_PRS: numbers(50) }) })
+  assert.equal(runCheck(s).outputs.marker_prs, numbers(50))
+
+  const t = scenario()
+  pack({ cwd: t.agent, env: packEnv(t, { WORTHY_COUNT: "0", MARKER_PATCH: MARKER, MARKER_PRS: numbers(51) }) })
+  expectRejected(t, /marker_prs has an invalid value/)
+})
+
 test("pack records the integration tip it built on as the push lease", () => {
   const s = scenario()
   git(s.seed, ["checkout", "-q", "-b", "integ"])

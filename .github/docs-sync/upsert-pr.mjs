@@ -693,22 +693,40 @@ async function patchLearnedMarkers({ api, repo, marker, numbers }) {
   }
 }
 
+/** Most pull request numbers a marker handoff may name (one per surface is the norm). */
+export const MARKER_PRS_MAX = 50
+
 /**
  * Delete a lingering legacy `docs/auto-sync` branch on origin (a closed PR or a
- * partial cleanup still blocks every surface push), leased at the tip the agent
- * job saw (`lease`; empty: it saw none, so nothing is deleted), and drop its
+ * partial cleanup still blocks every surface push), and drop its
  * remote-tracking ref, which actions/checkout creates for every origin branch
- * and which would block fetching a surface branch. Its content already lives in
- * the integration base and the surface branches. The lease guards honest races
- * only: a branch recreated or moved during the run is kept, and that run's
- * surface pushes fail with a warning.
+ * and which would block fetching a surface branch. The branch is deleted only
+ * when `lease` (the tip the agent job reported; empty: it saw none) is part of
+ * the published integration commit, so no legacy content is lost, and only at
+ * that tip (`--force-with-lease`). A tip the run did not incorporate, or a
+ * branch moved during the run, is kept with a warning, and that run's surface
+ * pushes fail. The lease guards honest races only; the reachability check is
+ * what keeps a deletion from dropping commits the run never published.
  */
-function deleteLegacyBranch(lease) {
+function deleteLegacyBranch(lease, integrationSha) {
   if (lease) {
+    let published = false
     try {
-      git(["push", `--force-with-lease=refs/heads/${LEGACY_BRANCH}:${lease}`, "origin", `:refs/heads/${LEGACY_BRANCH}`])
-    } catch (err) {
-      console.warn(`::warning::docs-sync: could not delete the legacy branch ${LEGACY_BRANCH}: ${err.message}`)
+      git(["merge-base", "--is-ancestor", lease, integrationSha])
+      published = true
+    } catch {
+      published = false
+    }
+    if (!published) {
+      console.warn(
+        `::warning::docs-sync: the legacy branch ${LEGACY_BRANCH} at ${lease} is not part of the published commit ${integrationSha}; not deleting it`,
+      )
+    } else {
+      try {
+        git(["push", `--force-with-lease=refs/heads/${LEGACY_BRANCH}:${lease}`, "origin", `:refs/heads/${LEGACY_BRANCH}`])
+      } catch (err) {
+        console.warn(`::warning::docs-sync: could not delete the legacy branch ${LEGACY_BRANCH}: ${err.message}`)
+      }
     }
   }
   try {
@@ -741,10 +759,13 @@ async function main() {
   const marker = process.env.MARKER_PATCH ?? ""
   if (marker) {
     const list = process.env.MARKER_PRS ?? ""
-    if (!/^\d{1,10}(,\d{1,10})*$/.test(list)) {
-      throw new Error(`MARKER_PRS must list the pull request numbers learn read; got ${JSON.stringify(list)}`)
+    const numbers = /^\d{1,10}(,\d{1,10})*$/.test(list) ? list.split(",") : []
+    if (numbers.length === 0 || numbers.length > MARKER_PRS_MAX) {
+      throw new Error(
+        `MARKER_PRS must list 1 to ${MARKER_PRS_MAX} pull request numbers learn read; got ${JSON.stringify(list.slice(0, 200))}`,
+      )
     }
-    await patchLearnedMarkers({ api, repo: repo(), marker, numbers: list.split(",") })
+    await patchLearnedMarkers({ api, repo: repo(), marker, numbers })
   }
 
   // Order matters: compute uncovered BEFORE the no-diff early return so
@@ -812,7 +833,7 @@ async function main() {
   console.log(`docs-sync surface map (${changedFiles.length} changed files):`)
   for (const file of changedFiles) console.log(`  ${surfaceForDoc(file, map)} <- ${file}`)
 
-  deleteLegacyBranch(legacyLease)
+  deleteLegacyBranch(legacyLease, integrationSha)
 
   let open = new Map()
   try {

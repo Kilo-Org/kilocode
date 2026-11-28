@@ -172,7 +172,9 @@ async function main() {
   // `docs/auto-sync` branch blocks every `docs/auto-sync/<surface>` ref. This
   // job's token is read-only: the publish job deletes the branch on origin
   // (upsert-pr.mjs), leased at the tip read here (output legacy_sha; empty when
-  // there is none). Drop the stale local remote-tracking ref here, otherwise a
+  // there is none), and only when that tip is part of the commit it publishes:
+  // this read comes after the merges, so the branch may have moved since. Drop
+  // the stale local remote-tracking ref here, otherwise a
   // fetch of a `docs/auto-sync/<surface>` branch later in this job fails on the
   // directory/file ref conflict. Deleting a ref that is not present is a no-op.
   let legacySha = ""

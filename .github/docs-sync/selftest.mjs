@@ -4196,8 +4196,13 @@ function case18_legacyRefDeletedWithoutPr() {
     stub.child.kill()
   }
 
-  // The legacy branch moves between the jobs: the leased delete must refuse,
-  // and the run's surface push fails with a warning instead of a lost branch.
+  // The agent job incorporated the legacy tip A (`legacySha`) into the
+  // integration tree, as prepare-branch does when the legacy branch is its base.
+  gitIn(repoDir, ["merge", "-q", "--no-edit", legacySha])
+
+  // The legacy branch moves to B between the jobs: the leased delete at A must
+  // refuse, and the run's surface push fails with a warning instead of a lost
+  // branch.
   const movedSha = gitIn(repoDir, ["commit-tree", `${legacySha}^{tree}`, "-p", legacySha, "-m", "moved during the run"])
   gitIn(repoDir, ["push", "-q", "origin", `${movedSha}:refs/heads/docs/auto-sync`])
   write(SURFACE_PAGE_FILES.cli, "# new\n")
@@ -4212,11 +4217,28 @@ function case18_legacyRefDeletedWithoutPr() {
     movedStub.child.kill()
   }
 
-  // With the lease at the tip the agent job saw, upsert deletes the branch and
-  // the remote-tracking ref (recreated by the publish checkout) before it
-  // pushes a surface branch.
+  // The branch moved to B between prepare-branch's merge and its ls-remote, so
+  // the reported tip B matches origin but was never incorporated: upsert must
+  // not delete it.
   gitIn(repoDir, ["update-ref", "refs/remotes/origin/docs/auto-sync", movedSha])
   write(SURFACE_PAGE_FILES.cli, "# new, second run\n")
+  const unseenStub = startSurfaceStub({ openPrs: [] })
+  try {
+    const result = runUpsert(repoDir, root, unseenStub.port, { LEGACY_BASE: movedSha })
+    assert.equal(result.status, 0, `upsert must exit 0: ${result.output}`)
+    assert.match(result.output, /is not part of the published commit/, "an unincorporated tip must be refused")
+    const remote = gitIn(repoDir, ["ls-remote", "--heads", "origin", "docs/auto-sync"])
+    assert.ok(remote.startsWith(movedSha), `a tip the run did not publish must be kept; got:\n${remote}`)
+  } finally {
+    unseenStub.child.kill()
+  }
+
+  // Once the run incorporates B and reports it, upsert deletes the branch and
+  // the remote-tracking ref (recreated by the publish checkout) before it
+  // pushes a surface branch.
+  gitIn(repoDir, ["merge", "-q", "--no-edit", movedSha])
+  gitIn(repoDir, ["update-ref", "refs/remotes/origin/docs/auto-sync", movedSha])
+  write(SURFACE_PAGE_FILES.cli, "# new, third run\n")
   const publishStub = startSurfaceStub({ openPrs: [] })
   try {
     const result = runUpsert(repoDir, root, publishStub.port, { LEGACY_BASE: movedSha })
@@ -4804,6 +4826,28 @@ function case27_patchFailureIsolated() {
       log.some((e) => e.method === "PATCH" && e.url.includes("/pulls/2")),
       "the remaining target's marker must still be published",
     )
+
+    // The marker handoff names at most 50 pull requests; 51 fails the run
+    // before any request.
+    const before = readStubLog(stub.logFile).length
+    const tooMany = runNodeScript(UPSERT_SCRIPT, {
+      cwd: repoDir,
+      env: {
+        GITHUB_REPOSITORY: "acme/repo",
+        GH_TOKEN: "stub-token",
+        DOCS_SYNC_API_BASE: `http://127.0.0.1:${stub.port}`,
+        PROCESSED_THROUGH: SURFACE_NOW,
+        SINCE: "2026-08-01T00:00:00.000Z",
+        HAS_EDITS: "false",
+        MARKER_PATCH: "<!-- docs-sync: learned-through commit=none comment=none -->",
+        MARKER_PRS: Array.from({ length: 51 }, (_, i) => i + 1).join(","),
+        GITHUB_OUTPUT: path.join(root, "gh-output-too-many"),
+        GITHUB_STEP_SUMMARY: path.join(root, "gh-summary-too-many"),
+      },
+    })
+    assert.notEqual(tooMany.status, 0, "51 marker PR numbers must be refused")
+    assert.match(tooMany.output, /MARKER_PRS must list 1 to 50 pull request numbers/)
+    assert.equal(readStubLog(stub.logFile).length, before, "a refused list makes no request")
   } finally {
     stub.child.kill()
   }

@@ -28,9 +28,10 @@
  * the agent job saw them (empty: absent). They decide nothing but whether a
  * branch that moved during the run is overwritten or deleted (it is not). They
  * guard honest races only: the agent job chooses the values, so they are no
- * security check. `marker_prs` lists the pull requests learn.mjs read for the
- * marker; upsert-pr.mjs re-reads each and patches only this repository's own
- * auto-docs surface PRs among them.
+ * security check; upsert-pr.mjs also deletes the legacy branch only when its
+ * leased tip is part of the published commit. `marker_prs` lists the pull
+ * requests learn.mjs read for the marker (at most 50); upsert-pr.mjs re-reads
+ * each and patches only this repository's own auto-docs surface PRs among them.
  *
  * Env (pack): HANDOFF_DIR, WORTHY_COUNT, SINCE, NOW, SINCE_OVERRIDE,
  *   LEARNED_THROUGH, MARKER_PATCH, MARKER_PRS, BRANCH, LEGACY_BASE, VERIFIED.
@@ -87,7 +88,7 @@ const SCALARS = {
   since_override: (v) => v === "true" || v === "false",
   learned_through: (v) => v === "" || LEARNED_THROUGH.test(v),
   marker_patch: (v) => v === "" || LEARNED_THROUGH.test(v),
-  marker_prs: (v) => /^(\d{1,10}(,\d{1,10})*)?$/.test(v),
+  marker_prs: (v) => /^(\d{1,10}(,\d{1,10}){0,49})?$/.test(v),
   branch: (v) => v === "" || /^docs\/auto-sync(-\d{4}-\d{2}-\d{2})?$/.test(v),
   verified: (v) => v === "" || v === "true" || v === "false",
   has_edits: (v) => v === "true" || v === "false",

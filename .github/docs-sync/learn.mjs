@@ -939,8 +939,8 @@ function handOffMarker({ marker, targets, fixture, patchFile, appendOutput }) {
   }
 
   const numbers = [...new Set(targets.map((t) => String(t.prNumber)).filter((n) => /^\d{1,10}$/.test(n)))]
-  if (numbers.length === 0) {
-    warn("no surface PR number to hand over with the learned-through marker")
+  if (numbers.length === 0 || numbers.length > 50) {
+    warn(`cannot hand over the learned-through marker with ${numbers.length} surface PR numbers (1 to 50 allowed)`)
     return
   }
   appendOutput("marker_patch", marker)
