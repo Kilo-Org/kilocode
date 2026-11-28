@@ -367,6 +367,7 @@ export const EditorContext = Schema.Struct({
   openTabs: Schema.optional(Schema.Array(Schema.String)),
   activeFile: Schema.optional(Schema.String),
   shell: Schema.optional(Schema.String),
+  timezone: Schema.optional(Schema.String),
 })
 export type EditorContext = Types.DeepMutable<Schema.Schema.Type<typeof EditorContext>>
 // kilocode_change end

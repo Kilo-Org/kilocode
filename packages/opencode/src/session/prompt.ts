@@ -6,6 +6,7 @@ import fs from "node:fs" // kilocode_change
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import os from "os"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
+import { hostTimezone } from "@/kilocode/editor-context" // kilocode_change
 import { KiloAttachment } from "@/kilocode/session/attachment" // kilocode_change
 import { unavailable } from "@/kilocode/provider/catalog-recovery" // kilocode_change
 import { BoardContext } from "@/kilocode/board/context" // kilocode_change
@@ -645,6 +646,7 @@ export const layer = Layer.effect(
               role: "user",
               agent: input.agent,
               model: { providerID: model.providerID, modelID: model.modelID },
+              editorContext: { timezone: hostTimezone() }, // kilocode_change
             }
             yield* sessions.updateMessage(userMsg)
             const userPart: SessionV1.Part = {
@@ -876,7 +878,7 @@ export const layer = Layer.effect(
         },
         system: input.system,
         format: input.format,
-        editorContext: input.editorContext, // kilocode_change
+        editorContext: { ...input.editorContext, timezone: hostTimezone() }, // kilocode_change
       }
 
       // kilocode_change start - defer Goal model changes until admission succeeds
