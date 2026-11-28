@@ -63,9 +63,9 @@ An author or commenter is a maintainer when one of these is true:
 
 - GitHub shows them as `OWNER`, `MEMBER` or `COLLABORATOR`.
 - Their login is in `.github/community-maintainers.json`.
-- The sweep only: the secret `COMMUNITY_TRIAGE_MEMBER_TOKEN` (`read:org`) shows they are in the org.
+- The sweep only: a Kilo Maintainer app token with `members: read` shows they are in the org.
 
-The label job uses only the first two. It runs on PRs from forks and on issues, so it holds no org credential. The default token cannot see private org members, so they look like normal contributors, and the label job labels their new PRs and issues as community. The next sweep finds them with the member token and removes `community`, `first-time-contributor`, `quick-win` and the status labels from their open PRs and open issues. A `priority:*` label stays. A PR or issue that is closed or merged before the next sweep keeps its labels. If the secret is missing or empty, the sweep fails with a clear message. Org members are never listed in the file.
+The label job uses only the first two. It runs on PRs from forks and on issues, so it holds no org credential. The default token cannot see private org members, so they look like normal contributors, and the label job labels their new PRs and issues as community. The next sweep finds them with the member token and removes `community`, `first-time-contributor`, `quick-win` and the status labels from their open PRs and open issues. A `priority:*` label stays. A PR or issue that is closed or merged before the next sweep keeps its labels. If the member token is missing, the sweep fails with a clear message. Org members are never listed in the file.
 
 Bots are ignored.
 
@@ -263,10 +263,16 @@ New issues get the `community` label, `needs-triage`, `first-time-contributor` f
 | Name | Kind | Needed | Purpose |
 |---|---|---|---|
 | `KILO_AUTO_CLOSE_ENABLED` | Variable | No | `true` lets `kilo-auto-close.yml` close PRs and issues. Set to `false` while community reviews are paused |
-| `COMMUNITY_TRIAGE_MEMBER_TOKEN` | Secret | Yes | Token with `read:org`. The sweep uses it to find private org members |
-| `COMMUNITY_TRIAGE_SLACK_TOKEN` | Secret | No | Slack bot token (`xoxb-`, scope `chat:write`). Posts a summary and threads the lists. The bot must be in the channel |
+| `KILO_MAINTAINER_APP_ID` | Variable | Yes | The Kilo Maintainer app. The sweep mints a token with `members: read` from the app key to find private org members |
 | `COMMUNITY_TRIAGE_SLACK_CHANNEL` | Secret | No | Channel ID (`C...`) for the bot token |
-| `COMMUNITY_TRIAGE_SLACK_WEBHOOK` | Secret | No | Posts the whole queue as one message. Used when there is no bot token, or when the bot post fails |
+
+The sweep reads the app key and the Slack credentials from the Kilo STS bundle of `ci-kilocode-community`, in the `automation` environment (see `.github/actions/kilo-credentials/README.md`), not from repository secrets:
+
+| Bundle key | Purpose |
+|---|---|
+| `KILOCODE_MAINTAINER_APP_KEY` | Private key of the Kilo Maintainer app, for the member token |
+| `KILOCODE_COMMUNITY_TRIAGE_SLACK_TOKEN` | Slack bot token (`xoxb-`, scope `chat:write`). Posts a summary and threads the lists when the channel is set. The bot must be in the channel |
+| `KILOCODE_COMMUNITY_TRIAGE_SLACK_WEBHOOK` | Posts the whole queue as one message. Used when the channel is not set, or when the bot post fails |
 
 Labels are created by the workflows, and their color and description are kept in line with the list in the script. Run "Community sweep" once by hand after merge to create them and label the open PRs.
 

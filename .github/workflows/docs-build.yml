@@ -25,15 +25,9 @@ jobs:
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
-        # kilocode_change start - job uses a repository secret, so skip the shared dependency cache
-        with:
-          cache: false
-        # kilocode_change end
 
       - name: Build site
         run: bun run --filter @kilocode/kilo-docs build
-        env:
-          NEXT_PUBLIC_POSTHOG_KEY: ${{ secrets.POSTHOG_API_KEY }}
 
       - name: Run tests
         run: bun run --filter @kilocode/kilo-docs test

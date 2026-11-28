@@ -24,8 +24,16 @@ jobs:
     if: github.repository == 'Kilo-Org/kilocode'
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 10
+    # The Slack webhook comes from the STS bundle of ci-kilocode-notify, which needs environment
+    # automation (the STS policy accepts only this file at refs/heads/main) and id-token: write. The
+    # job therefore installs no packages and runs only this repository's code: read
+    # .github/actions/kilo-credentials/README.md before adding a step.
+    environment: automation
+    permissions:
+      contents: read
+      id-token: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
@@ -38,16 +46,24 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           mkdir -p .cache
-          bun run script/kilocode/outdated.ts > .cache/report.json
+          bun --no-install script/kilocode/outdated.ts > .cache/report.json
           echo "count=$(jq -r .count .cache/report.json)" >> "$GITHUB_OUTPUT"
           jq -r '.full' .cache/report.json >> "$GITHUB_STEP_SUMMARY"
           # Build real JSON via jq instead of splicing text into a YAML payload.
           jq '{text}' .cache/report.json > .cache/slack-payload.json
 
       - if: steps.report.outputs.count != '0'
-        name: Notify Slack
-        uses: slackapi/slack-github-action@v2.0.0
+        name: Read the STS bundle
+        id: creds
+        uses: ./.github/actions/kilo-credentials
         with:
-          webhook: ${{ secrets.SECURITY_ALERTS_SLACK_WEBHOOK }}
+          workload: ci-kilocode-notify
+          secrets: KILOCODE_SECURITY_ALERTS_SLACK_WEBHOOK
+
+      - if: steps.report.outputs.count != '0'
+        name: Notify Slack
+        uses: slackapi/slack-github-action@485a9d42d3a73031f12ec201c457e2162c45d02d # v2.0.0
+        with:
+          webhook: ${{ steps.creds.outputs.KILOCODE_SECURITY_ALERTS_SLACK_WEBHOOK }}
           webhook-type: incoming-webhook
           payload-file-path: .cache/slack-payload.json
