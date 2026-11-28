@@ -3,7 +3,7 @@ import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import path from "path"
-import { tool, type ModelMessage } from "ai"
+import { tool, type ModelMessage, type Tool } from "ai" // kilocode_change - Tool type for the 128-tool ceiling fixture
 import { Cause, Effect, Exit, Fiber, Layer, Stream } from "effect"
 import { InstanceRef } from "../../src/effect/instance-ref"
 import { HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
@@ -23,6 +23,7 @@ import { Permission } from "@/permission"
 import { LLMAISDK } from "@/session/llm/ai-sdk"
 import { Session as SessionNs } from "@/session/session"
 import { USER_AGENT } from "../../src/installation" // kilocode_change
+import { KiloToolLimit } from "@/kilocode/session/tool-limit" // kilocode_change
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
@@ -629,6 +630,22 @@ function timeout(ms: number) {
     setTimeout(() => reject(new Error(`timed out after ${ms}ms`)), ms)
   })
 }
+
+// kilocode_change start - fixture exceeding the 128-tool provider ceiling (#15926)
+function makeManyTools(total: number): Record<string, Tool> {
+  const tools: Record<string, Tool> = {}
+  for (let i = 0; i < total - 1; i++) {
+    const name = `mcp_srv_tool_${String(i).padStart(3, "0")}`
+    tools[name] = tool({ description: name, inputSchema: z.object({}), execute: async () => ({ output: "" }) })
+  }
+  tools[KiloToolLimit.STRUCTURED_OUTPUT_TOOL] = tool({
+    description: "structured output",
+    inputSchema: z.object({}),
+    execute: async () => ({ output: "" }),
+  })
+  return tools
+}
+// kilocode_change end
 
 function waitStreamingRequest(pathname: string) {
   const request = deferred<Capture>()
@@ -1322,6 +1339,73 @@ describe("session.llm.stream", () => {
     },
   )
 
+  // kilocode_change start - the ai-sdk outbound request must never carry more than 128 tools (#15926)
+  it.instance(
+    "caps the ai-sdk outbound tools array at the 128-tool provider limit",
+    () =>
+      Effect.gen(function* () {
+        const fixture = loadFixture(alibabaQwenFixture.providerID, alibabaQwenFixture.modelID)
+        const request = waitRequest(
+          "/chat/completions",
+          new Response(createChatStream("Hello"), {
+            status: 200,
+            headers: { "Content-Type": "text/event-stream" },
+          }),
+        )
+
+        const resolved = yield* Provider.use.getModel(
+          ProviderV2.ID.make(alibabaQwenFixture.providerID),
+          ModelV2.ID.make(fixture.model.id),
+        )
+        const sessionID = SessionID.make("session-test-tool-limit-aisdk")
+        const agent = {
+          name: "test",
+          mode: "primary",
+          options: {},
+          permission: [{ permission: "*", pattern: "*", action: "allow" }],
+        } satisfies Agent.Info
+
+        yield* drain({
+          user: {
+            id: MessageID.make("msg_user-tool-limit-aisdk"),
+            sessionID,
+            role: "user",
+            time: { created: Date.now() },
+            agent: agent.name,
+            model: { providerID: ProviderV2.ID.make(alibabaQwenFixture.providerID), modelID: resolved.id },
+          } satisfies SessionV1.User,
+          sessionID,
+          model: resolved,
+          agent,
+          system: ["You are a helpful assistant."],
+          messages: [{ role: "user", content: "Hello" }],
+          tools: makeManyTools(130),
+        })
+
+        const capture = yield* Effect.promise(() => request)
+        const tools = capture.body.tools as Array<{ function?: { name?: string } }>
+        expect(tools).toHaveLength(KiloToolLimit.MAX_TOOLS)
+        const names = tools.map((item) => item.function?.name)
+        expect(names).toContain(KiloToolLimit.STRUCTURED_OUTPUT_TOOL)
+        expect(names).toContain("mcp_srv_tool_000")
+        // StructuredOutput is protected and sorts first; the two alphabetically
+        // last MCP tools (127, 128) are the deterministic over-budget drops.
+        expect(names).not.toContain("mcp_srv_tool_127")
+        expect(names).not.toContain("mcp_srv_tool_128")
+      }),
+    {
+      config: () => ({
+        enabled_providers: [alibabaQwenFixture.providerID],
+        provider: {
+          [alibabaQwenFixture.providerID]: {
+            options: { apiKey: "test-key", baseURL: `${state.server!.url.origin}/v1` },
+          },
+        },
+      }),
+    },
+  )
+  // kilocode_change end
+
   it.instance(
     "sends responses API payload for OpenAI models",
     () =>
@@ -1683,6 +1767,75 @@ describe("session.llm.stream", () => {
       }),
     { config: () => openAIConfig(loadFixture("openai", "gpt-5.2").model, "https://injected-openai.test/v1") },
   )
+
+  // kilocode_change start - the native runtime shares the same capped tool record (#15926)
+  it.instance(
+    "caps the native runtime outbound tools array at the 128-tool provider limit",
+    () =>
+      Effect.gen(function* () {
+        const model = loadFixture("openai", "gpt-5.2").model
+        const chunks = [
+          { type: "response.created", response: { id: "resp-tool-limit" } },
+          {
+            type: "response.completed",
+            response: {
+              incomplete_details: null,
+              usage: { input_tokens: 1, output_tokens: 1 },
+            },
+          },
+        ]
+        let captured: Record<string, unknown> | undefined
+        const executor = Layer.succeed(
+          RequestExecutor.Service,
+          RequestExecutor.Service.of({
+            execute: (request) =>
+              Effect.gen(function* () {
+                const web = yield* HttpClientRequest.toWeb(request).pipe(Effect.orDie)
+                captured = (yield* Effect.promise(() => web.json())) as Record<string, unknown>
+                return HttpClientResponse.fromWeb(request, createEventResponse(chunks, true))
+              }),
+          }),
+        )
+
+        const resolved = yield* Provider.use.getModel(ProviderV2.ID.openai, ModelV2.ID.make(model.id))
+        const sessionID = SessionID.make("session-test-native-tool-limit")
+        const agent = {
+          name: "test",
+          mode: "primary",
+          options: {},
+          permission: [{ permission: "*", pattern: "*", action: "allow" }],
+        } satisfies Agent.Info
+
+        yield* drainWith(llmLayerWithExecutor({ executor, flags: { experimentalNativeLlm: true } }), {
+          user: {
+            id: MessageID.make("msg_user-native-tool-limit"),
+            sessionID,
+            role: "user",
+            time: { created: Date.now() },
+            agent: agent.name,
+            model: { providerID: ProviderV2.ID.openai, modelID: resolved.id },
+          } satisfies SessionV1.User,
+          sessionID,
+          model: resolved,
+          agent,
+          system: [],
+          messages: [{ role: "user", content: "Hello" }],
+          tools: makeManyTools(130),
+        })
+
+        const tools = captured?.tools as Array<{ name: string }>
+        expect(tools).toHaveLength(KiloToolLimit.MAX_TOOLS)
+        const names = tools.map((item) => item.name)
+        expect(names).toContain(KiloToolLimit.STRUCTURED_OUTPUT_TOOL)
+        expect(names).toContain("mcp_srv_tool_000")
+        // StructuredOutput is protected and sorts first; the two alphabetically
+        // last MCP tools (127, 128) are the deterministic over-budget drops.
+        expect(names).not.toContain("mcp_srv_tool_127")
+        expect(names).not.toContain("mcp_srv_tool_128")
+      }),
+    { config: () => openAIConfig(loadFixture("openai", "gpt-5.2").model, "https://tool-limit-openai.test/v1") },
+  )
+  // kilocode_change end
 
   it.instance(
     "executes OpenAI tool calls through native runtime",
