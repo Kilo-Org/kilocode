@@ -3,6 +3,7 @@ import { dict as br } from "./autocomplete/br"
 import { dict as bs } from "./autocomplete/bs"
 import { dict as da } from "./autocomplete/da"
 import { dict as de } from "./autocomplete/de"
+import { dict as el } from "./autocomplete/el"
 import { dict as en } from "./autocomplete/en"
 import { type dict as enDict } from "./autocomplete/en"
 import { dict as es } from "./autocomplete/es"
@@ -30,6 +31,7 @@ const bundles: Record<string, Record<string, string>> = {
   bs,
   da,
   de,
+  el,
   en,
   es,
   fa,

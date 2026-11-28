@@ -120,7 +120,8 @@
             "nl",
             "uk",
             "it",
-            "fa"
+            "fa",
+            "el"
           ],
           "enumDescriptions": [
             "Auto (VS Code language)",
@@ -144,7 +145,8 @@
             "Nederlands",
             "Українська",
             "Italiano",
-            "فارسی"
+            "فارسی",
+            "Ελληνικά"
           ]
         },
         "kilo-code.v2.chat.sendWhileRunning": {
@@ -263,7 +265,8 @@
             "nl",
             "uk",
             "it",
-            "fa"
+            "fa",
+            "el"
           ],
           "enumDescriptions": [
             "Sync with UI language",
@@ -287,7 +290,8 @@
             "Nederlands",
             "Українська",
             "Italiano",
-            "فارسی"
+            "فارسی",
+            "Ελληνικά"
           ]
         },
         "kilo-code.v2.autocomplete.model": {

@@ -43,6 +43,7 @@ export const LOCALE_LABELS: Record<Locale, string> = {
   uk: "Українська",
   it: "Italiano",
   fa: "فارسی",
+  el: "Ελληνικά",
 }
 
 const base = { ...appEn, ...uiEn, ...kiloEn }
@@ -58,6 +59,7 @@ const dictionaries: Record<Exclude<Locale, "en">, () => Promise<Dictionary>> = {
   bs: () => import("./language-dictionaries/bs").then(dictionaryExport),
   da: () => import("./language-dictionaries/da").then(dictionaryExport),
   de: () => import("./language-dictionaries/de").then(dictionaryExport),
+  el: () => import("./language-dictionaries/el").then(dictionaryExport),
   es: () => import("./language-dictionaries/es").then(dictionaryExport),
   fa: () => import("./language-dictionaries/fa").then(dictionaryExport),
   fr: () => import("./language-dictionaries/fr").then(dictionaryExport),
