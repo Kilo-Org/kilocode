@@ -25,7 +25,7 @@ This means newly added models and providers are automatically available to your 
 
 Navigate to your organization's **Providers & Models** page to configure access controls.
 
-The page has an **Auto routing** card followed by two tabs.
+The page has an **Auto routing** card followed by the **Models** and **Providers** tabs. Enterprise organizations also see an [**Advanced policies**](/docs/collaborate/enterprise/advanced-policies) tab.
 
 ### Auto routing Card
 
@@ -82,7 +82,7 @@ Provider controls also decide how a router is routed:
 
 ## Model pricing
 
-The model and provider detail dialogs show the price Kilo bills for each model in the **In** and **Out** columns. When Kilo bills a model at a custom discounted rate, the dialog shows the discounted price with the original list price struck through above it, so the saving is visible. Models without a discount show the list price only.
+The model and provider detail dialogs show the price Kilo bills for each model in the **In** and **Out** columns. When OpenRouter and Vercel AI Gateway publish different default prices for the same provider and model, the dialog shows the higher of the two, using each gateway's peak price. Per-provider custom pricing is not applied in these dialogs.
 
 ## Filtering Options
 
