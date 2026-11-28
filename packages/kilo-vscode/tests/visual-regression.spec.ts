@@ -68,6 +68,27 @@ async function settle(page: Page) {
     undefined,
     { timeout: 5_000 },
   )
+  // Pierre paints an unhighlighted fallback (unstyled spans, zero-height blank lines)
+  // until its Shiki worker has the grammar. That fallback is stable long enough for
+  // toHaveScreenshot to accept it on a busy runner, so wait for every diff to render
+  // highlighted lines.
+  await page.waitForFunction(
+    () => {
+      const root = document.querySelector("#storybook-root")
+      if (!root) return false
+      const all = (node: ParentNode): Element[] =>
+        [...node.querySelectorAll("*")].flatMap((el) => (el.shadowRoot ? [el, ...all(el.shadowRoot)] : [el]))
+      return all(root)
+        .filter((el) => el.tagName === "DIFFS-CONTAINER")
+        .every(
+          (el) =>
+            !!el.shadowRoot?.querySelector("[data-line]") &&
+            !el.shadowRoot.querySelector("[data-line] > span:not([style])"),
+        )
+    },
+    undefined,
+    { timeout: 10_000 },
+  )
   await frames()
 }
 
