@@ -293,7 +293,10 @@ describe("signed", () => {
       expect(result.manifest.entries.find((entry) => entry.artifact === "kilo-linux-x64.tar.gz")).toEqual(
         built.manifest.entries.find((entry) => entry.artifact === "kilo-linux-x64.tar.gz"),
       )
-      expect(await Sbom.digests(evidence).then((digest) => digest("kilo-windows-x64.zip"))).toBe(sha)
+      const written = await Bun.file(path.join(evidence, "cli-sbom-evidence.json")).json()
+      expect(
+        written.entries.find((entry: { artifact: string }) => entry.artifact === "kilo-windows-x64.zip").sha256,
+      ).toBe(sha)
       const sums = await Bun.file(path.join(evidence, Sbom.CHECKSUMS)).text()
       expect(sums).toContain(`${sha}  kilo-windows-x64.zip\n`)
       expect(sums).toContain(`${windows.sbomSha256}  kilo-windows-x64.zip.cdx.json\n`)

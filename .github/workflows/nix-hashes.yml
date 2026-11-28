@@ -193,7 +193,7 @@ jobs:
         id: committer
         uses: ./.github/actions/setup-git-committer
         with:
-          kilo-maintainer-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
+          kilo-maintainer-app-id: ${{ vars.KILO_MAINTAINER_APP_ID }}
           kilo-maintainer-app-secret: ${{ steps.creds.outputs.KILOCODE_MAINTAINER_APP_KEY }}
           repositories: kilocode
           permission-contents: write
@@ -255,7 +255,7 @@ jobs:
       - name: Mint a Kilo Maintainer app token
         uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
         with:
-          app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
+          app-id: ${{ vars.KILO_MAINTAINER_APP_ID }}
           private-key: ${{ steps.creds.outputs.KILOCODE_MAINTAINER_APP_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: kilocode

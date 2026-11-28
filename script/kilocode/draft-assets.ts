@@ -18,8 +18,8 @@ import type { Manifest } from "./sbom/manifest.ts"
 
 const MANIFEST = "cli-sbom-evidence.json"
 const SUMS = "kilo-cli-SHA256SUMS"
-const DISTRIBUTION = "cli-distribution-sbom-evidence.json"
-const DISTRIBUTION_SUMS = "kilo-cli-distribution-SHA256SUMS"
+export const DISTRIBUTION = "cli-distribution-sbom-evidence.json"
+export const DISTRIBUTION_SUMS = "kilo-cli-distribution-SHA256SUMS"
 
 /** Names of the distribution evidence: its manifest, checksum file and npm and image sidecars. */
 export function distribution(name: string) {
@@ -49,7 +49,7 @@ export function list(text: string, source: string) {
  * sidecar must have a recorded digest: the fallback `Manifest.checksums` has for a missing one
  * (hashing the file beside it) has no recorded value to check against.
  */
-function sums(entries: Manifest["entries"]) {
+export function sums(entries: Manifest["entries"]) {
   const lines: string[] = []
   for (const entry of [...entries].sort((a, b) => a.artifact.localeCompare(b.artifact))) {
     if (entry.sha256) lines.push(`${entry.sha256}  ${entry.artifact}`)

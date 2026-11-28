@@ -7,7 +7,7 @@
 #
 # Triggers:
 #   - workflow_dispatch: manually from Actions tab (optionally pass a CLI version)
-#   - workflow_call: from publish.yml after draft release assets are uploaded
+#   - workflow_call: from publish.yml, with the CLI archive its smoke-cli job took from the draft release
 #
 # Required secrets (publish.yml passes them explicitly; a manual run reads the
 # repository secrets):
@@ -26,14 +26,14 @@ on:
         type: string
   workflow_call:
     inputs:
-      cli_version:
-        description: "CLI version to test from draft release assets."
-        required: false
+      cli_artifact:
+        description: "Artifact of the calling run that holds kilo-linux-x64.tar.gz."
+        required: true
         type: string
-      waive_bench:
-        description: "Skip the bench tests and record the release exception."
-        type: boolean
-        default: false
+      cli_sha256:
+        description: "SHA-256 the archive must have."
+        required: true
+        type: string
     secrets:
       KILO_API_KEY:
         description: "Kilo Gateway key."
@@ -52,22 +52,14 @@ concurrency:
 permissions: {}
 
 jobs:
-  bench-exception:
-    name: Record bench exception
-    if: inputs.waive_bench
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "The kilo-bench end-to-end tests are paused for stable and prerelease v1 releases until the release runner's BENCH_GITHUB_TOKEN access is approved. Run this workflow manually to verify access, then remove the waiver." >> "$GITHUB_STEP_SUMMARY"
-
   smoke-test:
     name: Smoke Test
-    if: ${{ !inputs.waive_bench }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 30
-    # Draft releases are visible only to tokens with push access, so reading
-    # the CLI archive from publish.yml's draft release needs contents: write.
+    # Published releases and the caller's artifacts need only read access. publish.yml passes the
+    # draft's archive as an artifact (its smoke-cli job holds the push access drafts need).
     permissions:
-      contents: write
+      contents: read
     env:
       # kilo-bench's capture helper requires a Go toolchain >= 1.26. The runner
       # image pins GOTOOLCHAIN=local, so allow Go to fetch the required toolchain.
@@ -113,13 +105,33 @@ jobs:
       - name: Install dependencies
         run: uv sync --no-dev
 
+      - name: Download CLI archive from the calling run
+        if: inputs.cli_artifact != ''
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ inputs.cli_artifact }}
+          path: ${{ runner.temp }}/cli
+
       - name: Download CLI archive
         id: cli
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           VERSION: ${{ inputs.cli_version }}
+          ARTIFACT: ${{ inputs.cli_artifact }}
+          EXPECTED: ${{ inputs.cli_sha256 }}
         run: |
+          if [[ -n "$ARTIFACT" ]]; then
+            ARCHIVE="$RUNNER_TEMP/cli/kilo-linux-x64.tar.gz"
+            ACTUAL="$(sha256sum "$ARCHIVE" | cut -d ' ' -f 1)"
+            if [[ -z "$EXPECTED" || "$ACTUAL" != "$EXPECTED" ]]; then
+              echo "::error::kilo-linux-x64.tar.gz has digest $ACTUAL; the caller recorded ${EXPECTED:-none}."
+              exit 1
+            fi
+            echo "cli_path=$ARCHIVE" >> "$GITHUB_OUTPUT"
+            echo "::notice::Testing the CLI archive of the calling run ($ACTUAL)"
+            exit 0
+          fi
           if [[ -z "$VERSION" ]]; then
             echo "cli_path=" >> "$GITHUB_OUTPUT"
             echo "::notice::Testing latest CLI from npm"

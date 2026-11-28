@@ -521,16 +521,6 @@ export async function distribution(input: {
 
 export const CHECKSUMS = "kilo-cli-SHA256SUMS"
 
-/** Stable AUR and Homebrew recipes use the archive digests checked by the draft uploader. */
-export async function digests(dir: string) {
-  const manifest = await Manifest.read(path.join(dir, Manifest.name("cli")))
-  return (name: string) => {
-    const sha = manifest.entries.find((entry) => entry.artifact === name)?.sha256
-    if (!sha || !/^[a-f0-9]{64}$/.test(sha)) throw new Error(`Missing archive digest for ${name}`)
-    return sha
-  }
-}
-
 /**
  * Produce the full evidence set for a CLI release and report its completeness.
  *
