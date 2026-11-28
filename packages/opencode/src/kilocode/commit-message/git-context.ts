@@ -138,31 +138,35 @@ export function git(args: string[], cwd: string): string {
   return result.stdout.toString().trimEnd()
 }
 
+// Parses `git diff --name-status -z`. Records are NUL-separated so names keep
+// their real bytes; without `-z`, git C-quotes names with non-ASCII characters.
 export function parseNameStatus(output: string): Array<{ status: string; path: string }> {
-  if (!output) return []
-  return output.split("\n").map((line) => {
-    const [status, ...rest] = line.split("\t")
-    let path: string
-    if (status!.startsWith("R")) {
-      // Rename: rest = ["old.ts", "new.ts"], use the new path
-      path = rest[1] ?? rest[0] ?? ""
-    } else {
-      path = rest.join("\t")
-    }
-    return { status: status!, path }
-  })
+  const fields = output.split("\0")
+  const result: Array<{ status: string; path: string }> = []
+  for (let i = 0; fields.at(i); ) {
+    const status = fields.at(i) ?? ""
+    // Renames and copies carry two paths (old, new); use the new path
+    const pair = status.startsWith("R") || status.startsWith("C")
+    result.push({ status, path: fields.at(pair ? i + 2 : i + 1) ?? "" })
+    i += pair ? 3 : 2
+  }
+  return result
 }
 
+// Parses `git status --porcelain -z`. Each record is `XY path`; a rename or
+// copy record is followed by one more field holding the source path. Without
+// `-z`, git C-quotes names with spaces or non-ASCII characters.
 export function parsePorcelain(output: string): Array<{ status: string; path: string }> {
-  if (!output) return []
-  return output
-    .split("\n")
-    .filter((line) => line.length > 0)
-    .map((line) => {
-      const xy = line.slice(0, 2)
-      const filepath = line.slice(3)
-      return { status: xy.trim(), path: filepath }
-    })
+  const fields = output.split("\0")
+  const result: Array<{ status: string; path: string }> = []
+  for (let i = 0; i < fields.length; i++) {
+    const line = fields.at(i)
+    if (!line) continue
+    const xy = line.slice(0, 2)
+    result.push({ status: xy.trim(), path: line.slice(3) })
+    if (xy.includes("R") || xy.includes("C")) i++
+  }
+  return result
 }
 
 export function mapStatus(code: string): FileChange["status"] {
@@ -183,11 +187,11 @@ export async function getGitContext(repoPath: string, selectedFiles?: string[]):
   const recentCommits = log ? log.split("\n") : []
 
   // Check staged files first
-  const staged = parseNameStatus(git(["diff", "--name-status", "--cached"], repoPath))
+  const staged = parseNameStatus(git(["diff", "--name-status", "-z", "--cached"], repoPath))
   const useStaged = staged.length > 0
 
   // Fall back to all changes if nothing staged
-  const raw = useStaged ? staged : parsePorcelain(git(["status", "--porcelain"], repoPath))
+  const raw = useStaged ? staged : parsePorcelain(git(["status", "--porcelain", "-z"], repoPath))
 
   const selected = selectedFiles ? new Set(selectedFiles) : undefined
 
