@@ -226,8 +226,6 @@ jobs:
         id: verify
         if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
         continue-on-error: true
-        env:
-          NEXT_PUBLIC_POSTHOG_KEY: ${{ secrets.POSTHOG_API_KEY }}
         run: |
           set -o pipefail
           { bun run --filter @kilocode/kilo-docs build && bun run --filter @kilocode/kilo-docs test; } 2>&1 | tee docs-sync-out/verify.log
@@ -264,8 +262,6 @@ jobs:
         if: steps.verify.outcome == 'failure'
         continue-on-error: true
         timeout-minutes: 10
-        env:
-          NEXT_PUBLIC_POSTHOG_KEY: ${{ secrets.POSTHOG_API_KEY }}
         run: |
           set -o pipefail
           # This step decides the outcome: a failed build or test fails it, and
