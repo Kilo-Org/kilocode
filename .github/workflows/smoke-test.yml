@@ -63,7 +63,7 @@ jobs:
     if: inputs.waive_bench
     runs-on: ubuntu-latest
     steps:
-      - run: echo "The kilo-bench end-to-end tests are paused for stable and prerelease v1 releases until the release runner's BENCH_GITHUB_TOKEN access is approved. Run this workflow manually to verify access, then remove the waiver." >> "$GITHUB_STEP_SUMMARY"
+      - run: echo "The kilo-bench end-to-end tests are waived for this release by WAIVE_BENCH in publish.yml. Run the smoke test manually to verify bench access, then set WAIVE_BENCH back to \"false\"." >> "$GITHUB_STEP_SUMMARY"
 
   smoke-test:
     name: Smoke Test

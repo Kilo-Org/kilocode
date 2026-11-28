@@ -40,13 +40,12 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.oidc_check && '
 permissions:
   contents: read # kilocode_change
 
-# kilocode_change start - temporary: waive the private kilo-bench gate for stable and prerelease
-# v1 releases until BENCH_GITHUB_TOKEN access is approved. Standalone smoke-test dispatch still runs
-# the bench so access can be verified. While it is "true", smoke-cli is skipped and the smoke test
-# only records the exception. Job conditions and reusable-workflow inputs cannot read `env`, so
+# kilocode_change start - the private kilo-bench gate runs in the pre-publish smoke test. Setting
+# WAIVE_BENCH to "true" waives it for a release: smoke-cli is then skipped and the smoke test only
+# records the exception. Job conditions and reusable-workflow inputs cannot read `env`, so
 # release-draft passes it on as its output `waive-bench`.
 env:
-  WAIVE_BENCH: "true"
+  WAIVE_BENCH: "false"
 # kilocode_change end
 
 jobs:
@@ -1585,6 +1584,8 @@ jobs:
           AUR_KEY_FILE: ${{ steps.creds.outputs.KILOCODE_AUR_KEY_FILE }}
           MANIFEST: ${{ runner.temp }}/build/cli-sbom-evidence.json
           VERSION: ${{ needs.release-draft.outputs.version }}
+          # Read-only, to tell a re-run of an older release from a recipe that is wrongly ahead.
+          GITHUB_TOKEN: ${{ github.token }}
         run: node script/kilocode/package-managers.ts aur "$MANIFEST" "$VERSION"
 
       # Runs even when the AUR update failed; either failure fails the job.
@@ -1593,6 +1594,7 @@ jobs:
         env:
           MANIFEST: ${{ runner.temp }}/build/cli-sbom-evidence.json
           VERSION: ${{ needs.release-draft.outputs.version }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: node script/kilocode/package-managers.ts homebrew "$MANIFEST" "$VERSION"
 
       - name: Remove key files

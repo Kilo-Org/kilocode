@@ -11,8 +11,15 @@
  *   node script/kilocode/package-managers.ts homebrew <cli-sbom-evidence.json> <version>
  *
  * `aur` reads the SSH key path from AUR_KEY_FILE. `homebrew` clones over HTTPS and gets its token from
- * the git credential helper that setup-git-committer registers. Each target is left unchanged when it
- * already has the files of this version, so a re-run pushes nothing new.
+ * the git credential helper that setup-git-committer registers. Both refuse a pre-release version:
+ * the job runs for final releases only. Each target is left unchanged when it already has the files
+ * of this version, so a re-run pushes nothing new.
+ *
+ * Both targets refuse to move a recipe backwards: when the clone already publishes a newer version
+ * than the one this run publishes, the update is skipped with a warning, or fails when the run
+ * publishes the latest GitHub release, because a recipe can only be ahead of an older re-run. The
+ * latest release comes from KILO_LATEST_RELEASE, or from the GitHub API with the job's read-only
+ * `GITHUB_TOKEN`.
  */
 
 import { execFileSync } from "node:child_process"
@@ -76,6 +83,61 @@ function split(version: string) {
   if (!VERSION.test(version)) throw new Error(`Invalid release version ${JSON.stringify(version)}`)
   const dash = version.indexOf("-")
   return dash < 0 ? { pkgver: version, subver: "" } : { pkgver: version.slice(0, dash), subver: version.slice(dash) }
+}
+
+/** Orders two release versions: the numbers field by field, then `1.2.3` after `1.2.3-rc.1`. */
+export function compare(a: string, b: string) {
+  const dashA = a.indexOf("-")
+  const dashB = b.indexOf("-")
+  const x = (dashA < 0 ? a : a.slice(0, dashA)).split(".").map(Number)
+  const y = (dashB < 0 ? b : b.slice(0, dashB)).split(".").map(Number)
+  for (let i = 0; i < 3; i++) {
+    const mine = x[i] ?? 0
+    const theirs = y[i] ?? 0
+    if (mine !== theirs) return mine - theirs
+  }
+  const left = dashA < 0 ? "" : a.slice(dashA + 1)
+  const right = dashB < 0 ? "" : b.slice(dashB + 1)
+  if (left === right) return 0
+  if (!left) return 1
+  if (!right) return -1
+  return left.localeCompare(right, "en", { numeric: true })
+}
+
+/**
+ * A version read back from a recipe, or undefined unless it is one this script publishes. A recipe
+ * can carry a pre-release when someone edited it by hand; it then compares like any other version.
+ */
+function accepted(value: string | undefined) {
+  return value !== undefined && VERSION.test(value) ? value : undefined
+}
+
+/** The version a PKGBUILD publishes: `pkgver` with `_subver` appended when it has one. */
+export function pkgbuildVersion(text: string | undefined) {
+  if (text === undefined) return undefined
+  const pkgver = /^[ \t]*pkgver=([^\s]+)$/m.exec(text)?.[1]
+  if (pkgver === undefined) return undefined
+  const subver = /^[ \t]*_subver=(.*)$/m.exec(text)?.[1] ?? ""
+  return accepted(`${pkgver}${subver}`)
+}
+
+/**
+ * The version a Homebrew formula publishes, taken from its download URLs so a pre-release keeps its
+ * suffix; the formula's own `version` line does not carry one.
+ */
+export function formulaVersion(text: string | undefined) {
+  if (text === undefined) return undefined
+  const url = /\/releases\/download\/v([^/\s]+)\//.exec(text)?.[1]
+  const line = /^[ \t]*version[ \t]+"([^"\n]+)"/m.exec(text)?.[1]
+  return accepted(url ?? line)
+}
+
+/** The text of a file in the clone, or undefined when the clone has no such file. */
+async function cloneText(dir: string, name: string) {
+  return await readFile(path.join(dir, name), "utf8").catch((err: NodeJS.ErrnoException) => {
+    if (err.code === "ENOENT") return undefined
+    throw err
+  })
 }
 
 // pkgbuild() and srcinfo() describe the same package: change both together (the .SRCINFO must be
@@ -213,6 +275,10 @@ export type Update = {
   branch?: string
   /** File name in the repository root, and its full contents. */
   files: Record<string, string>
+  /** The version `files` publish. */
+  version?: string
+  /** Reads the version the clone publishes, or undefined when it has none. */
+  published?: (dir: string) => Promise<string | undefined>
   message: string
   /** Extra environment for git, for example GIT_SSH_COMMAND. */
   env?: Record<string, string>
@@ -222,11 +288,42 @@ export type Update = {
 }
 
 /**
+ * The latest published release version, or undefined when it cannot be read. KILO_LATEST_RELEASE
+ * overrides the lookup; otherwise the GitHub API answers with the job's read-only token.
+ */
+export async function latestRelease() {
+  const override = process.env.KILO_LATEST_RELEASE
+  if (override !== undefined) return accepted(override.replace(/^v/, ""))
+  const token = process.env.GITHUB_TOKEN
+  try {
+    const response = await fetch("https://api.github.com/repos/Kilo-Org/kilocode/releases/latest", {
+      headers: {
+        accept: "application/vnd.github+json",
+        "user-agent": "kilocode-package-managers",
+        ...(token ? { authorization: `Bearer ${token}` } : {}),
+      },
+      signal: AbortSignal.timeout(10_000),
+    })
+    if (!response.ok) return undefined
+    const body: unknown = await response.json()
+    const tag = typeof body === "object" && body !== null ? Reflect.get(body, "tag_name") : undefined
+    return typeof tag === "string" ? accepted(tag.replace(/^v/, "")) : undefined
+  } catch {
+    return undefined
+  }
+}
+
+/** A recipe ahead of the latest release: a retry cannot fix it, so the update fails at once. */
+export class RecipeAheadError extends Error {}
+
+/**
  * Clones `remote`, writes `files`, and commits and pushes them unless the clone already has them.
+ * With `version` and `published`, a clone that already publishes a newer version is left as it is
+ * with a warning, unless this run publishes the latest release, which no recipe may be ahead of.
  * A failed clone, commit or push (for example a push that lost a race) starts again from a new
  * clone, up to `attempts` times; the last error fails the update.
  */
-export async function update(input: Update): Promise<"pushed" | "unchanged"> {
+export async function update(input: Update): Promise<"pushed" | "unchanged" | "skipped"> {
   const attempts = input.attempts ?? 3
   const env = {
     ...process.env,
@@ -243,6 +340,21 @@ export async function update(input: Update): Promise<"pushed" | "unchanged"> {
     try {
       git(["clone", "--quiet", input.remote, dir])
       if (input.branch) git(["checkout", "--quiet", input.branch], dir)
+      if (input.version !== undefined && input.published) {
+        const current = await input.published(dir)
+        if (current !== undefined && compare(current, input.version) > 0) {
+          const ahead = `${input.remote} publishes v${current}, newer than the v${input.version} this run publishes`
+          const latest = await latestRelease()
+          if (latest === input.version) {
+            throw new RecipeAheadError(
+              `${ahead}, and v${latest} is the latest release. Nothing was pushed; check the recipe by hand.`,
+            )
+          }
+          const freshness = latest === undefined ? "the latest release is unknown" : `the latest release is v${latest}`
+          console.log(`::warning::${ahead}; leaving it unchanged (${freshness}).`)
+          return "skipped"
+        }
+      }
       for (const [name, text] of Object.entries(input.files)) await regular(path.join(dir, name), text)
       git(["add", "--", ...Object.keys(input.files)], dir)
       const diff = execFileSync("git", ["diff", "--cached", "--name-only"], { cwd: dir, env, encoding: "utf8" })
@@ -251,7 +363,7 @@ export async function update(input: Update): Promise<"pushed" | "unchanged"> {
       git(["push", "--quiet", "origin", "HEAD"], dir)
       return "pushed"
     } catch (err) {
-      if (attempt >= attempts) throw err
+      if (err instanceof RecipeAheadError || attempt >= attempts) throw err
       console.warn(`attempt ${attempt}/${attempts} for ${input.remote} failed; starting again from a new clone`)
       await sleep(input.wait ?? 5_000)
     } finally {
@@ -291,7 +403,16 @@ export function sshCommand(key: string, known: string) {
   ].join(" ")
 }
 
+/** Refuses anything but a final release version: the package-managers job runs for finals only. */
+function requireFinal(version: string) {
+  if (!VERSION.test(version)) throw new Error(`Invalid release version ${JSON.stringify(version)}`)
+  if (version.includes("-")) {
+    throw new Error(`Package managers publish final releases only, not pre-release ${JSON.stringify(version)}`)
+  }
+}
+
 export async function aur(version: string, digest: Digests, key: string, remote = AUR_REMOTE) {
+  requireFinal(version)
   // ssh rejects a private key without its final newline; the secret store may have dropped it.
   if (!(await readFile(key, "utf8")).endsWith("\n")) await appendFile(key, "\n")
   const root = await mkdtemp(path.join(process.env.RUNNER_TEMP || os.tmpdir(), "aur-hosts-"))
@@ -301,6 +422,8 @@ export async function aur(version: string, digest: Digests, key: string, remote 
     return await update({
       remote,
       branch: "master",
+      version,
+      published: async (dir) => pkgbuildVersion(await cloneText(dir, "PKGBUILD")),
       files: { PKGBUILD: pkgbuild(version, digest), ".SRCINFO": srcinfo(version, digest) },
       message: `Update to v${version}`,
       env: { GIT_SSH_COMMAND: sshCommand(key, known) },
@@ -311,7 +434,14 @@ export async function aur(version: string, digest: Digests, key: string, remote 
 }
 
 export async function homebrew(version: string, digest: Digests, remote = TAP_REMOTE) {
-  return update({ remote, files: { "kilo.rb": formula(version, digest) }, message: `Update to v${version}` })
+  requireFinal(version)
+  return update({
+    remote,
+    version,
+    published: async (dir) => formulaVersion(await cloneText(dir, "kilo.rb")),
+    files: { "kilo.rb": formula(version, digest) },
+    message: `Update to v${version}`,
+  })
 }
 
 if (import.meta.main) {
@@ -319,7 +449,7 @@ if (import.meta.main) {
   if ((target !== "aur" && target !== "homebrew") || !manifest || !version) {
     throw new Error("Usage: package-managers.ts aur|homebrew <cli-sbom-evidence.json> <version>")
   }
-  if (!VERSION.test(version)) throw new Error(`Invalid release version ${JSON.stringify(version)}`)
+  requireFinal(version)
   const digest = digests(await readFile(manifest, "utf8"), version)
   if (target === "aur") {
     const key = process.env.AUR_KEY_FILE
