@@ -2,7 +2,12 @@
 
 Reads the job's secret bundle from Kilo STS and sets each requested secret as a step output.
 
-**Callers.** Nine jobs read an STS bundle. Each takes only the keys in its `secrets:` input.
+**Callers.** Nine jobs read an STS bundle. Each action call requests only the keys in its `secrets:`
+input. That input limits what the action requests, not what STS serves: STS returns the whole
+bundle of the policy that matches the job. `publish-jetbrains.yml` and
+`publish-jetbrains-bundled.yml` share the policy `ci-kilocode-release-jetbrains`, so the `bundle`
+job, which requests only the signing key, chain and password, can also obtain the Marketplace
+token until that policy is split per workflow.
 
 | Workflow | Job | Workload and environment | Use |
 |---|---|---|---|
