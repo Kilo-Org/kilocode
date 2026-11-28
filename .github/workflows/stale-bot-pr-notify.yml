@@ -28,8 +28,17 @@ jobs:
     if: github.repository == 'Kilo-Org/kilocode'
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 5
+    # The Slack webhook comes from the STS bundle of ci-kilocode-notify, which needs environment
+    # automation (the STS policy accepts only this file at refs/heads/main) and id-token: write. The
+    # job therefore installs no packages and runs only this repository's code: read
+    # .github/actions/kilo-credentials/README.md before adding a step.
+    environment: automation
+    permissions:
+      contents: read
+      pull-requests: read
+      id-token: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
@@ -107,12 +116,20 @@ jobs:
           # bot-prs.ts builds the Slack JSON, so PR titles (free text) never
           # reach the payload through Actions expressions. It collapses PRs
           # that touch the same package into one line.
-          bun run script/kilocode/bot-prs.ts .cache/bots.json .cache/flagged.json > .cache/slack-payload.json
+          bun --no-install script/kilocode/bot-prs.ts .cache/bots.json .cache/flagged.json > .cache/slack-payload.json
+
+      - if: steps.build.outputs.flagged != '[]'
+        name: Read the STS bundle
+        id: creds
+        uses: ./.github/actions/kilo-credentials
+        with:
+          workload: ci-kilocode-notify
+          secrets: KILOCODE_SECURITY_ALERTS_SLACK_WEBHOOK
 
       - if: steps.build.outputs.flagged != '[]'
         name: Notify Slack
-        uses: slackapi/slack-github-action@v2.0.0
+        uses: slackapi/slack-github-action@485a9d42d3a73031f12ec201c457e2162c45d02d # v2.0.0
         with:
-          webhook: ${{ secrets.SECURITY_ALERTS_SLACK_WEBHOOK }}
+          webhook: ${{ steps.creds.outputs.KILOCODE_SECURITY_ALERTS_SLACK_WEBHOOK }}
           webhook-type: incoming-webhook
           payload-file-path: .cache/slack-payload.json

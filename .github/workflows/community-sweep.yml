@@ -30,8 +30,19 @@ jobs:
     if: github.repository == 'Kilo-Org/kilocode'
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 30
+    # The Kilo Maintainer app key and the Slack credentials come from the STS bundle of
+    # ci-kilocode-community, which needs environment automation (the STS policy accepts only this
+    # file at refs/heads/main) and id-token: write. The job therefore installs no packages and runs
+    # only this repository's code: read .github/actions/kilo-credentials/README.md before adding a
+    # step.
+    environment: automation
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+      id-token: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
@@ -39,40 +50,58 @@ jobs:
         with:
           install: false
 
+      - name: Read the STS bundle
+        id: creds
+        uses: ./.github/actions/kilo-credentials
+        with:
+          workload: ci-kilocode-community
+          secrets: |
+            KILOCODE_MAINTAINER_APP_KEY
+            KILOCODE_COMMUNITY_TRIAGE_SLACK_TOKEN
+            KILOCODE_COMMUNITY_TRIAGE_SLACK_WEBHOOK
+
+      # GITHUB_TOKEN cannot see private org members. This token can only read org membership and
+      # is revoked when the job ends.
+      - name: Mint an org membership token
+        id: member-token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
+        with:
+          app-id: ${{ vars.KILO_MAINTAINER_APP_ID }}
+          private-key: ${{ steps.creds.outputs.KILOCODE_MAINTAINER_APP_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: kilocode
+          permission-members: read
+
+      # A manual run with Slack turned off posts nothing. The script posts with the bot token
+      # only when the channel is set too.
+      - name: Check Slack
+        id: slack
+        env:
+          POST: ${{ github.event_name != 'workflow_dispatch' || inputs.slack }}
+          SLACK_CHANNEL: ${{ secrets.COMMUNITY_TRIAGE_SLACK_CHANNEL }}
+        run: |
+          echo "post=$POST" >> "$GITHUB_OUTPUT"
+          if [ -n "$SLACK_CHANNEL" ]; then echo "api=true" >> "$GITHUB_OUTPUT"; fi
+
       - name: Sweep
         id: sweep
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-          MEMBER_TOKEN: ${{ secrets.COMMUNITY_TRIAGE_MEMBER_TOKEN }}
+          MEMBER_TOKEN: ${{ steps.member-token.outputs.token }}
           SLACK_PAYLOAD: ${{ runner.temp }}/slack-payload.json
-          # Optional. With both set, the sweep posts a short summary and puts
-          # the lists in a thread. Without them, or if that post fails, the
-          # webhook below is used.
-          # Both stay empty when a manual run turns Slack off.
-          SLACK_TOKEN: ${{ (github.event_name != 'workflow_dispatch' || inputs.slack) && secrets.COMMUNITY_TRIAGE_SLACK_TOKEN || '' }}
-          SLACK_CHANNEL: ${{ (github.event_name != 'workflow_dispatch' || inputs.slack) && secrets.COMMUNITY_TRIAGE_SLACK_CHANNEL || '' }}
-        run: bun run script/kilocode/community-triage.ts sweep
-
-      # A step cannot read its own env in `if`, so a small step exposes the
-      # secret to itself only and passes on whether it is set.
-      - name: Check Slack webhook
-        id: slack
-        env:
-          SLACK_WEBHOOK: ${{ secrets.COMMUNITY_TRIAGE_SLACK_WEBHOOK }}
-          SLACK_TOKEN: ${{ secrets.COMMUNITY_TRIAGE_SLACK_TOKEN }}
-          SLACK_CHANNEL: ${{ secrets.COMMUNITY_TRIAGE_SLACK_CHANNEL }}
-        # The script posts with the bot token only when the token and the channel are both set.
-        run: |
-          echo "post=${{ github.event_name != 'workflow_dispatch' || inputs.slack }}" >> "$GITHUB_OUTPUT"
-          echo "webhook=${{ env.SLACK_WEBHOOK != '' }}" >> "$GITHUB_OUTPUT"
-          echo "api=${{ env.SLACK_TOKEN != '' && env.SLACK_CHANNEL != '' }}" >> "$GITHUB_OUTPUT"
+          # With both set, the sweep posts a short summary and puts the lists
+          # in a thread. Without them, or if that post fails, the webhook
+          # below is used. Both stay empty when a manual run turns Slack off.
+          SLACK_TOKEN: ${{ steps.slack.outputs.post == 'true' && steps.creds.outputs.KILOCODE_COMMUNITY_TRIAGE_SLACK_TOKEN || '' }}
+          SLACK_CHANNEL: ${{ steps.slack.outputs.post == 'true' && secrets.COMMUNITY_TRIAGE_SLACK_CHANNEL || '' }}
+        run: bun --no-install script/kilocode/community-triage.ts sweep
 
       - name: Notify Slack
         # Use the webhook when the bot API is not set up, or when its post failed.
-        if: steps.slack.outputs.post == 'true' && steps.slack.outputs.webhook == 'true' && (steps.slack.outputs.api != 'true' || steps.sweep.outputs.slack_failed == 'true')
-        uses: slackapi/slack-github-action@v2.0.0
+        if: steps.slack.outputs.post == 'true' && (steps.slack.outputs.api != 'true' || steps.sweep.outputs.slack_failed == 'true')
+        uses: slackapi/slack-github-action@485a9d42d3a73031f12ec201c457e2162c45d02d # v2.0.0
         with:
-          webhook: ${{ secrets.COMMUNITY_TRIAGE_SLACK_WEBHOOK }}
+          webhook: ${{ steps.creds.outputs.KILOCODE_COMMUNITY_TRIAGE_SLACK_WEBHOOK }}
           webhook-type: incoming-webhook
           payload-file-path: ${{ runner.temp }}/slack-payload.json

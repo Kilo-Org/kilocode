@@ -23,20 +23,54 @@ permissions:
   security-events: read
 
 jobs:
+  # The Kilo Maintainer app key comes from the STS bundle of ci-kilocode-scan-notify, which needs
+  # environment automation (the STS policy accepts only this file at refs/heads/main) and
+  # id-token: write. The job therefore runs only pinned actions, this repository's
+  # kilo-credentials action, gh and jq: read .github/actions/kilo-credentials/README.md before
+  # adding a step.
   list-findings:
     if: github.repository == 'Kilo-Org/kilocode'
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 5
+    environment: automation
+    permissions:
+      contents: read
+      vulnerability-alerts: read
+      security-events: read
+      id-token: write
     outputs:
       matrix: ${{ steps.build.outputs.matrix }}
     steps:
+      - name: Checkout the kilo-credentials action
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/actions/kilo-credentials
+
+      - name: Read the STS bundle
+        id: creds
+        uses: ./.github/actions/kilo-credentials
+        with:
+          workload: ci-kilocode-scan-notify
+          secrets: KILOCODE_MAINTAINER_APP_KEY
+
+      # GITHUB_TOKEN cannot read secret scanning alerts. This token can read only those, on this
+      # repository, and is revoked when the job ends.
+      - name: Mint a secret scanning token
+        id: scan-token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
+        with:
+          app-id: ${{ vars.KILO_MAINTAINER_APP_ID }}
+          private-key: ${{ steps.creds.outputs.KILOCODE_MAINTAINER_APP_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: kilocode
+          permission-secret-scanning-alerts: read
+
       - id: build
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Optional. The default token cannot read secret scanning alerts on
-          # every plan. A token with the secret_scanning_alerts scope is used
-          # for that one call only. Without it, the call uses GH_TOKEN.
-          SECRET_SCAN_TOKEN: ${{ secrets.SECURITY_SCAN_TOKEN }}
+          # Used for the secret scanning call only.
+          SCAN_TOKEN: ${{ steps.scan-token.outputs.token }}
           REPO: ${{ github.repository }}
           # 15 matches an observed real critical deadline; 30 is a guess.
           CRIT_DAYS: ${{ vars.SECURITY_SLA_CRITICAL_DAYS || '15' }}
@@ -56,15 +90,14 @@ jobs:
           }
           dependabot=$(fetch dependabot/alerts)
 
-          # Code scanning returns 404 when it is not enabled, and secret
-          # scanning is not readable with the default GITHUB_TOKEN on every
-          # plan (set the SECURITY_SCAN_TOKEN secret to fix that). A source that cannot be read is skipped with a warning, so it
-          # never hides the Dependabot findings.
+          # Code scanning returns 404 when it is not enabled, and so does
+          # secret scanning. A source that cannot be read is skipped with a
+          # warning, so it never hides the Dependabot findings.
           if ! code=$(fetch code-scanning/alerts 2>/dev/null); then
             echo "::warning::could not read code scanning alerts, skipping them"
             code='[]'
           fi
-          if ! secrets=$(GH_TOKEN="${SECRET_SCAN_TOKEN:-$GH_TOKEN}" fetch secret-scanning/alerts 2>/dev/null); then
+          if ! secrets=$(GH_TOKEN="$SCAN_TOKEN" fetch secret-scanning/alerts 2>/dev/null); then
             echo "::warning::could not read secret scanning alerts, skipping them"
             secrets='[]'
           fi
@@ -109,16 +142,32 @@ jobs:
           ')
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
 
+  # The Slack webhook comes from the STS bundle of ci-kilocode-scan-notify, which needs environment
+  # automation (the STS policy accepts only this file at refs/heads/main) and id-token: write. Each
+  # leg therefore runs only pinned actions, this repository's kilo-credentials action and jq, and
+  # reads the bundle only when it posts: read .github/actions/kilo-credentials/README.md before
+  # adding a step.
   notify:
     needs: list-findings
     if: needs.list-findings.outputs.matrix != '[]'
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 5
+    environment: automation
+    permissions:
+      contents: read
+      id-token: write
     strategy:
       fail-fast: false
       matrix:
         include: ${{ fromJson(needs.list-findings.outputs.matrix) }}
     steps:
+      # Before the cache restore: a checkout empties the workspace.
+      - name: Checkout the kilo-credentials action
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/actions/kilo-credentials
+
       # API values (summary, URL, etc.) go through `env:`/`jq --arg`, never
       # spliced via `${{ }}` into a script or payload -- avoids script
       # injection from free-text advisory summaries.
@@ -142,7 +191,7 @@ jobs:
           fi
 
       - id: cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: .cache/security-notified
           key: ${{ steps.key.outputs.value }}
@@ -179,10 +228,18 @@ jobs:
           jq -n --arg text "$text" '{text: $text}' > .cache/slack-payload.json
 
       - if: steps.cache.outputs.cache-hit != 'true'
-        name: Notify Slack
-        uses: slackapi/slack-github-action@v2.0.0
+        name: Read the STS bundle
+        id: creds
+        uses: ./.github/actions/kilo-credentials
         with:
-          webhook: ${{ secrets.SECURITY_ALERTS_SLACK_WEBHOOK }}
+          workload: ci-kilocode-scan-notify
+          secrets: KILOCODE_SECURITY_ALERTS_SLACK_WEBHOOK
+
+      - if: steps.cache.outputs.cache-hit != 'true'
+        name: Notify Slack
+        uses: slackapi/slack-github-action@485a9d42d3a73031f12ec201c457e2162c45d02d # v2.0.0
+        with:
+          webhook: ${{ steps.creds.outputs.KILOCODE_SECURITY_ALERTS_SLACK_WEBHOOK }}
           webhook-type: incoming-webhook
           payload-file-path: .cache/slack-payload.json
 
@@ -191,7 +248,7 @@ jobs:
         run: mkdir -p .cache/security-notified && date -u > .cache/security-notified/marker
 
       - if: success() && steps.cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: .cache/security-notified
           key: ${{ steps.key.outputs.value }}
