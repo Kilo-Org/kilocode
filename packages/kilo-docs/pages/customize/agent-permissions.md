@@ -173,6 +173,8 @@ permission:
 
 This allows delegation only to `code-reviewer` and `docs-writer`.
 
+These rules gate the subagent calls an agent decides to make. When you name a subagent yourself with an `@` mention, its `task` rule does not apply, so a rule limits what the agent may delegate to rather than what you invoke directly.
+
 ## Troubleshooting
 
 - If a specific rule appears to be ignored, check whether a later catch-all also matches.

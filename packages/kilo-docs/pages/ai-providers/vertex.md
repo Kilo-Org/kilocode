@@ -74,6 +74,8 @@ A `location` or `project` set in the provider `options` takes precedence over th
 }
 ```
 
+Kilo reads the location from the provider `options`, then from `GOOGLE_VERTEX_LOCATION`, `GOOGLE_CLOUD_LOCATION`, or `VERTEX_LOCATION`, and finally falls back to `us-central1`. A blank value counts as unset. The location must be a Google Cloud region or multi-region name, such as `us-central1`, `europe-west4`, `eu`, or `global`; Kilo trims and lowercases it and reports a configuration error for any other value. It validates the location only when the request endpoint is derived from it, so a provider that sets its own endpoint keeps working.
+
 Then set your default model:
 
 ```jsonc

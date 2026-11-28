@@ -46,6 +46,16 @@ You can use your Claude account to sign in to Kilo. Signing in does not change w
 [Add credits to your account](https://app.kilo.ai/profile), or sign up for [Kilo Pass](https://kilo.ai/pricing/kilo-pass).
 {% /callout %}
 
+## When Kilo rejects your login
+
+If the Kilo Gateway rejects your stored login — for example, because the credential expired or was revoked — Kilo Code asks you to sign in again instead of showing a generic error:
+
+- **VS Code** — the chat shows a **Sign in** card. Select it to open the Kilo Profile tab and start the device login.
+- **CLI** — the TUI shows a signed-out block with the `/connect` and `kilo auth login` hints, and `kilo run` names `kilo auth login` in its error output. See [Kilo Code CLI](/docs/code-with-ai/platforms/cli).
+- **JetBrains** — the login card opens **User Profile** settings, and the session continues once you sign in again. See [JetBrains](/docs/code-with-ai/platforms/jetbrains).
+
+After you sign in, resend your message.
+
 ## Kilo Gateway API Key
 
 If you're using the [Kilo AI Gateway](/docs/gateway/) outside of the Kilo Code extension (for example, with the Vercel AI SDK or OpenAI SDK), you'll need an API key:
