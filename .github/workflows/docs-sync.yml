@@ -17,6 +17,11 @@ name: docs-sync
 # `selftest` job that never pushes, comments, or calls an LLM. `pull_request`
 # (not `pull_request_target`) keeps fork tokens read-only.
 #
+# Residual: `sync` still has the Actions cache write that every job of a run
+# gets, and its entries land in main's cache scope. Workflows on main must not
+# trust cache entries as security state (for example, a record of what was
+# already reported or checked).
+#
 # Every headless Kilo CLI pass runs under the committed policy in
 # .github/docs-sync/agent-permissions.json (exported as KILO_CONFIG_CONTENT), so
 # the CLI itself bounds the agent's tools and write paths. Each pass carries only
@@ -291,7 +296,6 @@ jobs:
           LEARNED_THROUGH: ${{ steps.learn.outputs.learned_through }}
           MARKER_PATCH: ${{ steps.learn.outputs.marker_patch }}
           BRANCH: ${{ steps.prep.outputs.branch }}
-          PREP_MODE: ${{ steps.prep.outputs.mode }}
           VERIFIED: ${{ steps.verified.outputs.ok }}
         run: node .github/docs-sync/handoff.mjs pack
 
@@ -396,6 +400,6 @@ jobs:
           SINCE: ${{ steps.check.outputs.since }}
           SINCE_OVERRIDE: ${{ steps.check.outputs.since_override }}
           BRANCH: ${{ steps.check.outputs.branch }}
-          PREP_MODE: ${{ steps.check.outputs.mode }}
+          DURABLE_BASE: ${{ steps.check.outputs.durable_base }}
           VERIFIED: ${{ steps.check.outputs.verified }}
         run: node .github/docs-sync/upsert-pr.mjs

@@ -51,11 +51,15 @@ const LINE_RE =
 const LEARNED_THROUGH_RE = /<!--\s*docs-sync:\s*learned-through\s+commit=(\S+)\s+comment=(\S+)\s*-->/
 
 // Agent-generated strings land in the PR body next to machine-read markers.
-// Identical to clean() at upsert-pr.mjs:37.
+// Identical to clean() in upsert-pr.mjs: repeat until nothing changes, because
+// one pass over `<!<!----` leaves a new `<!--`.
 function clean(value) {
-  return String(value ?? "")
-    .replaceAll("<!--", "")
-    .replaceAll("-->", "")
+  let text = String(value ?? "")
+  for (;;) {
+    const next = text.replaceAll("<!--", "").replaceAll("-->", "")
+    if (next === text) return text
+    text = next
+  }
 }
 
 function warn(msg) {

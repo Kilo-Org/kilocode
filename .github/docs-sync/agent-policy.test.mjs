@@ -9,6 +9,11 @@
  * which holds the write token, runs no agent step and checks the handoff
  * before any step holds a credential.
  *
+ * Not covered here, by design: the agent job still has the Actions cache write
+ * that every job of a run gets, and its entries land in main's cache scope.
+ * Workflows on main must not trust cache entries as security state; the
+ * workflow's posture comment says so, and a check below keeps that note.
+ *
  * Run: node .github/docs-sync/agent-policy.test.mjs
  */
 
@@ -524,9 +529,22 @@ check("the publish steps read the agent job's values only through the check", ()
     assert.ok(!block.includes("needs.sync"), `publish step "${block.split("\n")[0]}" must not read needs.sync`)
   }
   const upsert = step("Upsert rolling PR", publishJob())
-  for (const key of ["HAS_EDITS", "INTEGRATION_SHA", "LEARNED_THROUGH", "MARKER_PATCH", "PROCESSED_THROUGH", "BRANCH"]) {
+  for (const key of [
+    "HAS_EDITS",
+    "INTEGRATION_SHA",
+    "DURABLE_BASE",
+    "LEARNED_THROUGH",
+    "MARKER_PATCH",
+    "PROCESSED_THROUGH",
+    "BRANCH",
+  ]) {
     assert.match(upsert, new RegExp(`${key}: \\$\\{\\{ steps\\.check\\.outputs\\.\\w+ \\}\\}`), `${key} must come from the check`)
   }
+})
+
+check("the posture comment records the agent job's cache scope", () => {
+  assert.match(workflow, /^# Residual: `sync` still has the Actions cache write/m)
+  assert.match(workflow, /^# trust cache entries as security state/m)
 })
 
 check("CROSS_REPO_ACCESS_TOKEN reaches only the publish upsert step", () => {

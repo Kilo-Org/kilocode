@@ -31,6 +31,7 @@ import {
   renderBody,
   extractSectionRows,
   surfaceBranch,
+  clean,
 } from "./upsert-pr.mjs"
 import {
   revertTitleKind,
@@ -1141,6 +1142,16 @@ function case4_routing() {
     })
     assert.ok(!forgedRows.skippedRows[0].includes("<!--"), "clean() must strip <!-- from reasons")
     assert.ok(!forgedRows.skippedRows[0].includes("-->"), "clean() must strip --> from reasons")
+    // One pass over `<!<!----` leaves a new `<!--`; clean() repeats until stable.
+    assert.equal(clean("<!<!----"), "", "clean() must not leave a marker that one pass rebuilds")
+    const nested = clean("a <!<!-- docs-sync:x -->--> b")
+    assert.ok(!nested.includes("<!--") && !nested.includes("-->"), `nested markers must not survive; got ${nested}`)
+    const multiline = routeRows({
+      summary: [{ pr: 10, url: "https://github.com/Kilo-Org/cloud/pull/10", action: "added\n| forged | row |" }],
+      triage: [],
+      uncovered: [],
+    })
+    assert.ok(!multiline.changesRows[0].includes("\n"), "a change row must stay on one line")
     const forgedBody = renderBody({
       date: "2026-07-27",
       since: "s",
@@ -3635,12 +3646,19 @@ function setupSurfaceRepo() {
 }
 
 // The agent job commits the docs diff (handoff.mjs pack) and the publish job
-// passes the commit to upsert; do the same here before each run.
+// passes the commit and the integration tip it built on (the push lease) to
+// upsert; do the same here before each run.
 function runUpsert(repoDir, root, port, extraEnv = {}) {
   const dirty = gitIn(repoDir, ["status", "--porcelain", "--", "packages/kilo-docs"]) !== ""
   if (dirty) {
     gitIn(repoDir, ["add", "packages/kilo-docs"])
     gitIn(repoDir, ["commit", "-q", "-m", "docs: sync with merged PRs (test)"])
+  }
+  let durableBase = ""
+  try {
+    durableBase = gitIn(repoDir, ["rev-parse", "--verify", "-q", "refs/remotes/origin/docs/auto-sync-integration"])
+  } catch {
+    durableBase = ""
   }
   return runNodeScript(UPSERT_SCRIPT, {
     cwd: repoDir,
@@ -3652,7 +3670,7 @@ function runUpsert(repoDir, root, port, extraEnv = {}) {
       SINCE: "2026-08-01T00:00:00.000Z",
       VERIFIED: "true",
       BRANCH: "docs/auto-sync",
-      PREP_MODE: "update",
+      DURABLE_BASE: dirty ? durableBase : "",
       HAS_EDITS: dirty ? "true" : "false",
       INTEGRATION_SHA: dirty ? gitIn(repoDir, ["rev-parse", "HEAD"]) : "",
       GITHUB_OUTPUT: path.join(root, "gh-output"),
@@ -4714,6 +4732,34 @@ function case27_patchFailureIsolated() {
 }
 
 // ---------------------------------------------------------------------------
+// Case 28 — a durable branch that moved during the run is not overwritten
+// ---------------------------------------------------------------------------
+function case28_movedDurableBranchRefused() {
+  console.log("case 28 — a durable branch that moved during the run is not overwritten")
+  const stub = startSurfaceStub({ openPrs: [] })
+  try {
+    const { root, repoDir } = setupSurfaceRepo()
+    // The agent job saw no integration branch (empty lease); someone pushed one
+    // while the run was going.
+    const mainSha = gitIn(repoDir, ["rev-parse", "main"])
+    gitIn(repoDir, ["push", "-q", "origin", "main:refs/heads/docs/auto-sync-integration"])
+    gitIn(repoDir, ["update-ref", "-d", "refs/remotes/origin/docs/auto-sync-integration"])
+
+    const result = runUpsert(repoDir, root, stub.port)
+    assert.notEqual(result.status, 0, `the lease must refuse the push: ${result.output}`)
+    assert.match(result.output, /stale info|rejected/, "git must report the refused lease")
+    const remote = gitIn(repoDir, ["ls-remote", "--heads", "origin", "docs/auto-sync-integration"])
+    assert.ok(remote.startsWith(mainSha), `the moved branch must keep its tip; got ${remote}`)
+    assert.ok(
+      !readStubLog(stub.logFile).some((e) => e.kind === "create"),
+      "no surface PR may be opened after a refused integration push",
+    )
+  } finally {
+    stub.child.kill()
+  }
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 function main() {
@@ -4753,6 +4799,7 @@ function main() {
     case25_surfaceBranchRecognized,
     case26_learnIgnoresLegacyPr,
     case27_patchFailureIsolated,
+    case28_movedDurableBranchRefused,
   ]
   let failed = 0
   for (const fn of cases) {

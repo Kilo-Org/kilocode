@@ -85,7 +85,9 @@ function scenario() {
   const agent = path.join(root, "agent")
   clone(origin, agent)
   git(agent, ["checkout", "-q", "-b", "docs/auto-sync"])
-  return { root, origin, seed, agent, handoff: path.join(root, "handoff") }
+  // The commit the run started from (GITHUB_SHA in the publish job).
+  const runSha = git(seed, ["rev-parse", "HEAD"])
+  return { root, origin, seed, agent, runSha, handoff: path.join(root, "handoff") }
 }
 
 function packEnv(s, extra = {}) {
@@ -98,7 +100,6 @@ function packEnv(s, extra = {}) {
     LEARNED_THROUGH: "",
     MARKER_PATCH: "",
     BRANCH: "docs/auto-sync",
-    PREP_MODE: "update",
     VERIFIED: "true",
     ...extra,
   }
@@ -108,15 +109,15 @@ function packEnv(s, extra = {}) {
 function runCheck(s) {
   const publish = path.join(s.root, `publish-${fs.readdirSync(s.root).length}`)
   clone(s.origin, publish)
-  return { publish, outputs: check({ cwd: publish, env: { HANDOFF_DIR: s.handoff } }) }
+  return { publish, outputs: check({ cwd: publish, env: { HANDOFF_DIR: s.handoff, GITHUB_SHA: s.runSha } }) }
 }
 
-function expectRejected(s, pattern) {
+function expectRejected(s, pattern, env = { GITHUB_SHA: s.runSha }) {
   let publish
   assert.throws(() => {
     publish = path.join(s.root, `publish-${fs.readdirSync(s.root).length}`)
     clone(s.origin, publish)
-    check({ cwd: publish, env: { HANDOFF_DIR: s.handoff } })
+    check({ cwd: publish, env: { HANDOFF_DIR: s.handoff, ...env } })
   }, pattern)
   assert.ok(!fs.existsSync(path.join(publish, "docs-sync-out")), "a refused handoff stages nothing")
 }
@@ -154,7 +155,7 @@ test("a docs-only handoff passes and stages the data files", () => {
   assert.equal(outputs.has_edits, "true")
   assert.equal(outputs.learned_through, MARKER)
   assert.equal(outputs.branch, "docs/auto-sync")
-  assert.equal(outputs.mode, "update")
+  assert.equal(outputs.durable_base, "", "no integration branch existed, so the lease says it must not exist")
   assert.equal(outputs.now, NOW)
   assert.equal(fs.readFileSync(path.join(publish, "docs-sync-out/worthy.json"), "utf8"), '[{"url":"https://github.com/Kilo-Org/kilocode/pull/1"}]')
   assert.equal(fs.readFileSync(path.join(publish, ".docs-sync-summary.json"), "utf8"), "[]")
@@ -164,12 +165,31 @@ test("a docs-only handoff passes and stages the data files", () => {
 
 test("a marker-only handoff passes without a bundle", () => {
   const s = scenario()
-  const packed = pack({ cwd: s.agent, env: packEnv(s, { WORTHY_COUNT: "0", MARKER_PATCH: MARKER, BRANCH: "", PREP_MODE: "", VERIFIED: "" }) })
+  const packed = pack({ cwd: s.agent, env: packEnv(s, { WORTHY_COUNT: "0", MARKER_PATCH: MARKER, BRANCH: "", VERIFIED: "" }) })
   assert.deepEqual(packed, { publish: "true", has_edits: "false" })
   assert.ok(!fs.existsSync(path.join(s.handoff, "docs.bundle")))
   const { outputs } = runCheck(s)
   assert.equal(outputs.marker_patch, MARKER)
   assert.equal(outputs.integration_sha, "")
+})
+
+test("pack records the integration tip it built on as the push lease", () => {
+  const s = scenario()
+  git(s.seed, ["checkout", "-q", "-b", "integ"])
+  write(s.seed, "packages/kilo-docs/pages/b.md", "# b, integrated\n")
+  const integ = commitAll(s.seed, "integration tree")
+  git(s.seed, ["push", "-q", "origin", "HEAD:refs/heads/docs/auto-sync-integration"])
+  git(s.agent, ["fetch", "-q", "origin", "+refs/heads/docs/auto-sync-integration:refs/remotes/origin/docs/auto-sync-integration"])
+  git(s.agent, ["reset", "-q", "--hard", "refs/remotes/origin/docs/auto-sync-integration"])
+  write(s.agent, "packages/kilo-docs/pages/a.md", "# a, updated\n")
+  pack({ cwd: s.agent, env: packEnv(s) })
+  assert.equal(runCheck(s).outputs.durable_base, integ)
+
+  // A conflicted run pushes its dated branch, so the lease is that branch's tip.
+  const t = scenario()
+  write(t.agent, "packages/kilo-docs/pages/a.md", "# a, updated\n")
+  pack({ cwd: t.agent, env: packEnv(t, { BRANCH: "docs/auto-sync-2026-09-01" }) })
+  assert.equal(runCheck(t).outputs.durable_base, "", "the dated branch did not exist")
 })
 
 test("no docs pass and no marker leaves nothing to publish", () => {
@@ -238,7 +258,7 @@ test("a malformed scalar is refused", () => {
     [(m) => (m.branch = "main"), /branch has an invalid value/],
     [(m) => (m.learned_through = `${MARKER}\nINJECTED=1`), /learned_through has an invalid value/],
     [(m) => (m.since = "yesterday"), /since has an invalid value/],
-    [(m) => (m.mode = "force"), /mode has an invalid value/],
+    [(m) => (m.durable_base = "origin/docs/auto-sync-integration"), /durable_base has an invalid value/],
     [(m) => (m.base_main = "HEAD"), /base_main has an invalid value/],
     [(m) => (m.extra = "x"), /keys must be exactly/],
     [(m) => (m.verified = true), /verified has an invalid value/],
@@ -263,7 +283,36 @@ test("has_edits must match the presence of the bundle", () => {
   editManifest(s, (m) => {
     m.has_edits = "false"
   })
+  expectRejected(s, /branch must be empty when has_edits is false/)
+  editManifest(s, (m) => {
+    m.branch = ""
+    m.base_main = ""
+  })
   expectRejected(s, /has_edits is false but the handoff has a docs.bundle/)
+})
+
+test("a base older than the commit the run started from is refused", () => {
+  const s = scenario()
+  const oldBase = s.runSha
+  write(s.seed, "README.md", "readme, second main commit\n")
+  s.runSha = commitAll(s.seed, "second main commit")
+  git(s.seed, ["push", "-q", "origin", "main"])
+  git(s.agent, ["fetch", "-q", "origin"])
+  git(s.agent, ["reset", "-q", "--hard", "origin/main"])
+  write(s.agent, "packages/kilo-docs/pages/a.md", "# a, updated\n")
+  pack({ cwd: s.agent, env: packEnv(s) })
+  assert.equal(runCheck(s).outputs.has_edits, "true", "the run's own base passes")
+  editManifest(s, (m) => {
+    m.base_main = oldBase
+  })
+  expectRejected(s, /is older than the commit this run started from/)
+})
+
+test("a bundle needs the run's commit", () => {
+  const s = scenario()
+  write(s.agent, "packages/kilo-docs/pages/a.md", "# a, updated\n")
+  pack({ cwd: s.agent, env: packEnv(s) })
+  expectRejected(s, /GITHUB_SHA must be the run's commit id/, {})
 })
 
 // --- refusals: the bundle ---

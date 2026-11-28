@@ -41,17 +41,12 @@ import {
   surfaceNames,
   surfaceSourceEntries,
 } from "./surfaces.mjs"
+import { durableBranch } from "./handoff.mjs"
 import { computeSurfaceReviewers } from "./reviewers.mjs"
 
 export { surfaceBranch }
 
 const BRANCH = process.env.BRANCH || "docs/auto-sync"
-// Git refs cannot hold both `docs/auto-sync` and `docs/auto-sync/<surface>`: a
-// ref may not be a path prefix of another ref. Surface PRs therefore use the
-// required `docs/auto-sync/<surface>` heads, and the integration tree is pushed
-// to this sibling ref purely for durability (a failed surface cannot lose the
-// run's changes).
-const INTEGRATION_BRANCH = process.env.INTEGRATION_BRANCH || "docs/auto-sync-integration"
 const FILE_CAP = 15
 const ROW_CAP = 150
 const PENDING_DISPLAY_CAP = 60
@@ -68,11 +63,15 @@ const git = (args, cwd) =>
 
 // Agent-generated strings land in the PR body next to machine-read markers.
 // Strip HTML-comment sequences so a crafted/adversarial value cannot forge
-// section boundaries or the processed-through watermark.
-function clean(value) {
-  return String(value ?? "")
-    .replaceAll("<!--", "")
-    .replaceAll("-->", "")
+// section boundaries or the processed-through watermark. Repeat until nothing
+// changes: one pass over `<!<!----` leaves a new `<!--`.
+export function clean(value) {
+  let text = String(value ?? "")
+  for (;;) {
+    const next = text.replaceAll("<!--", "").replaceAll("-->", "")
+    if (next === text) return text
+    text = next
+  }
 }
 
 function shortRef(url) {
@@ -80,7 +79,8 @@ function shortRef(url) {
 }
 
 function changeRow(e) {
-  return `| ${clean(e.action).replaceAll("|", "\\|")} | [${shortRef(e.url)}](${clean(e.url)}) |`
+  const action = clean(e.action).replaceAll("|", "\\|").replace(/[\r\n]+/g, " ")
+  return `| ${action} | [${shortRef(e.url)}](${clean(e.url)}) |`
 }
 
 function skippedRow(e) {
@@ -723,7 +723,6 @@ async function main() {
   const now = process.env.PROCESSED_THROUGH ?? new Date().toISOString()
   const since = process.env.SINCE ?? "unknown"
   const sinceOverride = process.env.SINCE_OVERRIDE === "true"
-  const mode = ["update", "conflict"].includes(process.env.PREP_MODE) ? process.env.PREP_MODE : "fresh"
   const verified = process.env.VERIFIED === "true"
   const date = now.slice(0, 10)
 
@@ -768,16 +767,18 @@ async function main() {
   // Push the full diff to the integration branch first, so a single surface's
   // later failure cannot lose the run's changes. A conflicted run pushes its
   // dated fallback branch; a normal run pushes the durability ref (see
-  // INTEGRATION_BRANCH).
+  // durableBranch in handoff.mjs). The lease is the tip the agent job built on
+  // (empty: the branch did not exist), so a change pushed to that branch while
+  // the run was going is refused instead of overwritten.
   const changedFiles = git(["diff", "--name-only", `origin/main...${integrationSha}`, "--", DOCS_PATH])
     .split("\n")
     .filter(Boolean)
-  const durableBranch = mode === "conflict" ? BRANCH : INTEGRATION_BRANCH
-  git(
-    mode === "update"
-      ? ["push", "origin", `${integrationSha}:refs/heads/${durableBranch}`]
-      : ["push", "--force-with-lease", "origin", `${integrationSha}:refs/heads/${durableBranch}`],
-  )
+  const durable = durableBranch(BRANCH)
+  const lease = process.env.DURABLE_BASE ?? ""
+  if (!/^([0-9a-f]{40})?$/.test(lease)) {
+    throw new Error(`DURABLE_BASE must be a commit id or empty; got ${JSON.stringify(lease)}`)
+  }
+  git(["push", `--force-with-lease=refs/heads/${durable}:${lease}`, "origin", `${integrationSha}:refs/heads/${durable}`])
 
   try {
     await api(`/repos/${repo()}/labels`, {

@@ -13,22 +13,28 @@
  *   - every JSON file is at most 20 MB and parses (the data files to arrays);
  *   - every scalar in handoff.json matches its exact format;
  *   - the docs bundle is a v2 bundle of at most 10 MB with the single head
- *     refs/heads/docs-sync-handoff, whose prerequisite is a commit of main, and
- *     is fetched with object checks;
+ *     refs/heads/docs-sync-handoff, and is fetched with object checks. Its
+ *     prerequisite (base_main) must lie on main between the commit this run
+ *     started from (GITHUB_SHA) and origin/main now, so it is a main commit
+ *     pushed during this run at the oldest;
  *   - each commit the bundle adds changes packages/kilo-docs/ alone, and so does
  *     the whole tip against main, with no symlink, no submodule, no mode change
  *     and no new executable file.
  * It never checks the bundle out into the workspace and runs no file from it.
+ * `durable_base` is the push lease for upsert-pr.mjs: the tip of the target
+ * branch the agent job built on (empty: it did not exist). It decides nothing
+ * but whether a branch that moved during the run is overwritten (it is not).
  *
  * Env (pack): HANDOFF_DIR, WORTHY_COUNT, SINCE, NOW, SINCE_OVERRIDE,
- *   LEARNED_THROUGH, MARKER_PATCH, BRANCH, PREP_MODE, VERIFIED.
- * Env (check): HANDOFF_DIR.
+ *   LEARNED_THROUGH, MARKER_PATCH, BRANCH, VERIFIED.
+ * Env (check): HANDOFF_DIR, GITHUB_SHA (the commit this run started from).
  */
 
 import { execFileSync } from "node:child_process"
 import fs from "node:fs"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
+import { DEFAULT_BRANCH, INTEGRATION_BRANCH } from "./prepare-branch.mjs"
 
 export const DOCS_PREFIX = "packages/kilo-docs/"
 export const HANDOFF_REF = "refs/heads/docs-sync-handoff"
@@ -38,6 +44,18 @@ export const JSON_MAX_BYTES = 20 * 1024 * 1024
 
 const MANIFEST = "handoff.json"
 const BUNDLE = "docs.bundle"
+
+/**
+ * The branch the integration tree is pushed to: a conflicted run's dated
+ * fallback branch, else the durability ref. Git refs cannot hold both
+ * `docs/auto-sync` and `docs/auto-sync/<surface>` (a ref may not be a path
+ * prefix of another ref), so the surface PRs use `docs/auto-sync/<surface>`
+ * heads and the tree goes to this sibling ref, so a failed surface cannot lose
+ * the run's changes.
+ */
+export function durableBranch(branch) {
+  return branch && branch !== DEFAULT_BRANCH ? branch : INTEGRATION_BRANCH
+}
 
 /**
  * Handoff data file → its path in the workspace: where the agent job writes it
@@ -63,10 +81,10 @@ const SCALARS = {
   learned_through: (v) => v === "" || LEARNED_THROUGH.test(v),
   marker_patch: (v) => v === "" || LEARNED_THROUGH.test(v),
   branch: (v) => v === "" || /^docs\/auto-sync(-\d{4}-\d{2}-\d{2})?$/.test(v),
-  mode: (v) => v === "" || v === "fresh" || v === "update" || v === "conflict",
   verified: (v) => v === "" || v === "true" || v === "false",
   has_edits: (v) => v === "true" || v === "false",
   base_main: (v) => v === "" || SHA.test(v),
+  durable_base: (v) => v === "" || SHA.test(v),
 }
 
 function gitRunner(cwd) {
@@ -103,6 +121,7 @@ export function pack({ cwd = process.cwd(), env = process.env } = {}) {
   const docsPass = Number(env.WORTHY_COUNT || "0") > 0
   const dirty = docsPass && git(["status", "--porcelain", "--", DOCS_PREFIX]) !== ""
   let baseMain = ""
+  let durableBase = ""
   if (dirty) {
     const date = String(env.NOW || new Date().toISOString()).slice(0, 10)
     git(["add", DOCS_PREFIX])
@@ -111,6 +130,13 @@ export function pack({ cwd = process.cwd(), env = process.env } = {}) {
     baseMain = git(["rev-parse", "origin/main^{commit}"])
     // Thin bundle: everything the integration branch adds over this run's main.
     git(["bundle", "create", path.join(dir, BUNDLE), HANDOFF_REF, `^${baseMain}`])
+    // The publish job's push lease: the tip of the target branch this job
+    // built on, or empty when it did not exist.
+    try {
+      durableBase = git(["rev-parse", "--verify", "-q", `refs/remotes/origin/${durableBranch(env.BRANCH)}^{commit}`])
+    } catch {
+      durableBase = ""
+    }
   }
 
   const manifest = {
@@ -120,10 +146,10 @@ export function pack({ cwd = process.cwd(), env = process.env } = {}) {
     learned_through: env.LEARNED_THROUGH ?? "",
     marker_patch: env.MARKER_PATCH ?? "",
     branch: dirty ? (env.BRANCH ?? "") : "",
-    mode: dirty ? (env.PREP_MODE ?? "") : "",
     verified: env.VERIFIED ?? "",
     has_edits: dirty ? "true" : "false",
     base_main: baseMain,
+    durable_base: durableBase,
   }
   fs.writeFileSync(path.join(dir, MANIFEST), JSON.stringify(manifest, null, 2))
 
@@ -179,8 +205,12 @@ export function validateManifest(manifest) {
     }
   }
   if (manifest.has_edits === "true") {
-    for (const key of ["branch", "mode", "base_main"]) {
+    for (const key of ["branch", "base_main"]) {
       if (manifest[key] === "") throw new Error(`${MANIFEST} ${key} is required when has_edits is true`)
+    }
+  } else {
+    for (const key of ["branch", "base_main", "durable_base"]) {
+      if (manifest[key] !== "") throw new Error(`${MANIFEST} ${key} must be empty when has_edits is false`)
     }
   }
   return manifest
@@ -226,10 +256,10 @@ export function checkEntry({ modes, path: file }, where) {
 }
 
 /**
- * Fetch and check the bundle. Returns the checked tip. `baseMain` must already
- * be a 40-hex id.
+ * Fetch and check the bundle. Returns the checked tip. `baseMain` and `runSha`
+ * must already be 40-hex ids.
  */
-export function checkBundle({ bundle, baseMain, git }) {
+export function checkBundle({ bundle, baseMain, runSha, git }) {
   const size = fs.lstatSync(bundle).size
   if (size > BUNDLE_MAX_BYTES) throw new Error(`${BUNDLE} is ${size} bytes, over the ${BUNDLE_MAX_BYTES}-byte limit`)
   const header = Buffer.alloc(16)
@@ -245,6 +275,13 @@ export function checkBundle({ bundle, baseMain, git }) {
     git(["merge-base", "--is-ancestor", baseMain, "refs/remotes/origin/main"])
   } catch {
     throw new Error(`base_main ${baseMain} is not a commit of origin/main`)
+  }
+  // The agent job's checkout is at or after the run's commit, so its main is
+  // too. An older base would widen the tip-against-main check below.
+  try {
+    git(["merge-base", "--is-ancestor", runSha, baseMain])
+  } catch {
+    throw new Error(`base_main ${baseMain} is older than the commit this run started from (${runSha})`)
   }
   try {
     git(["bundle", "verify", "-q", bundle])
@@ -340,7 +377,9 @@ export function check({ cwd = process.cwd(), env = process.env } = {}) {
 
   let integrationSha = ""
   if (hasBundle) {
-    integrationSha = checkBundle({ bundle: path.join(dir, BUNDLE), baseMain: manifest.base_main, git })
+    const runSha = env.GITHUB_SHA ?? ""
+    if (!SHA.test(runSha)) throw new Error(`GITHUB_SHA must be the run's commit id; got ${JSON.stringify(runSha)}`)
+    integrationSha = checkBundle({ bundle: path.join(dir, BUNDLE), baseMain: manifest.base_main, runSha, git })
   }
 
   for (const { name, text } of staged) {
@@ -357,10 +396,10 @@ export function check({ cwd = process.cwd(), env = process.env } = {}) {
     learned_through: manifest.learned_through,
     marker_patch: manifest.marker_patch,
     branch: manifest.branch,
-    mode: manifest.mode,
     verified: manifest.verified,
     has_edits: manifest.has_edits,
     integration_sha: integrationSha,
+    durable_base: manifest.durable_base,
   }
 }
 
