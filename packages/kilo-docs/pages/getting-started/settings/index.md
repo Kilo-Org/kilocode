@@ -55,6 +55,49 @@ Use **Local Config** or **Global Config** in the Settings header to open the mat
 If you check config files into version control, make sure they do not contain API keys or other secrets (e.g., `provider.*.options.apiKey`). Use environment variables for credentials instead.
 {% /callout %}
 
+### Image Generation
+
+Enable **Image Generation** in **Settings → Experimental** to let the agent generate and edit images in your workspace. Generated images appear in chat with a clickable preview.
+
+To use a local or remote Images API, set its base URL, optional API key, and model ID in the same section. These connection settings are machine-wide and come from your global `~/.config/kilo/kilo.jsonc`:
+
+```json
+{
+  "experimental": {
+    "image_generation": true,
+    "image_generation_base_url": "http://127.0.0.1:8080/v1",
+    "image_generation_model": "Qwen-Image-2.1"
+  }
+}
+```
+
+Set `experimental.image_generation_api_key` if your endpoint requires a bearer token. A custom endpoint works without Kilo sign-in. Leave the base URL empty to use Kilo Gateway or OpenRouter.
+
+HTTP does not encrypt tokens, prompts, or images. Use HTTPS or a protected connection, such as a VPN or SSH tunnel, when connecting to another machine.
+
+The custom endpoint must implement `POST /images/generations` with JSON and `POST /images/edits` with multipart uploads, relative to the base URL. Responses must contain PNG or JPEG image bytes in `data[].b64_json`. Editing accepts PNG/JPEG reference files. Requests can run for up to 15 minutes and stop when you cancel the tool. The original image is saved in the current workspace; its chat preview may be resized.
+
+After saving the endpoint settings, use **Available image models** to select a model returned by its `/models` endpoint. **Refresh** reloads the catalog. Discovery uses the same global endpoint and optional token as generation, and excludes models explicitly marked with a non-image `capability`. Manual model entry remains available when discovery is unsupported or the server is offline.
+
+To combine reference images, ask the agent to use the files in a specific order and describe each one's role. The `generate_image` tool accepts an `images` array with up to 10 workspace paths, or the existing `image` argument for one reference. Each file requires read permission before upload. Custom endpoints receive multiple references as ordered `image[]` multipart fields; the selected model must support multiple references.
+
+Custom endpoints also expose **Image size**, **Image background**, **Image seed**, and **Image steps** defaults in Experimental settings. Leave fields empty (or select **Server default**) to omit them. Seed `0` is a valid fixed seed. These defaults are stored globally:
+
+```json
+{
+  "experimental": {
+    "image_generation_options": {
+      "size": "1024x1024",
+      "background": "transparent",
+      "seed": 42,
+      "steps": 20
+    }
+  }
+}
+```
+
+Ask the agent for a different size, background, seed, or step count to override these defaults for an individual request. These controls require a custom Images API and are sent for both generation and editing. Supported values depend on the server: Gufo accepts 2–100 steps and sizes subject to its image limits. Other servers may not implement seed or steps; leave unsupported controls empty.
+
 ### Voice Transcription Model
 
 When the Kilo provider is enabled and you are signed in, choose the transcription model under **Models** > **Speech to Text Model**. This stores `experimental.speech_to_text_model` in your global Kilo CLI config:

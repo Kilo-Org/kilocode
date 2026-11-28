@@ -178,6 +178,7 @@ import type { ProjectRef, SessionRef, WorktreeRef } from "./agent-manager/projec
 import { indexingConsentStore, registeredProjects } from "./indexing-consent"
 import { fetchKiloEmbeddingModelCatalog } from "@kilocode/kilo-gateway"
 import { fetchImageModels } from "./image-generation/models"
+import { withGlobalImages } from "./image-generation/source"
 import { fetchSpeechToTextModels } from "./speech-to-text/catalog"
 import { SPEECH_TO_TEXT_MODELS } from "./speech-to-text/models"
 import {
@@ -490,8 +491,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private cachedIndexingStatusMessage: unknown = null
   /** Cached kiloEmbeddingModelsLoaded payload so requestKiloEmbeddingModels is resilient offline. */
   private cachedKiloEmbeddingModelsMessage: unknown = null
-  /** Cached imageModelsLoaded payload so requestImageModels is resilient offline. */
-  private cachedImageModelsMessage: unknown = null
   /** Cached mcpStatusLoaded payload so requestMcpStatus can be served before client is ready */
   private cachedMcpStatusMessage: unknown = null
   /** Cached mcpBundles payload so requestMcpBundles can be served before client is ready */
@@ -1647,7 +1646,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           )
           break
         case "requestImageModels":
-          this.fetchAndSendImageModels().catch((e) => console.error("[Kilo New] fetchAndSendImageModels failed:", e))
+          this.fetchAndSendImageModels(message.request).catch((e) =>
+            console.error("[Kilo New] fetchAndSendImageModels failed:", e),
+          )
           break
         case "updateConfig":
           await this.handleUpdateConfig(
@@ -3480,18 +3481,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.postMessage(message)
   }
 
-  private async fetchAndSendImageModels(): Promise<void> {
+  private async fetchAndSendImageModels(request: number): Promise<void> {
     const dir = this.getWorkspaceDirectory()
-    const result = await fetchImageModels(this.connectionService, dir)
-    if (!result.ok) {
-      if (this.cachedImageModelsMessage) {
-        this.postMessage(this.cachedImageModelsMessage)
-      }
-      return
-    }
-    const message = { type: "imageModelsLoaded" as const, models: result.models }
-    this.cachedImageModelsMessage = message
-    this.postMessage(message)
+    const result = await fetchImageModels(this.connectionService, dir, AbortSignal.timeout(15_000))
+    this.postMessage({
+      type: "imageModelsLoaded",
+      request,
+      models: result.ok ? result.models : [],
+      error: result.ok ? undefined : result.error,
+    })
   }
 
   private speechToTextSource(): SpeechToTextSource | undefined {
@@ -4268,6 +4266,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // The merged global scope is every global config file combined, which differs
       // from the single file the delete targets.
       const mergedGlobalConfig = (snapshot.mergedGlobal ?? global) as Config
+      const config = withGlobalImages(snapshot.effective, mergedGlobalConfig)
       const homeDir = snapshot.homeDir
       // Capture the previous source before cachedGlobalConfig moves, so a source
       // change still triggers a catalog refresh.
@@ -4275,7 +4274,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.cachedGlobalConfig = global
       this.cachedConfigMessage = {
         type: "configLoaded",
-        config: snapshot.effective,
+        config,
         globalConfig: global,
         mergedGlobalConfig,
         ...(homeDir !== undefined ? { homeDir } : {}),
@@ -4288,7 +4287,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.cachedConfigDirectory = dir
       this.postMessage({
         type: "configUpdated",
-        config: snapshot.effective,
+        config,
         globalConfig: global,
         mergedGlobalConfig,
         ...(homeDir !== undefined ? { homeDir } : {}),
@@ -4375,7 +4374,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       message: getErrorMessage(error) || "Failed to update config",
       details: getConfigErrorDetails(error),
       completedScopes: completed,
-      config: snapshot?.effective,
+      config: snapshot ? withGlobalImages(snapshot.effective, snapshot.mergedGlobal) : undefined,
       globalConfig: snapshot?.targets.global.raw,
       mergedGlobalConfig: snapshot?.mergedGlobal ?? snapshot?.targets.global.raw,
       ...(snapshot?.homeDir !== undefined ? { homeDir: snapshot.homeDir } : {}),

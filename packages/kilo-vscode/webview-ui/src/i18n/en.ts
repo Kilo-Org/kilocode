@@ -53,6 +53,40 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
+  "settings.experimental.imageGenerationOptions.size.title": "Image size",
+  "settings.experimental.imageGenerationOptions.size.description":
+    "Default output dimensions: auto or WIDTHxHEIGHT. Supported sizes depend on the server.",
+  "settings.experimental.imageGenerationOptions.size.error":
+    "Enter auto or positive dimensions such as 1024x1024. Invalid values are not saved.",
+  "settings.experimental.imageGenerationOptions.number.error":
+    "Enter a whole number from {{min}} to {{max}}. Invalid values are not saved.",
+  "settings.experimental.imageGenerationOptions.background.title": "Image background",
+  "settings.experimental.imageGenerationOptions.background.description":
+    "Default background mode, if supported by the server.",
+  "settings.experimental.imageGenerationOptions.seed.title": "Image seed",
+  "settings.experimental.imageGenerationOptions.seed.description":
+    "Default random seed, including zero. Leave empty to let the server choose.",
+  "settings.experimental.imageGenerationOptions.steps.title": "Image steps",
+  "settings.experimental.imageGenerationOptions.steps.description":
+    "Default number of diffusion steps. Supported ranges depend on the server; Gufo accepts 2–100. Leave empty for the server default.",
+  "settings.experimental.imageGenerationOptions.default": "Server default",
+  "settings.experimental.imageGenerationOptions.auto": "Auto",
+  "settings.experimental.imageGenerationOptions.opaque": "Opaque",
+  "settings.experimental.imageGenerationOptions.transparent": "Transparent",
+  "settings.experimental.imageGenerationModels.title": "Available image models",
+  "settings.experimental.imageGenerationModels.save": "Save the endpoint settings to discover its models.",
+  "settings.experimental.imageGenerationModels.error": "{{error}}. You can enter a model ID manually above.",
+  "settings.experimental.imageGenerationModels.loading": "Loading models…",
+  "settings.experimental.imageGenerationModels.description":
+    "Choose a discovered model, or enter an ID above if the server has no model catalog.",
+  "settings.experimental.imageGenerationModels.select": "Select a model",
+  "settings.experimental.imageGenerationModels.refresh": "Refresh",
+  "settings.experimental.imageGenerationBaseUrl.title": "Image generation base URL",
+  "settings.experimental.imageGenerationBaseUrl.description":
+    "Use a local or remote Images API. Leave empty to use Kilo Gateway or OpenRouter. HTTP does not encrypt tokens, prompts, or images; use HTTPS or a protected connection for remote servers.",
+  "settings.experimental.imageGenerationApiKey.title": "Image generation API key",
+  "settings.experimental.imageGenerationApiKey.description": "Optional bearer token for the custom endpoint",
+  "settings.experimental.imageGenerationModel.customPlaceholder": "Model ID, or the server default",
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Board",
