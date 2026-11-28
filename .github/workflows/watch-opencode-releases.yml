@@ -9,9 +9,14 @@
 # leaves that half open for the next run.
 #
 # Setup: repo secrets `OPENCODE_WATCH_SYNC_URL` and `OPENCODE_WATCH_SYNC_SECRET` (both enable the
-# sync; when either is unset no request is made and the tag is still recorded),
-# `OPENCODE_WATCH_VERCEL_SECRET` (optional Vercel protection bypass for the sync URL), and
-# `OPENCODE_WATCH_SLACK_WEBHOOK` (a Slack incoming webhook URL).
+# sync; when either is unset no request is made and the tag is still recorded) and
+# `OPENCODE_WATCH_VERCEL_SECRET` (optional Vercel protection bypass for the sync URL).
+# kilocode_change start
+# The Slack webhook (`KILOCODE_OPENCODE_WATCH_SLACK_WEBHOOK`) comes from the STS bundle of
+# ci-kilocode-opencode-watch, which needs environment automation (main only) and id-token: write,
+# so the job runs only pinned actions, this repository's kilo-credentials action, gh, jq and curl:
+# read .github/actions/kilo-credentials/README.md before adding a step.
+# kilocode_change end
 
 on:
   schedule:
@@ -30,7 +35,21 @@ jobs:
     if: vars.OPENCODE_WATCH_ENABLED != 'false' && (github.event_name == 'workflow_dispatch' || github.repository == 'Kilo-Org/kilocode') # kilocode_change
     runs-on: ${{ github.repository == 'Kilo-Org/kilocode' && 'blacksmith-2vcpu-ubuntu-2404' || 'ubuntu-latest' }} # kilocode_change
     timeout-minutes: 5
+    environment: automation # kilocode_change
+    # kilocode_change start
+    permissions:
+      contents: read
+      id-token: write
+    # kilocode_change end
     steps:
+      # kilocode_change start - before the cache restores: a checkout empties the workspace
+      - name: Checkout the kilo-credentials action
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/actions/kilo-credentials
+      # kilocode_change end
+
       - id: fetch
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -44,7 +63,7 @@ jobs:
 
       - if: steps.fetch.outputs.tag != ''
         id: sync-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0 # kilocode_change
         with:
           path: .cache/last-seen
           key: last-seen-${{ steps.fetch.outputs.tag }}
@@ -52,7 +71,7 @@ jobs:
 
       - if: steps.fetch.outputs.tag != ''
         id: notify-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0 # kilocode_change
         with:
           path: .cache/notified
           key: notified-${{ steps.fetch.outputs.tag }}
@@ -84,17 +103,27 @@ jobs:
 
       - if: steps.sync.outputs.handled == 'true'
         name: Save synced-tag cache
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0 # kilocode_change
         with:
           path: .cache/last-seen
           key: last-seen-${{ steps.fetch.outputs.tag }}
 
+      # kilocode_change start
       - if: ${{ !cancelled() && steps.fetch.outputs.tag != '' && steps.notify-cache.outputs.cache-hit != 'true' }}
+        name: Read the STS bundle
+        id: creds
+        uses: ./.github/actions/kilo-credentials
+        with:
+          workload: ci-kilocode-opencode-watch
+          secrets: KILOCODE_OPENCODE_WATCH_SLACK_WEBHOOK
+      # kilocode_change end
+
+      - if: ${{ !cancelled() && steps.fetch.outputs.tag != '' && steps.notify-cache.outputs.cache-hit != 'true' && steps.creds.outcome == 'success' }} # kilocode_change
         id: notify
         name: Notify Slack
-        uses: slackapi/slack-github-action@v2.0.0
+        uses: slackapi/slack-github-action@485a9d42d3a73031f12ec201c457e2162c45d02d # v2.0.0 # kilocode_change
         with:
-          webhook: ${{ secrets.OPENCODE_WATCH_SLACK_WEBHOOK }}
+          webhook: ${{ steps.creds.outputs.KILOCODE_OPENCODE_WATCH_SLACK_WEBHOOK }} # kilocode_change
           webhook-type: incoming-webhook
           payload: |
             name: "${{ steps.fetch.outputs.name }}"
@@ -109,7 +138,7 @@ jobs:
 
       - if: ${{ !cancelled() && steps.notify.outcome == 'success' }}
         name: Save notified-tag cache
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0 # kilocode_change
         with:
           path: .cache/notified
           key: notified-${{ steps.fetch.outputs.tag }}
