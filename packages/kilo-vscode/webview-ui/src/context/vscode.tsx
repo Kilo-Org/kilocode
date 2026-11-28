@@ -8,6 +8,7 @@ import type { VSCodeAPI, WebviewMessage, ExtensionMessage } from "../types/messa
 import { ClipboardProvider } from "@kilocode/kilo-ui/context/clipboard"
 import { edge } from "../sidebar-position"
 import { protect } from "../utils/webview-message"
+import { stabilize } from "../utils/webview-viewport"
 
 // Get the VS Code API (only available in webview context)
 let vscodeApi: VSCodeAPI | undefined
@@ -46,6 +47,7 @@ const VSCodeContext = createContext<VSCodeContextValue>()
 
 export const VSCodeProvider: ParentComponent = (props) => {
   const release = protect()
+  const viewport = typeof acquireVsCodeApi === "function" ? stabilize() : undefined
   const api = getVSCodeAPI()
   const handlers = new Set<(message: ExtensionMessage) => void>()
   const copies = new Map<string, { resolve: () => void; reject: (err: Error) => void }>()
@@ -103,6 +105,7 @@ export const VSCodeProvider: ParentComponent = (props) => {
 
   onCleanup(() => {
     release()
+    viewport?.()
     window.removeEventListener("message", messageListener)
     window.removeEventListener("focus", reportFocus)
     window.removeEventListener("blur", reportFocus)

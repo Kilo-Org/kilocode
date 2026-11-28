@@ -7,6 +7,12 @@
   overflow: hidden;
 }
 
+/* Follow #root's locked pixel height when VS Code temporarily collapses a
+   hidden webview iframe to 300x150, while keeping standalone stories on 100vh. */
+#root > .am-layout {
+  height: 100%;
+}
+
 /* Virtua already removes off-screen transcript rows. Avoid a second layer of
    layout skipping, which can leave Chromium accessibility traversing fragments
    whose layout items were discarded while Agent Manager scrolls. */
