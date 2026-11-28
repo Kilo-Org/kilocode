@@ -21,14 +21,8 @@ export function resolve(input: {
     return input.agent.variant
   }
 
-  if (
-    !input.command.model &&
-    (!input.command.agent || !input.agent.model) &&
-    input.input &&
-    input.selected.variants?.[input.input]
-  ) {
-    return input.input
-  }
+  // A command only overrides the chat effort when it picks a model of its own.
+  if (!input.command.model && input.input && input.selected.variants?.[input.input]) return input.input
 
   return undefined
 }
