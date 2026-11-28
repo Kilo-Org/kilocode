@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test"
+import path from "path"
+import { tmpdir } from "../fixture/fixture"
 
 const entry = "file:///tmp/kilo-cache/node_modules/@lancedb/lancedb/dist/index.js"
 const add = mock(async () => ({ directory: "/tmp/kilo-cache", entrypoint: entry }))
@@ -79,6 +81,34 @@ describe("LanceDBRuntime", () => {
       "@lancedb/lancedb-win32-arm64-msvc",
       "@lancedb/lancedb-win32-x64-msvc",
     ])
+  })
+
+  test("reads build metadata without initializing runtime directories", async () => {
+    await using tmp = await tmpdir()
+    const blocked = path.join(tmp.path, "blocked")
+    await Bun.write(blocked, "not a directory")
+
+    const result = Bun.spawnSync(
+      [
+        process.execPath,
+        "--eval",
+        'const { LanceDBRuntime } = await import("./src/kilocode/lancedb"); console.log(LanceDBRuntime.external[0])',
+      ],
+      {
+        cwd: path.resolve(import.meta.dir, "../.."),
+        env: {
+          ...process.env,
+          XDG_DATA_HOME: blocked,
+          XDG_CACHE_HOME: blocked,
+          XDG_CONFIG_HOME: blocked,
+          XDG_STATE_HOME: blocked,
+        },
+        windowsHide: true,
+      },
+    )
+
+    expect(result.exitCode).toBe(0)
+    expect(result.stdout.toString().trim()).toBe("@lancedb/lancedb")
   })
 
   test("skips install when runtime path is already set", async () => {

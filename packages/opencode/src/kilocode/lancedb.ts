@@ -1,5 +1,3 @@
-import { Npm } from "@opencode-ai/core/npm"
-
 export namespace LanceDBRuntime {
   export const env = "KILO_LANCEDB_PATH"
   export const pkg = "@lancedb/lancedb"
@@ -33,6 +31,7 @@ export namespace LanceDBRuntime {
     if (box.ready) return box.ready
 
     box.ready = (async () => {
+      const { Npm } = await import("@opencode-ai/core/npm")
       const result = await Npm.add(`${pkg}@${version}`)
       if (result.entrypoint) process.env[env] = result.entrypoint
     })().catch((err) => {
