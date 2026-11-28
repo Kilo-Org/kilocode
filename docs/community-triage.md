@@ -62,10 +62,10 @@ The team is migrating to opencode v2, and community reviews are paused until fur
 An author or commenter is a maintainer when one of these is true:
 
 - GitHub shows them as `OWNER`, `MEMBER` or `COLLABORATOR`.
-- The secret `COMMUNITY_TRIAGE_MEMBER_TOKEN` (`read:org`) shows they are in the org.
 - Their login is in `.github/community-maintainers.json`.
+- The sweep only: the secret `COMMUNITY_TRIAGE_MEMBER_TOKEN` (`read:org`) shows they are in the org.
 
-The default token cannot see private org members. They look like normal contributors. The member token fixes that, so it is needed. If the secret is missing or empty, the label job and the sweep fail with a clear message, so team PRs are not labeled as community. Org members are never listed in the file.
+The label job uses only the first two. It runs on PRs from forks and on issues, so it holds no org credential. The default token cannot see private org members, so they look like normal contributors, and the label job labels their new PRs and issues as community. The next sweep finds them with the member token and removes `community`, `first-time-contributor`, `quick-win` and the status labels from their open PRs and open issues. A `priority:*` label stays. A PR or issue that is closed or merged before the next sweep keeps its labels. If the secret is missing or empty, the sweep fails with a clear message. Org members are never listed in the file.
 
 Bots are ignored.
 
@@ -107,7 +107,7 @@ Set by hand:
 
 The sweep owns the status labels, `first-time-contributor` and `quick-win`. It adds and removes them on its own. Do not manage them by hand.
 
-The sweep also removes `community`, `first-time-contributor`, `quick-win` and the status labels from open PRs whose author is a maintainer. This fixes labels set before the maintainer list was known. It only handles PRs.
+The sweep also removes `community`, `first-time-contributor`, `quick-win` and the status labels from open PRs and open `community` issues whose author is a maintainer. This fixes labels set by the label job for private org members, and labels set before the maintainer list was known.
 
 `area:*` labels are only added, never removed. Fix a wrong one by hand. On every run the sweep also adds an area for a product name in the title of each open community PR.
 
@@ -256,14 +256,14 @@ The sweep can post the queue to Slack. Slack is optional.
 
 ## Issues
 
-New issues get the `community` label, `needs-triage`, `first-time-contributor` for new authors and an `area:*` label. The area comes from the required "Component" dropdown in the bug and feature templates. If there is no answer, for example "Other / not sure" or an issue that skips the form, a product name in the title is used instead. The sweep only handles PRs, so older issues get their labels when they are edited, and `needs-triage` on an issue stays until you remove it by hand.
+New issues get the `community` label, `needs-triage`, `first-time-contributor` for new authors and an `area:*` label. The area comes from the required "Component" dropdown in the bug and feature templates. If there is no answer, for example "Other / not sure" or an issue that skips the form, a product name in the title is used instead. For issues, the sweep only removes the community labels when the author turns out to be a maintainer. Older issues get their labels when they are edited, and `needs-triage` on a community issue stays until you remove it by hand.
 
 ## Setup
 
 | Name | Kind | Needed | Purpose |
 |---|---|---|---|
 | `KILO_AUTO_CLOSE_ENABLED` | Variable | No | `true` lets `kilo-auto-close.yml` close PRs and issues. Set to `false` while community reviews are paused |
-| `COMMUNITY_TRIAGE_MEMBER_TOKEN` | Secret | Yes | Token with `read:org`. Finds private org members |
+| `COMMUNITY_TRIAGE_MEMBER_TOKEN` | Secret | Yes | Token with `read:org`. The sweep uses it to find private org members |
 | `COMMUNITY_TRIAGE_SLACK_TOKEN` | Secret | No | Slack bot token (`xoxb-`, scope `chat:write`). Posts a summary and threads the lists. The bot must be in the channel |
 | `COMMUNITY_TRIAGE_SLACK_CHANNEL` | Secret | No | Channel ID (`C...`) for the bot token |
 | `COMMUNITY_TRIAGE_SLACK_WEBHOOK` | Secret | No | Posts the whole queue as one message. Used when there is no bot token, or when the bot post fails |
@@ -272,6 +272,6 @@ Labels are created by the workflows, and their color and description are kept in
 
 ## Safety
 
-- `community-label.yml` uses `pull_request_target`. It checks out the base branch only. It never runs PR code.
+- `community-label.yml` uses `pull_request_target`. It checks out the base branch only. It never runs PR code, and it uses only the job token.
 - The sweep and the label workflow close nothing. A test checks that the sweep script has no close call.
 - Closed PRs can be reopened by the contributor.

@@ -7,11 +7,19 @@ on:
   pull_request:
   workflow_dispatch:
 
+# kilocode_change start
+permissions:
+  contents: read
+# kilocode_change end
+
 jobs:
   # kilocode_change start
   changes:
     name: detect typecheck changes
     runs-on: ${{ github.repository == 'Kilo-Org/kilocode' && 'blacksmith-4vcpu-ubuntu-2404' || 'ubuntu-latest' }} # kilocode_change
+    permissions:
+      contents: read
+      pull-requests: read # paths-filter lists pull request files through the API
     outputs:
       javascript: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.javascript }}
       jetbrains: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.jetbrains }}

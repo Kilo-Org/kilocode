@@ -941,15 +941,13 @@ class ActiveTreeTest : BasePlatformTestCase() {
             val expected = java.awt.image.BufferedImage(arrow.width, bounds.height, java.awt.image.BufferedImage.TYPE_INT_ARGB)
             val stamp = expected.createGraphics()
             try {
-                val color = if (selected) com.intellij.util.ui.UIUtil.getTreeBackground(true, false) else view.background
-                stamp.color = color
+                stamp.color = view.background
                 stamp.fillRect(0, 0, expected.width, expected.height)
                 control.paint(view, stamp, 0, 0, expected.width, expected.height, true, false)
             } finally {
                 stamp.dispose()
             }
-            // The tree paints the control over its own rounded selection frame, so compare only the
-            // pixels the icon actually inks rather than the flat backdrop behind it.
+            // Compare the disclosure ink independently of the flat tree backdrop.
             val backdrop = image.getRGB(arrow.x - 1, arrow.y + arrow.height / 2)
             for (y in 0 until expected.height) for (x in 0 until expected.width) {
                 val color = java.awt.Color(expected.getRGB(x, y), true)

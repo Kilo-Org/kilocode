@@ -125,6 +125,7 @@ export const defaultConfig: MergeConfig = {
     ".github/workflows/close-prs.yml",
     ".github/workflows/opencode.yml",
     ".github/workflows/publish-vscode.yml",
+    ".github/workflows/generate.yml",
     // Upstream PR cleanup is replaced by .github/workflows/kilo-auto-close.yml
     "script/github/close-prs.ts",
     // VS Code example configs (Kilo ships real .vscode/* files)

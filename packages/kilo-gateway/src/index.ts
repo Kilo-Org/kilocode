@@ -28,6 +28,7 @@ export {
   fetchBalance,
   fetchProfileWithBalance,
   fetchDefaultModel,
+  InvalidTokenError,
   getKiloProfile,
   defaultOrganizationId,
   getKiloBalance,

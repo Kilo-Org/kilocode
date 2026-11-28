@@ -25,7 +25,7 @@ env:
 
 jobs:
   validate:
-    if: github.repository == 'Kilo-Org/kilocode'
+    if: github.repository == 'Kilo-Org/kilocode' && github.ref == 'refs/heads/main'
     runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: read
@@ -34,9 +34,17 @@ jobs:
       version: ${{ steps.release.outputs.version }}
       kind: ${{ steps.release.outputs.kind }}
       tag: ${{ steps.release.outputs.tag }}
+      commit: ${{ steps.release.outputs.commit }}
       channel: ${{ steps.release.outputs.marketplace_channel }}
       merge: ${{ steps.release.outputs.merge }}
     steps:
+      - name: Require main
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Run publish-jetbrains-bundled from main (got $GITHUB_REF). Nothing was built."
+            exit 1
+          fi
+
       - name: Checkout trusted validation scripts
         uses: actions/checkout@v6
         with:
@@ -45,6 +53,29 @@ jobs:
 
       - name: Setup Bun for validation
         uses: ./.github/actions/setup-bun
+        with:
+          cache: false # validate's outputs choose what bundle signs
+
+      # Checks the PR with the job token before any of its files are checked out.
+      - name: Check the release PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_INPUT: ${{ inputs.pr }}
+          MERGE_COMMIT: ${{ inputs.merge_commit }}
+        run: |
+          pr="$PR_INPUT"
+          if ! [[ "$pr" =~ ^[1-9][0-9]*$ && "$MERGE_COMMIT" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            echo "::error::pr must be a positive integer and merge_commit a full commit SHA."
+            exit 1
+          fi
+          if ! gh api "repos/$REPO/pulls/$pr" | jq -e --arg repo "$REPO" --arg merge "$MERGE_COMMIT" '
+            .merged == true and .base.ref == "main" and .head.repo.full_name == $repo
+            and any(.labels[]; .name == "jetbrains-release")
+            and (.merge_commit_sha | ascii_downcase) == ($merge | ascii_downcase)' > /dev/null; then
+            echo "::error::PR #$pr is not a merged jetbrains-release PR from this repository into main with merge commit $MERGE_COMMIT."
+            exit 1
+          fi
 
       - name: Checkout merged release PR for validation
         uses: actions/checkout@v6
@@ -54,10 +85,11 @@ jobs:
           persist-credentials: false
           ref: ${{ inputs.merge_commit }}
 
+      # Runs from the trusted checkout: release/ is only read through git and
+      # file reads, so nothing in it (bunfig.toml, scripts) is executed.
       - name: Validate release PR and tag
         id: release
-        working-directory: release
-        run: bun ../script/jetbrains-release-validate.ts --pr "$PR_NUMBER" --merge "$MERGE_COMMIT"
+        run: bun script/jetbrains-release-validate.ts --dir release --pr "$PR_NUMBER" --merge "$MERGE_COMMIT"
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -66,7 +98,7 @@ jobs:
 
   bundle:
     needs: validate
-    if: github.repository == 'Kilo-Org/kilocode'
+    if: github.repository == 'Kilo-Org/kilocode' && github.ref == 'refs/heads/main'
     runs-on: blacksmith-8vcpu-ubuntu-2404
     permissions:
       actions: read
@@ -78,6 +110,13 @@ jobs:
       version: ${{ needs.validate.outputs.version }}
       kind: ${{ needs.validate.outputs.kind }}
     steps:
+      - name: Require main
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Run publish-jetbrains-bundled from main (got $GITHUB_REF). Nothing was built."
+            exit 1
+          fi
+
       - name: Checkout merged release PR metadata
         uses: actions/checkout@v6
         with:
@@ -90,11 +129,13 @@ jobs:
           cp packages/kilo-jetbrains/CHANGELOG.md "$RUNNER_TEMP/jetbrains-CHANGELOG.md"
           cp packages/kilo-jetbrains/gradle.properties "$RUNNER_TEMP/jetbrains-gradle.properties"
 
-      - name: Checkout release tag
+      # The validated commit, not the tag name: a tag moved after validation
+      # is not picked up. The tag name is only used to name the release.
+      - name: Checkout release commit
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: ${{ needs.validate.outputs.tag }}
+          ref: ${{ needs.validate.outputs.commit }}
           persist-credentials: false
 
       - name: Restore reviewed release metadata
@@ -109,6 +150,8 @@ jobs:
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
+        with:
+          cache: false # job holds write scopes, id-token and signing secrets
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -121,6 +164,8 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-disabled: true # job signs with release secrets
 
       - name: Setup SBOM tooling
         uses: ./.github/actions/setup-sbom
@@ -257,10 +302,19 @@ jobs:
           sbom-path: ${{ steps.sbom.outputs.sidecar }}
 
       - name: Upload bundled ZIP to GitHub Release
-        run: gh release upload "$TAG" "$ARCHIVE" $EVIDENCE --clobber --repo "$GITHUB_REPOSITORY"
+        run: |
+          # The release must name the commit that was validated and built.
+          git fetch --force --no-tags origin "refs/tags/$TAG:refs/tags/$TAG"
+          actual="$(git rev-parse "$TAG^{commit}")"
+          if [[ "$actual" != "$COMMIT" ]]; then
+            echo "::error::$TAG points at $actual, not the validated commit $COMMIT. Nothing was uploaded."
+            exit 1
+          fi
+          gh release upload "$TAG" "$ARCHIVE" $EVIDENCE --clobber --repo "$GITHUB_REPOSITORY"
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.validate.outputs.tag }}
+          COMMIT: ${{ needs.validate.outputs.commit }}
           ARCHIVE: ${{ steps.archive.outputs.path }}
           EVIDENCE: ${{ steps.sbom.outputs.sidecar }} packages/kilo-jetbrains/build/release/jetbrains-sbom-evidence.json packages/kilo-jetbrains/build/release/kilo-jetbrains-SHA256SUMS
 

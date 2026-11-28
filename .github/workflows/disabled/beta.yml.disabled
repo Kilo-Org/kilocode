@@ -1,0 +1,188 @@
+# kilocode_change start - disabled: origin has no beta or dev branch, so the sync cannot succeed.
+# Re-enabling it puts pull request code on main's cache scope; privileged jobs must stop restoring caches first.
+# kilocode_change end
+name: beta
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 * * * *"
+
+# kilocode_change start
+permissions:
+  contents: read
+# kilocode_change end
+
+jobs:
+  # kilocode_change start - build merges and runs pull request code, so it can
+  # only read; publish runs no pull request code and holds the write scopes
+  build:
+    if: github.repository == 'Kilo-Org/kilocode'
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      has_update: ${{ steps.handoff.outputs.has_update }}
+      has_comments: ${{ steps.handoff.outputs.has_comments }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+        with:
+          cache: false # runs pull request code on main's cache scope, so never save an entry
+
+      - name: Configure git user
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: List beta pull requests
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/beta-out"
+          echo '[]' > "$RUNNER_TEMP/beta-out/comments.json"
+          gh pr list --repo "$GITHUB_REPOSITORY" --state open --draft=false --label beta \
+            --json number,title,author,labels --limit 100 > "$RUNNER_TEMP/beta-prs.json"
+
+      - name: Merge and validate beta branch
+        run: bun script/beta.ts --prs "$RUNNER_TEMP/beta-prs.json" --out "$RUNNER_TEMP/beta-out"
+
+      - name: Summarize beta handoff
+        id: handoff
+        if: always()
+        run: |
+          dir="$RUNNER_TEMP/beta-out"
+          update=false
+          comments=false
+          [ -f "$dir/beta.json" ] && update=true
+          jq -e 'type == "array" and length > 0' "$dir/comments.json" > /dev/null 2>&1 && comments=true
+          echo "has_update=$update" >> "$GITHUB_OUTPUT"
+          echo "has_comments=$comments" >> "$GITHUB_OUTPUT"
+
+      - name: Upload beta handoff
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: beta-handoff
+          path: ${{ runner.temp }}/beta-out
+          retention-days: 1
+          if-no-files-found: ignore
+
+  publish:
+    needs: build
+    if: ${{ !cancelled() && (needs.build.outputs.has_update == 'true' || needs.build.outputs.has_comments == 'true') }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Download beta handoff
+        id: handoff
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          name: beta-handoff
+          path: ${{ runner.temp }}/beta-out
+
+      - name: Push beta branch
+        if: needs.build.result == 'success' && needs.build.outputs.has_update == 'true'
+        env:
+          HANDOFF: ${{ steps.handoff.outcome }}
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/beta-out"
+          if [ "$HANDOFF" != "success" ] || [ ! -f "$dir/beta.json" ]; then
+            echo "::error::The build reported a beta update but its handoff could not be downloaded"
+            exit 1
+          fi
+          if ! jq -se 'length == 1 and (.[0] | type == "object")' "$dir/beta.json" > /dev/null; then
+            echo "::error::beta.json must hold exactly one JSON object"
+            exit 1
+          fi
+          sha="$(jq -er '.sha | strings | select(test("^[0-9a-f]{40}$"))' "$dir/beta.json")"
+          base="$(jq -er '.base | strings | select(test("^[0-9a-f]{40}$"))' "$dir/beta.json")"
+          seen="$(jq -er '.lease | strings | select(test("^([0-9a-f]{40})?$"))' "$dir/beta.json")"
+          main="$(git rev-parse origin/main)"
+          if [ "$base" != "$main" ]; then
+            echo "::warning::beta was built on $base but main is now $main; skipping the push, the next run rebuilds it"
+            exit 0
+          fi
+          lease="$(git ls-remote origin refs/heads/beta | cut -f1)"
+          if [ "$lease" != "$seen" ]; then
+            echo "::warning::beta moved from ${seen:-nothing} to ${lease:-nothing} since the build checked it; skipping the push"
+            exit 0
+          fi
+          if [ -f "$dir/beta.bundle" ]; then
+            git bundle verify -q "$dir/beta.bundle"
+            heads="$(git bundle list-heads "$dir/beta.bundle")"
+            if [ "$heads" != "$sha refs/heads/beta" ]; then
+              echo "::error::Bundle must contain exactly refs/heads/beta at $sha"
+              exit 1
+            fi
+            git fetch --no-tags "$dir/beta.bundle" "refs/heads/beta:refs/beta-handoff/beta"
+            if [ "$(git rev-parse refs/beta-handoff/beta)" != "$sha" ]; then
+              echo "::error::Fetched beta does not match $sha"
+              exit 1
+            fi
+          elif [ "$sha" != "$base" ]; then
+            echo "::error::Missing bundle for $sha"
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$base" "$sha"; then
+            echo "::error::Beta $sha does not build on $base"
+            exit 1
+          fi
+          git push --no-verify --force-with-lease="refs/heads/beta:$lease" origin "$sha:refs/heads/beta"
+          echo "Pushed beta at $sha"
+
+      - name: Comment on blocked pull requests
+        if: steps.handoff.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          file="$RUNNER_TEMP/beta-out/comments.json"
+          if [ ! -f "$file" ]; then
+            echo "No comments to post"
+            exit 0
+          fi
+          reasons='["Fetch failed","Merge conflicts with dev branch","Merge failed","Failed to stage changes","Failed to commit changes"]'
+          if ! jq -se --argjson reasons "$reasons" '
+            length == 1 and (.[0] | type == "array" and length <= 100 and all(.[];
+              type == "object" and (keys == ["number", "reason"])
+              and (.number | type == "number" and . == floor and . > 0)
+              and (.reason as $r | any($reasons[]; . == $r))))' "$file" > /dev/null; then
+            echo "::error::comments.json must be one array of {number, reason} entries with known reasons"
+            exit 1
+          fi
+          open="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues?labels=beta&state=open&per_page=100" \
+            --jq '[.[] | select(.pull_request) | .number]' | jq -s 'add // []')"
+          jq -sr --argjson open "$open" '.[0] | unique_by(.number) | .[]
+            | if (.number as $n | any($open[]; . == $n)) then "post\t\(.number)\t\(.reason)" else "skip\t\(.number)\t-" end' \
+            "$file" | while IFS=$'\t' read -r action number reason; do
+            if [ "$action" = skip ]; then
+              echo "Skipped PR #$number: no longer an open beta pull request"
+              continue
+            fi
+            body="$(printf '⚠️ **Blocking Beta Release**\n\nThis PR cannot be merged into the beta branch due to: **%s**\n\nPlease resolve this issue to include this PR in the next beta release.' "$reason")"
+            if gh api "repos/$GITHUB_REPOSITORY/issues/$number/comments" -f body="$body" > /dev/null; then
+              echo "Posted comment on PR #$number"
+            else
+              echo "Failed to post comment on PR #$number"
+            fi
+          done
+  # kilocode_change end
