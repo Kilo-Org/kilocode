@@ -1,5 +1,70 @@
 # kilo-code
 
+## 7.8.36
+
+### Patch Changes
+
+- [#16484](https://github.com/Kilo-Org/kilocode/pull/16484) [`8345515`](https://github.com/Kilo-Org/kilocode/commit/8345515276ff26af38369fc03a7db28ddbe094cf) - Show the permission card's description, paths, commands and diff file names in an escaped display form.
+
+  Characters that render without width now appear as literal escapes. That covers control characters, the
+  bidi marks and overrides, and the invisible format characters. It also covers two kinds of character that
+  ordinary text uses on purpose: an emoji presentation selector such as the one in `⚠️`, and the joiners that
+  combine emoji sequences or join the letters of Persian and Indic words. Those now show as `\ufe0f` and
+  `\u200d` in the card, so the displayed text names every character the request carries.
+
+- [#16414](https://github.com/Kilo-Org/kilocode/pull/16414) [`f891ace`](https://github.com/Kilo-Org/kilocode/commit/f891ace78066e92b9feb1a51f5bf86eabe321918) - Stop an automatic permission approval that is still being retried when auto-approve is turned off.
+
+- [#16453](https://github.com/Kilo-Org/kilocode/pull/16453) [`a353089`](https://github.com/Kilo-Org/kilocode/commit/a3530895868cb1623228e243e0fa0e4bc92ddb66) - Make auto-approve a user-level setting: it reads and writes your user settings only.
+
+- [#16417](https://github.com/Kilo-Org/kilocode/pull/16417) [`06ad704`](https://github.com/Kilo-Org/kilocode/commit/06ad7042b333c50a5da4c1334f5d1d2b222b4d09) - Report each configuration value that is skipped while loading, with its file and its field path, and keep the settings that validate in the same file.
+
+- [#16485](https://github.com/Kilo-Org/kilocode/pull/16485) [`158fe65`](https://github.com/Kilo-Org/kilocode/commit/158fe65a86c91ba18188cb4d9743945c90016eb0) - Only attach mentioned files that live inside the current workspace, and skip creating attachments when the workspace folder is not known.
+
+- [#16488](https://github.com/Kilo-Org/kilocode/pull/16488) [`a062619`](https://github.com/Kilo-Org/kilocode/commit/a06261934bbe6d4aca13bddbba7d929964625a7e) - Switch accounts in one correlated attempt: a failed confirmation keeps the last-known account and offers a retry instead of showing you as signed out, and the notice clears once the applied account moves on.
+
+- [#16475](https://github.com/Kilo-Org/kilocode/pull/16475) [`0a41b57`](https://github.com/Kilo-Org/kilocode/commit/0a41b5727bdf287490e7e9e95e4783ead8102df4) - Honor the configured working directory of a local MCP server, and keep a provider allow or deny list in effect after a configuration document is converted to the newer format.
+
+- [#16479](https://github.com/Kilo-Org/kilocode/pull/16479) [`83a0856`](https://github.com/Kilo-Org/kilocode/commit/83a085661983e8b18e4bb3b39f6a9867c9095973) - Switching off a saved auto-approve or auto-deny rule in the permission prompt now removes that rule.
+
+- [#16451](https://github.com/Kilo-Org/kilocode/pull/16451) [`5fb4429`](https://github.com/Kilo-Org/kilocode/commit/5fb4429bce74511264ec1cc5fc6fe01848aecffc) - Improve the Brazilian Portuguese wording of the MCP OAuth settings and sign-in labels.
+
+- [#16564](https://github.com/Kilo-Org/kilocode/pull/16564) [`e645f7c`](https://github.com/Kilo-Org/kilocode/commit/e645f7c2cea534bdaeca42fcf7eedca558c8af63) - Tell an expired or revoked Kilo login apart from a temporary outage. The profile now asks you to sign in again only when Kilo rejects the login, and keeps your account with a retry when Kilo is unreachable.
+
+- [#16480](https://github.com/Kilo-Org/kilocode/pull/16480) [`39f83cf`](https://github.com/Kilo-Org/kilocode/commit/39f83cf13400f3f4dff847e7b4e98a0b9e9ad060) - Report a clear configuration error when an Azure resource name or a Google Vertex location is not a plain resource name or region, send the AI Gateway credential from the environment only to a Cloudflare AI Gateway endpoint, and send the Google Cloud access token of the OpenAI-compatible Vertex path only to a Vertex API host, including the Vertex mTLS hosts. A Vertex location is validated only when the request endpoint is derived from it, so a provider configured with its own endpoint keeps working. An endpoint option that is blank or only whitespace counts as unset, so the Vertex endpoint derives from the region and the Azure endpoint derives from the resource name instead of being sent as given. When no location option is set, the location falls back to the Google Cloud region that the environment names before the provider default, and it is validated there too. For the Vertex Anthropic provider, a configured project or region now decides the request endpoint ahead of the environment, so the two cannot disagree.
+
+- [#16452](https://github.com/Kilo-Org/kilocode/pull/16452) [`5ee5096`](https://github.com/Kilo-Org/kilocode/commit/5ee5096028093d7aec0e6e1881c78bedbcb510c3) - Reload the provider and authentication state when the panel switches to another project, so the view always describes the project shown.
+  When the provider list cannot be read for the project shown, the panel states the failure.
+  Close an open provider dialog when the panel switches to another project, so its edits apply to the project it was opened for.
+
+- [#16491](https://github.com/Kilo-Org/kilocode/pull/16491) [`40dbdbb`](https://github.com/Kilo-Org/kilocode/commit/40dbdbbe7cf67fc9a42f27ff81c4e0c5dd5d7a0b) - Ask before a shell command prints an environment file, matching the existing read-tool prompt. A stream filter that reads a redirected environment file asks as well.
+
+- [#16556](https://github.com/Kilo-Org/kilocode/pull/16556) [`05c9710`](https://github.com/Kilo-Org/kilocode/commit/05c971024306d992e3dea8567695fbb2f51150a5) - Show a clear "signed out" message with a sign-in action when Kilo rejects your login, instead of a generic error. The CLI points to `/connect` and `kilo auth login`. In VS Code, the Sign in button starts login in the Kilo Profile tab. JetBrains opens User Profile and resends your message once you are signed in again.
+
+- [#16516](https://github.com/Kilo-Org/kilocode/pull/16516) [`df8e639`](https://github.com/Kilo-Org/kilocode/commit/df8e6396ce9513134c3e80bc923d8e6ea5991cc9) - Apply a configured file-write permission from an older configuration document to file writes when the document is converted to the newer format, so the permission a user authored takes effect. When such a document also sets the deprecated tool toggle for the same capability, the toggle keeps the effect it has today.
+
+- [#16486](https://github.com/Kilo-Org/kilocode/pull/16486) [`bf85d41`](https://github.com/Kilo-Org/kilocode/commit/bf85d415ac592439053a5cb4c23ca44d927ccd16) - Carry configured provider headers and bearer tokens as request headers when a configuration document is converted to the newer format, so a configured `headers` entry and an `authToken` apply to the provider request.
+
+- [#16518](https://github.com/Kilo-Org/kilocode/pull/16518) [`bd87e56`](https://github.com/Kilo-Org/kilocode/commit/bd87e56f1c4bfa99da90ac38f3291dc0cd8c35ff) - Save the auto-approve setting before auto-approval starts, report a save that fails, and tell you when an automatic approval was not accepted so the prompt still reaches you.
+
+- [#16455](https://github.com/Kilo-Org/kilocode/pull/16455) [`919043d`](https://github.com/Kilo-Org/kilocode/commit/919043d376b89c8bec8c49b326c4d6820ab70d56) - Keep sub-agent tab state consistent when tabs close and reopen, and route prompt answers to the session that asked the question.
+
+- [#16515](https://github.com/Kilo-Org/kilocode/pull/16515) [`28504eb`](https://github.com/Kilo-Org/kilocode/commit/28504ebbd15db713547af7e2540e072394ca90d2) - Session actions keep to one project: revert, unrevert, message delete, session delete, session rename, compact, stop, and permission and question replies act on the directory that owns the session, and report the action when that directory cannot be determined.
+
+- [#16519](https://github.com/Kilo-Org/kilocode/pull/16519) [`18c803f`](https://github.com/Kilo-Org/kilocode/commit/18c803fb84d10dc7680f19b4c6315b6996052745) - Settings keeps your unsaved changes and the save bar in place until the extension host confirms the save, and reports a save the host never confirms so you can retry it.
+
+- [#16487](https://github.com/Kilo-Org/kilocode/pull/16487) [`3d2eb1d`](https://github.com/Kilo-Org/kilocode/commit/3d2eb1daaad3bc8d9cfabb953a7226502de61fd0) - Report a settings change that the extension host did not apply with a dismissible error that names the control, keep the previous value in force, and keep a rejected unsaved edit available so it can be saved again.
+
+- [#16474](https://github.com/Kilo-Org/kilocode/pull/16474) [`e05e37f`](https://github.com/Kilo-Org/kilocode/commit/e05e37f4081e0c1cd289ff8aa9ffdfb1e0a2dace) - The write tool now refuses to write when the target changed before the write verifies it, and names that reason in its answer. It also names a target that is not a regular file, or whose filesystem reports no usable identity.
+
+- Updated dependencies [[`b0717b9`](https://github.com/Kilo-Org/kilocode/commit/b0717b91ee02e06e3757d2696a3e340a7b3592a0)]:
+  - @kilocode/sdk@7.9.0
+  - @kilocode/kilo-ui@7.8.33
+  - @kilocode/plugin@7.8.33
+  - @opencode-ai/ui@7.8.33
+  - @opencode-ai/core@7.8.33
+  - @kilocode/kilo-gateway@7.8.33
+  - @kilocode/kilo-indexing@7.8.33
+
 ## 7.8.32
 
 ### Patch Changes

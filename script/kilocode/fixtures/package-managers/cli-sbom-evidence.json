@@ -1,0 +1,56 @@
+{
+  "version": "7.8.40",
+  "product": "cli",
+  "generated": "2026-11-27T09:07:07.908Z",
+  "expected": 12,
+  "entries": [
+    {
+      "artifact": "kilo-darwin-arm64.zip",
+      "sha256": "16beea276f77d678d3eb4209e2e627747a8319f785deaf7152cdc8ab7fc51feb"
+    },
+    {
+      "artifact": "kilo-darwin-x64-baseline.zip",
+      "sha256": "e035464ef6ac051c6b41ec45dcedd18b3940e9cd483139892576c1f140c66ced"
+    },
+    {
+      "artifact": "kilo-darwin-x64.zip",
+      "sha256": "3d2112009592171228d32b5f09dc442fa06dd11759e1a9c61e79d305049f4da6"
+    },
+    {
+      "artifact": "kilo-linux-arm64-musl.tar.gz",
+      "sha256": "48013507cbe50dfb992aa31d0c67024433c6753765b98b948b014eff7d938312"
+    },
+    {
+      "artifact": "kilo-linux-arm64.tar.gz",
+      "sha256": "3e7b140cd446c09b1f48589085d7b4b975889e37255eb4d71ebf80b506f54661"
+    },
+    {
+      "artifact": "kilo-linux-x64-baseline-musl.tar.gz",
+      "sha256": "58694e9111213242e924dab4b754f83e2c5d9d4c8635058a17f6910f669b587b"
+    },
+    {
+      "artifact": "kilo-linux-x64-baseline.tar.gz",
+      "sha256": "b99e39784d8c1f9c18cf0fcabd5b425e5ce5ab68101e67a044393c64908fd656"
+    },
+    {
+      "artifact": "kilo-linux-x64-musl.tar.gz",
+      "sha256": "00f1e06351ba1a7d022357fcfa1e3ff819d5abb2ae5751ba9e8004dd69128dbe"
+    },
+    {
+      "artifact": "kilo-linux-x64.tar.gz",
+      "sha256": "5ccdd8972f1b57306c28e613a1810b87a95224d966b381897a12bdae4d9bf0d1"
+    },
+    {
+      "artifact": "kilo-windows-arm64.zip",
+      "sha256": "2e9b18d84188a90e21f364fbdb2653a657c1f8ef5215334a1aa132b52c0a82c5"
+    },
+    {
+      "artifact": "kilo-windows-x64-baseline.zip",
+      "sha256": "fe014d96fdcb1052da5f3d595525a2ed4ad8f0954361ab5292213b94c1799ac1"
+    },
+    {
+      "artifact": "kilo-windows-x64.zip",
+      "sha256": "5cf0ea4bb783837a719f5ee08f2607e509b0c63068d4144576ff057614baa171"
+    }
+  ]
+}

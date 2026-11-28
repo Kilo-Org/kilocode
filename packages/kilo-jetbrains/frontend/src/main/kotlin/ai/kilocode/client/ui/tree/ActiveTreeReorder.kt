@@ -23,6 +23,7 @@ internal class ActiveTreeReorder(private val view: ActiveTreeView, private val o
     @RequiresEdt
     fun pick(point: Point): String? = view.regions.entry(point)?.takeIf {
         view.isEnabled && preview == null && movable(it) &&
+            view.regions.control(it)?.contains(point) != true &&
             view.regions.hits(it).none { hit -> hit.enabled && hit.bounds.contains(point) }
     }?.key
 

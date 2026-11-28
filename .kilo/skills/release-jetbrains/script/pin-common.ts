@@ -1,5 +1,7 @@
 import { $ } from "bun"
-import semver from "semver"
+// Dependency-free version helpers: the jetbrains-pin job of publish.yml runs set-pin.ts, which
+// imports this file, without installing packages.
+import { compare, parse, type Version } from "../../../../script/kilocode/jetbrains-version"
 
 export const assets = [
   "kilo-darwin-arm64.zip",
@@ -16,10 +18,13 @@ export async function latest(repo: string) {
     isDraft: boolean
     isPrerelease: boolean
   }[]
-  return list
-    .filter((item) => /^v\d+\.\d+\.\d+$/.test(item.tagName) && !item.isDraft && !item.isPrerelease)
-    .map((item) => item.tagName.slice(1))
-    .sort(semver.rcompare)[0] ?? null
+  return (
+    list
+      .filter((item) => /^v\d+\.\d+\.\d+$/.test(item.tagName) && !item.isDraft && !item.isPrerelease)
+      .map((item) => ({ tag: item.tagName.slice(1), ver: parse(item.tagName.slice(1)) }))
+      .filter((item): item is { tag: string; ver: Version } => item.ver !== undefined)
+      .sort((a, b) => compare(b.ver, a.ver))[0]?.tag ?? null
+  )
 }
 
 export async function missing(repo: string, version: string) {

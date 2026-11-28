@@ -184,6 +184,8 @@ jobs:
       - name: Setup Bun
         if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
         uses: ./.github/actions/setup-bun
+        with:
+          cache: false # job holds write scopes and secrets
 
       - name: Prepare rolling branch
         id: prep

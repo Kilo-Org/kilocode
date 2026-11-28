@@ -9,6 +9,7 @@ import type {
   ConnectionState,
   ServerInfo,
   ProfileData,
+  ProfileStatusMessage,
   ProviderUsageData,
   DeviceAuthState,
   ExtensionMessage,
@@ -23,6 +24,7 @@ interface ServerContextValue {
   errorDetails: Accessor<string | undefined>
   isConnected: Accessor<boolean>
   profileData: Accessor<ProfileData | null>
+  profileStatus: Accessor<ProfileStatusMessage["status"] | undefined>
   providerUsage: Accessor<ProviderUsageData | undefined>
   providerUsageLoading: Accessor<boolean>
   providerUsageError: Accessor<string | undefined>
@@ -40,6 +42,24 @@ interface ServerContextValue {
 export const ServerContext = createContext<ServerContextValue>()
 
 const initialDeviceAuth: DeviceAuthState = { status: "idle" }
+const LOGIN_EVENT = "kilo:login"
+
+/**
+ * Intercept `goToLogin()` calls in webviews that do not render ProfileView
+ * (such as Agent Manager), preventing an invisible device-auth flow and
+ * delegating sign-in to the Profile panel instead.
+ */
+export function interceptLogin(
+  handler: () => void,
+  target: Pick<Window, "addEventListener" | "removeEventListener"> = window,
+): () => void {
+  const listener = (event: Event) => {
+    event.preventDefault()
+    handler()
+  }
+  target.addEventListener(LOGIN_EVENT, listener)
+  return () => target.removeEventListener(LOGIN_EVENT, listener)
+}
 
 export const ServerProvider: ParentComponent = (props) => {
   const vscode = useVSCode()
@@ -50,6 +70,7 @@ export const ServerProvider: ParentComponent = (props) => {
   const [errorMessage, setErrorMessage] = createSignal<string | undefined>()
   const [errorDetails, setErrorDetails] = createSignal<string | undefined>()
   const [profileData, setProfileData] = createSignal<ProfileData | null>(null)
+  const [profileStatus, setProfileStatus] = createSignal<ProfileStatusMessage["status"]>()
   const [providerUsage, setProviderUsage] = createSignal<ProviderUsageData>()
   const [providerUsageLoading, setProviderUsageLoading] = createSignal(false)
   const [providerUsageError, setProviderUsageError] = createSignal<string>()
@@ -92,8 +113,19 @@ export const ServerProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "requestProviderUsage" })
   }
 
+  // A profile read (or its absence) clears the status; a status keeps the shown profile.
+  const profile = (message: ExtensionMessage) => {
+    if (message.type === "profileData") {
+      console.log("[Kilo New] Profile data:", message.data ? "received" : "null")
+      setProfileData(message.data)
+      setProfileStatus(undefined)
+    }
+    if (message.type === "profileStatus") setProfileStatus(message.status)
+  }
+
   onMount(() => {
     const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
+      profile(message)
       switch (message.type) {
         case "ready":
           console.log("[Kilo New] Server ready:", message.serverInfo)
@@ -138,11 +170,6 @@ export const ServerProvider: ParentComponent = (props) => {
           console.error("[Kilo New] Server error:", message.message)
           setErrorMessage(message.message)
           setErrorDetails(message.message)
-          break
-
-        case "profileData":
-          console.log("[Kilo New] Profile data:", message.data ? "received" : "null")
-          setProfileData(message.data)
           break
 
         case "deviceAuthStarted":
@@ -200,11 +227,14 @@ export const ServerProvider: ParentComponent = (props) => {
    * Route any "Sign In" action through the Profile view so the user always
    * sees the device-auth UI (URL, QR, code, timer, cancel). Entry points
    * outside the Profile page — e.g. the Kilo Gateway card in the Providers
-   * settings tab, or the provider picker — must call this helper instead of
-   * `startLogin()` directly. Otherwise the login flow runs silently and the
-   * user has no way to see the code or cancel if the browser is dismissed.
+   * settings tab, the provider picker, or chat auth errors — must call this
+   * helper instead of `startLogin()` directly. Webviews without an inline
+   * Profile view (such as Agent Manager) intercept `LOGIN_EVENT` via
+   * `interceptLogin()` to open the Profile panel and trigger login there.
    */
   const goToLogin = () => {
+    const event = new CustomEvent(LOGIN_EVENT, { cancelable: true })
+    if (!window.dispatchEvent(event)) return
     window.postMessage({ type: "navigate", view: "profile" }, window.origin)
     startLogin()
   }
@@ -229,6 +259,7 @@ export const ServerProvider: ParentComponent = (props) => {
     errorDetails,
     isConnected: () => connectionState() === "connected",
     profileData,
+    profileStatus,
     providerUsage,
     providerUsageLoading,
     providerUsageError,

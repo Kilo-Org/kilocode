@@ -48,6 +48,19 @@ class LoginRequiredViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test signed out show replaces the title and a later sign in prompt restores it`() {
+        edt {
+            val view = LoginRequiredView(openProfile = {}, dismiss = {})
+            view.show("Sign in again.", signedOut = true)
+            val title = findAll<JBTextArea>(view).firstOrNull { it.text == "You've been signed out of Kilo" }
+            assertNotNull("Signed-out title should be shown", title)
+
+            // The same retained title component goes back to the sign-in prompt.
+            view.show("Sign in required.")
+            assertEquals("You need to sign in to use this model", title!!.text)
+        }
+    }
+
     // ------ open profile button style ------
 
     fun `test open profile button is primary`() {

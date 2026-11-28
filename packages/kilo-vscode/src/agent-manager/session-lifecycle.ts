@@ -1,27 +1,55 @@
 import type { Session } from "@kilocode/sdk/v2/client"
 import { sessionToWebview } from "../kilo-provider-utils"
-import { samePath } from "./project/paths"
+import { canonicalizePath, samePath } from "./project/paths"
 import type { ProjectContexts } from "./project/contexts"
 import type { AgentManagerOutMessage } from "./types"
 
 type Deps = {
   busy: Set<string>
+  busyDirs?: Map<string, string>
   removed: Set<string>
   contexts: ProjectContexts
   closeBrowser: (sessionId: string) => void
   post: (message: AgentManagerOutMessage) => void
 }
 
-type Event = { type?: string; properties?: { info?: Session; sessionID?: string } }
+type Event = { type?: string; properties?: { info?: Session; sessionID?: string; directory?: string } }
 
 function remove(id: string, deps: Deps): void {
   deps.removed.add(id)
   deps.busy.delete(id)
+  deps.busyDirs?.delete(id)
   deps.closeBrowser(id)
   const ctx = deps.contexts.byLiveSession(id)
   if (!ctx) return
   ctx.removeLiveSession(id)
   deps.post({ type: "agentManager.projectSessions", projectId: ctx.id, sessions: [...ctx.sessions()] })
+}
+
+function owner(id: string, deps: Deps): string | undefined {
+  const tracked = deps.busyDirs?.get(id)
+  if (tracked) return tracked
+  const ctx = deps.contexts.byLiveSession(id)
+  if (!ctx) return undefined
+  const state = ctx.peekState()
+  const wid = state?.getSession(id)?.worktreeId
+  if (wid) return state?.getWorktree(wid)?.path ?? ctx.root
+  return ctx.root
+}
+
+function dispose(dir: string | undefined, deps: Deps): void {
+  if (!dir) {
+    deps.busy.clear()
+    deps.busyDirs?.clear()
+    return
+  }
+  const target = canonicalizePath(dir)
+  for (const id of [...deps.busy]) {
+    const path = owner(id, deps)
+    if (!path || !samePath(canonicalizePath(path), target)) continue
+    deps.busy.delete(id)
+    deps.busyDirs?.delete(id)
+  }
 }
 
 function upsert(info: Session, deps: Deps): void {
@@ -39,10 +67,15 @@ function upsert(info: Session, deps: Deps): void {
   deps.post({ type: "agentManager.projectSessions", projectId: ctx.id, sessions: [...ctx.sessions()] })
 }
 
-export function handleSessionLifecycle(event: unknown, deps: Deps): void {
+export function handleSessionLifecycle(event: unknown, deps: Deps, directory?: string): void {
   const ev = event as Event
+  if (ev.type === "global.disposed") return dispose(undefined, deps)
+  if (ev.type === "server.instance.disposed") return dispose(ev.properties?.directory ?? directory, deps)
   if (ev.type === "session.error") {
-    if (ev.properties?.sessionID) deps.busy.delete(ev.properties.sessionID)
+    const id = ev.properties?.sessionID
+    if (!id) return
+    deps.busy.delete(id)
+    deps.busyDirs?.delete(id)
     return
   }
   if (ev.type === "session.deleted") {

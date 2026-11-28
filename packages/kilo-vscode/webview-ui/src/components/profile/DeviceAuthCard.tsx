@@ -55,7 +55,7 @@ const DeviceAuthCard: Component<DeviceAuthCardProps> = (props) => {
   const vscode = useVSCode()
   const language = useLanguage()
   const dialog = useDialog()
-  const [timeRemaining, setTimeRemaining] = createSignal(props.expiresIn ?? 900)
+  const [timeRemaining, setTimeRemaining] = createSignal(props.expiresIn ?? 600)
   const [qrDataUrl, setQrDataUrl] = createSignal("")
 
   // Countdown timer
@@ -63,7 +63,7 @@ const DeviceAuthCard: Component<DeviceAuthCardProps> = (props) => {
     if (props.status !== "pending") {
       return
     }
-    setTimeRemaining(props.expiresIn ?? 900)
+    setTimeRemaining(props.expiresIn ?? 600)
     const interval = setInterval(() => {
       setTimeRemaining((prev) => Math.max(0, prev - 1))
     }, 1000)

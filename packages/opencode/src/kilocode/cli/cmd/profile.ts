@@ -87,7 +87,7 @@ export async function handle(args: Args) {
     return
   }
 
-  const { fetchBalance, fetchProfile } = await import("@kilocode/kilo-gateway")
+  const { fetchBalance, fetchProfile, InvalidTokenError } = await import("@kilocode/kilo-gateway")
   const org = auth.accountId ?? null
   const result = await (async () => {
     try {
@@ -96,7 +96,11 @@ export async function handle(args: Args) {
         (args.getBalance ?? fetchBalance)(auth.access, org ?? undefined),
       ] as const)
     } catch (err) {
-      error(err instanceof Error ? err.message : String(err))
+      error(
+        err instanceof InvalidTokenError
+          ? "Your Kilo login has expired or was revoked. Run `kilo auth login` to sign in again."
+          : `Could not load your Kilo profile, try again later (${err instanceof Error ? err.message : String(err)})`,
+      )
       exit(1)
       return undefined
     }

@@ -111,6 +111,34 @@ function strip(node: Record<string, unknown>) {
   return out
 }
 
+// The same rule applies to a typed node beside `anyOf`/`oneOf`, such as
+// `{ type: "array", anyOf: [...] }`. A type array next to a combiner also
+// produces this shape, because `branch` copies the combiner into every branch.
+// Gemini rejects the `type` sibling, and the sanitizer cannot add a missing
+// `items` there without adding another sibling. Push the parent keywords into
+// each branch instead: `A and anyOf(B, C)` equals `anyOf(A and B, A and C)`, and
+// the same holds for `oneOf`. Each branch then stands alone and gets its own
+// `items` fallback. A key the branch already sets wins over the parent's.
+const COMBINERS = ["anyOf", "oneOf"]
+const OUTER = new Set(["nullable", "description"])
+
+function spread(node: unknown): unknown {
+  if (!plain(node)) return node
+  const keys = COMBINERS.filter((key) => Array.isArray(node[key]))
+  if (keys.length !== 1) return node
+  const key = keys[0]
+  const branches = node[key] as unknown[]
+  if (typeof node.type !== "string") return { ...node, [key]: branches.map(spread) }
+  const outer: Record<string, unknown> = {}
+  const inner: Record<string, unknown> = {}
+  for (const [name, value] of Object.entries(node)) {
+    if (name === key) continue
+    if (OUTER.has(name)) outer[name] = value
+    else inner[name] = value
+  }
+  return { ...outer, [key]: branches.map((item) => (plain(item) ? spread({ ...inner, ...item }) : item)) }
+}
+
 export function lowerTypeArrays(schema: unknown, npm: string | undefined): unknown {
   const native = npm != null && NATIVE.has(npm)
   const walk = (node: unknown): unknown => {
@@ -129,8 +157,8 @@ export function lowerTypeArrays(schema: unknown, npm: string | undefined): unkno
       out[key] = walk(value)
     }
     const types = out.type
-    if (Array.isArray(types) && types.every((type) => typeof type === "string")) return lower(out, types, native)
-    return strip(out)
+    if (Array.isArray(types) && types.every((type) => typeof type === "string")) return spread(lower(out, types, native))
+    return spread(strip(out))
   }
   return walk(schema)
 }
