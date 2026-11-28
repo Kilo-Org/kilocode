@@ -20,6 +20,7 @@ export type Locale =
   | "uk"
   | "it"
   | "fa"
+  | "el"
 
 export const LOCALES: readonly Locale[] = [
   "en",
@@ -43,6 +44,7 @@ export const LOCALES: readonly Locale[] = [
   "uk",
   "it",
   "fa",
+  "el",
 ]
 
 /** Normalize a BCP 47 language tag to one of the supported locales, and fall back to `en`. */
