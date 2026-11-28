@@ -52,9 +52,6 @@ const ROW_CAP = 150
 const PENDING_DISPLAY_CAP = 60
 const SUMMARY_FILE = ".docs-sync-summary.json"
 const DOCS_PATH = "packages/kilo-docs"
-// The pre-surface rolling branch. A ref may not be a path prefix of another
-// ref, so it must be gone before any `docs/auto-sync/<surface>` push.
-const LEGACY_BRANCH = "docs/auto-sync"
 const MAP_FILE = ".github/docs-sync/surfaces.json"
 export const LEARNINGS_FILE = "packages/kilo-docs/LEARNINGS.md"
 
@@ -696,46 +693,6 @@ async function patchLearnedMarkers({ api, repo, marker, numbers }) {
 /** Most pull request numbers a marker handoff may name (one per surface is the norm). */
 export const MARKER_PRS_MAX = 50
 
-/**
- * Delete a lingering legacy `docs/auto-sync` branch on origin (a closed PR or a
- * partial cleanup still blocks every surface push), and drop its
- * remote-tracking ref, which actions/checkout creates for every origin branch
- * and which would block fetching a surface branch. The branch is deleted only
- * when `lease` (the tip the agent job reported; empty: it saw none) is part of
- * the published integration commit, so no legacy content is lost, and only at
- * that tip (`--force-with-lease`). A tip the run did not incorporate, or a
- * branch moved during the run, is kept with a warning, and that run's surface
- * pushes fail. The lease guards honest races only; the reachability check is
- * what keeps a deletion from dropping commits the run never published.
- */
-function deleteLegacyBranch(lease, integrationSha) {
-  if (lease) {
-    let published = false
-    try {
-      git(["merge-base", "--is-ancestor", lease, integrationSha])
-      published = true
-    } catch {
-      published = false
-    }
-    if (!published) {
-      console.warn(
-        `::warning::docs-sync: the legacy branch ${LEGACY_BRANCH} at ${lease} is not part of the published commit ${integrationSha}; not deleting it`,
-      )
-    } else {
-      try {
-        git(["push", `--force-with-lease=refs/heads/${LEGACY_BRANCH}:${lease}`, "origin", `:refs/heads/${LEGACY_BRANCH}`])
-      } catch (err) {
-        console.warn(`::warning::docs-sync: could not delete the legacy branch ${LEGACY_BRANCH}: ${err.message}`)
-      }
-    }
-  }
-  try {
-    git(["update-ref", "-d", `refs/remotes/origin/${LEGACY_BRANCH}`])
-  } catch (err) {
-    console.warn(`::warning::docs-sync: could not remove the stale ref for ${LEGACY_BRANCH}: ${err.message}`)
-  }
-}
-
 async function main() {
   const { api, appendOutput, appendSummary, repo, searchIssues } = await import("./lib.mjs")
 
@@ -790,10 +747,6 @@ async function main() {
   if (!/^[0-9a-f]{40}$/.test(baseMain)) {
     throw new Error(`BASE_MAIN must be a commit id when HAS_EDITS is true; got ${JSON.stringify(baseMain)}`)
   }
-  const legacyLease = process.env.LEGACY_BASE ?? ""
-  if (!/^([0-9a-f]{40})?$/.test(legacyLease)) {
-    throw new Error(`LEGACY_BASE must be a commit id or empty; got ${JSON.stringify(legacyLease)}`)
-  }
 
   // Watermark: now when fully covered; else earliest uncovered merged_at − 1ms.
   // Pass SINCE as fallback so missing digest-full cannot strand uncovered PRs.
@@ -832,8 +785,6 @@ async function main() {
   // Run-log proof: the computed surface for every changed file.
   console.log(`docs-sync surface map (${changedFiles.length} changed files):`)
   for (const file of changedFiles) console.log(`  ${surfaceForDoc(file, map)} <- ${file}`)
-
-  deleteLegacyBranch(legacyLease, integrationSha)
 
   let open = new Map()
   try {

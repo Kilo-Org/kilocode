@@ -3705,7 +3705,6 @@ function runUpsert(repoDir, root, port, extraEnv = {}) {
       BRANCH: "docs/auto-sync",
       DURABLE_BASE: dirty ? durableBase : "",
       BASE_MAIN: dirty ? baseMain : "",
-      LEGACY_BASE: "",
       HAS_EDITS: dirty ? "true" : "false",
       INTEGRATION_SHA: dirty ? gitIn(repoDir, ["rev-parse", "HEAD"]) : "",
       GITHUB_OUTPUT: path.join(root, "gh-output"),
@@ -4117,145 +4116,6 @@ function case17_learnAllSurfaces() {
       input.corrections.some((c) => c.source === `commit:${cliSha.slice(0, 7)}`),
       "the readable branch must still be learned",
     )
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Case 18 — a lingering legacy ref is deleted without an open legacy PR
-// ---------------------------------------------------------------------------
-// prepare-branch (agent job, read-only token) only drops the local
-// remote-tracking ref; upsert-pr (publish job) deletes the branch on origin
-// before the first surface push.
-function case18_legacyRefDeletedWithoutPr() {
-  console.log("case 18 — a lingering legacy ref is deleted without an open legacy PR")
-  const root = mktemp("docs-sync-prep-legacy-")
-  const originDir = path.join(root, "origin.git")
-  gitIn(root, ["init", "--bare", "origin.git"])
-  const repoDir = path.join(root, "repo")
-  fs.mkdirSync(repoDir)
-  initRepoWithIdentity(repoDir)
-
-  const write = (rel, text) => {
-    const p = path.join(repoDir, rel)
-    fs.mkdirSync(path.dirname(p), { recursive: true })
-    fs.writeFileSync(p, text)
-  }
-  write("packages/kilo-docs/pages/getting-started/base.md", "# base\n")
-  gitIn(repoDir, ["add", "packages/kilo-docs"])
-  gitIn(repoDir, ["commit", "-m", "base"])
-  gitIn(repoDir, ["remote", "add", "origin", originDir])
-  gitIn(repoDir, ["push", "-q", "origin", "main"])
-
-  gitIn(repoDir, ["checkout", "-q", "-b", "docs/auto-sync-integration"])
-  write("packages/kilo-docs/pages/getting-started/integ.md", "# integ\n")
-  gitIn(repoDir, ["add", "packages/kilo-docs"])
-  gitIn(repoDir, ["commit", "-m", "integ"])
-  gitIn(repoDir, ["push", "-q", "origin", "docs/auto-sync-integration"])
-
-  // A legacy docs/auto-sync branch lingers on origin with no open legacy PR.
-  // It must be pushed from a temp branch: origin (like a local repo) refuses to
-  // hold both `docs/auto-sync` and `docs/auto-sync/cli`.
-  gitIn(repoDir, ["checkout", "-q", "-b", "legacy-tmp", "main"])
-  write("packages/kilo-docs/pages/getting-started/legacy.md", "# legacy\n")
-  gitIn(repoDir, ["add", "packages/kilo-docs"])
-  gitIn(repoDir, ["commit", "-m", "legacy"])
-  const legacySha = gitIn(repoDir, ["rev-parse", "HEAD"])
-  gitIn(repoDir, ["push", "-q", "origin", "HEAD:refs/heads/docs/auto-sync"])
-
-  // actions/checkout leaves the remote-tracking ref for every origin branch.
-  gitIn(repoDir, ["update-ref", "refs/remotes/origin/docs/auto-sync", legacySha])
-  gitIn(repoDir, ["checkout", "-q", "main"])
-  gitIn(repoDir, ["branch", "-D", "legacy-tmp"])
-
-  const stub = startSurfaceStub({ openPrs: [{ number: 7, head: "docs/auto-sync/cli", body: "" }] })
-  try {
-    const outputFile = path.join(root, "gh-output")
-    const result = runNodeScript(PREP_SCRIPT, {
-      cwd: repoDir,
-      env: {
-        GITHUB_REPOSITORY: "acme/repo",
-        GH_TOKEN: "stub-token",
-        DOCS_SYNC_API_BASE: `http://127.0.0.1:${stub.port}`,
-        GITHUB_OUTPUT: outputFile,
-      },
-    })
-    assert.equal(result.status, 0, `prepare-branch must exit 0: ${result.output}`)
-    assert.match(
-      fs.readFileSync(outputFile, "utf8"),
-      new RegExp(`^legacy_sha=${legacySha}$`, "m"),
-      "prepare-branch must report the legacy tip it saw, for the publish lease",
-    )
-
-    const remote = gitIn(repoDir, ["ls-remote", "--heads", "origin", "docs/auto-sync"])
-    assert.ok(remote.endsWith("refs/heads/docs/auto-sync"), `prepare-branch must make no remote write; got:\n${remote}`)
-    assert.throws(
-      () => gitIn(repoDir, ["rev-parse", "--verify", "refs/remotes/origin/docs/auto-sync"]),
-      "the stale remote-tracking ref must be removed",
-    )
-  } finally {
-    stub.child.kill()
-  }
-
-  // The agent job incorporated the legacy tip A (`legacySha`) into the
-  // integration tree, as prepare-branch does when the legacy branch is its base.
-  gitIn(repoDir, ["merge", "-q", "--no-edit", legacySha])
-
-  // The legacy branch moves to B between the jobs: the leased delete at A must
-  // refuse, and the run's surface push fails with a warning instead of a lost
-  // branch.
-  const movedSha = gitIn(repoDir, ["commit-tree", `${legacySha}^{tree}`, "-p", legacySha, "-m", "moved during the run"])
-  gitIn(repoDir, ["push", "-q", "origin", `${movedSha}:refs/heads/docs/auto-sync`])
-  write(SURFACE_PAGE_FILES.cli, "# new\n")
-  const movedStub = startSurfaceStub({ openPrs: [] })
-  try {
-    const result = runUpsert(repoDir, root, movedStub.port, { LEGACY_BASE: legacySha })
-    assert.equal(result.status, 0, `upsert must exit 0: ${result.output}`)
-    assert.match(result.output, /could not delete the legacy branch/, "the refused delete must warn")
-    const remote = gitIn(repoDir, ["ls-remote", "--heads", "origin", "docs/auto-sync"])
-    assert.ok(remote.startsWith(movedSha), `the moved legacy branch must be kept; got:\n${remote}`)
-  } finally {
-    movedStub.child.kill()
-  }
-
-  // The branch moved to B between prepare-branch's merge and its ls-remote, so
-  // the reported tip B matches origin but was never incorporated: upsert must
-  // not delete it.
-  gitIn(repoDir, ["update-ref", "refs/remotes/origin/docs/auto-sync", movedSha])
-  write(SURFACE_PAGE_FILES.cli, "# new, second run\n")
-  const unseenStub = startSurfaceStub({ openPrs: [] })
-  try {
-    const result = runUpsert(repoDir, root, unseenStub.port, { LEGACY_BASE: movedSha })
-    assert.equal(result.status, 0, `upsert must exit 0: ${result.output}`)
-    assert.match(result.output, /is not part of the published commit/, "an unincorporated tip must be refused")
-    const remote = gitIn(repoDir, ["ls-remote", "--heads", "origin", "docs/auto-sync"])
-    assert.ok(remote.startsWith(movedSha), `a tip the run did not publish must be kept; got:\n${remote}`)
-  } finally {
-    unseenStub.child.kill()
-  }
-
-  // Once the run incorporates B and reports it, upsert deletes the branch and
-  // the remote-tracking ref (recreated by the publish checkout) before it
-  // pushes a surface branch.
-  gitIn(repoDir, ["merge", "-q", "--no-edit", movedSha])
-  gitIn(repoDir, ["update-ref", "refs/remotes/origin/docs/auto-sync", movedSha])
-  write(SURFACE_PAGE_FILES.cli, "# new, third run\n")
-  const publishStub = startSurfaceStub({ openPrs: [] })
-  try {
-    const result = runUpsert(repoDir, root, publishStub.port, { LEGACY_BASE: movedSha })
-    assert.equal(result.status, 0, `upsert must exit 0: ${result.output}`)
-
-    const remote = gitIn(repoDir, ["ls-remote", "--heads", "origin", "docs/auto-sync"])
-    assert.equal(remote, "", `the lingering legacy remote branch must be deleted; got:\n${remote}`)
-    assert.ok(
-      gitIn(repoDir, ["ls-remote", "--heads", "origin", "docs/auto-sync/cli"]).endsWith("refs/heads/docs/auto-sync/cli"),
-      "the cli surface branch must be pushed after the legacy branch is gone",
-    )
-    assert.throws(
-      () => gitIn(repoDir, ["rev-parse", "--verify", "refs/remotes/origin/docs/auto-sync"]),
-      "the stale remote-tracking ref must be removed",
-    )
-  } finally {
-    publishStub.child.kill()
   }
 }
 
@@ -4956,7 +4816,6 @@ function main() {
     case15_surfaceUpdate,
     case16_surfaceDeletion,
     case17_learnAllSurfaces,
-    case18_legacyRefDeletedWithoutPr,
     case19_watermarkAndMarkerHelpers,
     case20_upsertRefreshesSkippedMarker,
     case21_twoSurfacesOneUnmapped,

@@ -297,7 +297,6 @@ jobs:
           MARKER_PATCH: ${{ steps.learn.outputs.marker_patch }}
           MARKER_PRS: ${{ steps.learn.outputs.marker_prs }}
           BRANCH: ${{ steps.prep.outputs.branch }}
-          LEGACY_BASE: ${{ steps.prep.outputs.legacy_sha }}
           VERIFIED: ${{ steps.verified.outputs.ok }}
         run: node .github/docs-sync/handoff.mjs pack
 
@@ -405,6 +404,5 @@ jobs:
           SINCE_OVERRIDE: ${{ steps.check.outputs.since_override }}
           BRANCH: ${{ steps.check.outputs.branch }}
           DURABLE_BASE: ${{ steps.check.outputs.durable_base }}
-          LEGACY_BASE: ${{ steps.check.outputs.legacy_base }}
           VERIFIED: ${{ steps.check.outputs.verified }}
         run: node .github/docs-sync/upsert-pr.mjs

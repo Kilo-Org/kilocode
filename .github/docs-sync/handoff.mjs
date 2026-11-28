@@ -23,18 +23,16 @@
  *     the whole tip against main, with no symlink, no submodule, no mode change
  *     and no new executable file.
  * It never checks the bundle out into the workspace and runs no file from it.
- * `durable_base` and `legacy_base` are push leases for upsert-pr.mjs: the tip
- * of the target branch, and of a lingering legacy `docs/auto-sync` branch, as
- * the agent job saw them (empty: absent). They decide nothing but whether a
- * branch that moved during the run is overwritten or deleted (it is not). They
- * guard honest races only: the agent job chooses the values, so they are no
- * security check; upsert-pr.mjs also deletes the legacy branch only when its
- * leased tip is part of the published commit. `marker_prs` lists the pull
- * requests learn.mjs read for the marker (at most 50); upsert-pr.mjs re-reads
- * each and patches only this repository's own auto-docs surface PRs among them.
+ * `durable_base` is the push lease for upsert-pr.mjs: the tip of the target
+ * branch the agent job built on (empty: it did not exist). It decides nothing
+ * but whether a branch that moved during the run is overwritten (it is not).
+ * It guards honest races only: the agent job chooses the value, so it is no
+ * security check. `marker_prs` lists the pull requests learn.mjs read for the
+ * marker (at most 50); upsert-pr.mjs re-reads each and patches only this
+ * repository's own auto-docs surface PRs among them.
  *
  * Env (pack): HANDOFF_DIR, WORTHY_COUNT, SINCE, NOW, SINCE_OVERRIDE,
- *   LEARNED_THROUGH, MARKER_PATCH, MARKER_PRS, BRANCH, LEGACY_BASE, VERIFIED.
+ *   LEARNED_THROUGH, MARKER_PATCH, MARKER_PRS, BRANCH, VERIFIED.
  * Env (check): HANDOFF_DIR, GITHUB_SHA (the commit this run started from).
  */
 
@@ -94,7 +92,6 @@ const SCALARS = {
   has_edits: (v) => v === "true" || v === "false",
   base_main: (v) => v === "" || SHA.test(v),
   durable_base: (v) => v === "" || SHA.test(v),
-  legacy_base: (v) => v === "" || SHA.test(v),
 }
 
 function gitRunner(cwd) {
@@ -161,7 +158,6 @@ export function pack({ cwd = process.cwd(), env = process.env } = {}) {
     has_edits: dirty ? "true" : "false",
     base_main: baseMain,
     durable_base: durableBase,
-    legacy_base: dirty ? (env.LEGACY_BASE ?? "") : "",
   }
   fs.writeFileSync(path.join(dir, MANIFEST), JSON.stringify(manifest, null, 2))
 
@@ -221,7 +217,7 @@ export function validateManifest(manifest) {
       if (manifest[key] === "") throw new Error(`${MANIFEST} ${key} is required when has_edits is true`)
     }
   } else {
-    for (const key of ["branch", "base_main", "durable_base", "legacy_base"]) {
+    for (const key of ["branch", "base_main", "durable_base"]) {
       if (manifest[key] !== "") throw new Error(`${MANIFEST} ${key} must be empty when has_edits is false`)
     }
   }
@@ -421,7 +417,6 @@ export function check({ cwd = process.cwd(), env = process.env } = {}) {
     integration_sha: integrationSha,
     base_main: manifest.base_main,
     durable_base: manifest.durable_base,
-    legacy_base: manifest.legacy_base,
   }
 }
 

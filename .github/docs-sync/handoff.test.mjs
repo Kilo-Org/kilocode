@@ -101,7 +101,6 @@ function packEnv(s, extra = {}) {
     MARKER_PATCH: "",
     MARKER_PRS: "4,5",
     BRANCH: "docs/auto-sync",
-    LEGACY_BASE: "",
     VERIFIED: "true",
     ...extra,
   }
@@ -167,7 +166,6 @@ test("a docs-only handoff passes and stages the data files", () => {
   assert.equal(outputs.branch, "docs/auto-sync")
   assert.equal(outputs.durable_base, "", "no integration branch existed, so the lease says it must not exist")
   assert.equal(outputs.base_main, s.runSha)
-  assert.equal(outputs.legacy_base, "")
   assert.equal(outputs.marker_prs, "", "no marker, no PR list")
   assert.equal(outputs.now, NOW)
   assert.equal(fs.readFileSync(path.join(publish, "docs-sync-out/worthy.json"), "utf8"), '[{"url":"https://github.com/Kilo-Org/kilocode/pull/1"}]')
@@ -234,18 +232,6 @@ test("an honest handoff passes when main moves between the jobs", () => {
   assert.equal(outputs.base_main, newer, "the agent job's newer main is the base")
   assert.equal(git(publish, ["rev-parse", "refs/remotes/origin/main"]), newer, "check reads main as it is now")
   assert.equal(git(publish, ["rev-parse", "HEAD"]), s.runSha, "the workspace stays at the run's commit")
-})
-
-test("pack records the legacy branch tip only with a docs commit", () => {
-  const legacy = "b".repeat(40)
-  const s = scenario()
-  write(s.agent, "packages/kilo-docs/pages/a.md", "# a, updated\n")
-  pack({ cwd: s.agent, env: packEnv(s, { LEGACY_BASE: legacy }) })
-  assert.equal(runCheck(s).outputs.legacy_base, legacy)
-
-  const t = scenario()
-  pack({ cwd: t.agent, env: packEnv(t, { WORTHY_COUNT: "0", MARKER_PATCH: MARKER, LEGACY_BASE: legacy }) })
-  assert.equal(runCheck(t).outputs.legacy_base, "")
 })
 
 test("no docs pass and no marker leaves nothing to publish", () => {
@@ -316,7 +302,6 @@ test("a malformed scalar is refused", () => {
     [(m) => (m.since = "yesterday"), /since has an invalid value/],
     [(m) => (m.durable_base = "origin/docs/auto-sync-integration"), /durable_base has an invalid value/],
     [(m) => (m.base_main = "HEAD"), /base_main has an invalid value/],
-    [(m) => (m.legacy_base = "docs/auto-sync"), /legacy_base has an invalid value/],
     [(m) => (m.marker_prs = "1;2"), /marker_prs has an invalid value/],
     [(m) => (m.marker_prs = "77"), /marker_patch and marker_prs must both be set or both be empty/],
     [(m) => (m.extra = "x"), /keys must be exactly/],
@@ -348,10 +333,6 @@ test("has_edits must match the presence of the bundle", () => {
     m.base_main = ""
   })
   expectRejected(s, /has_edits is false but the handoff has a docs.bundle/)
-  editManifest(s, (m) => {
-    m.legacy_base = "c".repeat(40)
-  })
-  expectRejected(s, /legacy_base must be empty when has_edits is false/)
 })
 
 test("a marker without its PR list is refused", () => {
