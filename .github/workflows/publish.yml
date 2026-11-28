@@ -1154,6 +1154,8 @@ jobs:
           AUR_KEY_FILE: ${{ steps.creds.outputs.KILOCODE_AUR_KEY_FILE }}
           MANIFEST: ${{ runner.temp }}/build/cli-sbom-evidence.json
           VERSION: ${{ needs.version.outputs.version }}
+          # Read-only, to tell a re-run of an older release from a recipe that is wrongly ahead.
+          GITHUB_TOKEN: ${{ github.token }}
         run: node script/kilocode/package-managers.ts aur "$MANIFEST" "$VERSION"
 
       # Runs even when the AUR update failed; either failure fails the job.
@@ -1162,6 +1164,7 @@ jobs:
         env:
           MANIFEST: ${{ runner.temp }}/build/cli-sbom-evidence.json
           VERSION: ${{ needs.version.outputs.version }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: node script/kilocode/package-managers.ts homebrew "$MANIFEST" "$VERSION"
 
       - name: Remove key files

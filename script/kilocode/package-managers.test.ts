@@ -6,7 +6,22 @@ import path from "node:path"
 import workflow from "../../.github/workflows/publish.yml"
 import * as Artifact from "./sbom/artifact"
 import * as Manifest from "./sbom/manifest"
-import { aur, digests, formula, pkgbuild, srcinfo, sshCommand, update, type Digests } from "./package-managers"
+import {
+  aur,
+  compare,
+  digests,
+  formula,
+  formulaVersion,
+  homebrew,
+  latestRelease,
+  pkgbuild,
+  pkgbuildVersion,
+  RecipeAheadError,
+  srcinfo,
+  sshCommand,
+  update,
+  type Digests,
+} from "./package-managers"
 
 // The files the release script published for v7.8.40: the AUR kilo-bin PKGBUILD and .SRCINFO, the
 // Homebrew kilo.rb, and the archive digests of that release's CLI evidence manifest.
@@ -22,6 +37,20 @@ async function temp() {
   const root = await mkdtemp(path.join(os.tmpdir(), "package-managers-"))
   roots.push(root)
   return root
+}
+
+/** Sets `vars` in the environment for the duration of `run`, then restores the previous values. */
+async function withEnv(vars: Record<string, string>, run: () => Promise<void>) {
+  const saved = Object.fromEntries(Object.keys(vars).map((key) => [key, process.env[key]]))
+  Object.assign(process.env, vars)
+  try {
+    await run()
+  } finally {
+    for (const [key, value] of Object.entries(saved)) {
+      if (value === undefined) delete process.env[key]
+      else process.env[key] = value
+    }
+  }
 }
 
 const sha = (char: string) => char.repeat(64)
@@ -67,6 +96,43 @@ test("versions that are not release versions are refused", () => {
     expect(() => pkgbuild(version, sample)).toThrow("Invalid release version")
     expect(() => formula(version, sample)).toThrow("Invalid release version")
   }
+})
+
+test("the version a published recipe has is read back from it", async () => {
+  expect(pkgbuildVersion(await fixture("PKGBUILD"))).toBe("7.8.40")
+  expect(formulaVersion(await fixture("kilo.rb"))).toBe("7.8.40")
+  expect(pkgbuildVersion(pkgbuild("7.9.0-rc.1", sample))).toBe("7.9.0-rc.1")
+  // The download URLs carry the pre-release suffix; the formula's version line does not.
+  expect(formulaVersion(formula("7.9.0-rc.1", sample))).toBe("7.9.0-rc.1")
+  expect(formulaVersion('class Kilo < Formula\n  version "1.2.3"\nend\n')).toBe("1.2.3")
+  expect(pkgbuildVersion(undefined)).toBeUndefined()
+  expect(pkgbuildVersion("pkgname='kilo-bin'\n")).toBeUndefined()
+  expect(formulaVersion(undefined)).toBeUndefined()
+  expect(formulaVersion("class Kilo < Formula\nend\n")).toBeUndefined()
+})
+
+test("a read-back value that is not a release version is ignored", () => {
+  for (const text of [
+    "pkgver=not-a-version\n",
+    "pkgver = 1.2.3\n",
+    "pkgver=1.2.3 extra\n",
+    "pkgver='1.2.3'\n",
+    "pkgver=1.2.3\n_subver=-rc 1\n",
+  ]) {
+    expect(pkgbuildVersion(text)).toBeUndefined()
+  }
+  expect(formulaVersion('class Kilo < Formula\n  version "1.2"\nend\n')).toBeUndefined()
+  expect(formulaVersion("describe /releases/download/v1.2/\n")).toBeUndefined()
+})
+
+test("versions order by number, and a release comes after its pre-releases", () => {
+  expect(compare("7.8.40", "7.8.40")).toBe(0)
+  expect(compare("7.8.40", "7.8.9")).toBeGreaterThan(0)
+  expect(compare("7.10.0", "7.9.99")).toBeGreaterThan(0)
+  expect(compare("7.8.39", "7.8.40")).toBeLessThan(0)
+  expect(compare("7.9.0", "7.9.0-rc.1")).toBeGreaterThan(0)
+  expect(compare("7.9.0-rc.2", "7.9.0-rc.1")).toBeGreaterThan(0)
+  expect(compare("7.9.0-rc.10", "7.9.0-rc.9")).toBeGreaterThan(0)
 })
 
 test("the AUR ssh command uses only the given key and the pinned host keys", () => {
@@ -121,6 +187,119 @@ test("update commits on the remote's default branch when no branch is given", as
   expect(repo.show("kilo.rb")).toBe(files["kilo.rb"])
 })
 
+test("update leaves a clone that publishes a newer version alone", async () => {
+  const repo = await remote("main")
+  const base = {
+    remote: repo.bare,
+    // Like the script's own reader, a clone without the file publishes nothing.
+    published: async (dir: string) =>
+      formulaVersion(await readFile(path.join(dir, "kilo.rb"), "utf8").catch(() => undefined)),
+    env: repo.env,
+    wait: 0,
+  }
+  const newer = formula("1.2.4", sample)
+  // The recipe already carries the latest release, as after a re-run of an older release's job.
+  await withEnv({ KILO_LATEST_RELEASE: "1.2.4" }, async () => {
+    expect(await update({ ...base, version: "1.2.4", files: { "kilo.rb": newer }, message: "Update to v1.2.4" })).toBe(
+      "pushed",
+    )
+    expect(
+      await update({
+        ...base,
+        version: "1.2.3",
+        files: { "kilo.rb": formula("1.2.3", sample) },
+        message: "Update to v1.2.3",
+      }),
+    ).toBe("skipped")
+  })
+  expect(repo.log()).toBe("Update to v1.2.4\nseed")
+  expect(repo.show("kilo.rb")).toBe(newer)
+  const newest = formula("1.2.5", sample)
+  expect(await update({ ...base, version: "1.2.5", files: { "kilo.rb": newest }, message: "Update to v1.2.5" })).toBe(
+    "pushed",
+  )
+  expect(repo.show("kilo.rb")).toBe(newest)
+})
+
+test("a pre-release formula is updated by the next pre-release and not by the previous one", async () => {
+  const repo = await remote("main")
+  const base = {
+    remote: repo.bare,
+    published: async (dir: string) =>
+      formulaVersion(await readFile(path.join(dir, "kilo.rb"), "utf8").catch(() => undefined)),
+    env: repo.env,
+    wait: 0,
+  }
+  await withEnv({ KILO_LATEST_RELEASE: "7.9.0-rc.2" }, async () => {
+    expect(
+      await update({
+        ...base,
+        version: "7.9.0-rc.1",
+        files: { "kilo.rb": formula("7.9.0-rc.1", sample) },
+        message: "Update to v7.9.0-rc.1",
+      }),
+    ).toBe("pushed")
+    expect(
+      await update({
+        ...base,
+        version: "7.9.0-rc.2",
+        files: { "kilo.rb": formula("7.9.0-rc.2", sample) },
+        message: "Update to v7.9.0-rc.2",
+      }),
+    ).toBe("pushed")
+    expect(
+      await update({
+        ...base,
+        version: "7.9.0-rc.1",
+        files: { "kilo.rb": formula("7.9.0-rc.1", sample) },
+        message: "Update to v7.9.0-rc.1",
+      }),
+    ).toBe("skipped")
+  })
+  expect(repo.log()).toBe("Update to v7.9.0-rc.2\nUpdate to v7.9.0-rc.1\nseed")
+  expect(repo.show("kilo.rb")).toBe(formula("7.9.0-rc.2", sample))
+})
+
+test("update fails when the recipe is ahead of the latest release it is publishing", async () => {
+  const repo = await remote("main")
+  const base = {
+    remote: repo.bare,
+    published: async (dir: string) =>
+      formulaVersion(await readFile(path.join(dir, "kilo.rb"), "utf8").catch(() => undefined)),
+    env: repo.env,
+    wait: 0,
+  }
+  await withEnv({ KILO_LATEST_RELEASE: "1.2.4" }, async () => {
+    expect(
+      await update({ ...base, version: "1.2.5", files: { "kilo.rb": formula("1.2.5", sample) }, message: "v1.2.5" }),
+    ).toBe("pushed")
+    const error = await update({
+      ...base,
+      version: "1.2.4",
+      files: { "kilo.rb": formula("1.2.4", sample) },
+      message: "v1.2.4",
+    }).then(
+      () => undefined,
+      (err: unknown) => err,
+    )
+    expect(error).toBeInstanceOf(RecipeAheadError)
+    expect(String(error)).toContain("publishes v1.2.5, newer than the v1.2.4 this run publishes")
+    expect(String(error)).toContain("v1.2.4 is the latest release")
+  })
+  // One attempt only: a recipe that is ahead is not a transient failure.
+  expect(repo.log()).toBe("v1.2.5\nseed")
+  expect(repo.show("kilo.rb")).toBe(formula("1.2.5", sample))
+})
+
+test("the latest release comes from KILO_LATEST_RELEASE, and is unknown when that is unusable", async () => {
+  await withEnv({ KILO_LATEST_RELEASE: "v1.2.3" }, async () => {
+    expect(await latestRelease()).toBe("1.2.3")
+  })
+  await withEnv({ KILO_LATEST_RELEASE: "not a version" }, async () => {
+    expect(await latestRelease()).toBeUndefined()
+  })
+})
+
 test("update fails after its last attempt", async () => {
   const root = await temp()
   const missing = path.join(root, "missing.git")
@@ -158,16 +337,32 @@ test("the AUR update adds the final newline a stored key lost", async () => {
   const repo = await remote("master")
   const key = path.join(await temp(), "aur_key")
   await writeFile(key, "stand-in key without its final newline")
-  const saved = process.env.GIT_CONFIG_GLOBAL
-  process.env.GIT_CONFIG_GLOBAL = repo.env.GIT_CONFIG_GLOBAL
-  try {
+  await withEnv({ ...repo.env, KILO_LATEST_RELEASE: "1.2.3" }, async () => {
     expect(await aur("1.2.3", sample, key, repo.bare)).toBe("pushed")
-  } finally {
-    if (saved === undefined) delete process.env.GIT_CONFIG_GLOBAL
-    else process.env.GIT_CONFIG_GLOBAL = saved
-  }
+    // A re-run of an older release leaves the newer recipe alone.
+    expect(await aur("1.2.2", sample, key, repo.bare)).toBe("skipped")
+  })
   expect(await readFile(key, "utf8")).toBe("stand-in key without its final newline\n")
+  expect(repo.log()).toBe("Update to v1.2.3\nseed")
   expect(repo.show(".SRCINFO")).toBe(srcinfo("1.2.3", sample))
+})
+
+test("homebrew leaves a tap that publishes a newer formula alone", async () => {
+  const repo = await remote("main")
+  await withEnv({ ...repo.env, KILO_LATEST_RELEASE: "1.2.4" }, async () => {
+    expect(await homebrew("1.2.4", sample, repo.bare)).toBe("pushed")
+    expect(await homebrew("1.2.3", sample, repo.bare)).toBe("skipped")
+  })
+  expect(repo.log()).toBe("Update to v1.2.4\nseed")
+  expect(repo.show("kilo.rb")).toBe(formula("1.2.4", sample))
+})
+
+test("the package-managers job gives the update steps a read-only token for the latest release", () => {
+  const steps: { name?: string; env?: Record<string, string> }[] = workflow.jobs["package-managers"].steps
+  for (const name of ["Update AUR", "Update Homebrew"]) {
+    const step = steps.find((candidate) => candidate.name === name)
+    expect(step?.env?.GITHUB_TOKEN).toBe("${{ github.token }}")
+  }
 })
 
 test("the package-managers job checks the manifest against the digest build-cli recorded", async () => {
