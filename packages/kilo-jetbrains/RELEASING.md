@@ -48,7 +48,7 @@ bun .kilo/skills/release-jetbrains/script/set-pin.ts --latest --pr
 
 Merge the generated pin PR first, then re-run `check-pin.ts` and dispatch prepare. Do not dispatch prepare from a local-only pin edit.
 
-CLI releases also try to open this pin bump PR automatically after publishing. The PR is labeled `jetbrains-cli-pin-bump`, and pre-release CLI bump PRs also receive the `pre-release` label, including preview-channel releases with a plain semver version. Release publishing does not fail if creating the PR fails; inspect the publish log for either the PR URL or the warning with manual follow-up instructions.
+CLI releases also try to open this pin bump PR automatically after publishing (the `jetbrains-pin` job of `publish.yml`). The PR is labeled `jetbrains-cli-pin-bump`, and pre-release CLI bump PRs also receive the `pre-release` label, including preview-channel releases with a plain semver version. Release publishing does not fail if creating the PR fails; inspect the `jetbrains-pin` job log for either the PR URL or the warning with manual follow-up instructions.
 
 ## Create Release Tag And PR
 
@@ -179,7 +179,7 @@ git push origin jetbrains/v7.3.13
 | Secret or variable | Purpose |
 |---|---|
 | `KILO_MAINTAINER_APP_ID` | Repository variable (not a secret; the app id is public): GitHub App ID used to create/update release PRs and immediate release tags. |
-| `KILO_MAINTAINER_APP_SECRET` | Not used by the JetBrains release workflows. `prepare-jetbrains-release.yml` reads the GitHub App private key from the Kilo STS bundle `ci-kilocode-app-key`, in the `automation` environment (`main` only); see `.github/actions/kilo-credentials/README.md`. Of all workflows, only `publish.yml` still reads this secret. |
+| `KILO_MAINTAINER_APP_SECRET` | Not read by any workflow. `prepare-jetbrains-release.yml` reads the GitHub App private key from the Kilo STS bundle `ci-kilocode-app-key`, in the `automation` environment (`main` only), and the `jetbrains-pin` job of `publish.yml` from `ci-kilocode-release`, in `release-keys`; see `.github/actions/kilo-credentials/README.md`. |
 | `JETBRAINS_MARKETPLACE_TOKEN` | Marketplace API token for publishing. |
 | `JETBRAINS_CERTIFICATE_CHAIN` | PEM certificate chain for plugin signing. |
 | `JETBRAINS_PRIVATE_KEY` | PEM private key for plugin signing. |
