@@ -203,44 +203,50 @@ describe("WebSearchTool registration", () => {
     }),
   )
 
-  it.effect("calls Parallel with session ID and keeps bearer credentials out of output", () =>
-    Effect.gen(function* () {
-      requests.length = 0
-      assertions.length = 0
-      responseBody = payload("parallel results")
-      config = { provider: "parallel", enableExa: false, enableParallel: false, parallelApiKey: "parallel-secret" }
-      const registry = yield* ToolRegistry.Service
+  // kilocode_change start
+  for (const key of [undefined, "parallel-secret"]) {
+    it.effect(`calls unified Parallel Search ${key ? "with a key" : "anonymously"}`, () =>
+      Effect.gen(function* () {
+        requests.length = 0
+        assertions.length = 0
+        responseBody = `event: message\ndata: ${payload("parallel results")}\n\n`
+        config = { provider: "parallel", enableExa: false, enableParallel: false, parallelApiKey: key }
+        const registry = yield* ToolRegistry.Service
 
-      const settled = yield* settleTool(registry, {
-        sessionID,
-        ...toolIdentity,
-        call: { type: "tool-call", id: "call-parallel", name: "websearch", input: { query: "effect layers" } },
-      })
+        const settled = yield* settleTool(registry, {
+          sessionID,
+          ...toolIdentity,
+          call: { type: "tool-call", id: "call-parallel", name: "websearch", input: { query: "effect layers" } },
+        })
 
-      expect(requests[0]).toMatchObject({
-        url: WebSearchTool.PARALLEL_URL,
-        headers: { authorization: "Bearer parallel-secret" },
-        body: {
+        const request = requests.at(0)
+        expect(request?.url).toBe("https://mcp.parallel.ai/mcp")
+        expect(request?.headers.authorization).toBe(key ? `Bearer ${key}` : undefined)
+        expect(request?.headers.accept).toBe("application/json, text/event-stream")
+        expect(request?.body).toEqual({
           jsonrpc: "2.0",
           id: 1,
           method: "tools/call",
           params: {
             name: "web_search",
-            arguments: { objective: "effect layers", search_queries: ["effect layers"], session_id: sessionID },
+            arguments: {
+              objective: "effect layers",
+              search_queries: ["effect layers"],
+              ...(key ? {} : { session_id: sessionID }),
+            },
           },
-        },
-      })
-      expect(requests[0]?.body).not.toHaveProperty("params.arguments.model_name")
-      expect(settled).toEqual({
-        result: { type: "text", value: "parallel results" },
-        output: {
-          structured: { provider: "parallel", text: "parallel results" },
-          content: [{ type: "text", text: "parallel results" }],
-        },
-      })
-      expect(JSON.stringify(settled)).not.toContain("parallel-secret")
-    }),
-  )
+        })
+        expect(settled).toEqual({
+          result: { type: "text", value: "parallel results" },
+          output: {
+            structured: { provider: "parallel", text: "parallel results" },
+            content: [{ type: "text", text: "parallel results" }],
+          },
+        })
+      }),
+    )
+  }
+  // kilocode_change end
 
   it.effect("keeps an Exa credential in the transport URL and out of model output", () =>
     Effect.gen(function* () {

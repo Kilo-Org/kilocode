@@ -18,7 +18,7 @@ import { ToolRegistry } from "./registry"
 export const name = "websearch"
 export const NO_RESULTS = "No search results found. Please try a different query."
 export const EXA_URL = "https://mcp.exa.ai/mcp"
-export const PARALLEL_URL = "https://search.parallel.ai/mcp"
+export const PARALLEL_URL = "https://mcp.parallel.ai/mcp" // kilocode_change
 export const MAX_NUM_RESULTS = 20
 export const MAX_CONTEXT_CHARACTERS = 50_000
 export const MAX_RESPONSE_BYTES = 256 * 1024
@@ -132,7 +132,7 @@ const ExaArgs = Schema.Struct({
 const ParallelArgs = Schema.Struct({
   objective: Schema.String,
   search_queries: Schema.Array(Schema.String),
-  session_id: Schema.String,
+  session_id: Schema.optionalKey(Schema.String), // kilocode_change
 })
 const McpRequest = <F extends Schema.Struct.Fields>(args: Schema.Struct<F>) =>
   Schema.Struct({
@@ -233,7 +233,7 @@ const layer = Layer.effectDiscard(
                       {
                         objective: input.query,
                         search_queries: [input.query],
-                        session_id: context.sessionID,
+                        ...(config.parallelApiKey ? {} : { session_id: context.sessionID }), // kilocode_change
                         // V2 invocation context does not safely expose the model yet.
                       },
                       {
