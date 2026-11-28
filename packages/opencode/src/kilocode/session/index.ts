@@ -8,7 +8,7 @@ import { InstanceRef } from "@/effect/instance-ref"
 import { InstanceState } from "@/effect/instance-state"
 import { Session } from "@/session/session"
 import { MessageID, SessionID } from "@/session/schema"
-import { and, desc, eq, gte, inArray, isNull, like, lt, or, type SQL } from "drizzle-orm"
+import { and, desc, eq, gte, inArray, isNull, like, lt, or, sql, type SQL } from "drizzle-orm"
 import { Database } from "@opencode-ai/core/database/database"
 import { ProjectTable } from "@opencode-ai/core/project/sql"
 import { ProjectV2 } from "@opencode-ai/core/project"
@@ -431,9 +431,17 @@ export namespace KiloSession {
 
       const limit = input.limit ?? 100
       const sorted = [...dirs].sort((a, b) => b.length - a.length)
+      const git = new Map<string, boolean>()
+      const hasGit = (dir: string) => {
+        const hit = git.get(dir)
+        if (hit !== undefined) return hit
+        const found = existsSync(path.join(dir, ".git"))
+        git.set(dir, found)
+        return found
+      }
       const nested = (root: string, dir: string): boolean => {
         if (dir === root || !Filesystem.contains(root, dir)) return false
-        if (existsSync(path.join(dir, ".git"))) return true
+        if (hasGit(dir)) return true
         const parent = path.dirname(dir)
         return parent !== dir && nested(root, parent)
       }
@@ -450,26 +458,69 @@ export namespace KiloSession {
       }
       const current = input.currentDirectory ? worktree(Filesystem.resolve(input.currentDirectory)) : undefined
 
-      const query =
-        conditions.length > 0
-          ? db
-              .select()
-              .from(SessionTable)
-              .where(and(...conditions))
-          : db.select().from(SessionTable)
-      const ordered = query.orderBy(desc(SessionTable.time_updated), desc(SessionTable.id))
-      const rows = yield* (dirs.length ? ordered.all() : ordered.limit(limit).all()).pipe(Effect.orDie)
+      const accepts = (raw: string) => {
+        const resolved = (() => {
+          try {
+            return Filesystem.resolve(raw)
+          } catch (err) {
+            const code = typeof err === "object" && err !== null && "code" in err ? err.code : undefined
+            if (code !== "EPERM" && code !== "EACCES") throw err
+            // An inaccessible historical directory must not fail the whole page.
+            log.warn("Ignoring inaccessible session directory", { dir: raw, code })
+            return undefined
+          }
+        })()
+        if (!resolved) return false
+        const root = worktree(resolved)
+        if (!root) return false
+        if (input.currentDirectory) return root === current
+        return true
+      }
+      const where = (extra?: SQL) => {
+        const all = extra ? [...conditions, extra] : conditions
+        return all.length > 0 ? and(...all) : undefined
+      }
+      const order = [desc(SessionTable.time_updated), desc(SessionTable.id)] as const
 
-      const list =
-        dirs.length > 0
-          ? rows.filter((row) => {
-              const dir = Filesystem.resolve(row.directory)
-              const root = worktree(dir)
-              if (!root) return false
-              if (input.currentDirectory) return root === current
-              return true
-            })
-          : rows
+      // Membership depends only on `directory`. Inside one read transaction (one SQLite
+      // snapshot), list the distinct stored directories of the matching sessions, decide each
+      // once, then run a single ordered, limited query over full rows restricted to the
+      // accepted directories. The stored text is bound back unchanged, so SQLite compares
+      // exact bytes whatever form the row was written in. The values travel as one JSON bind
+      // parameter, so the number of directories can never hit SQLite's bind-variable limit.
+      // Memory is bounded by the distinct directories and `limit`, and the order is sorted once.
+      const scoped = db.transaction((tx) =>
+        Effect.gen(function* () {
+          const stored = sql<string>`${SessionTable.directory}`.as("directory")
+          const seen = yield* tx.selectDistinct({ directory: stored }).from(SessionTable).where(where()).all()
+          const decided = new Map<string, boolean>()
+          const accepted: string[] = []
+          for (const { directory: raw } of seen) {
+            const dir = SessionTable.directory.mapFromDriverValue(raw)
+            const ok = decided.get(dir) ?? accepts(dir)
+            decided.set(dir, ok)
+            if (ok) accepted.push(raw)
+          }
+          if (accepted.length === 0) return []
+          const members = sql`${SessionTable.directory} IN (SELECT value FROM json_each(${JSON.stringify(accepted)}))`
+          return yield* tx
+            .select()
+            .from(SessionTable)
+            .where(where(members))
+            .orderBy(...order)
+            .limit(limit)
+            .all()
+        }),
+      )
+      const all = db
+        .select()
+        .from(SessionTable)
+        .where(where())
+        .orderBy(...order)
+        .limit(limit)
+        .all()
+      // The query result is used as is: spreading a large page into `push` exceeds the argument limit.
+      const list: SessionRow[] = yield* (dirs.length === 0 ? all : scoped).pipe(Effect.orDie)
 
       const ids = [...new Set(list.slice(0, limit).map((row) => row.project_id))]
       const projects = new Map<string, ProjectInfo>()
