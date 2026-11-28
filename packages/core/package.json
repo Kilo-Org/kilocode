@@ -95,7 +95,7 @@
     "@ai-sdk/google": "3.0.86",
     "@ai-sdk/google-vertex": "4.0.186",
     "@ai-sdk/groq": "3.0.45",
-    "@ai-sdk/mistral": "3.0.51",
+    "@ai-sdk/mistral": "3.0.68",
     "@ai-sdk/openai": "3.0.88",
     "@ai-sdk/openai-compatible": "2.0.54",
     "@ai-sdk/perplexity": "3.0.39",
