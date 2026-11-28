@@ -208,10 +208,20 @@ class ActiveRendererTest : BasePlatformTestCase() {
             val y = bounds.y + bounds.height / 2
             val frame = PickerRow().apply { update(view.background, UIUtil.getTreeBackground(true, false), true, true) }
             val left = surface.x + frame.selectionInsets.left
-            assertEquals("Native paint includes the selection cap at row $index", UIUtil.getTreeBackground(true, false).rgb,
-                image.getRGB(left + frame.selectionArc / 2, y))
-            assertEquals("Frame remains selected behind trailing content", UIUtil.getTreeBackground(true, false).rgb,
-                image.getRGB(surface.x + surface.width - JBUI.CurrentTheme.ActionsList.cellPadding().right, y))
+            if (entry.allowsChildren) {
+                // Section rows keep the tree surface; the selected header is underlined instead.
+                val gap = UiStyle.Gap.xs()
+                assertFalse("Section rows do not paint the selection frame",
+                    image.getRGB(left + frame.selectionArc / 2, y) == UIUtil.getTreeBackground(true, false).rgb)
+                assertEquals("Selected section underlines its header",
+                    UIUtil.getTreeBackground(true, true).rgb,
+                    image.getRGB(surface.x, surface.y + surface.height - gap - 1))
+            } else {
+                assertEquals("Native paint includes the selection cap at row $index", UIUtil.getTreeBackground(true, false).rgb,
+                    image.getRGB(left + frame.selectionArc / 2, y))
+                assertEquals("Frame remains selected behind trailing content", UIUtil.getTreeBackground(true, false).rgb,
+                    image.getRGB(surface.x + surface.width - JBUI.CurrentTheme.ActionsList.cellPadding().right, y))
+            }
             assertTrue("Top-level frame starts inside the tree's own gutter", surface.x >= view.insets.left)
             assertEquals("Frame runs to the tree's trailing inset", surface.x + surface.width,
                 view.width - view.insets.right)

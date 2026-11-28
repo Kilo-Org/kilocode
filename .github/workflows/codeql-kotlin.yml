@@ -20,7 +20,7 @@ jobs:
   analyze:
     name: Analyze (java-kotlin)
     if: github.event_name == 'workflow_dispatch' || github.repository == 'Kilo-Org/kilocode'
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.repository == 'Kilo-Org/kilocode' && 'blacksmith-8vcpu-ubuntu-2404' || 'ubuntu-latest' }}
     timeout-minutes: 30
     permissions:
       security-events: write
@@ -34,6 +34,8 @@ jobs:
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
+        with:
+          cache: false # job holds security-events: write
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -50,7 +52,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          cache-disabled: true # job holds security-events: write
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
@@ -58,8 +60,7 @@ jobs:
           languages: java-kotlin
           build-mode: manual
           config-file: ./.github/codeql/codeql-config.yml
-          # Leave headroom for the runner agent and OS. CodeQL otherwise claims ~14.6 GB of the
-          # 16 GB runner, and the query phase OOM-kills the whole VM.
+          # Leave headroom for Gradle and the OS, including on 16 GB fallback runners.
           ram: 12288
 
       - name: Build Java/Kotlin
