@@ -19,7 +19,7 @@ Still stumped after reading this? Come find us in discord at #vscode.
 
 ### Where did code indexing go?
 
-Code indexing is temporarily unavailable in the new extension. It is actively being worked on and is expected to return soon. Please follow [this issue](https://github.com/Kilo-Org/kilocode/issues/6144)
+Code indexing is available in the new extension. It stays off until you enable it, so open **Settings → Indexing** or select the indexing indicator at the bottom of the prompt input, then turn it on for the workspace you want indexed. If you are signed in to Kilo, the **Kilo** embedding provider is preselected and needs no separate API key. See [Codebase Indexing](/docs/customize/context/codebase-indexing) for setup.
 
 ### How do checkpoints work in the new extension?
 
@@ -61,6 +61,7 @@ Modes have been renamed to Agents in the new extension. You can set the default 
 ### Where is the diff view for file changes?
 
 Each message that caused file changes shows a **diff badge** in the chat — click it to open the Diff Viewer and review what changed.
+The **Changes** button above the prompt opens the Changes view for the working tree, where you can switch between the branch, staged, unstaged, and session scopes. A completed turn's **Modified N files** row opens that turn's diff.
 The Agent Manager also includes a built-in diff reviewer that shows every change file by file, in unified or split view.
 For Markdown files, use the eye/code toggle in the file header to switch between rendered Markdown and the raw diff.
 
