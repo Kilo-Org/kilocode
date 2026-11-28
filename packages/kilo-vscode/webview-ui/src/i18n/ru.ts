@@ -387,6 +387,7 @@ export const dict = {
   "common.signIn": "Войти",
   "common.dismiss": "Закрыть",
   "common.requestFailed": "Запрос не выполнен",
+  "common.copyFailed": "Не удалось скопировать",
   "common.rename": "Переименовать",
   "common.delete": "Удалить",
   "common.close": "Закрыть",

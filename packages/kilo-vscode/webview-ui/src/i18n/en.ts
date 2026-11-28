@@ -353,6 +353,7 @@ export const dict = {
   "common.signIn": "Sign in",
   "common.dismiss": "Dismiss",
   "common.requestFailed": "Request failed",
+  "common.copyFailed": "Failed to copy",
   "common.rename": "Rename",
   "common.delete": "Delete",
   "common.close": "Close",
