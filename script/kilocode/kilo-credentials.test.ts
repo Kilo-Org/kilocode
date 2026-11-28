@@ -38,7 +38,7 @@ const REQUEST_TOKEN = "req-token.synthetic_ABC123"
 const WORKLOAD = "ci-test-release"
 const FETCHED_AT = "2026-11-27T10:00:00.123Z"
 
-const A = "KILOCODE_ANACONDA_API_KEY"
+const A = "KILOCODE_JETBRAINS_MARKETPLACE_TOKEN"
 const J = "KILOCODE_JETBRAINS_PRIVATE_KEY"
 const M = "KILOCODE_MAINTAINER_APP_KEY"
 const U = "KILOCODE_AUR_KEY"
@@ -68,7 +68,6 @@ const NOTICE_LINE = /^kilo-credentials: .*; retrying in \d+ s \(attempt [23] of 
 
 // The union of the secrets of services/sts/policy/ci-kilocode-*.yaml on Kilo-Org/cloud main.
 const LIVE_KEYS = [
-  "KILOCODE_ANACONDA_API_KEY",
   "KILOCODE_AUR_KEY",
   "KILOCODE_MAINTAINER_APP_KEY",
   "KILOCODE_JETBRAINS_MARKETPLACE_TOKEN",
@@ -819,7 +818,7 @@ describe.skipIf(!supported)("kilo-credentials action", () => {
     ["an undeclared key", { INPUT_SECRETS: `${A}\nOTHER_TOKEN` }, "OTHER_TOKEN is not an output of action.yml"],
     ["a duplicate key", { INPUT_SECRETS: `${A}\n${A}` }, "requested twice"],
     ["a pasted value", { INPUT_SECRETS: `${A}\nrk-synthetic-7f3a` }, "line 2 is not a bundle key"],
-    ["the old mapping syntax", { INPUT_SECRETS: `ANACONDA_API_KEY=${A}` }, "line 1 is not a bundle key"],
+    ["the old mapping syntax", { INPUT_SECRETS: `MARKETPLACE_TOKEN=${A}` }, "line 1 is not a bundle key"],
     ["an empty input", { INPUT_SECRETS: "\n \n" }, "names no bundle key"],
     ["an output name", { INPUT_SECRETS: `${U}_FILE` }, `request the bundle key ${U}, not the output ${U}_FILE`],
   ] as const)("refuses %s before any request", async (_label, env, contains) => {

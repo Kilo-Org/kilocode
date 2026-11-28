@@ -1,7 +1,8 @@
 // kilocode_change - new file
-// Versions of JetBrains release tags: x.y.z and x.y.z-rc.n. This module imports nothing, so
-// prepare-jetbrains-release.yml runs script/jetbrains-release-pr.ts without installing packages
-// while the job holds the Kilo Maintainer app key and may request OIDC tokens.
+// Versions of JetBrains release tags and CLI releases: x.y.z and x.y.z-rc.n. This module imports
+// nothing, so prepare-jetbrains-release.yml runs script/jetbrains-release-pr.ts, and the
+// jetbrains-pin job of publish.yml runs .kilo/skills/release-jetbrains/script/set-pin.ts, without
+// installing packages while the job holds the Kilo Maintainer app key and may request OIDC tokens.
 
 export type Version = { major: number; minor: number; patch: number; rc?: number }
 

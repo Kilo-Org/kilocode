@@ -433,17 +433,16 @@ async function api(path: string, init?: RequestInit & { token?: string; ok?: num
 }
 
 // Without MEMBER_TOKEN every private org member looks like a community author.
-// Fail the sweep, so a missing secret is seen at once and team PRs keep no
+// Fail the sweep, so a missing token is seen at once and team PRs keep no
 // community labels.
 export function needMember(value: string | undefined) {
   if (!value)
-    throw new Error(
-      "COMMUNITY_TRIAGE_MEMBER_TOKEN is not set. Without it, private org members are labeled as community authors.",
-    )
+    throw new Error("MEMBER_TOKEN is not set. Without it, private org members are labeled as community authors.")
 }
 
 // Sweep only. GITHUB_TOKEN cannot see private org members, so they show up as
-// plain contributors. MEMBER_TOKEN (read:org) fixes that.
+// plain contributors. MEMBER_TOKEN (a Kilo Maintainer app token with
+// members: read) fixes that.
 async function maintainer(login: string, assoc: string) {
   if (known(login, assoc, await listed())) return true
   const key = login.toLowerCase()
