@@ -146,15 +146,13 @@ jobs:
   # automation (the STS policy accepts only this file at refs/heads/main) and id-token: write. Each
   # leg therefore runs only pinned actions, this repository's kilo-credentials action and jq, and
   # reads the bundle only when it posts: read .github/actions/kilo-credentials/README.md before
-  # adding a step. Most legs post nothing, so no leg records a deployment (deployment: false).
+  # adding a step.
   notify:
     needs: list-findings
     if: needs.list-findings.outputs.matrix != '[]'
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 5
-    environment:
-      name: automation
-      deployment: false
+    environment: automation
     permissions:
       contents: read
       id-token: write

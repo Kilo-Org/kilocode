@@ -121,9 +121,7 @@ jobs:
     if: needs.check.outputs.newest != '' && needs.check.outputs.hit != 'true'
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 10
-    environment:
-      name: automation
-      deployment: false
+    environment: automation
     permissions:
       contents: read
       id-token: write

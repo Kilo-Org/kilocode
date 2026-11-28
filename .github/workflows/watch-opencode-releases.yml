@@ -16,8 +16,7 @@
 # ci-kilocode-opencode-watch, which needs environment automation (the STS policy accepts only this
 # file at refs/heads/main) and id-token: write, so the job runs only pinned actions, this
 # repository's kilo-credentials action, gh, jq and curl: read
-# .github/actions/kilo-credentials/README.md before adding a step. It runs every 30 minutes and
-# mostly finds nothing new, so it records no deployment (deployment: false).
+# .github/actions/kilo-credentials/README.md before adding a step.
 # kilocode_change end
 
 on:
@@ -38,9 +37,7 @@ jobs:
     runs-on: ${{ github.repository == 'Kilo-Org/kilocode' && 'blacksmith-2vcpu-ubuntu-2404' || 'ubuntu-latest' }} # kilocode_change
     timeout-minutes: 5
     # kilocode_change start
-    environment:
-      name: automation
-      deployment: false
+    environment: automation
     permissions:
       contents: read
       id-token: write
