@@ -8,11 +8,14 @@ import ai.kilocode.rpc.dto.RunProcessState
 import ai.kilocode.rpc.dto.RunStateDto
 import com.intellij.execution.BeforeRunTask
 import com.intellij.execution.CommonProgramRunConfigurationParameters
+import com.intellij.execution.DefaultExecutionTarget
 import com.intellij.execution.ExecutionManager
 import com.intellij.execution.ExecutionTarget
 import com.intellij.execution.Executor
 import com.intellij.execution.RunManager
 import com.intellij.execution.RunnerAndConfigurationSettings
+import com.intellij.execution.compound.CompoundRunConfiguration
+import com.intellij.execution.compound.CompoundRunConfigurationType
 import com.intellij.execution.configuration.EnvironmentVariablesData
 import com.intellij.execution.configurations.ConfigurationFactory
 import com.intellij.execution.configurations.ConfigurationPerRunnerSettings
@@ -69,6 +72,7 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
 
     private lateinit var cs: CoroutineScope
     private val launched = mutableListOf<RunnerAndConfigurationSettings>()
+    private val targets = mutableListOf<ExecutionTarget?>()
     private val added = mutableListOf<RunnerAndConfigurationSettings>()
 
     private lateinit var types: ConfigTypes
@@ -78,6 +82,7 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         types = ConfigTypes(testRootDisposable).also { it.mask() }
         cs = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         launched.clear()
+        targets.clear()
     }
 
     override fun tearDown() {
@@ -274,6 +279,73 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
 
         val result = manager().run(settings.uniqueID, "$repo/.kilo/worktrees/npm-nopath-wt")
         assertFalse(result.ok)
+        assertTrue(launched.isEmpty())
+    }
+
+    fun testCompoundRunsNestedChildrenOnceAndTracksThemIndividually() = runBlocking {
+        val type = register(paramsType("kilo.test.params.compound"))
+        val cloud = add(type, "Cloud")
+        val web = add(type, "Web")
+        val group = compound("Cloud + Web", cloud, compound("Nested", cloud, web))
+        val mgr = manager()
+        val repo = requireNotNull(project.basePath)
+        val wt = "$repo/.kilo/worktrees/compound"
+        (web.configuration as ParamsConfig).workingDirectory = "$repo/apps/web"
+
+        assertTrue(mgr.configs().configs.any { it.id == group.uniqueID })
+        assertTrue(mgr.run(group.uniqueID, wt).ok)
+        assertEquals(listOf("Cloud [compound]", "Web [compound]"), launched.map { it.name })
+        assertEquals(listOf(wt, "$wt/apps/web"), launched.map { (it.configuration as ParamsConfig).workingDirectory })
+        assertEquals(listOf(DefaultExecutionTarget.INSTANCE, DefaultExecutionTarget.INSTANCE), targets)
+        val clones = launched.toList()
+        clones.forEach { start(it) }
+        assertEquals(listOf(cloud.uniqueID, web.uniqueID), mgr.states.value.map { it.id })
+
+        assertTrue(mgr.run(group.uniqueID, wt).ok)
+        assertEquals(clones, launched.drop(2))
+    }
+
+    fun testCompoundWithMissingOrUnsupportedChildDoesNotLaunch() = runBlocking {
+        val type = register(paramsType("kilo.test.params.compound.missing"))
+        val supported = add(type, "Supported")
+        val missing = RunManager.getInstance(project).createConfiguration("Missing", type.configurationFactories.single())
+        val unsupported = add(register(plainType("kilo.test.plain.compound")), "Unsupported")
+        val groups = listOf(
+            compound("Missing child", supported, missing) to "child configuration 'Missing' was not found",
+            compound("Unsupported child", supported, unsupported) to "child 'Unsupported': not module-based (PlainConfig)",
+        )
+        val mgr = manager()
+        val wt = "${requireNotNull(project.basePath)}/.kilo/worktrees/compound-skipped"
+
+        val listed = mgr.configs()
+        for ((group, reason) in groups) {
+            assertEquals(reason, listed.skipped.single { it.name == group.name }.reason)
+            assertEquals("cannot run '${group.name}' in a worktree: $reason", mgr.run(group.uniqueID, wt).error)
+        }
+        assertTrue(launched.isEmpty())
+    }
+
+    fun testCompoundRejectsCycles() = runBlocking {
+        val group = compound("Cycle")
+        val nested = compound("Nested", group)
+        (group.configuration as CompoundRunConfiguration).setConfigurationsWithoutTargets(listOf(nested.configuration))
+        val mgr = manager()
+        val wt = "${requireNotNull(project.basePath)}/.kilo/worktrees/compound-cycle"
+
+        assertEquals("cyclic compound configuration 'Cycle'", mgr.configs().skipped.single { it.name == group.name }.reason)
+        assertFalse(mgr.run(group.uniqueID, wt).ok)
+        assertTrue(launched.isEmpty())
+    }
+
+    fun testCompoundDoesNotLaunchPreparedChildWhenAnotherCannotBePrepared() = runBlocking {
+        val supported = add(register(paramsType("kilo.test.params.compound.prepare")), "Supported")
+        val broken = add(register(npmType()), "Broken")
+        val group = compound("Group", supported, broken)
+        val mgr = manager()
+        val wt = "${requireNotNull(project.basePath)}/.kilo/worktrees/compound-prepare"
+
+        assertTrue(mgr.configs().configs.any { it.id == group.uniqueID })
+        assertEquals("cannot prepare 'Broken' for a worktree run; check its paths and settings", mgr.run(group.uniqueID, wt).error)
         assertTrue(launched.isEmpty())
     }
 
@@ -828,7 +900,10 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         }
     }
 
-    private fun manager() = WorktreeRunManager(project, cs) { launched += it }
+    private fun manager() = WorktreeRunManager(project, cs) { settings, target ->
+        launched += settings
+        targets += target
+    }
 
     /** `ExternalSystemRunConfiguration` erases its base type argument, so `logFiles` arrives raw. */
     private fun logs(config: RunConfiguration): List<LogFileOptions> = (config as RunConfigurationBase<*>).logFiles
@@ -869,12 +944,19 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
 
     private fun applicationType() = register(PlainApplicationType())
 
-    private fun add(type: ConfigurationTypeBase, name: String): RunnerAndConfigurationSettings {
+    private fun add(type: ConfigurationType, name: String): RunnerAndConfigurationSettings {
         val manager = RunManager.getInstance(project)
         val settings = manager.createConfiguration(name, type.configurationFactories[0])
         manager.addConfiguration(settings)
         added.add(settings)
         return settings
+    }
+
+    private fun compound(name: String, vararg children: RunnerAndConfigurationSettings): RunnerAndConfigurationSettings {
+        val type = ConfigurationType.CONFIGURATION_TYPE_EP.extensionList.filterIsInstance<CompoundRunConfigurationType>().single()
+        return add(type, name).also {
+            (it.configuration as CompoundRunConfiguration).setConfigurationsWithoutTargets(children.map { child -> child.configuration })
+        }
     }
 
     private fun paramsType(id: String) = TestType(id) { project, factory, name -> ParamsConfig(project, factory, name) }

@@ -12,6 +12,9 @@ import com.intellij.execution.configurations.RunConfigurationBase
 import com.intellij.openapi.externalSystem.model.ProjectSystemId
 import com.intellij.openapi.externalSystem.model.execution.ExternalSystemTaskExecutionSettings
 import com.intellij.openapi.externalSystem.service.execution.ExternalSystemRunConfiguration
+import com.intellij.openapi.util.JDOMExternalizerUtil.readField
+import com.intellij.openapi.util.JDOMExternalizerUtil.readOption
+import com.intellij.openapi.util.io.FileUtil
 import org.jdom.Element
 import java.nio.file.Path
 
@@ -28,6 +31,8 @@ import java.nio.file.Path
  *   vars are injected (same contract as the VS Code Agent Manager run scripts).
  * - Types listed in [PATHS], whose location is reachable only through serialized state; see
  *   [relocate].
+ * - Shell Script configurations: relocate the shell plugin's serialized options and use the
+ *   Run tool window for process tracking; see [shell].
  *
  * All kinds additionally get their `<log_file>` tabs mapped onto the worktree; see [rebaseLogs].
  *
@@ -46,6 +51,9 @@ import java.nio.file.Path
 internal object WorktreeRunAdapter {
     const val WORKTREE_ENV = "WORKTREE_PATH"
     const val REPO_ENV = "REPO_PATH"
+    const val SHELL = "ShConfigurationType"
+    private const val SCRIPT = "SCRIPT_PATH"
+    private const val SCRIPT_FILE = "EXECUTE_SCRIPT_FILE"
 
     /** Gradle's own debug switch, read by its always-injected `JvmDebugInit` script. */
     const val DEBUGGER_ENV = "DEBUGGER_ENABLED"
@@ -106,7 +114,7 @@ internal object WorktreeRunAdapter {
         // location rewriting makes a direct transplant correct. Those go through
         // WorktreeRunDelegate, which asks the build system to produce the worktree's own output.
         if (config is ModuleBasedConfiguration<*, *>) return false
-        if (config.type.id in PATHS) return true
+        if (config.type.id == SHELL || config.type.id in PATHS) return true
         return config is CommonProgramRunConfigurationParameters
     }
 
@@ -125,16 +133,17 @@ internal object WorktreeRunAdapter {
     ): RunnerAndConfigurationSettings? {
         val source = settings.configuration
         if (!supports(source)) return null
-        val spots = PATHS[source.type.id]
         // ExternalSystemRunConfiguration.clone() returns null when its factory is missing or the
         // serialization round trip fails; treat that as unsupported instead of crashing the run.
-        val clone = (if (spots == null) source.clone() else relocate(settings, spots, repo, worktree)) ?: run {
+        val clone = when (val type = source.type.id) {
+            SHELL -> shell(source, repo, worktree)
+            in PATHS -> relocate(settings, PATHS.getValue(type), repo, worktree)
+            else -> source.clone()
+        } ?: run {
             LOG.warn("worktree run: clone failed for ${source.name}")
             return null
         }
         clone.name = "${source.name} [$label]"
-        // A "Build project" pre-step would build the main checkout, not the worktree.
-        clone.beforeRunTasks = emptyList()
         // Restart on re-run: the platform stops the previous process of the same settings first.
         clone.isAllowRunningInParallel = false
         when (clone) {
@@ -150,8 +159,54 @@ internal object WorktreeRunAdapter {
         // Log-file tabs live on RunConfigurationBase, so neither branch above covers them.
         if (clone is RunConfigurationBase<*>) rebaseLogs(clone, repo, worktree)
         val result = manager.createConfiguration(clone, settings.factory)
+        // Wrapping settings installs template tasks, which must not run in the main checkout.
+        clone.beforeRunTasks = emptyList()
         result.isActivateToolWindowBeforeRun = true
         return result
+    }
+
+    /** Rewrite only the Shell Script plugin's known options, without requiring it at runtime. */
+    private fun shell(source: RunConfiguration, repo: String, worktree: String): RunConfiguration? {
+        // Shell Script stores paths with slash separators plus INDEPENDENT_* flags; its reader
+        // restores native separators where appropriate. Keep the flags from the source.
+        fun mapped(path: String?) = FileUtil.toSystemIndependentName(rebase(path, repo, worktree))
+
+        try {
+            val element = Element("configuration")
+            source.writeExternal(element)
+            val cwd = readOption(element, "SCRIPT_WORKING_DIRECTORY") ?: return null
+            cwd.setAttribute("value", mapped(cwd.getAttributeValue("value")))
+            if (readField(element, SCRIPT_FILE, "true").toBoolean()) {
+                val script = readOption(element, SCRIPT) ?: return null
+                val path = script.getAttributeValue("value")?.takeIf { it.isNotBlank() } ?: return null
+                script.setAttribute("value", mapped(path))
+                val interpreter = readOption(element, "INTERPRETER_PATH") ?: return null
+                val raw = interpreter.getAttributeValue("value")
+                val root = Path.of(repo).normalize()
+                // Leave command names, relative executables, and external shells alone.
+                if (raw != null && (raw.startsWith(PROJECT_MACRO) || Path.of(raw).normalize().startsWith(root))) {
+                    interpreter.setAttribute("value", mapped(raw))
+                }
+            }
+            // The Terminal branch can return no ExecutionResult or ProcessHandler. In the Run
+            // branch IntelliJ 2026.1 applies envs only for script files, not inline commands.
+            val terminal = readOption(element, "EXECUTE_IN_TERMINAL") ?: return null
+            terminal.setAttribute("value", "false")
+            inject(element, worktree, repo)
+            // Cloning avoids creating a fresh shell template, which probes for the default shell.
+            val clone = source.clone()
+            clone.readExternal(element)
+            return clone
+        } catch (e: Exception) {
+            LOG.warn("worktree run: cannot relocate ${source.name} [${source.type.id}]", e)
+            return null
+        }
+    }
+
+    fun script(config: RunConfiguration): String? {
+        if (config.type.id != SHELL) return null
+        val element = Element("configuration").also(config::writeExternal)
+        return readField(element, SCRIPT, "").takeIf { readField(element, SCRIPT_FILE, "true").toBoolean() }
     }
 
     /**

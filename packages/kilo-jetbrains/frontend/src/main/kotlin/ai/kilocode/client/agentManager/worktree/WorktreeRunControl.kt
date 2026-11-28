@@ -127,8 +127,7 @@ internal class WorktreeRunControl(
         )
         service<KiloRunService>().runInBackground(repo, cfg.id, worktree) { result ->
             result.warning?.let { dropped ->
-                // The run started, but the framework's own build integration declined it, so it runs
-                // as a plain JVM application and these settings do not apply.
+                // At least one configuration fell back to a plain JVM application.
                 alive {
                     KiloNotifications.warning(
                         project,

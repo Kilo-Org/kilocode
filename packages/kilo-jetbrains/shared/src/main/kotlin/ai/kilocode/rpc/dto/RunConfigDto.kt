@@ -56,7 +56,7 @@ data class RunStateDto(
 data class RunResultDto(
     val ok: Boolean = false,
     val error: String? = null,
-    // Set when the run started but not exactly as configured — currently only when a framework's own
+    // Set when a configuration started but not exactly as configured — currently only when its
     // build-system integration declined the configuration and it had to run as a plain JVM
     // application, dropping the framework-specific settings named here (e.g. Spring Boot profiles).
     val warning: String? = null,
