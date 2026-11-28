@@ -77,6 +77,8 @@ data class ConfigDto(
     val snapshot: Boolean? = null,
     /** Machine-wide session retention policy. Null means disabled with a 30-day default. */
     val retention: RetentionConfigDto? = null,
+    /** Effective CLI telemetry level. Null means the settings endpoint is unavailable or has not responded yet. */
+    val telemetry: Boolean? = null,
 )
 
 @Serializable
@@ -237,6 +239,19 @@ data class ProfileDto(
     val balance: ProfileBalanceDto? = null,
     val kiloPass: ProfileKiloPassDto? = null,
     val currentOrgId: String? = null,
+)
+
+/**
+ * Result of a profile refresh that follows a completed account step (sign-in, organization switch).
+ *
+ * [profile] is the account, or null when the CLI reports that nobody is signed in.
+ * [error] is set when the profile could not be read; [profile] is then null and the caller must
+ * keep its current account state, because the step itself already succeeded.
+ */
+@Serializable
+data class ProfileSyncDto(
+    val profile: ProfileDto? = null,
+    val error: LoadErrorDto? = null,
 )
 
 @Serializable

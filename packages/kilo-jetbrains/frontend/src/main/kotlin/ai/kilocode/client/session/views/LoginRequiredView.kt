@@ -42,7 +42,8 @@ class LoginRequiredView(
 
     /** Make the view visible with [message] shown as the description. */
     @RequiresEdt
-    fun show(message: String) {
+    fun show(message: String, signedOut: Boolean = false) {
+        setHeader(KiloBundle.message(if (signedOut) "session.login.signedOut.title" else "session.login.required.title"))
         setDescription(message)
         isVisible = true
         refresh()

@@ -312,6 +312,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "Убрать из списка разрешённых",
   "ui.permission.rule.addToDenied": "Добавить в список запрещённых",
   "ui.permission.rule.removeFromDenied": "Убрать из списка запрещённых",
+  "ui.permission.rule.fromConfig": "Управляется файлом конфигурации",
   "ui.permission.toolLabel.read": "Чтение",
   "ui.permission.toolLabel.edit": "Редактирование",
   "ui.permission.toolLabel.write": "Запись",
@@ -695,6 +696,9 @@ export const dict = {
 
   "profile.title": "Профиль",
   "profile.notLoggedIn": "Не авторизован",
+  "profile.expired": "Срок действия входа в Kilo истёк или вход был отозван. Войдите снова, чтобы продолжить.",
+  "profile.unavailable": "Не удалось загрузить ваш профиль Kilo. Возможно, Kilo сейчас недоступен.",
+  "profile.stale": "Не удалось обновить ваш профиль. Показаны последние загруженные данные.",
   "profile.action.login": "Войти через Kilo Code",
   "profile.balance.title": "Баланс",
   "profile.balance.refresh": "Обновить баланс",
@@ -815,6 +819,7 @@ export const dict = {
 
   "dialog.model.noProviders": "Нет провайдеров",
   "dialog.model.unavailable": "Модели Kilo недоступны",
+  "dialog.model.loadFailed": "Не удалось загрузить провайдеров для этого проекта.",
 
   "prompt.placeholder.connecting": "Подключение к серверу...",
   "prompt.placeholder.error": "Не удалось подключиться. Проверьте панель вывода или перезапустите расширение.",
@@ -865,8 +870,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "Телеметрия",
   "settings.aboutKiloCode.telemetry.description":
-    'Телеметрия управляется встроенной настройкой телеметрии VS Code. Чтобы отключить её, перейдите в Настройки > Телеметрия > Уровень телеметрии и установите значение "off". Перезапустите VS Code, чтобы применить изменение.',
-  "settings.aboutKiloCode.telemetry.openSettings": "Открыть настройки телеметрии",
+    "Используйте этот переключатель, чтобы изменить настройку телеметрии в Kilo. Если телеметрия отключена в VS Code или в среде выполнения, она останется отключённой.",
+  "settings.aboutKiloCode.telemetry.toggle": "Включить телеметрию",
+  "settings.aboutKiloCode.telemetry.saveFailed": "Не удалось обновить настройку телеметрии",
 
   "settings.agentBehaviour.subtab.agents": "Агенты",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-серверы",
@@ -1333,6 +1339,8 @@ export const dict = {
   "dialog.model.notSet": "Не задано",
   "profile.personalAccount": "Личный аккаунт",
   "profile.switchingAccount": "Переключение аккаунта…",
+  "profile.unavailableAccount": "Недоступный аккаунт",
+  "profile.switchFailed": "Не удалось подтвердить переключение аккаунта.",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/ru.ts
 
   "question.summary": "{{n}} из {{total}} вопросов",
@@ -1417,6 +1425,9 @@ export const dict = {
   "settings.saveBar.cancel": "Отмена",
   "settings.saveBar.saving": "Сохранение…",
   "settings.saveBar.saveFailed": "Не удалось сохранить настройки",
+  "settings.saveBar.dismissError": "Закрыть",
+  "settings.saveBar.unconfirmedWrite": "Хост расширения не подтвердил «{{name}}».",
+  "settings.saveBar.unconfirmedSave": "Хост расширения не подтвердил сохранение. Повторите попытку.",
   "notifications.action.next": "Далее",
   "notifications.action.close": "Закрыть",
   "notifications.action.tryModel": "Попробовать {{model}}",

@@ -24,6 +24,7 @@ import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.speech.SpeechCapture
 import ai.kilocode.client.test.CopyProviderSink
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
+import ai.kilocode.client.ui.LiveBadgeIcon
 import ai.kilocode.rpc.dto.CommandDto
 import ai.kilocode.rpc.dto.FileSearchResultDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
@@ -1910,14 +1911,18 @@ class PromptPanelTest : BasePlatformTestCase() {
         editor.selectionModel.setSelection(5, 12)
         val speech = speechButton(panel)
         val items = speech.parent.components.toList()
+        val idleIcon = speech.icon
 
         assertEquals(2, items.indexOf(panel.buttonForTest()) - items.indexOf(speech))
 
         speech.doClick()
         waitForSend { speech.toolTipText == speechTooltip("prompt.speech.stop") }
-        assertSame(AllIcons.CodeWithMe.CwmMicOn, speech.icon)
+        val recording = speech.icon
+        assertTrue(recording is LiveBadgeIcon)
+        assertSame(AllIcons.CodeWithMe.CwmMicOn, (recording as LiveBadgeIcon).icon)
         speech.doClick()
         waitForSend { panel.text() == "keep dictated prompt keep" }
+        assertSame(idleIcon, speech.icon)
 
         assertEquals(1, capture.starts)
         assertEquals(1, capture.stops)

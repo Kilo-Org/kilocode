@@ -971,6 +971,26 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `create resets state left at a recycled worktree path`() = runBlocking {
+        initRepo()
+        val first = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+        assertNotNull(api.rename(repo.toString(), first.path, "Old Label").worktree)
+        assertTrue(api.setSessionList(first.path, true))
+        // A removal outside Agent Manager leaves the path-keyed state behind. Creating the same branch
+        // again reuses the path and must not inherit that worktree's label or visibility.
+        git(repo, "worktree", "remove", "--force", first.path)
+
+        val again = assertNotNull(
+            api.create(repo.toString(), CreateWorktreeRequestDto("feature/x", existingBranch = true)).worktree,
+        )
+
+        assertEquals(first.path, again.path)
+        val state = readWorktreeState(repo.resolve(".kilo").resolve("jetbrains.json"))
+        assertNull(state.names[again.path])
+        assertTrue(state.sessionList.isEmpty())
+    }
+
+    @Test
     fun `reorder persists a new order that a later list returns`() = runBlocking {
         initRepo()
         val first = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("zebra")).worktree)
@@ -1561,15 +1581,17 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
-    fun `prTargets keeps the main tree and drops detached and prunable entries`() {
+    fun `prTargets keeps the main tree and skips hidden detached and prunable entries`() {
         val items = listOf(
             WorktreeDto("/repo", "repo", "main", "/repo", main = true),
             WorktreeDto("/repo/.kilo/worktrees/a", "a", "feature/a", "/repo/.kilo/worktrees/a"),
+            WorktreeDto("/repo/.kilo/worktrees/b", "b", "feature/b", "/repo/.kilo/worktrees/b"),
             WorktreeDto("/repo/.kilo/worktrees/detached", "detached", "(detached)", "/repo/.kilo/worktrees/detached"),
             WorktreeDto("/repo/.kilo/worktrees/gone", "gone", "feature/gone", "/repo/.kilo/worktrees/gone", prunable = true),
         )
 
-        assertEquals(listOf("/repo", "/repo/.kilo/worktrees/a"), prTargets(items).map { it.path })
+        val hidden = prPaths(listOf("/repo/.kilo/worktrees/../worktrees/b/"))
+        assertEquals(listOf("/repo", "/repo/.kilo/worktrees/a"), prTargets(items, hidden).map { it.path })
     }
 
     @Test

@@ -6,6 +6,8 @@ type Decision = {
   reply: "once" | "always" | "reject"
   approvedAlways: string[]
   deniedAlways: string[]
+  /** Patterns whose saved rule the user cleared; the server deletes them. */
+  removedAlways?: string[]
   message?: string
 }
 
@@ -66,7 +68,8 @@ export async function respondToPermission(
 ): Promise<{ error?: unknown; saved?: boolean }> {
   const deadline = Date.now() + timeout
   const budget = () => Math.max(0, deadline - Date.now())
-  const saved = input.approvedAlways.length > 0 || input.deniedAlways.length > 0
+  const removed = input.removedAlways ?? []
+  const saved = input.approvedAlways.length > 0 || input.deniedAlways.length > 0 || removed.length > 0
   try {
     if (saved) {
       await send(
@@ -77,6 +80,7 @@ export async function respondToPermission(
               directory: input.directory,
               approvedAlways: input.approvedAlways,
               deniedAlways: input.deniedAlways,
+              ...(removed.length > 0 ? { removedAlways: removed } : {}),
             },
             { throwOnError: true, signal: AbortSignal.timeout(budget()) },
           ),
@@ -114,10 +118,7 @@ export async function permissionSettled(
   requestID: string,
   timeout = 5_000,
 ): Promise<boolean> {
-  const { data, error } = await client.permission.list(
-    { directory },
-    { signal: AbortSignal.timeout(timeout) },
-  )
+  const { data, error } = await client.permission.list({ directory }, { signal: AbortSignal.timeout(timeout) })
   if (error || !data) return false
   return !data.some((permission) => permission.id === requestID)
 }

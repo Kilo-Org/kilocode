@@ -732,6 +732,8 @@ class SessionUi(
                         dismissed = failure
                         messageBody.setPreparationFailure(null)
                         controller.retryPreparation(failure)
+                    } else if (controller.canRetryTerminal()) {
+                        controller.retryTerminal()
                     } else if (controller.canRetryLoad()) {
                         controller.retryLoad()
                     } else {
@@ -742,7 +744,7 @@ class SessionUi(
             retryable = {
                 val failure = messageBody.preparationFailure()
                 if (failure != null) controller.canRetryPreparation(failure)
-                else controller.canRetry() || controller.canRetryLoad()
+                else controller.canRetryTerminal() || controller.canRetry() || controller.canRetryLoad()
             },
             dismiss = if (readonly) null else {
                 {

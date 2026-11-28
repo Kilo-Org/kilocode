@@ -1,5 +1,123 @@
 # Changelog
 
+## 7.8.32
+
+### Patch Changes
+
+- [#16443](https://github.com/Kilo-Org/kilocode/pull/16443) [`1eb4d10`](https://github.com/Kilo-Org/kilocode/commit/1eb4d10391f5feac464db99ed479dcdc72d51fd7) - Keep the current account visible when the details cannot be loaded right after signing in or switching organization, and show a notice with a Refresh action that retries. The notice stays available while the details are still unavailable, and a read that brings the account clears it. A switch made from the session account switcher reports the same outcome with an action that opens the account settings.
+
+- [#16527](https://github.com/Kilo-Org/kilocode/pull/16527) [`b12e612`](https://github.com/Kilo-Org/kilocode/commit/b12e612bd3ad9c4073ea57caaf0197fad7f98d63) - Show Cloud workspace compute status, such as Active or Sleeping, only in the workspace editor instead of duplicating it in the Agent Manager tree. The status remains available in the tree row tooltip.
+
+- [#16393](https://github.com/Kilo-Org/kilocode/pull/16393) [`3dee754`](https://github.com/Kilo-Org/kilocode/commit/3dee7548532ba622b6aa73f0450b85e063868da0) - Keep Agent Manager working when a worktree listing repeats the primary checkout. Previously the duplicate row could crash the list with "ActiveTree keys must be unique" during a refresh or worktree delete.
+
+- [#16528](https://github.com/Kilo-Org/kilocode/pull/16528) [`4008ac3`](https://github.com/Kilo-Org/kilocode/commit/4008ac3212f9276d8b0cbc777413b7effb925c5f) - Show workspace counts in Agent Manager section headers, match the IDE theme, and drag section headers to reorder them with their contents.
+
+- [#16413](https://github.com/Kilo-Org/kilocode/pull/16413) [`95c4008`](https://github.com/Kilo-Org/kilocode/commit/95c40086f8d301e84965dbd4f211fbee528d65cb) - Report backend fetch failures by resource, HTTP status and response size, and keep user-facing fetch errors short.
+
+- [#16454](https://github.com/Kilo-Org/kilocode/pull/16454) [`f29945c`](https://github.com/Kilo-Org/kilocode/commit/f29945c7c1fe565293430dd53f096c6703dd67ca) - Answering the plan follow-up question with **Start new session** now opens the new session it starts, so the saved plan carries over into it.
+
+- [#16501](https://github.com/Kilo-Org/kilocode/pull/16501) [`e8da38e`](https://github.com/Kilo-Org/kilocode/commit/e8da38e0ef343be28aee234ee2401287005235bd) - Cloud workspace sessions now follow the selected account context: each organization gets its own hosted attachment, and switching organization starts a fresh Cloud session state.
+
+- [#16471](https://github.com/Kilo-Org/kilocode/pull/16471) [`65c1564`](https://github.com/Kilo-Org/kilocode/commit/65c156489431d1eec47ca250d5ab39f2eaea3a58) - Keep a Cloud workspace permission card on Allow once and Reject, because a Cloud workspace stores no per-pattern allow rules.
+
+- [#16416](https://github.com/Kilo-Org/kilocode/pull/16416) [`f708f7b`](https://github.com/Kilo-Org/kilocode/commit/f708f7b69bca55d10e562603574099d6a60df71a) - Legacy custom modes now migrate to the same permission keys the CLI reads: only a command group grants shell commands, a browser group grants the Integrated Browser tool of the VS Code client, an MCP group grants the tools of each migrated server, and a file restriction becomes a wildcard glob that keeps the files it allowed. A migrated mode's MCP grant and the CLI's own MCP tool ids come from one definition, so the grant always names the tools the CLI registers and a server name outside the Basic Multilingual Plane yields the same key in the CLI and the plugin, and the grant covers every server the loader that ran the migration converted rather than only the ones a project file declared. A file restriction that alternates at the top level keeps the files of every alternative. A file restriction made only of digits is reported and asks instead of denying the allowed files, one whose translated arm resolves against the home directory is reported and asks, one that escapes a character the glob cannot carry literally, including backslash, `*` and `?`, is reported and asks, so the migrated rule always means what the legacy pattern meant, a migrated mode in the CLI keeps the default skill permission because no legacy group governs it, the JetBrains migration denies skill and states that in its report, and an MCP group is reported when a skipped store declared a server the migration can grant and that no converted server's permission key covers, even when other servers were migrated, while a disabled entry, a local entry with no command and a remote entry with no url are not reported. An empty alternative matches the empty string. A pattern whose empty alternative is its whole body matches every path; when the alternative sits inside a longer pattern, it matches that pattern's surrounding characters instead. With both anchors the empty alternative is dropped so the alternatives that name a path survive, and a pattern whose every alternative is empty is reported and asks. A mode that lists the same group more than once keeps the narrower rule and reports the repeat in the migration warnings when the rule differs. With auto-approval on and no command lists, the migration grants shell commands and leaves other tools at their defaults. A mode that writes a group with its options in flow style keeps the file restriction that group names, and a group whose options arrive as their own entry asks instead of widening to every file. A single-quoted scalar decodes a doubled quote to one quote, and a `#` after it stays part of the value instead of starting a comment.
+
+- [#16500](https://github.com/Kilo-Org/kilocode/pull/16500) [`a4021da`](https://github.com/Kilo-Org/kilocode/commit/a4021da903445358ce564b1fc99edb2065f22fc2) - Store a migrated provider credential in the shape its provider accepts: the Kilo gateway token keeps the OAuth-shaped envelope the CLI uses for Kilo sign-in, with the organization as the account id, and every other provider stores an api credential. A migrated provider config patch carries its base URL and no secret.
+
+- [#16450](https://github.com/Kilo-Org/kilocode/pull/16450) [`53b73eb`](https://github.com/Kilo-Org/kilocode/commit/53b73eb18b4c5ca1666a2707355a87aa79e70ae1) - Report legacy provider profiles whose provider is unsupported or unrecognised as a migration result, and migrate credentials only for a provider the import can identify.
+
+- [#16406](https://github.com/Kilo-Org/kilocode/pull/16406) [`b686b98`](https://github.com/Kilo-Org/kilocode/commit/b686b987a82c641be6651087dfde973f8e9a7141) - Report when a permission or question answer is not accepted, and keep the card on screen with the answers already given so it can be sent again.
+
+- [#16408](https://github.com/Kilo-Org/kilocode/pull/16408) [`92b19f9`](https://github.com/Kilo-Org/kilocode/commit/92b19f9da9db71d19f372df9f5da7b25680d86fa) - Keep the Kilo Gateway entry managed by the gateway login flow in Provider Settings, and turn a provider back on in every configuration file that lists it as turned off when you enable it.
+
+- [#16393](https://github.com/Kilo-Org/kilocode/pull/16393) [`3dee754`](https://github.com/Kilo-Org/kilocode/commit/3dee7548532ba622b6aa73f0450b85e063868da0) - Keep JetBrains responsive when questions appear or are answered in long conversations by updating only the linked question card instead of rebuilding the transcript.
+
+- [#16393](https://github.com/Kilo-Org/kilocode/pull/16393) [`3dee754`](https://github.com/Kilo-Org/kilocode/commit/3dee7548532ba622b6aa73f0450b85e063868da0) - Reduce JetBrains chat freezes by keeping the transcript footer attached when session state or messages change.
+
+- [#16503](https://github.com/Kilo-Org/kilocode/pull/16503) [`0e6ad52`](https://github.com/Kilo-Org/kilocode/commit/0e6ad52d2a386a4a457fefee1378c839203770e2) - Report when a manual session cleanup cannot switch automatic cleanup back off, and offer a retry from the Checkpoints settings page.
+
+- [#16409](https://github.com/Kilo-Org/kilocode/pull/16409) [`cede8c3`](https://github.com/Kilo-Org/kilocode/commit/cede8c3136eec6ec1cdbf787597e1503c28edf20) - Signing out of Kilo Gateway now also clears Cloud workspace session state, so the IDE returns to a clean signed-out state and the next sign-in starts fresh.
+
+- [#16556](https://github.com/Kilo-Org/kilocode/pull/16556) [`05c9710`](https://github.com/Kilo-Org/kilocode/commit/05c971024306d992e3dea8567695fbb2f51150a5) - Show a clear "signed out" message with a sign-in action when Kilo rejects your login, instead of a generic error. The CLI points to `/connect` and `kilo auth login`. In VS Code, the Sign in button starts login in the Kilo Profile tab. JetBrains opens User Profile and resends your message once you are signed in again.
+
+## 7.9.0
+
+### Minor Changes
+
+- [#16284](https://github.com/Kilo-Org/kilocode/pull/16284) [`e90c8a2`](https://github.com/Kilo-Org/kilocode/commit/e90c8a2f0ae4c7ef42244ed3160b01e0f0120d38) - View saved Cloud workspace changes and published pull request diffs in the native diff editor without a local checkout.
+
+  Use a shared capability-aware menu and badge actions for local and Cloud workspaces in Agent Manager.
+
+  Use the local workspace header for Cloud sessions, with passive saved-change counters and a browser-linked compute status. The Cloud header no longer shows the hourly workspace rate; the status badge links to the session instead.
+
+  Name Cloud diff tabs with the task or branch instead of the internal workspace ID.
+
+### Patch Changes
+
+- [#16293](https://github.com/Kilo-Org/kilocode/pull/16293) [`3f4422d`](https://github.com/Kilo-Org/kilocode/commit/3f4422d1c029512e9abe07fc12f0bf74588e578b) - Respect telemetry settings from `kilo.json` without client-side overrides, and add a switch under Settings > Tools > Kilo Code > Advanced that updates `experimental.openTelemetry` through the CLI core.
+
+## 7.9.0
+
+### Minor Changes
+
+- [#16257](https://github.com/Kilo-Org/kilocode/pull/16257) [`dbfbeb4`](https://github.com/Kilo-Org/kilocode/commit/dbfbeb443b480a936b8259c1bb7e20e7152dd17b) - Show Cloud workspace pull request status in Agent Manager: hosted rows and workspace editor headers now display the PR number, state, review, and check verdicts backed by Cloud, with the same browsable detail as a local worktree pull request.
+
+### Patch Changes
+
+- [#16279](https://github.com/Kilo-Org/kilocode/pull/16279) [`46e4dd4`](https://github.com/Kilo-Org/kilocode/commit/46e4dd47e524d79ddd40c57ad633b13fc6b6bcec) - Reload individual Cloud workspaces and reconnect their session streams from the workspace menu.
+
+- [#16279](https://github.com/Kilo-Org/kilocode/pull/16279) [`46e4dd4`](https://github.com/Kilo-Org/kilocode/commit/46e4dd47e524d79ddd40c57ad633b13fc6b6bcec) - Make failed Cloud turns retryable and avoid treating recoverable setup steps as workspace failures.
+
+- [#16343](https://github.com/Kilo-Org/kilocode/pull/16343) [`00a5d30`](https://github.com/Kilo-Org/kilocode/commit/00a5d30cf76f2a826bdfb305fea631beb9d2ce76) - Keep Agent Manager sections collapsed when their contents change, skip pull request polling for hidden worktrees unless their editor is visible, and underline the selected section.
+
+- [#16241](https://github.com/Kilo-Org/kilocode/pull/16241) [`37d6024`](https://github.com/Kilo-Org/kilocode/commit/37d602483c338cba749fd68b9e4be2c61554bb82) - Show a recording badge on the prompt dictation button so it is visible that the microphone is recording instead of looking idle.
+
+- [#16250](https://github.com/Kilo-Org/kilocode/pull/16250) [`49c8ff7`](https://github.com/Kilo-Org/kilocode/commit/49c8ff793da0b99491efe156098a253017b27a03) - Keep a new Agent Manager worktree from inheriting a previous worktree's merged pull request badge or conversations when a branch name is reused.
+
+## 7.9.0
+
+### Minor Changes
+
+- [#16182](https://github.com/Kilo-Org/kilocode/pull/16182) [`c9212a6`](https://github.com/Kilo-Org/kilocode/commit/c9212a6158e00ffea059582f7307c96ca17c8a7f) - Move Agent Manager worktrees and Cloud tasks between sections, choose a section when creating tasks with the current tree selection prefilled, and dictate prompts in the creation dialogs.
+
+- [#16100](https://github.com/Kilo-Org/kilocode/pull/16100) [`ac9f2e3`](https://github.com/Kilo-Org/kilocode/commit/ac9f2e3b625f40eee6700cf2f1541e8b9f053b42) - Organize local and Cloud workspaces in a unified Agent Manager list with reorderable, color-coded sections and keep the primary checkout pinned at the top.
+
+- [#15599](https://github.com/Kilo-Org/kilocode/pull/15599) [`c153a86`](https://github.com/Kilo-Org/kilocode/commit/c153a86705ad856843960f1339c5b973e56f56ce) - Create local and Cloud tasks from a unified Add menu in the JetBrains Agent Manager. Group Cloud workspaces, open them in the correct organization in your browser, close and reopen sessions, and delete whole workspaces with progress and retry. Allow Cloud workspaces without a profile, preselect and mark personal and organization default profiles, switch back to the default profile, show a standard border around the dialog prompt, and create a Cloud workspace with an empty prompt. Show submitted prompts immediately, show preparation progress while a Cloud workspace starts, wait for preparation to finish before loading chat history, and keep Cloud-generated session titles in sync in both the session header and the workspace list. Keep newly created Cloud workspaces visible while discovery catches up, and remove deleted ones immediately. Report setup failures with command output and retry even when chat history is unavailable, and show Cloud load failures in plain language with Retry for transient errors instead of Dismiss for permanent errors.
+
+- [#16021](https://github.com/Kilo-Org/kilocode/pull/16021) [`73c4f3a`](https://github.com/Kilo-Org/kilocode/commit/73c4f3a6a88fcf380908ac5fc8c53abaff952d52) - Search conversation text in the chat transcript with the IDE Find shortcut and native Find bar.
+
+- [#16138](https://github.com/Kilo-Org/kilocode/pull/16138) [`0652bf5`](https://github.com/Kilo-Org/kilocode/commit/0652bf515a1c3d378bba6da04c498b2ec44684d8) - Dictate prompts in JetBrains IDEs using the microphone button or a configurable start/stop shortcut.
+
+### Patch Changes
+
+- [#16096](https://github.com/Kilo-Org/kilocode/pull/16096) [`bfb2db1`](https://github.com/Kilo-Org/kilocode/commit/bfb2db11d71a98c153e8803f2aeda28d372d6198) - Keep Agent Manager branch labels and pull request badges in sync when a checkout switches branches outside the list.
+
+- [#16103](https://github.com/Kilo-Org/kilocode/pull/16103) [`edb25bf`](https://github.com/Kilo-Org/kilocode/commit/edb25bf64f2802877d82907dca1c812475521150) - Prevent errors when editing branch searches in the worktree dialog, and preserve the search text and caret when suggestions open.
+
+- [#15599](https://github.com/Kilo-Org/kilocode/pull/15599) [`89e06d1`](https://github.com/Kilo-Org/kilocode/commit/89e06d1d3a1070378bc354b6a299e9ad7523648b) - Open the New Cloud Workspace dialog immediately while profiles load in the background, and remember non-default profile selections per repository in IDE settings. Show the organization or personal default in the profile picker; the Set as default action is temporarily unavailable until organization profiles can be saved as personal defaults.
+
+- [#15599](https://github.com/Kilo-Org/kilocode/pull/15599) [`babbfcb`](https://github.com/Kilo-Org/kilocode/commit/babbfcb2df8cc4f297f47d7ba285beda2480a007) - Unify the Cloud workspace editor with local worktrees: start new Cloud sessions from the same New Session row (no prompt dialog), share one title across the tree row, editor tab, header, and status bar, delete Cloud workspaces from the tree with the standard Delete shortcut, and keep the Starting badge instead of showing "not available" while a sandbox boots.
+
+- [#16103](https://github.com/Kilo-Org/kilocode/pull/16103) [`a7964d3`](https://github.com/Kilo-Org/kilocode/commit/a7964d3a0a237f8923c623a4022470b18fee37e8) - Prevent session background painting errors while editor color schemes initialize or reload, while preserving custom editor backgrounds and theme updates.
+
+- [#15599](https://github.com/Kilo-Org/kilocode/pull/15599) [`92a8ea2`](https://github.com/Kilo-Org/kilocode/commit/92a8ea20c9594bbbb79b82a484996773d7636127) - Hide local MCP sign-in warnings from JetBrains Cloud sessions.
+
+- [#16103](https://github.com/Kilo-Org/kilocode/pull/16103) [`a387dfa`](https://github.com/Kilo-Org/kilocode/commit/a387dfad5ae7b05964f1364da794226be5e13114) - Prevent IDE freezes when a Cloud workspace has no open sessions and keep session-history requests from blocking IDE background work.
+
+- [#16076](https://github.com/Kilo-Org/kilocode/pull/16076) [`90e5ea5`](https://github.com/Kilo-Org/kilocode/commit/90e5ea57d464451ec41c78ba7baa8c73464c5e12) - Fix the JetBrains plugin so Marketplace publishing passes plugin verification again.
+
+- [#16103](https://github.com/Kilo-Org/kilocode/pull/16103) [`d3d201d`](https://github.com/Kilo-Org/kilocode/commit/d3d201d9bcc214e46a6a833e3dd3afbd03c844bb) - Prevent markdown hover and scrolling errors when mixed-direction text contains paths, URLs, or dotted names, while preserving word wrapping and link highlighting.
+
+- [#16103](https://github.com/Kilo-Org/kilocode/pull/16103) [`08d725a`](https://github.com/Kilo-Org/kilocode/commit/08d725a75096662f8c684fb9ebc47055ecccf8fc) - Keep the Windows CLI connection working when optional native process cleanup is unavailable.
+
+- [#16103](https://github.com/Kilo-Org/kilocode/pull/16103) [`d3d201d`](https://github.com/Kilo-Org/kilocode/commit/d3d201d9bcc214e46a6a833e3dd3afbd03c844bb) - Prevent overlay hover errors when display configuration changes or the pointer position is unavailable.
+
+- [#16103](https://github.com/Kilo-Org/kilocode/pull/16103) [`d91b019`](https://github.com/Kilo-Org/kilocode/commit/d91b019219fe0065dcf66234bf6af6b187becec9) - Prevent prompt editing and paste errors after the input editor is recreated, and preserve mention and command highlighting across editor changes.
+
+- [#16103](https://github.com/Kilo-Org/kilocode/pull/16103) [`3d043b8`](https://github.com/Kilo-Org/kilocode/commit/3d043b8b0c6112f80ae7b37c03bac85af3cccd59) - Prevent tool-window setup errors when Kilo Code is disabled or uninstalled by safely skipping unavailable telemetry and honoring cancellation.
+
+- [#16181](https://github.com/Kilo-Org/kilocode/pull/16181) [`2233d32`](https://github.com/Kilo-Org/kilocode/commit/2233d32ad7b7342f2630b9949f98207729dd08cb) - Fix worktree creation getting stuck during background refreshes. Preserve creation prompts and their selected mode and model through failures, reopening, and IDE restarts.
+
 ## 7.9.0
 
 ### Minor Changes
@@ -679,6 +797,39 @@
 - [#12059](https://github.com/Kilo-Org/kilocode/pull/12059) [`8ea3f10`](https://github.com/Kilo-Org/kilocode/commit/8ea3f10495e28c8a131b805d51f8f7524895148b) - Increase spacing before non-initial user prompts in the JetBrains session transcript.
 
 ## [Unreleased]
+
+## [7.2.1-rc.9] - 2026-11-19
+
+### Added
+
+- Added native Cloud workspace diffs, so Cloud sessions can show their changes in the IDE diff viewer.
+- Agent Manager now shows pull request status for Cloud workspaces.
+- Added a core telemetry level API so the plugin reports telemetry at the level configured in Kilo Core.
+- Bundled Kilo Core CLI provides the new core telemetry level API.
+
+### Fixed
+
+- Fixed reused worktrees inheriting old history from previous sessions.
+- Fixed Cloud sessions not recovering and reloading after reconnect.
+- Fixed collapsed Agent Manager sections expanding again after a refresh.
+- Fixed the dictation button not showing its recording indicator.
+- Fixed Gemini type arrays leaving sibling keywords on `anyOf` in generated tool schemas.
+
+### Changed
+
+- Bundled Kilo Core CLI updated to 7.8.31.
+
+## [7.2.1-rc.8] - 2026-11-17
+
+### Added
+
+- Cloud sessions now show status for the pull request linked to a hosted workspace, keeping partial or temporarily unavailable results distinct from having no pull request.
+- Cloud sessions can review workspace changes: committed, uncommitted, and pull-request-published diffs are shown separately, with revision-checked file reads, an explicit refresh, and verified linked pull request patches in the native diff editor.
+
+### Changed
+
+- Bundled Kilo Core CLI updated to 7.8.30.
+- Markdown rendering libraries updated to 0.32.0.
 
 ## [7.2.1-rc.7] - 2026-11-15
 

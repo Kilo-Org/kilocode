@@ -322,6 +322,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "Aus der Erlaubt-Liste entfernen",
   "ui.permission.rule.addToDenied": "Zur Verweigert-Liste hinzufügen",
   "ui.permission.rule.removeFromDenied": "Aus der Verweigert-Liste entfernen",
+  "ui.permission.rule.fromConfig": "Verwaltet von einer Konfigurationsdatei",
   "ui.permission.toolLabel.read": "Lesen",
   "ui.permission.toolLabel.edit": "Bearbeiten",
   "ui.permission.toolLabel.write": "Schreiben",
@@ -709,6 +710,11 @@ export const dict = {
 
   "profile.title": "Profil",
   "profile.notLoggedIn": "Nicht angemeldet",
+  "profile.expired":
+    "Deine Kilo-Anmeldung ist abgelaufen oder wurde widerrufen. Melde dich erneut an, um fortzufahren.",
+  "profile.unavailable":
+    "Dein Kilo-Profil konnte nicht geladen werden. Kilo ist möglicherweise gerade nicht erreichbar.",
+  "profile.stale": "Dein Profil konnte nicht aktualisiert werden. Es werden die zuletzt geladenen Daten angezeigt.",
   "profile.action.login": "Mit Kilo Code anmelden",
   "profile.balance.title": "Guthaben",
   "profile.balance.refresh": "Guthaben aktualisieren",
@@ -829,6 +835,7 @@ export const dict = {
 
   "dialog.model.noProviders": "Keine Anbieter",
   "dialog.model.unavailable": "Kilo-Modelle nicht verfügbar",
+  "dialog.model.loadFailed": "Anbieter für dieses Projekt konnten nicht geladen werden.",
 
   "prompt.placeholder.connecting": "Verbindung zum Server wird hergestellt...",
   "prompt.placeholder.error":
@@ -883,8 +890,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "Telemetrie",
   "settings.aboutKiloCode.telemetry.description":
-    'Die Telemetrie wird durch die integrierte Telemetrie-Einstellung von VS Code gesteuert. Um sie zu deaktivieren, gehen Sie zu Einstellungen > Telemetrie > Telemetrie-Stufe und setzen Sie diese auf "off". Starten Sie VS Code neu, um die Änderung zu übernehmen.',
-  "settings.aboutKiloCode.telemetry.openSettings": "Telemetrie-Einstellungen öffnen",
+    "Mit diesem Schalter ändern Sie Ihre Telemetrie-Einstellung in Kilo. Wenn VS Code oder die Umgebung die Telemetrie deaktiviert, bleibt sie ausgeschaltet.",
+  "settings.aboutKiloCode.telemetry.toggle": "Telemetrie aktivieren",
+  "settings.aboutKiloCode.telemetry.saveFailed": "Die Telemetrie-Einstellung konnte nicht aktualisiert werden",
 
   "settings.agentBehaviour.subtab.agents": "Agenten",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-Server",
@@ -1363,6 +1371,8 @@ export const dict = {
   "dialog.model.notSet": "Nicht festgelegt",
   "profile.personalAccount": "Persönliches Konto",
   "profile.switchingAccount": "Konto wird gewechselt…",
+  "profile.unavailableAccount": "Nicht verfügbares Konto",
+  "profile.switchFailed": "Kontowechsel konnte nicht bestätigt werden.",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/de.ts
 
@@ -1449,6 +1459,10 @@ export const dict = {
   "settings.saveBar.cancel": "Abbrechen",
   "settings.saveBar.saving": "Speichern…",
   "settings.saveBar.saveFailed": "Einstellungen konnten nicht gespeichert werden",
+  "settings.saveBar.dismissError": "Verwerfen",
+  "settings.saveBar.unconfirmedWrite": "„{{name}}“ wurde vom Erweiterungshost nicht bestätigt.",
+  "settings.saveBar.unconfirmedSave":
+    "Das Speichern wurde vom Erweiterungshost nicht bestätigt. Versuchen Sie es erneut.",
   "notifications.action.next": "Weiter",
   "notifications.action.close": "Schließen",
   "notifications.action.tryModel": "{{model}} ausprobieren",

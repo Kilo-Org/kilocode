@@ -23,6 +23,7 @@ import ai.kilocode.client.session.model.PermissionRequestState
 import ai.kilocode.client.session.model.Question
 import ai.kilocode.client.session.model.QuestionItem
 import ai.kilocode.client.session.model.QuestionOption
+import ai.kilocode.client.session.model.QuestionRequestState
 import ai.kilocode.client.session.model.Reasoning
 import ai.kilocode.client.session.ui.mode.agentTitle
 import ai.kilocode.client.session.model.ToolCallRef
@@ -32,6 +33,7 @@ import ai.kilocode.client.session.model.TurnOutcome
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.telemetry.Telemetry
+import ai.kilocode.client.settings.profile.accountErrorToken
 import ai.kilocode.client.util.UiTimer
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
@@ -125,12 +127,23 @@ class SessionController(
   private val telemetry: (String, Map<String, String>) -> Unit = { event, props -> Telemetry.send(event, props) },
   private val notify: (String, String) -> Unit = { title, body -> KiloNotifications.error(title, body) },
   private val notifyInfo: (String, String) -> Unit = { title, body -> KiloNotifications.info(title, body) },
+  private val notifyAction: (String, String?, String, () -> Unit) -> Unit = { title, body, label, action ->
+    KiloNotifications.warning(title, body, label, action)
+  },
   private val timers: UiTimerSource = UiTimers,
   private val log: KiloLog = LOG,
 ) : Disposable {
 
     private data class OrganizationTarget(val org: String?)
-    private data class Followup(val dir: String, val time: Long)
+    /**
+     * An answer that asked the CLI for a new session: [session] asked and [question] is the answered request.
+     * [time] is the local clock, used only for the handoff window. [since] is the asking session's newest
+     * positive CLI timestamp, the anchor for the "created after the answer" check, and is null when the CLI
+     * has stamped that session with nothing usable: the creation check is then skipped and only the
+     * directory, root, not-the-asking-session and child gates remain. No client clock is ever compared with
+     * a CLI one, so a client and a backend on different hosts are never compared.
+     */
+    private data class Followup(val dir: String, val time: Long, val session: String?, val question: String, val since: Double?)
     /** [submitted] is the message the create call itself delivered; every other dispatch still sends. */
     private data class Created(val id: String, val submitted: String? = null)
     private data class Pref(val agent: String?, val model: String?, val variants: List<String>, val variant: String?, val reset: Boolean)
@@ -241,6 +254,9 @@ class SessionController(
     private var lastProfile: ProfileDto? = null
     private var target: OrganizationTarget? = null
     private var loginRetry: PromptDto? = null
+
+    /** A rejected login whose account is still held; cleared once that account reads signed out. */
+    private var stale = false
     private var followup: Followup? = null
     private var agentTime: Double? = null
     private var prefModel: String? = null
@@ -752,6 +768,22 @@ class SessionController(
         return preparationPrompt() != null
     }
 
+    /** Whether the current failed Cloud prompt can be sent again with a fresh message identity. */
+    @RequiresEdt
+    fun canRetryTerminal(): Boolean {
+        if (ref !is SessionRef.Hosted || sid == null || revertOp != null) return false
+        val tail = model.messages().lastOrNull() ?: return false
+        return tail.info.role == "user" && tail.terminal?.status == "failed" && canRetryPreparation()
+    }
+
+    @RequiresEdt
+    fun retryTerminal() {
+        assertEdt()
+        if (!canRetryTerminal()) return
+        val prompt = preparationPrompt() ?: return
+        resend(prompt, KiloBundle.message("session.status.considering"), "message")
+    }
+
     /**
      * Retry Cloud workspace preparation. Cloud retries preparation when a prompt is submitted, so
      * replay the last user text with a fresh canonical message ID. The optimistic prompt is dropped
@@ -759,24 +791,28 @@ class SessionController(
      */
     fun retryPreparation(failure: HostedSystemEventDto? = null) {
         assertEdt()
-        val id = sid ?: return
         if (!canRetryPreparation(failure)) return
         val prompt = preparationPrompt() ?: return
+        resend(prompt, KiloBundle.message("hosted.workspace.preparation.retrying"), "preparation")
+    }
+
+    private fun resend(prompt: PromptDto, status: String, kind: String) {
+        val id = sid ?: return
         promptRevision++
         initial = null
         val tail = model.messages().lastOrNull { it.info.role == "user" }
         val tailOptimistic = tail?.let { model.isOptimistic(it.info.id) } == true
         tail?.let { model.removeOptimistic(it.info.id) }
         addOptimistic(prompt)
-        LOG.info("${ChatLogSummary.sid(id)} kind=retry preparation=true")
-        model.setState(SessionState.Busy(KiloBundle.message("hosted.workspace.preparation.retrying")))
+        LOG.info("${ChatLogSummary.sid(id)} kind=retry hosted=$kind")
+        model.setState(SessionState.Busy(status))
         cs.launch {
             try {
                 sessions.prompt(id, directory, prompt)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                LOG.warn("${ChatLogSummary.sid(id)} kind=retry preparation=true failed message=${e.message}", e)
+                LOG.warn("${ChatLogSummary.sid(id)} kind=retry hosted=$kind failed message=${e.message}", e)
                 edt {
                     if (disposed) return@edt
                     // Keep the replacement prompt when the removed tail was optimistic. Otherwise
@@ -1191,7 +1227,7 @@ class SessionController(
     }
 
     private fun approve(request: PermissionRequestDto) {
-        approve(request.id) { toPermission(request) }
+        approve(request.id) { toPermission(request, isHosted) }
     }
 
     private fun approve(permission: Permission) {
@@ -1238,11 +1274,12 @@ class SessionController(
         drainJob = cs.launch {
             try {
                 val permissions = sessions.pendingPermissions(directory).filter { it.sessionID in ids && it.id !in skip }
-                val count = replyAll(permissions)
+                val batch = replyAll(permissions)
                 // Sensitive requests are skipped by replyAll; queue all of them so they aren't
                 // stranded (never machine-approved, never shown) or overwritten by later cards.
-                val cards = permissions.filter { manual(it.metadata) }.map(::toPermission)
-                if (count == 0 && cards.isEmpty()) return@launch
+                // A refused reply is not approved, so it gets an ERROR card like approve() does.
+                val cards = leftovers(batch, permissions)
+                if (batch.approved == 0 && cards.isEmpty()) return@launch
                 runEdt {
                     if (disposed) return@runEdt
                     if (cards.isNotEmpty()) {
@@ -1266,23 +1303,62 @@ class SessionController(
                         model.setState(SessionState.Busy(KiloBundle.message("session.status.considering")))
                     }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 LOG.warn("${ChatLogSummary.sid(id)} kind=permission-auto-drain dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
             }
         }
     }
 
-    private suspend fun replyAll(permissions: List<PermissionRequestDto>): Int {
-        var count = 0
+    /** Outcome of an auto-approval batch: accepted replies, and refused requests with their message. */
+    private data class Batch(val approved: Int, val refused: List<Pair<PermissionRequestDto, String>>)
+
+    /**
+     * Replies "once" to every ordinary request in the batch under auto-approve.
+     *
+     * Sensitive requests need a human, so they are skipped and left to the caller's card. A refused
+     * reply does not stop the batch: it is collected in the result so the caller can surface an
+     * ERROR card for it, and it is never counted as approved.
+     */
+    private suspend fun replyAll(permissions: List<PermissionRequestDto>): Batch {
+        var approved = 0
+        val refused = mutableListOf<Pair<PermissionRequestDto, String>>()
         for (request in permissions) {
-            if (!autoApprove) return count
+            if (!autoApprove) break
             // Sensitive permissions need a human; skip them here (callers surface the card).
             if (manual(request.metadata)) continue
-            sessions.replyPermission(request.id, directory, PermissionReplyDto("once"))
+            try {
+                sessions.replyPermission(request.id, directory, PermissionReplyDto("once"))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                LOG.warn("${ChatLogSummary.sid(request.sessionID)} kind=permission-auto rid=${request.id} dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
+                refused.add(request to (e.message ?: KiloBundle.message("session.permission.error")))
+                continue
+            }
             capture("Permission Auto Approved", sessionProps(request.sessionID) + mapOf("tool" to request.permission, "source" to "drain"))
-            count++
+            approved++
         }
-        return count
+        return Batch(approved, refused)
+    }
+
+    /** ERROR card for a refused reply, mirroring the card approve() shows on failure. */
+    private fun errorCard(request: PermissionRequestDto, message: String): Permission =
+        toPermission(request, isHosted).copy(state = PermissionRequestState.ERROR, message = message)
+
+    /**
+     * Cards the batch still owes a human, in request order.
+     *
+     * A skipped sensitive request keeps its plain card. A refused reply becomes an ERROR card that
+     * reports the failure, so it is never silently dropped.
+     */
+    private fun leftovers(batch: Batch, permissions: List<PermissionRequestDto>): List<Permission> {
+        val failure = batch.refused.associate { (request, message) -> request.id to message }
+        return permissions.mapNotNull { request ->
+            failure[request.id]?.let { message -> errorCard(request, message) }
+                ?: if (manual(request.metadata)) toPermission(request, isHosted) else null
+        }
     }
 
     // Sensitive requests are never machine-approved; after draining, callers must surface one as a
@@ -1311,16 +1387,36 @@ class SessionController(
         updateModel { model.setState(SessionState.AwaitingPermission(perm)) }
     }
 
+    @RequiresEdt
+    private fun updateQuestion(id: String, state: QuestionRequestState, message: String? = null) {
+        assertEdt()
+        val current = model.state
+        if (current !is SessionState.AwaitingQuestion) return
+        if (current.question.id != id) return
+        val q = current.question
+        updateModel { model.setState(SessionState.AwaitingQuestion(q.copy(state = state, message = message))) }
+    }
+
     fun replyQuestion(requestId: String, answers: QuestionReplyDto, options: List<List<String>> = answers.answers) {
         assertEdt()
         promptRevision++
+        updateQuestion(requestId, QuestionRequestState.RESPONDING)
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=question rid=$requestId answers=${answers.answers.size}" }
         val current = model.state
+        val asking = sid
         followup = if (current is SessionState.AwaitingQuestion
             && current.question.id == requestId
             && options.any { labels -> labels.any { it.trim() == FOLLOWUP_NEW_SESSION } }
         ) {
-            Followup(directory, System.currentTimeMillis())
+            // The anchor is the asking session's newest positive CLI timestamp, so the creation check stays on
+            // the CLI's clock. A CLI that has stamped nothing usable leaves it null and the creation check is
+            // skipped; the local answer time only bounds the handoff window and is never compared.
+            val known = model.session
+            val time = System.currentTimeMillis()
+            val since = known?.time?.let { stamp ->
+                stamp.updated.takeIf { it > 0.0 } ?: stamp.created.takeIf { it > 0.0 }
+            }
+            Followup(directory, time, asking, requestId, since)
         } else null
         val follow = followup != null
         cs.launch {
@@ -1335,6 +1431,7 @@ class SessionController(
             } catch (e: Exception) {
                 edt { followup = null }
                 LOG.warn("${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=question rid=$requestId answers=${answers.answers.size} dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
+                edt { updateQuestion(requestId, QuestionRequestState.ERROR, e.message ?: KiloBundle.message("session.question.error")) }
             }
         }
     }
@@ -1342,6 +1439,7 @@ class SessionController(
     fun rejectQuestion(requestId: String) {
         assertEdt()
         promptRevision++
+        updateQuestion(requestId, QuestionRequestState.RESPONDING)
         followup = null
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=question rid=$requestId rejected=true" }
         cs.launch {
@@ -1351,6 +1449,7 @@ class SessionController(
                 LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=question rid=$requestId ok=true" }
             } catch (e: Exception) {
                 LOG.warn("${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=question rid=$requestId rejected=true dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
+                edt { updateQuestion(requestId, QuestionRequestState.ERROR, e.message ?: KiloBundle.message("session.question.error")) }
             }
         }
     }
@@ -1413,7 +1512,8 @@ class SessionController(
                     if (state.status == KiloAppStatusDto.READY) seenReady = true
                     model.app = state
                     model.version = app.version
-                    if (model.state is SessionState.LoginRequired && state.profile != null) {
+                    if (state.profile == null) stale = false
+                    if (model.state is SessionState.LoginRequired && state.profile != null && !stale) {
                         resumeAfterLogin()
                     }
                     syncModelSelection()
@@ -1932,24 +2032,21 @@ class SessionController(
             val permissions = sessions.pendingPermissions(directory).filter { it.sessionID == child }
             if (permissions.isEmpty()) return
             LOG.debug { "${ChatLogSummary.sid(sid ?: "pending")} kind=child-recovery child=$child permissions=${permissions.size}" }
-            // Under auto-approve, replyAll approves ordinary permissions and skips sensitive ones;
-            // queue only the latter. Otherwise queue every pending permission.
-            val queue = if (autoApprove) {
-                replyAll(permissions)
-                permissions.filter { manual(it.metadata) }
-            } else {
-                permissions
-            }
-            if (queue.isEmpty()) return
-            val items = queue.map(::toPermission)
+            // Under auto-approve, replyAll approves ordinary permissions and skips sensitive ones.
+            // Queue the skipped sensitive cards and an ERROR card for every refused reply, so a
+            // refusal stays visible instead of being stranded. Otherwise queue every pending one.
+            val cards = if (autoApprove) leftovers(replyAll(permissions), permissions) else permissions.map { toPermission(it, isHosted) }
+            if (cards.isEmpty()) return
             runEdt {
                 if (disposed) return@runEdt
                 if (child !in childIds) return@runEdt
-                items.forEach(::enqueue)
+                cards.forEach(::enqueue)
                 if (model.state !is SessionState.AwaitingPermission && model.state !is SessionState.AwaitingQuestion) {
                     updateModel { promote() }
                 }
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             LOG.warn("${ChatLogSummary.sid(sid ?: "pending")} kind=child-recovery child=$child dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
         }
@@ -2063,22 +2160,23 @@ class SessionController(
                 !disposed && sid == id && promptRevision == revision && epoch == generation
             }
             if (!current) return
-            if (permissions.isNotEmpty() && autoApprove) {
-                val count = replyAll(permissions)
-                if (count > 0 && prompt == null) {
-                    runEdt {
-                        if (disposed) return@runEdt
-                        if (sid != id) return@runEdt
-                        if (promptRevision != revision) return@runEdt
-                        if (epoch != generation) return@runEdt
-                        model.setState(SessionState.Busy(KiloBundle.message("session.status.considering")))
-                    }
-                    return
+            val batch = if (permissions.isNotEmpty() && autoApprove) replyAll(permissions) else null
+            // A refused reply is not approved: it still needs a card, so never go Busy and swallow
+            // it. Only a batch with no refused request and no sensitive card may skip the queue.
+            if (batch != null && batch.approved > 0 && batch.refused.isEmpty() && prompt == null) {
+                runEdt {
+                    if (disposed) return@runEdt
+                    if (sid != id) return@runEdt
+                    if (promptRevision != revision) return@runEdt
+                    if (epoch != generation) return@runEdt
+                    model.setState(SessionState.Busy(KiloBundle.message("session.status.considering")))
                 }
+                return
             }
-            // After auto-approve only sensitive permissions still need a human card; queue those.
-            // Otherwise queue the whole pending set so each request is resolved in turn.
-            val queue = if (autoApprove) permissions.filter { manual(it.metadata) } else permissions
+            // After auto-approve only skipped sensitive permissions and refused replies still need a
+            // human card; queue those. Otherwise queue the whole pending set so each request is
+            // resolved in turn.
+            val queue = if (batch != null) leftovers(batch, permissions) else permissions.map { toPermission(it, isHosted) }
             // An "idle" status is still a status. It means no live work, not "nothing to recover", so it
             // must not shadow the transcript: a session reopened after a failed turn is idle on the
             // server and would otherwise recover as if it had never failed.
@@ -2110,7 +2208,7 @@ class SessionController(
                         model.setState(SessionState.Idle)
                     }
                     if (queue.isNotEmpty()) {
-                        queue.map(::toPermission).forEach(::enqueue)
+                        queue.forEach(::enqueue)
                         promote()
                     } else if (questions.isNotEmpty()) {
                         model.setState(SessionState.AwaitingQuestion(toQuestion(questions.last())))
@@ -2417,7 +2515,7 @@ class SessionController(
                 }
             }
             // Replay must never auto-approve historical requests; only the successful live probe may do that.
-            permissions.values.map(::toPermission).forEach(::enqueue)
+            permissions.values.map { toPermission(it, isHosted) }.forEach(::enqueue)
             if (questions.isNotEmpty()) model.setState(SessionState.AwaitingQuestion(toQuestion(questions.values.last())))
             else if (permissions.isNotEmpty()) promote()
             events.filterIsInstance<ChatEventDto.SessionUpdated>().lastOrNull()?.let { model.setSession(it.session) }
@@ -2538,14 +2636,23 @@ class SessionController(
         partType = null
         tool = null
         val err = event.error
-        if (isPaidModelAuthRequired(err)) {
+        val signedOut = isSignedOut(err)
+        if (signedOut || isPaidModelAuthRequired(err)) {
             loginRetry = retryPrompt()
             if (reveal) showSession()
             capture("Account Overlay Shown", sessionProps(event.sessionID) + mapOf(
                 "surface" to "session",
-                "reason" to "paid_model_auth",
+                "reason" to loginReason(signedOut),
             ))
-            model.setState(SessionState.LoginRequired(KiloBundle.message("session.login.required.description")))
+            if (signedOut) {
+                // The account still held looks signed in, so User Profile would offer no login and
+                // the next app update would resend into the same rejection. Re-read it, and hold
+                // the resume until it has cleared.
+                stale = model.app.profile != null
+                app.refreshProfileAsync()
+            }
+            val key = if (signedOut) "session.login.signedOut.description" else "session.login.required.description"
+            model.setState(SessionState.LoginRequired(KiloBundle.message(key), signedOut))
             return
         }
         if (err != null && err.aborted) {
@@ -2613,7 +2720,7 @@ class SessionController(
             reapplyBackgroundAgents()
             return
         }
-        show(toPermission(event.request))
+        show(toPermission(event.request, isHosted))
         reapplyBackgroundAgents()
     }
 
@@ -3016,7 +3123,20 @@ class SessionController(
             return
         }
         if (pathKey(item.dir) != pathKey(session.directory)) return
+        // The created-session payload carries no creator, so the handoff binds to what it does carry: the
+        // session this answer produced is a root session of the answered question's directory, created
+        // after the answer. The anchor is a CLI stamp and may be absent, and a candidate whose own created
+        // time is unstamped (0.0, the CLI's unknown sentinel) cannot be ordered against it: either case
+        // skips the comparison, leaving the directory, root, not-the-asking-session and child gates.
+        // A candidate that does not qualify leaves the arming in place, so the intended session still
+        // opens when it arrives.
+        if (session.id == item.session) return
+        if (session.parentID != null) return
+        if (session.id in childIds) return
+        val since = item.since
+        if (since != null && session.time.created > 0.0 && session.time.created < since) return
         followup = null
+        LOG.debug { "${ChatLogSummary.sid(session.id)} kind=followup adopt=true rid=${item.question}" }
         open(SessionRef.Local(session))
     }
 
@@ -3129,8 +3249,24 @@ class SessionController(
         refreshAccountOverlay()
         cs.launch {
             try {
-                app.setOrganization(org)
+                val result = app.setOrganization(org)
+                val error = result.error
+                if (error != null) {
+                    capture("Account Connect Failed", mapOf("stage" to "organization", "errorClass" to accountErrorToken(error)))
+                    LOG.warn("account switch failed org=$org resource=${error.resource} status=${error.status}")
+                    edt {
+                        if (disposed) return@edt
+                        target = null
+                        refreshAccountOverlay()
+                        // The switch finished, so reverting the picker is right; without this the
+                        // overlay would quietly show the previous account with no way to find out why.
+                        reportSwitchFailure()
+                    }
+                    return@launch
+                }
                 capture("Organization Switched", mapOf("target" to if (org == null) "personal" else "organization"))
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 capture("Account Connect Failed", mapOf("stage" to "organization", "errorClass" to e::class.java.name))
                 LOG.warn("account switch failed org=$org message=${e.message}", e)
@@ -3140,6 +3276,24 @@ class SessionController(
                     refreshAccountOverlay()
                 }
             }
+        }
+    }
+
+    /**
+     * Report an organization switch whose follow-up account read did not complete.
+     *
+     * The switch itself finished, so the previous account stays on screen. The balloon names that
+     * outcome and its action opens the page that can re-read the details.
+     */
+    private fun reportSwitchFailure() {
+        notifyAction(
+            KiloBundle.message("profile.notice.switchUnavailable"),
+            null,
+            KiloBundle.message("profile.action.accountSettings"),
+        ) {
+            // The balloon outlives the click by design; a controller disposed in between must not
+            // open the page for a session that is gone.
+            if (!disposed) openProfile()
         }
     }
 
@@ -3216,12 +3370,12 @@ class SessionController(
 
     fun dismissLoginRequired() {
         assertEdt()
-        val active = model.state is SessionState.LoginRequired
+        val current = model.state as? SessionState.LoginRequired
         loginRetry = null
-        if (active) {
+        if (current != null) {
             capture("Account Overlay Dismissed", sessionProps() + mapOf(
                 "surface" to "session",
-                "reason" to "paid_model_auth",
+                "reason" to loginReason(current.signedOut),
             ))
             updateModel { model.setState(SessionState.Idle) }
         }
@@ -3755,7 +3909,7 @@ private fun ConfigWarningDto.toDetailLine(): String {
     return "$head\n$tail"
 }
 
-private fun toPermission(dto: PermissionRequestDto): Permission {
+private fun toPermission(dto: PermissionRequestDto, hosted: Boolean): Permission {
     val ref = dto.tool?.let { ToolCallRef(it.messageID, it.callID) }
     val state = dto.metadata["state"]?.let { raw ->
         PermissionRequestState.values().firstOrNull { item -> item.name.equals(raw, ignoreCase = true) }
@@ -3798,6 +3952,7 @@ private fun toPermission(dto: PermissionRequestDto): Permission {
         message = dto.message ?: dto.metadata["message"],
         tool = ref,
         state = state,
+        hosted = hosted,
     )
 }
 

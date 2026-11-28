@@ -595,6 +595,77 @@ class TurnLifecycleTest : SessionControllerTestBase() {
         assertTrue(m.model.state is SessionState.Busy)
     }
 
+    fun `test rejected login enters signed out login required state`() {
+        val (m, _, _) = prompted()
+
+        emit(rejected())
+
+        assertEquals(true, (m.model.state as? SessionState.LoginRequired)?.signedOut)
+        assertTrue(appRpc.telemetry.any {
+            it.event == "Account Overlay Shown" && it.properties["reason"] == "invalid_token"
+        })
+        assertSession(
+            """
+            [code] [kilo/gpt-5] [login-required] [Go to User Profile settings to sign in again. This session continues once you are signed in.]
+            """,
+            m,
+        )
+    }
+
+    fun `test rejected login clears the held account and resumes after sign in`() {
+        val (m, _, _) = prompted()
+        appRpc.state.value = ready(ProfileDto(email = "user@example.com"))
+        flush()
+        rpc.prompts.clear()
+        val reads = appRpc.profileReads
+
+        emit(rejected())
+        flush()
+
+        // The held account is re-read, and it reads signed out, so nothing is resent yet.
+        assertEquals(reads + 1, appRpc.profileReads)
+        assertNull(m.model.app.profile)
+        assertTrue(m.model.state is SessionState.LoginRequired)
+        assertTrue(rpc.prompts.isEmpty())
+
+        appRpc.state.value = ready(null)
+        flush()
+        appRpc.state.value = ready(ProfileDto(email = "user@example.com"))
+        flush()
+
+        assertFalse(m.model.state is SessionState.LoginRequired)
+    }
+
+    fun `test rejected login does not resume while the account still reads signed in`() {
+        val (m, _, _) = prompted()
+        appRpc.fakeProfile = ProfileDto(email = "user@example.com")
+        appRpc.state.value = ready(ProfileDto(email = "user@example.com"))
+        flush()
+        rpc.prompts.clear()
+
+        emit(rejected())
+        flush()
+        // An app update that still carries the account must not resend into the same rejection.
+        appRpc.state.value = ready(ProfileDto(email = "user@example.com", name = "User"))
+        flush()
+
+        assertTrue(m.model.state is SessionState.LoginRequired)
+        assertTrue(rpc.prompts.isEmpty())
+    }
+
+    private fun ready(profile: ProfileDto?) =
+        KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/gpt-5"), profile = profile)
+
+    private fun rejected() = ChatEventDto.Error(
+        "ses_test",
+        MessageErrorDto(
+            type = "APIError",
+            message = "Your authentication token is invalid. Please sign in again.",
+            statusCode = 401,
+            responseBody = """{"error":{"code":"INVALID_TOKEN"},"error_type":"authentication_required"}""",
+        ),
+    )
+
     fun `test session idle does not clobber login required`() {
         val (m, _, _) = prompted()
 

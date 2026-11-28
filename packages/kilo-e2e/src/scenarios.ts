@@ -54,6 +54,8 @@ type Definition = {
   prompt: { directive: PromptDirective; token: string }
   expected: { ui: string[]; model: string[]; terminalTranscriptToken: string }
   requires: Capability[]
+  /** Lanes this scenario can run on; every lane when omitted. */
+  lanes?: Lane[]
 }
 
 export const SCENARIO_IDS = ScenarioID.options
@@ -87,10 +89,54 @@ const DEFINITIONS: Record<ScenarioID, Definition> = {
     },
     requires: ["transcript.read", "stream.observe", "permission.answer"],
   },
+  "settings.telemetry": {
+    prompt: { directive: "settings", token: "K1-SETTINGS-TELEMETRY" },
+    expected: {
+      ui: [
+        "settings.advanced.visible",
+        "settings.telemetry.toggle",
+        "settings.telemetry.persisted",
+        "settings.telemetry.reload",
+      ],
+      model: ["cli.ready"],
+      terminalTranscriptToken: "K1-SETTINGS-TELEMETRY",
+    },
+    requires: [],
+  },
+  "followup.new-session": {
+    prompt: { directive: "followup", token: "K1-FOLLOWUP-NEWSESSION" },
+    expected: {
+      ui: [
+        "question.visible",
+        "question.requested",
+        "question.answered",
+        "followup.adopted",
+        "followup.plan.marker",
+      ],
+      model: ["plan.mode", "session.ready"],
+      terminalTranscriptToken: "K1-FOLLOWUP-NEWSESSION",
+    },
+    requires: ["transcript.read"],
+    // The local CLI drives the follow-up flow; the Kotlin driver only asserts it on the local lane.
+    lanes: ["local"],
+  },
 }
 
-export function manifest(id: ScenarioID, lane: (typeof LANES)[number]): ScenarioManifest {
+/**
+ * Whether a scenario runs on a lane. Every consumer that builds a cell goes through [manifest],
+ * which enforces this, so no path can produce a cell for an unsupported lane.
+ */
+export function supportsLane(id: ScenarioID, lane: Lane): boolean {
+  const lanes = DEFINITIONS[id].lanes
+  return !lanes || lanes.includes(lane)
+}
+
+export function manifest(id: ScenarioID, lane: Lane): ScenarioManifest {
   const definition = DEFINITIONS[id]
+  if (!supportsLane(id, lane)) {
+    const lanes = definition.lanes?.join(", ") ?? LANES.join(", ")
+    throw new ManifestError(`${id} does not run on the ${lane} lane; it runs on: ${lanes}`)
+  }
   return validateManifest({
     schemaVersion: SCHEMA_VERSION,
     id,
@@ -102,4 +148,6 @@ export function manifest(id: ScenarioID, lane: (typeof LANES)[number]): Scenario
   })
 }
 
-export const ALL_MANIFESTS = SCENARIO_IDS.flatMap((id) => LANES.map((lane) => manifest(id, lane)))
+export const ALL_MANIFESTS = SCENARIO_IDS.flatMap((id) =>
+  LANES.filter((lane) => supportsLane(id, lane)).map((lane) => manifest(id, lane)),
+)

@@ -313,6 +313,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "Fjern fra tilladelseslisten",
   "ui.permission.rule.addToDenied": "Tilføj til afvisningslisten",
   "ui.permission.rule.removeFromDenied": "Fjern fra afvisningslisten",
+  "ui.permission.rule.fromConfig": "Styret af en konfigurationsfil",
   "ui.permission.toolLabel.read": "Læs",
   "ui.permission.toolLabel.edit": "Rediger",
   "ui.permission.toolLabel.write": "Skriv",
@@ -697,6 +698,9 @@ export const dict = {
 
   "profile.title": "Profil",
   "profile.notLoggedIn": "Ikke logget ind",
+  "profile.expired": "Dit Kilo-login er udløbet eller tilbagekaldt. Log ind igen for at fortsætte.",
+  "profile.unavailable": "Din Kilo-profil kunne ikke indlæses. Kilo er muligvis ikke tilgængelig lige nu.",
+  "profile.stale": "Din profil kunne ikke opdateres. Viser de senest indlæste oplysninger.",
   "profile.action.login": "Log ind med Kilo Code",
   "profile.balance.title": "Saldo",
   "profile.balance.refresh": "Opdatér saldo",
@@ -816,6 +820,7 @@ export const dict = {
 
   "dialog.model.noProviders": "Ingen udbydere",
   "dialog.model.unavailable": "Kilo-modeller er ikke tilgængelige",
+  "dialog.model.loadFailed": "Kunne ikke indlæse udbydere for dette projekt.",
 
   "prompt.placeholder.connecting": "Opretter forbindelse til server...",
   "prompt.placeholder.error": "Forbindelse mislykkedes. Tjek outputpanelet eller genstart udvidelsen.",
@@ -867,8 +872,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "Telemetri",
   "settings.aboutKiloCode.telemetry.description":
-    'Telemetri styres af VS Codes indbyggede telemetriindstilling. For at deaktivere den, gå til Indstillinger > Telemetry > Telemetry Level og sæt den til "off". Genstart VS Code for at anvende ændringen.',
-  "settings.aboutKiloCode.telemetry.openSettings": "Åbn telemetriindstillinger",
+    "Brug denne til/fra-knap til at ændre din telemetriindstilling i Kilo. Telemetri forbliver slået fra, hvis VS Code eller miljøet deaktiverer den.",
+  "settings.aboutKiloCode.telemetry.toggle": "Aktivér telemetri",
+  "settings.aboutKiloCode.telemetry.saveFailed": "Telemetriindstillingen kunne ikke opdateres",
 
   "settings.agentBehaviour.subtab.agents": "Agenter",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-servere",
@@ -1332,6 +1338,8 @@ export const dict = {
   "dialog.model.notSet": "Ikke angivet",
   "profile.personalAccount": "Personlig konto",
   "profile.switchingAccount": "Skifter konto…",
+  "profile.unavailableAccount": "Utilgængelig konto",
+  "profile.switchFailed": "Kunne ikke bekræfte kontoskiftet.",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/da.ts
 
@@ -1417,6 +1425,9 @@ export const dict = {
   "settings.saveBar.cancel": "Annuller",
   "settings.saveBar.saving": "Gemmer…",
   "settings.saveBar.saveFailed": "Kunne ikke gemme indstillinger",
+  "settings.saveBar.dismissError": "Afvis",
+  "settings.saveBar.unconfirmedWrite": "„{{name}}“ blev ikke bekræftet af udvidelsesværten.",
+  "settings.saveBar.unconfirmedSave": "Gemningen blev ikke bekræftet af udvidelsesværten. Prøv igen.",
   "notifications.action.next": "Næste",
   "notifications.action.close": "Luk",
   "notifications.action.tryModel": "Prøv {{model}}",

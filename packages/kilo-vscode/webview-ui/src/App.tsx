@@ -124,7 +124,7 @@ export const DataBridge: Component<{ children: any }> = (props) => {
   }
 
   const respond = (input: { sessionID: string; permissionID: string; response: "once" | "always" | "reject" }) => {
-    session.respondToPermission(input.permissionID, input.response, [], [])
+    session.respondToPermission(input.permissionID, input.response, [], [], [])
   }
 
   const reply = (input: { requestID: string; answers: string[][] }) => {
@@ -401,7 +401,13 @@ const AppContent: Component = () => {
         console.log("[Kilo New] App: 🧭 navigate:", message.view, message.tab ? `tab=${message.tab}` : "")
         if (message.tab) setSettingsTab(message.tab)
         if (message.subtab) setSettingsSubtab(message.subtab)
-        if (message.focus) setSettingsFocus((prev) => ({ token: (prev?.token ?? 0) + 1, value: message.focus! }))
+        if (message.view === "profile" && message.focus === "login") {
+          setMigration(false)
+          vscode.postMessage({ type: "refreshProfile" })
+          server.startLogin()
+        } else if (message.focus) {
+          setSettingsFocus((prev) => ({ token: (prev?.token ?? 0) + 1, value: message.focus! }))
+        }
         setAgentManagerProjectId(message.projectId)
         setCurrentView(message.view as ViewType)
         vscode.postMessage({ type: "settingsTabChanged", tab: message.tab })
@@ -497,6 +503,7 @@ const AppContent: Component = () => {
             <Match when={currentView() === "profile"}>
               <ProfileView
                 profileData={server.profileData()}
+                profileStatus={server.profileStatus()}
                 providerUsage={server.providerUsage()}
                 providerUsageLoading={server.providerUsageLoading()}
                 providerUsageError={server.providerUsageError()}

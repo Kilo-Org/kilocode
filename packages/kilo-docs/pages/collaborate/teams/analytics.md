@@ -139,7 +139,7 @@ All costs are displayed in USD with detailed precision, helping you:
 
 ## Request Logs
 
-Owners, Admins, and Billing Managers can open **Request Logs** from the organization sidebar to inspect individual Kilo Gateway requests. The **Requests** tab lists the organization's requests from the hour before the selected start time, newest first, showing the time, user, model, provider, cost, input and output tokens, and whether the request used a user's own key (BYOK). Filter by start time, user, or model prefix, and select a request to see how it was routed.
+Owners, Admins, and Billing Managers can open **Request Logs** from the organization sidebar to inspect individual Kilo Gateway requests. The **Requests** tab lists the organization's requests from the hour before the selected start time, newest first, showing the time, user, model, provider, cost, input and output tokens, and whether the request used a user's own key (BYOK). Filter by start time, user, or model prefix, and select a request to see how it was routed. When a BYOK request failed over between keys, the routing detail lists every attempt in order, with each attempt's provider, HTTP status, and whether it failed over or served the request.
 
 Request Logs are available to every organization. If your organization has Enkrypt enabled, an **Enkrypt** tab appears next to **Requests**.
 

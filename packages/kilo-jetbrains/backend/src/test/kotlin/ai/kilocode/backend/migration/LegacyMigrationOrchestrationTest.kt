@@ -67,6 +67,83 @@ class LegacyMigrationOrchestrationTest {
         assertEquals(MigrationItemStatus.error, report.items[0].status)
     }
 
+    @Test
+    fun `migrate - unmapped provider is reported and nothing is written`() {
+        val (eng, _, backend) = setup {
+            providerProfiles = """
+                {
+                  "currentApiConfigName": "p",
+                  "apiConfigs": {
+                    "p": { "apiProvider": "totally-unknown-provider", "apiKey": "sk-x" }
+                  }
+                }
+            """.trimIndent()
+        }
+        assertFalse(eng.detect().providers.single().supported)
+        val items = mutableListOf<LegacyMigrationItemProgress>()
+        val sessions = mutableListOf<LegacyMigrationSessionProgress>()
+        val report = eng.migrate(noSelections().copy(providers = listOf("p")), sink(items, sessions))
+        val item = report.items.single()
+        assertEquals(MigrationItemCategory.provider, item.category)
+        assertEquals(MigrationItemStatus.warning, item.status)
+        assertEquals("Unknown provider \"totally-unknown-provider\"", item.message)
+        assertEquals(emptyList(), backend.authCalls)
+        assertEquals(emptyList(), backend.configCalls)
+        assertEquals(1, items.size)
+        assertEquals(MigrationItemProgressStatus.warning, items[0].status)
+        assertEquals(item.message, items[0].message)
+    }
+
+    @Test
+    fun `migrate - unsupported provider is reported and nothing is written`() {
+        val (eng, _, backend) = setup {
+            providerProfiles = """
+                {
+                  "currentApiConfigName": "p",
+                  "apiConfigs": {
+                    "p": { "apiProvider": "glama", "apiKey": "sk-x" }
+                  }
+                }
+            """.trimIndent()
+        }
+        assertFalse(eng.detect().providers.single().supported)
+        val items = mutableListOf<LegacyMigrationItemProgress>()
+        val sessions = mutableListOf<LegacyMigrationSessionProgress>()
+        val report = eng.migrate(noSelections().copy(providers = listOf("p")), sink(items, sessions))
+        val item = report.items.single()
+        assertEquals(MigrationItemCategory.provider, item.category)
+        assertEquals(MigrationItemStatus.warning, item.status)
+        assertEquals("Provider \"glama\" is not supported in the new version", item.message)
+        assertEquals(emptyList(), backend.authCalls)
+        assertEquals(emptyList(), backend.configCalls)
+        assertEquals(1, items.size)
+        assertEquals(MigrationItemProgressStatus.warning, items[0].status)
+        assertEquals(item.message, items[0].message)
+    }
+
+    @Test
+    fun `migrate - profile without a provider type is reported and nothing is written`() {
+        val (eng, _, backend) = setup {
+            providerProfiles = """
+                {
+                  "currentApiConfigName": "p",
+                  "apiConfigs": {
+                    "p": { "apiKey": "sk-x" }
+                  }
+                }
+            """.trimIndent()
+        }
+        assertFalse(eng.detect().providers.single().supported)
+        val items = mutableListOf<LegacyMigrationItemProgress>()
+        val report = eng.migrate(noSelections().copy(providers = listOf("p")), itemSink(items))
+        val item = report.items.single()
+        assertEquals(MigrationItemStatus.error, item.status)
+        assertEquals("No provider type found", item.message)
+        assertEquals(emptyList(), backend.authCalls)
+        assertEquals(emptyList(), backend.configCalls)
+        assertEquals(MigrationItemProgressStatus.error, items.single().status)
+    }
+
     // -----------------------------------------------------------------------
     // MCP migration
     // -----------------------------------------------------------------------
@@ -109,10 +186,45 @@ class LegacyMigrationOrchestrationTest {
         }
         val sel = noSelections().copy(customModes = listOf("my-agent"))
         val report = eng.migrate(sel)
-        assertEquals(MigrationItemStatus.success, report.items[0].status)
+        val item = report.items[0]
+        assertEquals(MigrationItemStatus.success, item.status)
+        assertEquals("Skills are not available: no legacy group grants them", item.message)
         val patch = backend.configCalls.find { it.containsKey("agent") }
         assertNotNull(patch)
         assertTrue(patch!!["agent"]?.jsonObject?.containsKey("my-agent") == true)
+    }
+
+    @Test
+    fun `migrate - custom mode with warnings reports one result item and one progress item`() {
+        val (eng, _, _) = setup {
+            mcpSettings = """{"mcpServers":{"tool1":{"command":"node","args":["tool.js"]}}}"""
+            customModes = """
+                {
+                  "customModes": [
+                    {
+                      "slug": "warned-mode",
+                      "name": "Warned Mode",
+                      "roleDefinition": "You are my warned agent.",
+                      "groups": ["mcp", "unknown-group"]
+                    }
+                  ]
+                }
+            """.trimIndent()
+        }
+        val sel = noSelections().copy(customModes = listOf("warned-mode"))
+        val items = mutableListOf<LegacyMigrationItemProgress>()
+        val report = eng.migrate(sel, itemSink(items))
+        val results = report.items.filter { it.category == MigrationItemCategory.customMode && it.item == "Warned Mode" }
+        assertEquals(1, results.size)
+        assertEquals(MigrationItemStatus.warning, results[0].status)
+        assertEquals(
+            "MCP access not migrated: no MCP server was migrated; Group not migrated; \"unknown-group\" ignored; " +
+                "Skills are not available: no legacy group grants them",
+            results[0].message,
+        )
+        val progress = items.filter { it.item == "Warned Mode" }
+        assertEquals(listOf(MigrationItemProgressStatus.migrating, MigrationItemProgressStatus.warning), progress.map { it.status })
+        assertEquals(results[0].message, progress[1].message)
     }
 
     // -----------------------------------------------------------------------

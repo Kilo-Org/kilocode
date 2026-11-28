@@ -27,13 +27,14 @@ internal class WorktreeStatusBinding(
     private val onStats: (Map<String, WorktreeStatsDto>) -> Unit,
     private val onPr: (Map<String, WorktreePrDto>) -> Unit,
     private val onDirty: (Map<String, WorktreeDirtyDto>) -> Unit = {},
+    excluded: (() -> Set<String>)? = null,
 ) {
     private val cs = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val handle: AutoCloseable
 
     init {
         val service = project.service<WorktreeStatusService>()
-        handle = service.attach()
+        handle = service.attach(excluded)
         cs.launch { service.stats.collectLatest { value -> alive { onStats(value) } } }
         cs.launch { service.dirty.collectLatest { value -> alive { onDirty(value) } } }
         cs.launch { service.pr.collectLatest { value -> alive { onPr(value) } } }

@@ -317,6 +317,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "Quitar de la lista de permitidos",
   "ui.permission.rule.addToDenied": "Añadir a la lista de denegados",
   "ui.permission.rule.removeFromDenied": "Quitar de la lista de denegados",
+  "ui.permission.rule.fromConfig": "Gestionada por un archivo de configuración",
   "ui.permission.toolLabel.read": "Leer",
   "ui.permission.toolLabel.edit": "Editar",
   "ui.permission.toolLabel.write": "Escribir",
@@ -704,6 +705,10 @@ export const dict = {
 
   "profile.title": "Perfil",
   "profile.notLoggedIn": "No conectado",
+  "profile.expired":
+    "Tu inicio de sesión en Kilo ha caducado o se ha revocado. Vuelve a iniciar sesión para continuar.",
+  "profile.unavailable": "No se pudo cargar tu perfil de Kilo. Es posible que Kilo no esté disponible en este momento.",
+  "profile.stale": "No se pudo actualizar tu perfil. Se muestran los últimos datos cargados.",
   "profile.action.login": "Iniciar sesión con Kilo Code",
   "profile.balance.title": "Saldo",
   "profile.balance.refresh": "Actualizar saldo",
@@ -824,6 +829,7 @@ export const dict = {
 
   "dialog.model.noProviders": "Sin proveedores",
   "dialog.model.unavailable": "Modelos de Kilo no disponibles",
+  "dialog.model.loadFailed": "No se pudieron cargar los proveedores de este proyecto.",
 
   "prompt.placeholder.connecting": "Conectando al servidor...",
   "prompt.placeholder.error": "Conexión fallida. Revisa el panel de salida o reinicia la extensión.",
@@ -876,8 +882,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "Telemetría",
   "settings.aboutKiloCode.telemetry.description":
-    'La telemetría está controlada por la configuración de telemetría integrada de VS Code. Para desactivarla, ve a Configuración > Telemetría > Nivel de telemetría y establécelo en "off". Reinicia VS Code para aplicar el cambio.',
-  "settings.aboutKiloCode.telemetry.openSettings": "Abrir configuración de telemetría",
+    "Usa este interruptor para cambiar tu preferencia de telemetría en Kilo. La telemetría seguirá desactivada si VS Code o el entorno la desactivan.",
+  "settings.aboutKiloCode.telemetry.toggle": "Activar la telemetría",
+  "settings.aboutKiloCode.telemetry.saveFailed": "No se pudo actualizar la configuración de telemetría",
 
   "settings.agentBehaviour.subtab.agents": "Agentes",
   "settings.agentBehaviour.subtab.mcpServers": "Servidores MCP",
@@ -1355,6 +1362,8 @@ export const dict = {
   "dialog.model.notSet": "No establecido",
   "profile.personalAccount": "Cuenta personal",
   "profile.switchingAccount": "Cambiando de cuenta…",
+  "profile.unavailableAccount": "Cuenta no disponible",
+  "profile.switchFailed": "No se pudo confirmar el cambio de cuenta.",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/es.ts
 
   "question.summary": "{{n}} de {{total}} preguntas",
@@ -1439,6 +1448,9 @@ export const dict = {
   "settings.saveBar.cancel": "Cancelar",
   "settings.saveBar.saving": "Guardando…",
   "settings.saveBar.saveFailed": "No se pudieron guardar los ajustes",
+  "settings.saveBar.dismissError": "Descartar",
+  "settings.saveBar.unconfirmedWrite": "El host de la extensión no confirmó «{{name}}».",
+  "settings.saveBar.unconfirmedSave": "El host de la extensión no confirmó el guardado. Inténtalo de nuevo.",
   "notifications.action.next": "Siguiente",
   "notifications.action.close": "Cerrar",
   "notifications.action.tryModel": "Probar {{model}}",

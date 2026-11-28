@@ -1,6 +1,11 @@
 # kilocode_change - new file
 name: publish-jetbrains
 
+# Publishing runs only on workflow_dispatch from main. A merged JetBrains
+# release PR does not publish by itself: the `dispatch` job checks the PR and
+# starts the publish run on main with the job token. A maintainer can also
+# dispatch a publish run by hand for a merged release PR.
+
 on:
   pull_request:
     types:
@@ -18,64 +23,134 @@ on:
         required: true
         type: string
 
-concurrency:
-  group: publish-jetbrains-pr-${{ github.event.pull_request.number || inputs.pr }}
-  cancel-in-progress: false
+# The release watcher finds the publish run of a PR by this title. The dispatch
+# job passes the PR number from the event, so the title is canonical.
+run-name: "${{ github.event_name == 'workflow_dispatch' && format('publish-jetbrains PR #{0}', inputs.pr) || github.event.pull_request.title }}"
 
-permissions:
-  actions: write
-  artifact-metadata: write
-  attestations: write
-  contents: write
-  id-token: write
-  pull-requests: read
+permissions: {}
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
+  dispatch:
+    if: >-
+      github.repository == 'Kilo-Org/kilocode' &&
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.merged == true &&
+      startsWith(github.event.pull_request.head.ref, 'jetbrains/release/') &&
+      contains(github.event.pull_request.labels.*.name, 'jetbrains-release') &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch the publish run on main
+        run: |
+          gh workflow run publish-jetbrains.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main \
+            -f pr="$PR_NUMBER" \
+            -f merge_commit="$MERGE_COMMIT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          MERGE_COMMIT: ${{ github.event.pull_request.merge_commit_sha }}
+
   publish:
     if: >-
       github.repository == 'Kilo-Org/kilocode' &&
-      (
-        (
-          github.event_name == 'pull_request' &&
-          github.event.pull_request.merged == true &&
-          startsWith(github.event.pull_request.head.ref, 'jetbrains/release/') &&
-          contains(github.event.pull_request.labels.*.name, 'jetbrains-release') &&
-          github.event.pull_request.head.repo.full_name == github.repository
-        ) ||
-        github.event_name == 'workflow_dispatch'
-      )
+      github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/main'
     runs-on: blacksmith-8vcpu-ubuntu-2404
+    concurrency:
+      group: publish-jetbrains-pr-${{ inputs.pr }}
+      cancel-in-progress: false
+    permissions:
+      actions: write
+      artifact-metadata: write
+      attestations: write
+      contents: write
+      id-token: write
+      pull-requests: read
     steps:
-      - name: Checkout merged release PR
+      # The job condition already skips other refs. This step keeps the run
+      # from reaching the signing secrets if that condition is ever loosened.
+      - name: Require main
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Run publish-jetbrains from main (got $GITHUB_REF). Nothing was published."
+            exit 1
+          fi
+
+      # Validation runs from main, never from the commit named in the inputs.
+      - name: Checkout trusted validation scripts
         uses: actions/checkout@v6
         with:
-          fetch-depth: 0
-          ref: ${{ github.event.pull_request.merge_commit_sha || inputs.merge_commit }}
+          ref: ${{ github.sha }}
+          persist-credentials: false
 
       - name: Setup Bun for validation
         uses: ./.github/actions/setup-bun
+        with:
+          cache: false # job holds write scopes, id-token and signing secrets
 
-      - name: Validate release PR and tag
-        id: release
-        run: bun script/jetbrains-release-validate.ts --pr "$PR_NUMBER"
+      # Checks the PR with the job token before any of its files are checked out.
+      - name: Check the release PR
         env:
           GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr }}
-
-      - name: Save reviewed release metadata
+          REPO: ${{ github.repository }}
+          PR_INPUT: ${{ inputs.pr }}
+          MERGE_COMMIT: ${{ inputs.merge_commit }}
         run: |
-          cp packages/kilo-jetbrains/CHANGELOG.md "$RUNNER_TEMP/jetbrains-CHANGELOG.md"
-          cp packages/kilo-jetbrains/gradle.properties "$RUNNER_TEMP/jetbrains-gradle.properties"
+          pr="$PR_INPUT"
+          if ! [[ "$pr" =~ ^[1-9][0-9]*$ && "$MERGE_COMMIT" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            echo "::error::pr must be a positive integer and merge_commit a full commit SHA."
+            exit 1
+          fi
+          if ! gh api "repos/$REPO/pulls/$pr" | jq -e --arg repo "$REPO" --arg merge "$MERGE_COMMIT" '
+            .merged == true and .base.ref == "main" and .head.repo.full_name == $repo
+            and any(.labels[]; .name == "jetbrains-release")
+            and (.merge_commit_sha | ascii_downcase) == ($merge | ascii_downcase)' > /dev/null; then
+            echo "::error::PR #$pr is not a merged jetbrains-release PR from this repository into main with merge commit $MERGE_COMMIT."
+            exit 1
+          fi
 
-      - name: Checkout release tag
+      - name: Checkout merged release PR for validation
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: ${{ steps.release.outputs.tag }}
+          path: release
+          persist-credentials: false
+          ref: ${{ inputs.merge_commit }}
+
+      # Runs from the trusted checkout: release/ is only read through git and
+      # file reads, so nothing in it (bunfig.toml, scripts) is executed.
+      # Requires a merged, labeled release PR into main whose merge commit and
+      # tag commit are both on main. Only that commit is built and signed below.
+      - name: Validate release PR and tag
+        id: release
+        run: bun script/jetbrains-release-validate.ts --dir release --pr "$PR_NUMBER" --merge "$MERGE_COMMIT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ inputs.pr }}
+          MERGE_COMMIT: ${{ inputs.merge_commit }}
+
+      - name: Save reviewed release metadata
+        run: |
+          cp release/packages/kilo-jetbrains/CHANGELOG.md "$RUNNER_TEMP/jetbrains-CHANGELOG.md"
+          cp release/packages/kilo-jetbrains/gradle.properties "$RUNNER_TEMP/jetbrains-gradle.properties"
+
+      # The validated commit, not the tag name: a tag moved after validation
+      # is not picked up. The tag name is only used to name the release.
+      - name: Checkout release commit
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ steps.release.outputs.commit }}
+          persist-credentials: false
 
       - name: Restore reviewed release metadata
         run: |
@@ -89,9 +164,11 @@ jobs:
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
+        with:
+          cache: false # job holds write scopes, id-token and signing secrets
 
       - name: Install dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -101,6 +178,8 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-disabled: true # job signs and publishes with release secrets
 
       - name: Setup SBOM tooling
         uses: ./.github/actions/setup-sbom
@@ -200,7 +279,7 @@ jobs:
           VERSION: ${{ steps.release.outputs.version }}
           CHANNEL: ${{ steps.release.outputs.marketplace_channel }}
           TAG: ${{ steps.release.outputs.tag }}
-          MERGE_COMMIT: ${{ github.event.pull_request.merge_commit_sha || inputs.merge_commit }}
+          MERGE_COMMIT: ${{ steps.release.outputs.merge }}
           SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }}
 
       - name: Attest plugin SBOM
@@ -210,6 +289,20 @@ jobs:
           subject-name: ${{ steps.sbom.outputs.name }}
           subject-digest: ${{ steps.sbom.outputs.digest }}
           sbom-path: ${{ steps.sbom.outputs.sidecar }}
+
+      # Marketplace publishing cannot be undone, so the tag must still name the
+      # validated and built commit right before it.
+      - name: Check the release tag
+        run: |
+          git fetch --force --no-tags origin "refs/tags/$TAG:refs/tags/$TAG"
+          actual="$(git rev-parse "$TAG^{commit}")"
+          if [[ "$actual" != "$COMMIT" ]]; then
+            echo "::error::$TAG points at $actual, not the validated commit $COMMIT. Nothing was published."
+            exit 1
+          fi
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+          COMMIT: ${{ steps.release.outputs.commit }}
 
       - name: Publish to JetBrains Marketplace
         working-directory: packages/kilo-jetbrains
@@ -227,6 +320,13 @@ jobs:
       - name: Upload to GitHub Release
         run: |
           tag="$TAG"
+          # Checked again: the tag can move while Marketplace publishes.
+          git fetch --force --no-tags origin "refs/tags/$tag:refs/tags/$tag"
+          actual="$(git rev-parse "$tag^{commit}")"
+          if [[ "$actual" != "$COMMIT" ]]; then
+            echo "::error::$tag now points at $actual, not the validated commit $COMMIT. Marketplace may already have version $VERSION; no GitHub Release was created or updated."
+            exit 1
+          fi
           title="JetBrains $VERSION"
           flags=(--title "$title" --notes-file "$NOTES")
           if [[ "$KIND" == "rc" ]]; then
@@ -241,6 +341,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.release.outputs.tag }}
+          COMMIT: ${{ steps.release.outputs.commit }}
           VERSION: ${{ steps.release.outputs.version }}
           KIND: ${{ steps.release.outputs.kind }}
           ARCHIVE: ${{ steps.archive.outputs.path }}
@@ -257,8 +358,8 @@ jobs:
             -f merge_commit="$MERGE_COMMIT"
         env:
           GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr }}
-          MERGE_COMMIT: ${{ github.event.pull_request.merge_commit_sha || inputs.merge_commit }}
+          PR_NUMBER: ${{ steps.release.outputs.pr }}
+          MERGE_COMMIT: ${{ steps.release.outputs.merge }}
 
       - name: Upload workflow artifact
         if: always()

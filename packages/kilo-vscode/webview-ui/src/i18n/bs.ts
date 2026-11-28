@@ -314,6 +314,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "Ukloni sa liste dozvoljenih",
   "ui.permission.rule.addToDenied": "Dodaj na listu odbijenih",
   "ui.permission.rule.removeFromDenied": "Ukloni sa liste odbijenih",
+  "ui.permission.rule.fromConfig": "Upravlja se konfiguracijskom datotekom",
   "ui.permission.toolLabel.read": "Čitaj",
   "ui.permission.toolLabel.edit": "Uredi",
   "ui.permission.toolLabel.write": "Piši",
@@ -698,6 +699,9 @@ export const dict = {
 
   "profile.title": "Profil",
   "profile.notLoggedIn": "Niste prijavljeni",
+  "profile.expired": "Vaša Kilo prijava je istekla ili je opozvana. Prijavite se ponovo da nastavite.",
+  "profile.unavailable": "Nije moguće učitati vaš Kilo profil. Kilo trenutno možda nije dostupan.",
+  "profile.stale": "Nije moguće osvježiti vaš profil. Prikazuju se posljednji učitani podaci.",
   "profile.action.login": "Prijavite se putem Kilo Code",
   "profile.balance.title": "Stanje",
   "profile.balance.refresh": "Osvježi stanje",
@@ -817,6 +821,7 @@ export const dict = {
 
   "dialog.model.noProviders": "Nema pružatelja",
   "dialog.model.unavailable": "Kilo modeli nisu dostupni",
+  "dialog.model.loadFailed": "Nije moguće učitati pružatelje za ovaj projekat.",
 
   "prompt.placeholder.connecting": "Povezivanje na server...",
   "prompt.placeholder.error": "Povezivanje nije uspjelo. Provjerite panel za izlaz ili ponovo pokrenite ekstenziju.",
@@ -867,8 +872,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "Telemetrija",
   "settings.aboutKiloCode.telemetry.description":
-    'Telemetrija je kontrolisana ugrađenom postavkom za telemetriju u VS Code-u. Da biste je onemogućili, idite na Postavke > Telemetrija > Nivo telemetrije i postavite na "off". Ponovo pokrenite VS Code da biste primijenili promjenu.',
-  "settings.aboutKiloCode.telemetry.openSettings": "Otvori postavke telemetrije",
+    "Koristite ovaj prekidač za promjenu postavke telemetrije u Kilu. Telemetrija ostaje isključena ako je isključi VS Code ili okruženje.",
+  "settings.aboutKiloCode.telemetry.toggle": "Uključi telemetriju",
+  "settings.aboutKiloCode.telemetry.saveFailed": "Nije bilo moguće ažurirati postavku telemetrije",
 
   "settings.agentBehaviour.subtab.agents": "Agenti",
   "settings.agentBehaviour.subtab.mcpServers": "MCP serveri",
@@ -1338,6 +1344,8 @@ export const dict = {
   "dialog.model.notSet": "Nije postavljeno",
   "profile.personalAccount": "Osobni račun",
   "profile.switchingAccount": "Prebacivanje računa…",
+  "profile.unavailableAccount": "Nedostupan račun",
+  "profile.switchFailed": "Nije moguće potvrditi promjenu računa.",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/bs.ts
 
@@ -1423,6 +1431,9 @@ export const dict = {
   "settings.saveBar.cancel": "Otkaži",
   "settings.saveBar.saving": "Spremanje…",
   "settings.saveBar.saveFailed": "Postavke nije moguće spremiti",
+  "settings.saveBar.dismissError": "Odbaci",
+  "settings.saveBar.unconfirmedWrite": "Host ekstenzije nije potvrdio „{{name}}”.",
+  "settings.saveBar.unconfirmedSave": "Host ekstenzije nije potvrdio spremanje. Pokušaj ponovo.",
   "notifications.action.next": "Sljedeći",
   "notifications.action.close": "Zatvori",
   "notifications.action.tryModel": "Probaj {{model}}",

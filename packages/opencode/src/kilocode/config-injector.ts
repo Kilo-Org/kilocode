@@ -1,6 +1,7 @@
 import { Config } from "../config/config"
 import { ConfigPermissionV1 as ConfigPermission } from "@opencode-ai/core/v1/config/permission"
 import { ModesMigrator } from "./modes-migrator"
+import { McpMigrator } from "./mcp-migrator"
 import { RulesMigrator } from "./rules-migrator"
 import { WorkflowsMigrator } from "./workflows-migrator"
 import { IgnoreMigrator } from "./ignore-migrator"
@@ -26,13 +27,28 @@ export namespace KilocodeConfigInjector {
     // Build config object
     const config: Partial<Config.Info> = {}
 
-    // Migrate custom modes
-    const modesMigration = await ModesMigrator.migrate(options)
+    // A migrated mode's `mcp` group grants the tools of every server the same migration
+    // converted, whether its entry came from a project file or a global store: the legacy
+    // group meant all MCP tools. The live CLI loader grants the same set, so both loaders
+    // follow this one rule. One pass only. The injector asks for nothing beyond the paths this
+    // call reads, so `skipGlobalPaths` here stays hermetic: the skipped-store report is the
+    // live loader's, which reads the same global stores for the modes themselves.
+    const store = await McpMigrator.loadMcpConfig(options.projectDir, options.skipGlobalPaths)
 
-    // Log skipped default modes (for debugging)
+    // Migrate custom modes
+    const modesMigration = await ModesMigrator.migrate({
+      projectDir: options.projectDir,
+      globalSettingsDir: options.globalSettingsDir,
+      skipGlobalPaths: options.skipGlobalPaths,
+      mcpServers: Object.keys(store.mcp),
+      mcpAvailable: store.available,
+    })
+
+    // Log skipped default modes and mode migration warnings (for debugging)
     for (const skipped of modesMigration.skipped) {
       warnings.push(`Mode '${skipped.slug}' skipped: ${skipped.reason}`)
     }
+    warnings.push(...modesMigration.warnings.map((warning) => warning.message))
 
     if (Object.keys(modesMigration.agents).length > 0) {
       config.agent = modesMigration.agents

@@ -4,7 +4,7 @@ import { $ } from "bun"
 import { readFile, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import semver from "semver"
+import { parse } from "../../../../script/kilocode/jetbrains-version"
 import { parseArgs } from "util"
 import { latest, missing } from "./pin-common"
 
@@ -45,7 +45,7 @@ Examples:
 
 if (values.latest && values.version) throw new Error("Pass either --latest or --version, not both")
 const version = values.latest ? await latest(repo) : values.version?.replace(/^v/, "")
-if (!version || !semver.valid(version)) {
+if (!version || !parse(version)) {
   throw new Error("Pass a valid CLI semver with --version or use --latest")
 }
 
@@ -88,7 +88,12 @@ async function pr(version: string, pre: boolean) {
   const body = `${JSON.stringify(pkg, null, 2)}\n`
   await ensure(branch, main)
   const current = (await $`gh api ${`repos/${repo}/contents/${file}?ref=${branch}`}`.json()) as { sha: string }
-  await $`gh api --method PUT ${`repos/${repo}/contents/${file}`} -f message=${`chore(jetbrains): bump CLI pin to v${version}`} -f content=${Buffer.from(body).toString("base64")} -f branch=${branch} -f sha=${current.sha}`.quiet()
+  await put(`repos/${repo}/contents/${file}`, {
+    message: `chore(jetbrains): bump CLI pin to v${version}`,
+    content: Buffer.from(body).toString("base64"),
+    branch,
+    sha: current.sha,
+  })
   await pushLock(version, previous, branch)
 
   const title = `chore(jetbrains): bump CLI pin to v${version}`
@@ -156,8 +161,27 @@ async function pushLock(version: string, previous: string, branch: string) {
     await rm(tmp, { force: true })
   }
   const current = (await $`gh api ${`${api}?ref=${branch}`} --jq .sha`.text()).trim()
-  await $`gh api --method PUT ${api} -f message=${`chore(jetbrains): bump CLI pin to v${version}`} -f content=${Buffer.from(patched).toString("base64")} -f branch=${branch} -f sha=${current}`.quiet()
+  await put(api, {
+    message: `chore(jetbrains): bump CLI pin to v${version}`,
+    content: Buffer.from(patched).toString("base64"),
+    branch,
+    sha: current,
+  })
   console.log(`Updated bun.lock for pin v${previous} -> v${version}`)
+}
+
+// File contents go through a request body file: bun.lock's base64 payload is
+// ~1 MB, which exceeds the Linux per-argument limit (MAX_ARG_STRLEN, 128 KiB)
+// and fails the whole call with `bun: Argument list too long: /usr/bin/gh`
+// when passed as -f.
+async function put(api: string, body: Record<string, string>) {
+  const tmp = join(tmpdir(), `gh-body-${process.pid}-${Date.now()}.json`)
+  try {
+    await Bun.write(tmp, JSON.stringify(body))
+    await $`gh api --method PUT ${api} --input ${tmp}`.quiet()
+  } finally {
+    await rm(tmp, { force: true })
+  }
 }
 
 async function tag(branch: string, version: string, pre: boolean) {
@@ -165,7 +189,7 @@ async function tag(branch: string, version: string, pre: boolean) {
   await $`gh label create ${label} --repo ${repo} --color 1D76DB --description ${"JetBrains pinned CLI version bump"}`
     .quiet()
     .nothrow()
-  if (pre || semver.prerelease(version)) {
+  if (pre || parse(version)?.rc !== undefined) {
     labels.push(preview)
     await $`gh label create ${preview} --repo ${repo} --color FBCA04 --description ${"Pre-release version"}`
       .quiet()

@@ -15,7 +15,10 @@ The **About** section shows the app's version and manages updates:
 - **Support** — information to include when you contact support:
   - **Application logs** — shows the path to the app's log file. Select **Show in Finder** (macOS), **Show in File Explorer** (Windows), or **Show in File Manager** (Linux) to find it.
   - **Kilo config** — shows the path to your global Kilo config file (for example `~/.config/kilo/kilo.json`), with the same button. If you haven't created one, it reads *No global config file has been created yet.*
-- **Legal** — select **View** next to **Third-party notices** to read the licenses of the third-party software Kilo Desktop includes. Next to **Chromium**, select **Show in Finder** (macOS), **Show in File Explorer** (Windows), or **Show in File Manager** (Linux) to find Chromium's notices.
+- **Legal**:
+  - **Third-party notices** — select **View** to read the licenses of the third-party software Kilo Desktop includes.
+  - **Terms of service** — select **View** to open Kilo's [terms of service](https://kilo.ai/terms) in your browser.
+  - **Chromium** — select **Show in Finder** (macOS), **Show in File Explorer** (Windows), or **Show in File Manager** (Linux) to find Chromium's notices.
 
 When an update is ready, select **Restart to update**, then **Install and restart**, to relaunch and apply it. The sidebar also shows **Restart to update** (on Linux, **Update available**, which opens **About**). When release notes are available, the **About** section also shows a **What's changed** section for the update; notes from earlier versions are labeled with their version. See [Updates](/docs/desktop/installation#updates).
 
@@ -64,7 +67,9 @@ See [Notebooks](/docs/desktop/features/notebooks) for working with notebooks in 
 
 ## Privacy
 
-The **Privacy** section has a single **Share usage analytics and crash reports** toggle. When on, it shares usage analytics and crash reports with Kilo — including from the embedded Kilo service and conda environment manager. 
+The **Privacy** section has a single **Share usage analytics and crash reports** toggle, enabled by default. Product telemetry and crash reports help us understand feature usage and diagnose problems. Turn the toggle off to disable sharing, including telemetry from the embedded Kilo service and conda environment manager. Desktop's preference takes precedence over standalone CLI telemetry settings.
+
+See [Desktop product telemetry controls](/docs/getting-started/settings/product-telemetry#kilo-desktop) for how the preference reaches running services and when to restart Desktop to ensure all embedded services use the saved choice.
 
 It also explains data handling for **free models**: because they may route your requests to providers that log prompts and outputs, don't submit personal or confidential data when using them. See [Using Kilo for Free](/docs/getting-started/using-kilo-for-free) for details, and use the chat model picker's filter to exclude free models.
 

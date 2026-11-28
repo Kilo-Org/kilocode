@@ -1,5 +1,126 @@
 # @kilocode/cli
 
+## 7.8.36
+
+### Minor Changes
+
+- [#16465](https://github.com/Kilo-Org/kilocode/pull/16465) [`b0717b9`](https://github.com/Kilo-Org/kilocode/commit/b0717b91ee02e06e3757d2696a3e340a7b3592a0) - List authorized additional GitHub repositories and include them when creating an organization Cloud workspace through Session Host.
+
+### Patch Changes
+
+- [#16473](https://github.com/Kilo-Org/kilocode/pull/16473) [`ab930b2`](https://github.com/Kilo-Org/kilocode/commit/ab930b2bfc549f4971a05c9a38a801659a2a6aed) - Keep one stored account selected after another stored account is removed, including when the remaining accounts belong to no organization.
+
+- [#16498](https://github.com/Kilo-Org/kilocode/pull/16498) [`b4b3335`](https://github.com/Kilo-Org/kilocode/commit/b4b3335dd9f69f8c77a17716fe3f1209b0bd762c) - Require approval for the destination path when a patch moves a file, and refuse a move onto Agent Manager state.
+
+- [#16523](https://github.com/Kilo-Org/kilocode/pull/16523) [`f89d52f`](https://github.com/Kilo-Org/kilocode/commit/f89d52fe14f42bf253911c14554748f47bb89a24) - Keep a ChatGPT OAuth connection signed in across token refreshes.
+
+- [#16511](https://github.com/Kilo-Org/kilocode/pull/16511) [`b7d5271`](https://github.com/Kilo-Org/kilocode/commit/b7d527140ef124c41a4f61760eb3fc7b9dee9bdf) - Report a missing Cloudflare AI Gateway credential as a missing credential that names the environment variable to set, and report a gateway token given as a configuration value that cannot be loaded as a configuration error.
+
+- [#16417](https://github.com/Kilo-Org/kilocode/pull/16417) [`06ad704`](https://github.com/Kilo-Org/kilocode/commit/06ad7042b333c50a5da4c1334f5d1d2b222b4d09) - Report each configuration value that is skipped while loading, with its file and its field path, and keep the settings that validate in the same file.
+
+- [#16477](https://github.com/Kilo-Org/kilocode/pull/16477) [`02379af`](https://github.com/Kilo-Org/kilocode/commit/02379afa483864766d8308199faf6d84dd6922fb) - Keep each Console account tied to the server that issued it, so signing in to another Console deployment keeps both accounts and their tokens.
+
+- [#16517](https://github.com/Kilo-Org/kilocode/pull/16517) [`c331258`](https://github.com/Kilo-Org/kilocode/commit/c3312582e3327e82b9db4ac1ea04df29f0f42f3f) - Show every permission rule an agent stores in the agent builder's permissions card. A tool's default
+  action and its pattern rules now appear together, in the order the agent stores them.
+
+- [#16476](https://github.com/Kilo-Org/kilocode/pull/16476) [`078811f`](https://github.com/Kilo-Org/kilocode/commit/078811f01bbac98990b2baeb516bb7471465e9fa) - The explore subagent now asks for approval before it reads secret environment files, as the other built-in agents do. Example environment files stay readable without approval.
+
+  On macOS, permission rules for file paths match names the way the volume resolves them, so the same approval applies to a file the volume treats as the same file. Rules for every other resource keep exact matching.
+
+- [#16540](https://github.com/Kilo-Org/kilocode/pull/16540) [`77f0743`](https://github.com/Kilo-Org/kilocode/commit/77f0743b43bf5a2cacb127927ee7deed1092b0cd) Thanks [@romulorosa](https://github.com/romulorosa)! - Fix Gemini rejecting MCP tool schemas that combine an array type with anyOf or oneOf
+
+- [#16483](https://github.com/Kilo-Org/kilocode/pull/16483) [`3a1dad3`](https://github.com/Kilo-Org/kilocode/commit/3a1dad31e222ae1e6f636a662a34b95d47096e8f) - Report a conflict error when completing an integration OAuth attempt that is still in flight.
+
+- [#16470](https://github.com/Kilo-Org/kilocode/pull/16470) [`4ed6ec5`](https://github.com/Kilo-Org/kilocode/commit/4ed6ec5910143d0796b20bfbdac3edbe1e9abf53) - Report the state of an integration OAuth attempt for as long as its handle is retained, including after it is cancelled or withdrawn, and report a not-found error when completing a handle that no longer has a pending attempt.
+
+- [#16416](https://github.com/Kilo-Org/kilocode/pull/16416) [`f708f7b`](https://github.com/Kilo-Org/kilocode/commit/f708f7b69bca55d10e562603574099d6a60df71a) - Legacy custom modes now migrate to the same permission keys the CLI reads: only a command group grants shell commands, a browser group grants the Integrated Browser tool of the VS Code client, an MCP group grants the tools of each migrated server, and a file restriction becomes a wildcard glob that keeps the files it allowed. A migrated mode's MCP grant and the CLI's own MCP tool ids come from one definition, so the grant always names the tools the CLI registers and a server name outside the Basic Multilingual Plane yields the same key in the CLI and the plugin, and the grant covers every server the loader that ran the migration converted rather than only the ones a project file declared. A file restriction that alternates at the top level keeps the files of every alternative. A file restriction made only of digits is reported and asks instead of denying the allowed files, one whose translated arm resolves against the home directory is reported and asks, one that escapes a character the glob cannot carry literally, including backslash, `*` and `?`, is reported and asks, so the migrated rule always means what the legacy pattern meant, a migrated mode in the CLI keeps the default skill permission because no legacy group governs it, the JetBrains migration denies skill and states that in its report, and an MCP group is reported when a skipped store declared a server the migration can grant and that no converted server's permission key covers, even when other servers were migrated, while a disabled entry, a local entry with no command and a remote entry with no url are not reported. An empty alternative matches the empty string. A pattern whose empty alternative is its whole body matches every path; when the alternative sits inside a longer pattern, it matches that pattern's surrounding characters instead. With both anchors the empty alternative is dropped so the alternatives that name a path survive, and a pattern whose every alternative is empty is reported and asks. A mode that lists the same group more than once keeps the narrower rule and reports the repeat in the migration warnings when the rule differs. With auto-approval on and no command lists, the migration grants shell commands and leaves other tools at their defaults. A mode that writes a group with its options in flow style keeps the file restriction that group names, and a group whose options arrive as their own entry asks instead of widening to every file. A single-quoted scalar decodes a doubled quote to one quote, and a `#` after it stays part of the value instead of starting a comment.
+
+- [#16513](https://github.com/Kilo-Org/kilocode/pull/16513) [`0401574`](https://github.com/Kilo-Org/kilocode/commit/040157466d2c5581be5c38515c73585a1ecd05d9) - Keep the organization you selected when you sign in again to the same Console account.
+
+- [#16475](https://github.com/Kilo-Org/kilocode/pull/16475) [`0a41b57`](https://github.com/Kilo-Org/kilocode/commit/0a41b5727bdf287490e7e9e95e4783ead8102df4) - Honor the configured working directory of a local MCP server, and keep a provider allow or deny list in effect after a configuration document is converted to the newer format.
+
+- [#16564](https://github.com/Kilo-Org/kilocode/pull/16564) [`e645f7c`](https://github.com/Kilo-Org/kilocode/commit/e645f7c2cea534bdaeca42fcf7eedca558c8af63) - Tell an expired or revoked Kilo login apart from a temporary outage. The profile now asks you to sign in again only when Kilo rejects the login, and keeps your account with a retry when Kilo is unreachable.
+
+- [#16505](https://github.com/Kilo-Org/kilocode/pull/16505) [`626e551`](https://github.com/Kilo-Org/kilocode/commit/626e5514e060d54cfc263b9e8b91f518de37a50e) - Kilo keeps a reply that another Kilo process on the same data directory is still producing, so a session shared between processes stays complete while both work in it.
+
+- [#16506](https://github.com/Kilo-Org/kilocode/pull/16506) [`3c674d7`](https://github.com/Kilo-Org/kilocode/commit/3c674d7e72c5064ba195f0fe5a261171f6340cba) - Pause session-export uploads when the ingest endpoint rejects the credential, keep the captured batches pending, and report the rejection and its release through telemetry.
+
+- [#16491](https://github.com/Kilo-Org/kilocode/pull/16491) [`40dbdbb`](https://github.com/Kilo-Org/kilocode/commit/40dbdbbe7cf67fc9a42f27ff81c4e0c5dd5d7a0b) - Ask before a shell command prints an environment file, matching the existing read-tool prompt. A stream filter that reads a redirected environment file asks as well.
+
+- [#16449](https://github.com/Kilo-Org/kilocode/pull/16449) [`b2947d7`](https://github.com/Kilo-Org/kilocode/commit/b2947d7e56c50e599688d48dad27687254280d18) - Finish shell tool calls when the foreground command exits on macOS and Linux, even if descendants keep stdout or stderr open.
+
+- [#16556](https://github.com/Kilo-Org/kilocode/pull/16556) [`05c9710`](https://github.com/Kilo-Org/kilocode/commit/05c971024306d992e3dea8567695fbb2f51150a5) - Show a clear "signed out" message with a sign-in action when Kilo rejects your login, instead of a generic error. The CLI points to `/connect` and `kilo auth login`. In VS Code, the Sign in button starts login in the Kilo Profile tab. JetBrains opens User Profile and resends your message once you are signed in again.
+
+- [#16507](https://github.com/Kilo-Org/kilocode/pull/16507) [`824e32d`](https://github.com/Kilo-Org/kilocode/commit/824e32d5533ea62e85edf0d50ec1efa6d2047ff8) - Move the redo boundary one user message forward in conversation order, and leave the session unchanged when the boundary message is not loaded.
+
+- [#16516](https://github.com/Kilo-Org/kilocode/pull/16516) [`df8e639`](https://github.com/Kilo-Org/kilocode/commit/df8e6396ce9513134c3e80bc923d8e6ea5991cc9) - Apply a configured file-write permission from an older configuration document to file writes when the document is converted to the newer format, so the permission a user authored takes effect. When such a document also sets the deprecated tool toggle for the same capability, the toggle keeps the effect it has today.
+
+- [#16486](https://github.com/Kilo-Org/kilocode/pull/16486) [`bf85d41`](https://github.com/Kilo-Org/kilocode/commit/bf85d415ac592439053a5cb4c23ca44d927ccd16) - Carry configured provider headers and bearer tokens as request headers when a configuration document is converted to the newer format, so a configured `headers` entry and an `authToken` apply to the provider request.
+
+- [#16499](https://github.com/Kilo-Org/kilocode/pull/16499) [`8045e72`](https://github.com/Kilo-Org/kilocode/commit/8045e72da2cf057e42ed70820891d5ca11aa3f4b) - Refuse a workflow tool call that a permission rule denies, and honor a permission rule for any subagent type the user did not name in their message.
+
+- [#16512](https://github.com/Kilo-Org/kilocode/pull/16512) [`b417966`](https://github.com/Kilo-Org/kilocode/commit/b417966f371b37cdf2a6e063cfd7343c27d9cd57) - Keep each workspace's configuration in the TUI when a config change notification arrives, discard responses that a previous workspace selection started, and answer pending permission prompts for the workspace they belong to.
+
+- [#16474](https://github.com/Kilo-Org/kilocode/pull/16474) [`e05e37f`](https://github.com/Kilo-Org/kilocode/commit/e05e37f4081e0c1cd289ff8aa9ffdfb1e0a2dace) - The write tool now refuses to write when the target changed before the write verifies it, and names that reason in its answer. It also names a target that is not a regular file, or whose filesystem reports no usable identity.
+
+- Updated dependencies [[`b0717b9`](https://github.com/Kilo-Org/kilocode/commit/b0717b91ee02e06e3757d2696a3e340a7b3592a0)]:
+  - @kilocode/sdk@7.9.0
+  - @kilocode/plugin@7.8.33
+  - @opencode-ai/tui@7.8.33
+  - @opencode-ai/ui@7.8.33
+  - @kilocode/kilo-gateway@7.8.33
+  - @kilocode/kilo-indexing@7.8.33
+  - @kilocode/plugin-atomic-chat@7.8.33
+  - @opencode-ai/server@7.8.33
+  - @kilocode/kilo-telemetry@7.8.33
+
+## 7.8.32
+
+## 7.8.31
+
+### Minor Changes
+
+- [#16342](https://github.com/Kilo-Org/kilocode/pull/16342) [`182a5f9`](https://github.com/Kilo-Org/kilocode/commit/182a5f9f501d4d2bff2b5a4372d6f06065cf9904) - Change the Kilo telemetry preference from VS Code's About tab or the core telemetry API. Telemetry stays off if Kilo config, VS Code, or the environment disables it.
+
+### Patch Changes
+
+- [#16346](https://github.com/Kilo-Org/kilocode/pull/16346) [`f35ba50`](https://github.com/Kilo-Org/kilocode/commit/f35ba505e8b232012b02ab52952d8a195c89d7a6) Thanks [@rgbkrk](https://github.com/rgbkrk)! - Fix Gemini requests failing when an MCP tool declares a nullable enum or a multi-type parameter.
+
+## 7.8.30
+
+### Minor Changes
+
+- [#16198](https://github.com/Kilo-Org/kilocode/pull/16198) [`37b2900`](https://github.com/Kilo-Org/kilocode/commit/37b2900fcb6223fec33c2bd5f59263e93682c670) - Expose hosted workspace change snapshots, revision-fenced per-file reads, explicit refresh, and verified linked-pull-request diffs through Session Host and the generated SDK.
+
+- [#16184](https://github.com/Kilo-Org/kilocode/pull/16184) [`8a762f8`](https://github.com/Kilo-Org/kilocode/commit/8a762f8487734a5db566cbd8938f84dec9076379) - Expose hosted workspace pull request summaries and explicit refresh through Session Host, preserving partial observations and distinct authorization, connectivity, and rate-limit states.
+
+- [#16080](https://github.com/Kilo-Org/kilocode/pull/16080) [`54de37a`](https://github.com/Kilo-Org/kilocode/commit/54de37a85dfef8feb828382d8a71f84139857121) - Retire the Mercury Edit 2 autocomplete models and Next Edit. Codestral is now the default autocomplete model, and saved Mercury or Inception selections use Codestral. The SDK no longer has `client.kilo.edit`, and `@kilocode/kilo-gateway` no longer exports `./edit` or `./edit-prompt`.
+
+### Patch Changes
+
+- [#15988](https://github.com/Kilo-Org/kilocode/pull/15988) [`b69e4d6`](https://github.com/Kilo-Org/kilocode/commit/b69e4d64e78d2c1ad18c5273a6f9f482d86adf37) - Fix Cloud Agent CLI authentication by exchanging login credentials for a Cloud Agent control token.
+
+- [#16210](https://github.com/Kilo-Org/kilocode/pull/16210) [`41b8ffa`](https://github.com/Kilo-Org/kilocode/commit/41b8ffae4f32b2f84b44b5fa6c2c7c9f8e9fddec) Thanks [@WebReflection](https://github.com/WebReflection)! - Update hono to 4.13.18 and @hono/node-server to 2.1.7 to fix security issues flagged by Dependabot alerts.
+
+- [#15599](https://github.com/Kilo-Org/kilocode/pull/15599) [`c153a86`](https://github.com/Kilo-Org/kilocode/commit/c153a86705ad856843960f1339c5b973e56f56ce) - Create local and Cloud tasks from a unified Add menu in the JetBrains Agent Manager. Group Cloud workspaces, open them in the correct organization in your browser, close and reopen sessions, and delete whole workspaces with progress and retry. Allow Cloud workspaces without a profile, preselect and mark personal and organization default profiles, switch back to the default profile, show a standard border around the dialog prompt, and create a Cloud workspace with an empty prompt. Show submitted prompts immediately, show preparation progress while a Cloud workspace starts, wait for preparation to finish before loading chat history, and keep Cloud-generated session titles in sync in both the session header and the workspace list. Keep newly created Cloud workspaces visible while discovery catches up, and remove deleted ones immediately. Report setup failures with command output and retry even when chat history is unavailable, and show Cloud load failures in plain language with Retry for transient errors instead of Dismiss for permanent errors.
+
+- [#16098](https://github.com/Kilo-Org/kilocode/pull/16098) [`b11ecb4`](https://github.com/Kilo-Org/kilocode/commit/b11ecb4d7191585fe5059bcf03b43b06e34542ec) - Show what Kilo Gateway charged as the session cost, and the provider's inference cost only for requests that use your own API key.
+
+- [#16212](https://github.com/Kilo-Org/kilocode/pull/16212) [`83e2ae6`](https://github.com/Kilo-Org/kilocode/commit/83e2ae62ca5e69d986435f9a9ec2cd30b27d5203) Thanks [@WebReflection](https://github.com/WebReflection)! - Update node-forge to 1.4.3 to fix security issues flagged by Dependabot alerts.
+
+- [#15987](https://github.com/Kilo-Org/kilocode/pull/15987) [`2cf9750`](https://github.com/Kilo-Org/kilocode/commit/2cf9750397fe6c95d41378eecbca4bc527b0d405) - Keep questions open while background tasks finish so answers are not dismissed while typing.
+
+- Updated dependencies [[`37b2900`](https://github.com/Kilo-Org/kilocode/commit/37b2900fcb6223fec33c2bd5f59263e93682c670), [`8a762f8`](https://github.com/Kilo-Org/kilocode/commit/8a762f8487734a5db566cbd8938f84dec9076379), [`54de37a`](https://github.com/Kilo-Org/kilocode/commit/54de37a85dfef8feb828382d8a71f84139857121)]:
+  - @kilocode/sdk@7.9.0
+  - @kilocode/kilo-gateway@7.9.0
+  - @kilocode/plugin@7.8.29
+  - @opencode-ai/tui@7.8.29
+  - @opencode-ai/ui@7.8.29
+  - @kilocode/kilo-indexing@7.8.29
+  - @kilocode/kilo-telemetry@7.8.29
+  - @kilocode/plugin-atomic-chat@7.8.29
+  - @opencode-ai/server@7.8.29
+
 ## 7.8.28
 
 ### Minor Changes

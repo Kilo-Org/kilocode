@@ -314,6 +314,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "허용 목록에서 제거",
   "ui.permission.rule.addToDenied": "거부 목록에 추가",
   "ui.permission.rule.removeFromDenied": "거부 목록에서 제거",
+  "ui.permission.rule.fromConfig": "구성 파일에서 관리됨",
   "ui.permission.toolLabel.read": "읽기",
   "ui.permission.toolLabel.edit": "편집",
   "ui.permission.toolLabel.write": "쓰기",
@@ -651,6 +652,9 @@ export const dict = {
 
   "profile.title": "프로필",
   "profile.notLoggedIn": "로그인하지 않음",
+  "profile.expired": "Kilo 로그인이 만료되었거나 취소되었습니다. 계속하려면 다시 로그인하세요.",
+  "profile.unavailable": "Kilo 프로필을 불러올 수 없습니다. 지금은 Kilo에 연결할 수 없을 수 있습니다.",
+  "profile.stale": "프로필을 새로 고칠 수 없습니다. 마지막으로 불러온 정보를 표시합니다.",
   "profile.action.login": "Kilo Code로 로그인",
   "profile.balance.title": "잔액",
   "profile.balance.refresh": "잔액 새로고침",
@@ -810,6 +814,7 @@ export const dict = {
 
   "dialog.model.noProviders": "공급자 없음",
   "dialog.model.unavailable": "Kilo 모델을 사용할 수 없음",
+  "dialog.model.loadFailed": "이 프로젝트의 공급자를 불러올 수 없습니다.",
 
   "prompt.placeholder.connecting": "서버에 연결 중...",
   "prompt.placeholder.error": "연결에 실패했습니다. 출력 패널을 확인하거나 확장 프로그램을 다시 시작하세요.",
@@ -859,8 +864,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "원격 측정",
   "settings.aboutKiloCode.telemetry.description":
-    '원격 측정은 VS Code에 내장된 원격 측정 설정으로 제어됩니다. 비활성화하려면 설정 > 원격 측정 > 원격 측정 수준으로 이동하여 "off"로 설정하세요. 변경 사항을 적용하려면 VS Code를 다시 시작하세요.',
-  "settings.aboutKiloCode.telemetry.openSettings": "원격 측정 설정 열기",
+    "이 스위치로 Kilo의 원격 측정 설정을 변경할 수 있습니다. VS Code나 실행 환경에서 원격 측정을 비활성화하면 계속 꺼진 상태로 유지됩니다.",
+  "settings.aboutKiloCode.telemetry.toggle": "원격 측정 사용",
+  "settings.aboutKiloCode.telemetry.saveFailed": "원격 측정 설정을 업데이트하지 못했습니다",
 
   "settings.agentBehaviour.subtab.agents": "에이전트",
   "settings.agentBehaviour.subtab.mcpServers": "MCP 서버",
@@ -1310,6 +1316,8 @@ export const dict = {
   "dialog.model.notSet": "설정되지 않음",
   "profile.personalAccount": "개인 계정",
   "profile.switchingAccount": "계정 전환 중…",
+  "profile.unavailableAccount": "사용할 수 없는 계정",
+  "profile.switchFailed": "계정 전환을 확인하지 못했습니다.",
   // Agent Manager strings live in webview-ui/agent-manager/i18n/ko.ts
 
   "question.summary": "{{total}}개 질문 중 {{n}}번째",
@@ -1394,6 +1402,9 @@ export const dict = {
   "settings.saveBar.cancel": "취소",
   "settings.saveBar.saving": "저장 중…",
   "settings.saveBar.saveFailed": "설정을 저장할 수 없습니다",
+  "settings.saveBar.dismissError": "닫기",
+  "settings.saveBar.unconfirmedWrite": "확장 프로그램 호스트가 “{{name}}”을(를) 확인하지 않았습니다.",
+  "settings.saveBar.unconfirmedSave": "확장 프로그램 호스트가 저장을 확인하지 않았습니다. 다시 시도하세요.",
   "notifications.action.next": "다음",
   "notifications.action.close": "닫기",
   "notifications.action.tryModel": "{{model}} 시도",

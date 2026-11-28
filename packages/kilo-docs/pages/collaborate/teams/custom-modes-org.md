@@ -38,3 +38,5 @@ Your new mode appears under **Custom Modes** in the Modes dashboard.
 
 - **Edit:** Click the edit icon to update any field or tool permissions.
 - **Delete:** Click the 🗑️ icon to permanently remove the mode.
+
+You can also list, create, edit, and delete organization modes from the **Custom modes** row in an organization's hub in the [mobile app](/docs/code-with-ai/platforms/mobile#organization-custom-modes-and-groups).

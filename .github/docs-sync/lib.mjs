@@ -8,6 +8,7 @@
 
 import { spawnSync } from "node:child_process"
 import fs from "node:fs"
+import { env as policyEnv } from "./agent-policy.mjs"
 
 // Test hook: DOCS_SYNC_API_BASE points the API at a local stub server. The workflow
 // never sets it — only selftests do.
@@ -33,7 +34,11 @@ export function repo() {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
-export async function api(path, { method = "GET", body, auth } = {}) {
+// `maxRetryAfter` (seconds) is the longest rate-limit wait the caller accepts;
+// a longer Retry-After fails the call at once. `timeoutMs` aborts a request
+// that takes longer and fails the call without a retry. The defaults wait any
+// length and never abort.
+export async function api(path, { method = "GET", body, auth, maxRetryAfter = Infinity, timeoutMs } = {}) {
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     let res
     try {
@@ -48,9 +53,10 @@ export async function api(path, { method = "GET", body, auth } = {}) {
           "user-agent": "kilo-docs-sync-bot",
         },
         body: body === undefined ? undefined : JSON.stringify(body),
+        signal: timeoutMs === undefined ? undefined : AbortSignal.timeout(timeoutMs),
       })
     } catch (err) {
-      if (attempt < MAX_RETRIES) {
+      if (attempt < MAX_RETRIES && err.name !== "TimeoutError") {
         console.warn(`network error (${err.message}), retrying in ${5 * attempt}s`)
         await sleep(5000 * attempt)
         continue
@@ -60,8 +66,8 @@ export async function api(path, { method = "GET", body, auth } = {}) {
 
     if (res.status === 403) {
       const text = await res.text()
-      if (text.includes("rate limit") && attempt < MAX_RETRIES) {
-        const retryAfter = Number(res.headers.get("retry-after")) || 30
+      const retryAfter = Number(res.headers.get("retry-after")) || 30
+      if (text.includes("rate limit") && attempt < MAX_RETRIES && retryAfter <= maxRetryAfter) {
         console.warn(`rate limited, retrying in ${retryAfter}s`)
         await sleep(retryAfter * 1000)
         continue
@@ -234,12 +240,19 @@ const STDERR_LOG_MAX_CHARS = 8 * 1024 * 1024
  * Always writes the full captured stderr to
  * docs-sync-out/kilo-stderr-<sanitized-label>.log (unconditional — success and
  * failure). The console return value still uses the short tailText.
+ *
+ * `mode` is the policy from agent-permissions.json, exported as
+ * KILO_CONFIG_CONTENT so the CLI enforces the tool and path scope of the run.
+ * A permission left as an ask would end a headless run, so every mode either
+ * allows or denies each one.
  */
-export function runKilo({ args, timeoutMs, streamStdout = false, label = "kilo" }) {
+export function runKilo({ args, timeoutMs, streamStdout = false, label = "kilo", mode }) {
+  if (!mode) throw new Error(`runKilo: mode is required (agent-policy MODE) for ${label}`)
   const result = spawnSync("kilo", args, {
     encoding: "utf8",
     maxBuffer: 32 * 1024 * 1024,
     timeout: timeoutMs,
+    env: policyEnv(mode),
     stdio: ["ignore", streamStdout ? "inherit" : "pipe", "pipe"],
   })
 

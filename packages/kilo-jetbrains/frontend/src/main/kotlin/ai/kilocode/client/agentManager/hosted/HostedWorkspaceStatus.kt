@@ -5,7 +5,7 @@ import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.active.ActiveBadge
 import ai.kilocode.rpc.dto.HostedWorkspaceStatusDto
 
-/** The row and editor header use the same compute status labels and themed pills. */
+/** Compute status labels and themed badges for the workspace editor. */
 internal enum class HostedWorkspaceStatus(private val value: String, private val style: UiStyle.Badge.Style) {
     LOADING("loading", UiStyle.Badge.Secondary),
     // The Marketplace Agents chip is the canonical Kilo green; Cloud Active reuses it verbatim.
@@ -21,15 +21,17 @@ internal enum class HostedWorkspaceStatus(private val value: String, private val
     UNKNOWN("unknown", UiStyle.Badge.Secondary),
     ;
 
+    fun label(): String = KiloBundle.message("hosted.workspace.status.$value")
+
     fun badge(): ActiveBadge = ActiveBadge(
-        text = KiloBundle.message("hosted.workspace.status.$value"),
+        text = label(),
         style = style,
         id = "cloud-compute",
     )
 
     /**
      * Sandbox boot or teardown. Rows show the same running spinner local sessions use so Cloud work
-     * in progress reads the same at a glance; the compute badge still names the phase.
+     * in progress reads the same at a glance. The editor badge names the phase.
      */
     fun busy(): Boolean = this == STARTING || this == SETTING_UP || this == LOADING || this == STOPPING
 

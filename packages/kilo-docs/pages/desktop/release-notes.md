@@ -7,6 +7,28 @@ description: "New features, improvements, bug fixes, and security updates in eac
 
 Kilo Desktop updates itself automatically on macOS and Windows, and tells you when an update is available on Linux (see [Updates](/docs/desktop/installation#updates)). To check which version you're running or to install an update, open the **About** section of the [General settings](/docs/desktop/settings/general#about).
 
+## Kilo Desktop 1.0.0
+
+Released November 17, 2026
+
+Kilo Desktop is now generally available.
+
+**What's new**
+
+- The local model server no longer requires a Kilo account. Downloading models from the Anaconda catalog still requires an Anaconda account.
+- Code blocks in chat replies are now syntax-highlighted and follow your theme.
+
+**Improvements and bug fixes**
+
+- The **Agents** menu in a session now has **New agent**, to start another chat.
+- Branch lists are now grouped into **Default**, **Recent**, **Local**, and **Remote**, and remote-only branches are marked.
+- Opening a file from Files while another tab is focused now takes one click instead of two.
+- Fixed long chats showing blank messages after switching away from a session and back.
+- Messages queued with an attachment no longer also appear in the chat before they're sent.
+- In **Automatically approve** mode, the message box and tool rows no longer flicker while requests are approved.
+- Long branch names no longer overflow the **Delete session and worktree?** dialog.
+- On Windows and Linux, the window controls now follow the system's light or dark mode when it changes.
+
 ## Kilo Desktop 0.1.16
 
 Released November 13, 2026

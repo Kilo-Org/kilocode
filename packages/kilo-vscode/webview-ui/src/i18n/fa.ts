@@ -312,6 +312,7 @@ export const dict = {
   "ui.permission.rule.removeFromAllowed": "حذف از لیست مجاز",
   "ui.permission.rule.addToDenied": "افزودن به لیست مسدود",
   "ui.permission.rule.removeFromDenied": "حذف از لیست مسدود",
+  "ui.permission.rule.fromConfig": "توسط یک فایل پیکربندی مدیریت می‌شود",
   "ui.permission.toolLabel.read": "خواندن",
   "ui.permission.toolLabel.edit": "ویرایش",
   "ui.permission.toolLabel.write": "نوشتن",
@@ -612,6 +613,9 @@ export const dict = {
 
   "profile.title": "پروفایل",
   "profile.notLoggedIn": "وارد نشده‌اید",
+  "profile.expired": "ورود شما به Kilo منقضی یا لغو شده است. برای ادامه دوباره وارد شوید.",
+  "profile.unavailable": "بارگیری نمایه Kilo شما ممکن نشد. ممکن است Kilo در حال حاضر در دسترس نباشد.",
+  "profile.stale": "به‌روزرسانی نمایه شما ممکن نشد. آخرین اطلاعات بارگیری‌شده نمایش داده می‌شود.",
   "profile.action.login": "ورود با Kilo Code",
   "profile.balance.title": "موجودی",
   "profile.balance.refresh": "بازخوانی موجودی",
@@ -797,6 +801,7 @@ export const dict = {
 
   "dialog.model.noProviders": "هیچ ارائه‌دهنده‌ای وجود ندارد",
   "dialog.model.unavailable": "مدل‌های Kilo در دسترس نیستند",
+  "dialog.model.loadFailed": "بارگذاری ارائه‌دهندگان این پروژه ممکن نشد.",
 
   "prompt.placeholder.connecting": "در حال اتصال به سرور...",
   "prompt.placeholder.default": "پیامی بنویسید... (Enter برای ارسال، Shift+Enter برای خط جدید)",
@@ -848,8 +853,9 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "تله‌متری",
   "settings.aboutKiloCode.telemetry.description":
-    "تله‌متری توسط تنظیمات داخلی تله‌متری VS Code کنترل می‌شود. برای غیرفعال کردن آن، به Settings > Telemetry > Telemetry Level بروید و آن را روی «off» تنظیم کنید. VS Code را مجدداً راه‌اندازی کنید تا تغییر اعمال شود.",
-  "settings.aboutKiloCode.telemetry.openSettings": "باز کردن تنظیمات تله‌متری",
+    "با این کلید می‌توانید تنظیم تله‌متری Kilo را تغییر دهید. اگر VS Code یا محیط اجرا تله‌متری را غیرفعال کند، تله‌متری غیرفعال می‌ماند.",
+  "settings.aboutKiloCode.telemetry.toggle": "فعال کردن تله‌متری",
+  "settings.aboutKiloCode.telemetry.saveFailed": "به‌روزرسانی تنظیم تله‌متری ممکن نبود",
 
   "settings.agentBehaviour.subtab.agents": "عوامل",
   "settings.agentBehaviour.subtab.mcpServers": "MCP Servers",
@@ -1328,6 +1334,8 @@ export const dict = {
 
   "profile.personalAccount": "حساب شخصی",
   "profile.switchingAccount": "در حال تغییر حساب…",
+  "profile.unavailableAccount": "حساب در دسترس نیست",
+  "profile.switchFailed": "تغییر حساب تأیید نشد.",
 
   // Agent Manager strings live in webview-ui/agent-manager/i18n/en.ts
 
@@ -1413,6 +1421,9 @@ export const dict = {
   "settings.saveBar.saveAnyway": "در هر صورت ذخیره کن",
   "settings.saveBar.cancel": "لغو",
   "settings.saveBar.saveFailed": "ذخیره تنظیمات ممکن نشد",
+  "settings.saveBar.dismissError": "رد کردن",
+  "settings.saveBar.unconfirmedWrite": "میزبان افزونه «{{name}}» را تأیید نکرد.",
+  "settings.saveBar.unconfirmedSave": "میزبان افزونه ذخیره کردن را تأیید نکرد. دوباره تلاش کنید.",
 
   "notifications.action.next": "بعدی",
   "notifications.action.close": "بستن",

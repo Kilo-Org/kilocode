@@ -8,6 +8,7 @@ import { kiloProviderOptions } from "@/kilocode/provider-options"
 import { isLing } from "@/kilocode/model-match" // kilocode_change
 import { reasoningSummary } from "@/kilocode/provider/reasoning-summary" // kilocode_change
 import { imageModalities } from "@/kilocode/provider/image-output" // kilocode_change
+import { lowerTypeArrays } from "@/kilocode/provider/gemini-schema" // kilocode_change
 
 type Modality = NonNullable<ModelsDev.Model["modalities"]>["input"][number]
 
@@ -1218,7 +1219,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
 
     case "@ai-sdk/mistral":
       // https://v5.ai-sdk.dev/providers/ai-sdk-providers/mistral
-      // https://docs.mistral.ai/studio-api/conversations/reasoning // kilocode_change
+      // https://docs.mistral.ai/inference/conversations/reasoning // kilocode_change
       if (!model.capabilities.reasoning) return {}
       // Only Mistral Small 4 and Medium 3.5 support reasoning
       const MISTRAL_REASONING_IDS = [
@@ -2041,7 +2042,7 @@ export function schema(model: Provider.Model, schema: JSONSchema7): JSONSchema7 
       return result
     }
 
-    schema = sanitizeGemini(schema)
+    schema = sanitizeGemini(lowerTypeArrays(schema, model.api.npm)) // kilocode_change
   }
 
   return schema

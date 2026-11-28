@@ -21,9 +21,15 @@ import ai.kilocode.rpc.dto.HostedProviderDto
 import ai.kilocode.rpc.dto.HostedStartSessionDto
 import ai.kilocode.rpc.dto.HostedSystemEventDto
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
+import ai.kilocode.rpc.dto.HostedWorkspaceChangesDto
+import ai.kilocode.rpc.dto.HostedWorkspaceChangesRefreshDto
+import ai.kilocode.rpc.dto.HostedWorkspaceChangeFileResultDto
+import ai.kilocode.rpc.dto.HostedWorkspacePullRequestDiffDto
+import ai.kilocode.rpc.dto.HostedWorkspacePullRequestDiffFileResultDto
 import ai.kilocode.rpc.dto.HostedWorkspaceListDto
 import ai.kilocode.rpc.dto.HostedWorkspaceProfileDto
 import ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto
+import ai.kilocode.rpc.dto.HostedWorkspacePullRequestDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.rpc.dto.HostedWorkspaceSessionDto
 import ai.kilocode.rpc.dto.HostedWorkspaceStatusDto
@@ -293,6 +299,10 @@ class KiloBackendHostedManager(
     @Volatile
     private var started = false
 
+    // start/stop/close are serialized on the manager monitor: the app service calls them from the
+    // app load coroutine (a CLI restart) and from sign-out/shutdown at the same time, and an
+    // interleaved pair would leave `started` true with null transport fields.
+    @Synchronized
     fun start(api: DefaultApi, http: OkHttpClient, port: Int, chat: KiloBackendChatManager) {
         val endpoint = "http://127.0.0.1:$port"
         val changed = started && (this.api !== api || this.http !== http || base != endpoint || this.chat !== chat)
@@ -304,6 +314,15 @@ class KiloBackendHostedManager(
         if (started && !changed) return
         if (started) rebind(previous)
         started = true
+        begin(chat)
+        log.info("Hosted session manager started")
+    }
+
+    private fun begin(chat: KiloBackendChatManager) {
+        statusJob?.cancel()
+        statusJob = null
+        lifecycle?.cancel()
+        lifecycle = null
         lifecycle = CoroutineScope(cs.coroutineContext + SupervisorJob(cs.coroutineContext[Job]))
         statusJob = lifecycle!!.launch(start = CoroutineStart.UNDISPATCHED) {
             chat.events.collect { event ->
@@ -340,10 +359,9 @@ class KiloBackendHostedManager(
                 }
             }
         }
-        // A restart calls stop() first, which keeps retained owners but closes transports. Reattach
-        // them here even though the manager was not "started" at entry.
-        if (changed || continuity.isNotEmpty()) continuity.entries.forEach { restore(it.key, it.value) }
-        log.info("Hosted session manager started")
+        // A restart calls stop() first, which keeps retained owners but closes transports; a context
+        // reset drops them. Either way, reattach whatever continuity is present.
+        continuity.entries.forEach { restore(it.key, it.value) }
     }
 
     /**
@@ -352,6 +370,7 @@ class KiloBackendHostedManager(
      * the replacement transport. Cached transcript/status data is dropped and rebuilt from the new
      * CLI. Use [reset] only when ownership itself is gone.
      */
+    @Synchronized
     fun stop() {
         if (!started && attachments.isEmpty()) return
         started = false
@@ -367,7 +386,27 @@ class KiloBackendHostedManager(
         log.info("Hosted session manager stopped")
     }
 
+    /**
+     * Starts a fresh hosted context: attachments, retained owners and statuses are dropped. When the
+     * manager is running it keeps serving on the same transport; when it is not, the observation
+     * still lands, so the next [start] finds no retained owners to restore.
+     *
+     * The whole reset is serialized on [lock], which [ensure] holds across the attach call, so a reset
+     * cannot interleave with an attach that is already installing an attachment. It is also
+     * serialized on the manager monitor, against [start], [stop] and [close], so the `started` and
+     * `chat` it reads cannot change under it: a reset racing a stop leaves nothing for the next
+     * [start] to restore.
+     */
+    suspend fun resetContext() = lock.withLock {
+        synchronized(this@KiloBackendHostedManager) {
+            reset(detach = true)
+            val chat = this.chat
+            if (started && chat != null) begin(chat)
+        }
+    }
+
     /** Full teardown for application disposal, where no RPC collector can survive the service. */
+    @Synchronized
     fun close() {
         started = false
         reset(detach = true)
@@ -475,6 +514,46 @@ class KiloBackendHostedManager(
                 effectiveDefaultProfileID = root.string("effectiveDefaultProfileID"),
             )
         }
+
+    suspend fun workspacePullRequest(
+        ref: HostedWorkspaceRefDto,
+        organizationID: String?,
+    ): HostedWorkspacePullRequestDto = pullRequest(http, base, ref, organizationID, refresh = false)
+
+    suspend fun refreshWorkspacePullRequest(
+        ref: HostedWorkspaceRefDto,
+        organizationID: String?,
+    ): HostedWorkspacePullRequestDto = pullRequest(http, base, ref, organizationID, refresh = true)
+
+    suspend fun workspaceChanges(ref: HostedWorkspaceRefDto, organizationID: String?): HostedWorkspaceChangesDto =
+        HostedDiffTransport(http, base).workspaceChanges(ref, organizationID)
+
+    suspend fun refreshWorkspaceChanges(
+        ref: HostedWorkspaceRefDto,
+        organizationID: String?,
+    ): HostedWorkspaceChangesRefreshDto = HostedDiffTransport(http, base).refreshWorkspaceChanges(ref, organizationID)
+
+    suspend fun workspaceChangeFile(
+        ref: HostedWorkspaceRefDto,
+        path: String,
+        scope: String?,
+        expectedRevision: Long,
+        organizationID: String?,
+    ): HostedWorkspaceChangeFileResultDto =
+        HostedDiffTransport(http, base).workspaceChangeFile(ref, path, scope, expectedRevision, organizationID)
+
+    suspend fun workspacePullRequestDiff(
+        ref: HostedWorkspaceRefDto,
+        organizationID: String?,
+    ): HostedWorkspacePullRequestDiffDto = HostedDiffTransport(http, base).workspacePullRequestDiff(ref, organizationID)
+
+    suspend fun workspacePullRequestDiffFile(
+        ref: HostedWorkspaceRefDto,
+        path: String,
+        expectedHeadSha: String,
+        organizationID: String?,
+    ): HostedWorkspacePullRequestDiffFileResultDto =
+        HostedDiffTransport(http, base).workspacePullRequestDiffFile(ref, path, expectedHeadSha, organizationID)
 
     suspend fun setPersonalDefaultProfile(profileID: String, organizationID: String?): HostedProfileDefaultDto =
         withContext(Dispatchers.IO) {
@@ -593,7 +672,7 @@ class KiloBackendHostedManager(
                 continuity.computeIfAbsent(composite) { Continuity() }.also {
                     it.subscribe(collector)
                     it.subscribers++
-                    it.organizationID = organizationID ?: it.organizationID
+                    it.organizationID = organizationID
                 }
             }
             try {
@@ -784,7 +863,9 @@ class KiloBackendHostedManager(
         reply: PermissionReplyDto,
     ) {
         val session = permissionOwner[requestId] ?: findOwner(requestId, directory, question = false)
-        val body = KiloCliDataParser.buildPermissionReplyJson(reply)
+        // The hosted transport accepts the decision and its message only; the human-answered flag is
+        // a local CLI field with no hosted equivalent, and sending it would be rejected.
+        val body = KiloCliDataParser.buildPermissionReplyJson(reply.copy(interactive = false))
         if (session != null) {
             attached(session, organizationID) { attachment ->
                 post("/permission/$requestId/reply?workspace=${encode(attachment.id)}", body, "replyPermission")
@@ -829,7 +910,7 @@ class KiloBackendHostedManager(
         val state = lock.withLock {
             continuity.computeIfAbsent(id) { Continuity() }.also {
                 it.retainers++
-                it.organizationID = organizationID ?: it.organizationID
+                it.organizationID = organizationID
             }
         }
         try {
@@ -880,7 +961,9 @@ class KiloBackendHostedManager(
             val state = continuity.computeIfAbsent(id) { Continuity() }
             val existing = attachments[id]
             // expiresAt describes the provider descriptor, not the opaque CLI attachment lease.
-            if (existing != null && !existing.invalid) {
+            // Each lease serves the organization it was minted for, so a call for another
+            // organization mints its own lease.
+            if (existing != null && !existing.invalid && existing.organizationID == organizationID) {
                 if (state.retained && existing.events == null) startNative(existing)
                 if (state.subscribers > 0 && existing.system == null) startSystem(existing)
                 return@withLock existing
@@ -921,7 +1004,7 @@ class KiloBackendHostedManager(
         val state = lock.withLock {
             continuity.computeIfAbsent(id) { Continuity() }.also {
                 it.calls++
-                it.organizationID = organizationID ?: it.organizationID
+                it.organizationID = organizationID
             }
         }
         try {

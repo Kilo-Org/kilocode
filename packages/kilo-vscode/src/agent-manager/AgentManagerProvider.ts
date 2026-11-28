@@ -143,6 +143,7 @@ export class AgentManagerProvider implements Disposable {
   private onVisibilityChange: ((visible: boolean) => void) | undefined
   private panelSessions = new Set<string>()
   private busySessions = new Set<string>()
+  private busyDirs = new Map<string, string>()
   private removedSessions = new Set<string>()
   readonly settings: ProjectWiring["settings"]
   /** Session ID most recently loaded via `loadMessages`; updated synchronously. */
@@ -343,8 +344,8 @@ export class AgentManagerProvider implements Disposable {
       paths: () =>
         [...this.contexts.values()].flatMap((ctx) => ctx.peekState()?.getWorktrees() ?? []).map((wt) => wt.path),
       post: (active) => this.postToWebview({ type: "agentManager.worktreeActivity", active }),
-      status: (event) => this.onSessionStatus(event),
-      lifecycle: (event) => this.onSessionLifecycle(event),
+      status: (event, dir) => this.onSessionStatus(event, dir),
+      lifecycle: (event, dir) => this.onSessionLifecycle(event, dir),
       log: (err) => this.log("Failed to load worktree activity:", err),
     })
   }
@@ -353,26 +354,33 @@ export class AgentManagerProvider implements Disposable {
    * session lifecycle events, so sessions created outside this panel (another
    * window, the CLI, the API) appear without waiting for a full re-list.
    */
-  private onSessionLifecycle(event: unknown): void {
-    handleSessionLifecycle(event, {
-      busy: this.busySessions,
-      removed: this.removedSessions,
-      contexts: this.contexts,
-      closeBrowser: (id) => this.browserLifecycle.close(id),
-      post: (message) => this.postToWebview(message),
-    })
+  private onSessionLifecycle(event: unknown, directory?: string): void {
+    handleSessionLifecycle(
+      event,
+      {
+        busy: this.busySessions,
+        busyDirs: this.busyDirs,
+        removed: this.removedSessions,
+        contexts: this.contexts,
+        closeBrowser: (id) => this.browserLifecycle.close(id),
+        post: (message) => this.postToWebview(message),
+      },
+      directory,
+    )
   }
-  private onSessionStatus(event: unknown): void {
+  private onSessionStatus(event: unknown, directory?: string): void {
     const props = (event as { properties?: { sessionID?: string; status?: { type?: string } } }).properties
     const sid = props?.sessionID
     const type = props?.status?.type
     if (!sid || !type || this.removedSessions.has(sid)) return
     if (type === "idle") {
       this.busySessions.delete(sid)
+      this.busyDirs.delete(sid)
       this.naming.idle(sid)
       return
     }
     this.busySessions.add(sid)
+    if (directory) this.busyDirs.set(sid, directory)
     this.naming.busy(sid)
   }
   private log(...args: unknown[]) {
@@ -490,6 +498,7 @@ export class AgentManagerProvider implements Disposable {
         if (this.activeSessionId) ids.push(this.activeSessionId)
         this.panelSessions.clear()
         this.busySessions.clear()
+        this.busyDirs.clear()
         void ctx.sessions.abortSessions(ids).catch((err) => this.log("Failed to abort sessions on panel close:", err))
         this.statsPoller.stop()
         this.projectPollers.dispose()
@@ -559,6 +568,7 @@ export class AgentManagerProvider implements Disposable {
 
   private async onMessage(msg: Record<string, unknown>): Promise<Record<string, unknown> | null> {
     if (this.prBridge.handleMessage(msg)) return null
+    if (msg.type === "openProfilePanel") return msg
     if (msg.type === "requestFileSearch" && typeof msg.sessionID !== "string" && this.activeSessionId) {
       return { ...msg, sessionID: this.activeSessionId }
     }
@@ -1563,8 +1573,12 @@ export class AgentManagerProvider implements Disposable {
     this.prBridge.reset()
     this.activeSessionId = undefined
     this.busySessions.clear()
+    this.busyDirs.clear()
     this.cachedWorktreeStats = this.cachedLocalStats = undefined
     void this.sendRepoInfo()
+    // The active project's root is what the prompt's mention search resolves
+    // against, and the panel keeps the previous project's root until told.
+    this.panel?.postMessage({ type: "workspaceDirectoryChanged", directory: this.getRoot() ?? "" })
     if (!reactivateProject(ctx, this.panel?.sessions, (c) => this.pushState(c)))
       this.stateReady = this.initializeState()
     else {

@@ -12,6 +12,10 @@ export const AiProvidersNav: NavSection[] = [
     title: "AI Labs",
     links: [
       { href: "/ai-providers/anthropic", children: "Anthropic" },
+      {
+        href: "/ai-providers/claude-linked-billing",
+        children: "Claude linked billing and sign-in",
+      },
       { href: "/ai-providers/openai", children: "OpenAI" },
       {
         href: "/ai-providers/openai-chatgpt-plus-pro",
