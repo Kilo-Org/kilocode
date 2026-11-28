@@ -21,10 +21,21 @@ const original = {
   execute: api.commands.executeCommand,
   editor: api.window.activeTextEditor,
   diagnostics: api.languages.getDiagnostics,
+  input: api.window.showInputBox,
+  pick: api.window.showQuickPick,
 }
 
-function setup(active = false, agentReady = true, last?: "sidebar" | "agent" | "tab", tabbed = false) {
+function setup(
+  active = false,
+  agentReady = true,
+  last?: "sidebar" | "agent" | "tab",
+  tabbed = false,
+  typed?: string,
+  answer?: "Yes" | "No",
+) {
   const commands = new Map<string, Command>()
+  const prompts: string[] = []
+  const picks: string[][] = []
   const executed: unknown[][] = []
   const events: string[] = []
   const posts: unknown[] = []
@@ -75,6 +86,17 @@ function setup(active = false, agentReady = true, last?: "sidebar" | "agent" | "
     executed.push(args)
   }
   api.languages.getDiagnostics = () => []
+  api.window.showInputBox = async (options) => {
+    events.push("input")
+    prompts.push(options?.prompt ?? "")
+    return typed
+  }
+  // Picks by what the user sees, so a label that no longer matches its behaviour fails a test.
+  api.window.showQuickPick = (async (items: Array<{ label: string; send: boolean }>) => {
+    events.push("pick")
+    picks.push(items.map((item) => item.label))
+    return items.find((item) => item.label === answer)
+  }) as never
   api.window.activeTextEditor = {
     selection: {
       isEmpty: false,
@@ -92,7 +114,7 @@ function setup(active = false, agentReady = true, last?: "sidebar" | "agent" | "
     focused.current ? (views[focused.current] as never) : undefined,
   )
 
-  return { commands, events, executed, posts, waits, recipients, focused }
+  return { commands, events, executed, posts, waits, recipients, focused, prompts, picks }
 }
 
 afterEach(() => {
@@ -100,6 +122,8 @@ afterEach(() => {
   api.commands.executeCommand = original.execute
   api.window.activeTextEditor = original.editor
   api.languages.getDiagnostics = original.diagnostics
+  api.window.showInputBox = original.input
+  api.window.showQuickPick = original.pick
 })
 
 function expectContextPost(post: unknown) {
@@ -195,6 +219,130 @@ describe("registerCodeActions", () => {
     const state = setup(true, false)
 
     await state.commands.get("kilo-code.new.addToContext")?.()
+
+    expect(state.events).toEqual(["wait"])
+    expect(state.posts).toEqual([])
+  })
+
+  it("reveals the sidebar and opens a new chat with the given text as written", async () => {
+    const state = setup()
+    const text = "Review this:\n```ts\nconst value = 1\n```"
+
+    await state.commands.get("kilo-code.new.newChatWithText")?.({ text })
+
+    expect(state.events).toEqual(["focus", "wait", "post"])
+    expect(state.executed).toEqual([["kilo-code.SidebarProvider.focus"]])
+    expect(state.posts).toEqual([{ type: "newChatWithText", text }])
+  })
+
+  it("accepts a plain string and targets the active Agent Manager", async () => {
+    const state = setup(true)
+
+    await state.commands.get("kilo-code.new.newChatWithText")?.("hello")
+
+    expect(state.events).toEqual(["wait", "post"])
+    expect(state.recipients).toEqual(["agent"])
+    expect(state.executed).toEqual([])
+    expect(state.posts).toEqual([{ type: "newChatWithText", text: "hello" }])
+  })
+
+  it.each(["sidebar", "agent", "tab"] as const)("opens the new chat in the last focused %s", async (last) => {
+    const state = setup(false, true, last)
+
+    await state.commands.get("kilo-code.new.newChatWithText")?.({ text: "hello" })
+
+    expect(state.recipients).toEqual([last])
+    expect(state.posts).toEqual([{ type: "newChatWithText", text: "hello" }])
+  })
+
+  it.each([42, { text: 42 }, { text: { nested: true } }])(
+    "treats non-string text %p as missing instead of throwing",
+    async (args) => {
+      const state = setup(false, true, undefined, false, "typed in the palette", "No")
+
+      await state.commands.get("kilo-code.new.newChatWithText")?.(args)
+
+      expect(state.events).toEqual(["input", "pick", "focus", "wait", "post"])
+      expect(state.posts).toEqual([{ type: "newChatWithText", text: "typed in the palette" }])
+    },
+  )
+
+  it.each(["", "  \n", { text: "" }])("ignores empty text %p without asking", async (args) => {
+    const state = setup(false, true, undefined, false, "unused")
+
+    await state.commands.get("kilo-code.new.newChatWithText")?.(args)
+
+    expect(state.events).toEqual([])
+    expect(state.posts).toEqual([])
+  })
+
+  it.each([undefined, {}])("asks for the text when run without any (%p), as from the Command Palette", async (args) => {
+    const state = setup(false, true, undefined, false, "typed in the palette", "No")
+
+    await state.commands.get("kilo-code.new.newChatWithText")?.(args)
+
+    expect(state.prompts).toHaveLength(1)
+    expect(state.events).toEqual(["input", "pick", "focus", "wait", "post"])
+    expect(state.posts).toEqual([{ type: "newChatWithText", text: "typed in the palette" }])
+  })
+
+  it("offers sending as a second Command Palette step, with No first", async () => {
+    const state = setup(false, true, undefined, false, "typed in the palette", "Yes")
+
+    await state.commands.get("kilo-code.new.newChatWithText")?.()
+
+    expect(state.picks).toEqual([["No", "Yes"]])
+    expect(state.posts).toEqual([{ type: "newChatWithText", text: "typed in the palette", send: true }])
+  })
+
+  it("does nothing when the send step is dismissed", async () => {
+    const state = setup(false, true, undefined, false, "typed in the palette")
+
+    await state.commands.get("kilo-code.new.newChatWithText")?.()
+
+    expect(state.events).toEqual(["input", "pick"])
+    expect(state.posts).toEqual([])
+  })
+
+  it("sends only when the caller asks for it, without any prompt", async () => {
+    const state = setup(false, true, undefined, false, "unused", "Yes")
+    const run = state.commands.get("kilo-code.new.newChatWithText")
+
+    await run?.({ text: "keep" })
+    await run?.({ text: "keep too", send: false })
+    await run?.({ text: "send", send: true })
+
+    expect(state.picks).toEqual([])
+    expect(state.prompts).toEqual([])
+    expect(state.posts).toEqual([
+      { type: "newChatWithText", text: "keep" },
+      { type: "newChatWithText", text: "keep too" },
+      { type: "newChatWithText", text: "send", send: true },
+    ])
+  })
+
+  it("only asks for the text when the caller already decided whether to send", async () => {
+    const state = setup(false, true, undefined, false, "typed in the palette", "No")
+
+    await state.commands.get("kilo-code.new.newChatWithText")?.({ send: true })
+
+    expect(state.events).toEqual(["input", "focus", "wait", "post"])
+    expect(state.posts).toEqual([{ type: "newChatWithText", text: "typed in the palette", send: true }])
+  })
+
+  it.each([undefined, "  "])("does nothing when the palette prompt is cancelled or blank (%p)", async (typed) => {
+    const state = setup(false, true, undefined, false, typed, "Yes")
+
+    await state.commands.get("kilo-code.new.newChatWithText")?.()
+
+    expect(state.events).toEqual(["input"])
+    expect(state.posts).toEqual([])
+  })
+
+  it("does not open a chat in the Agent Manager when its readiness wait is cancelled", async () => {
+    const state = setup(true, false)
+
+    await state.commands.get("kilo-code.new.newChatWithText")?.({ text: "hello" })
 
     expect(state.events).toEqual(["wait"])
     expect(state.posts).toEqual([])

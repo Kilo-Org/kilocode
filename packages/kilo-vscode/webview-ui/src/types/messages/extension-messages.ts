@@ -395,6 +395,13 @@ export interface AppendChatBoxMessage {
   browser?: BrowserReference
 }
 
+/** Opens a new chat whose prompt box holds only `text`. It is sent only when `send` is true. */
+export interface NewChatWithTextMessage {
+  type: "newChatWithText"
+  text: string
+  send?: boolean
+}
+
 export interface AppendChatContextMessage {
   type: "appendChatContext"
   context: CodeContext
@@ -2012,6 +2019,7 @@ export type ExtensionMessage =
   | AgentManagerSendInitialMessage
   | SetChatBoxMessage
   | AppendChatBoxMessage
+  | NewChatWithTextMessage
   | AppendChatContextMessage
   | AppendReviewCommentsMessage
   | AppendReviewCommentsToTerminalMessage

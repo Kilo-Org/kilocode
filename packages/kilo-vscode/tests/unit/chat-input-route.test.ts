@@ -18,7 +18,7 @@ function run(message: { type?: string }, view: string) {
 
 describe("routeChatInput", () => {
   it("switches to the chat and re-posts editor actions from History", () => {
-    for (const type of ["triggerTask", "appendChatContext"]) {
+    for (const type of ["triggerTask", "appendChatContext", "newChatWithText"]) {
       const message = { type }
       const { calls, posted } = run(message, "history")
       expect(calls).toEqual(["show", "post"])
@@ -29,6 +29,7 @@ describe("routeChatInput", () => {
   it("leaves editor actions to the prompt box when the chat is showing", () => {
     expect(run({ type: "triggerTask" }, "newTask").calls).toEqual([])
     expect(run({ type: "appendChatContext" }, "newTask").calls).toEqual([])
+    expect(run({ type: "newChatWithText" }, "newTask").calls).toEqual([])
   })
 
   it("ignores other messages on History", () => {
