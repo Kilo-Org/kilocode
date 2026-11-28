@@ -84,8 +84,9 @@ export function make(input: {
   const directoryService = input.directory ?? makeDirectoryService(input.sdk)
   const registeredMcp = new Map<string, Set<string>>()
   const sessionSnapshots = new Map<string, Directory.Snapshot>()
+  const capabilities = { elicitation: false } // kilocode_change - filled in by initialize
   const events = input.connection
-    ? ACPEvent.start({ sdk: input.sdk, connection: input.connection, session })
+    ? ACPEvent.start({ sdk: input.sdk, connection: input.connection, session, capabilities }) // kilocode_change
     : undefined
   if (events) input.eventSubscription?.(events)
   const runUntilIdle = <A>(sessionId: string, fn: () => Promise<A>) =>
@@ -93,6 +94,7 @@ export function make(input: {
 
   const initialize = Effect.fn("ACP.initialize")(function* (params: InitializeRequest) {
     const started = performance.now()
+    capabilities.elicitation = params.clientCapabilities?.elicitation?.form != null // kilocode_change
     // kilocode_change start
     const authMethod: AuthMethod = {
       description: "Run `kilo auth login` in the terminal",
