@@ -40,6 +40,7 @@ import { SessionNetwork } from "./network" // kilocode_change
 import { CodexAuthExpiredError } from "@/kilocode/provider/codex-refresh" // kilocode_change
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
 import { KiloPartLifecycle } from "@/kilocode/session/part-lifecycle" // kilocode_change
+import { KiloReplay } from "@/kilocode/session/replay" // kilocode_change
 import * as TextStream from "@/kilocode/text-stream" // kilocode_change
 import { BoardNotice } from "@/kilocode/board/notice" // kilocode_change
 import { Effect, Schema } from "effect"
@@ -380,7 +381,7 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
         msg.info.error &&
         !(
           AbortedError.isInstance(msg.info.error) &&
-          msg.parts.some((part) => part.type !== "step-start" && part.type !== "reasoning")
+          msg.parts.some(KiloReplay.replayable) // kilocode_change - blank text is not content
         )
       ) {
         continue
@@ -410,6 +411,7 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
         // kilocode_change - !part.ignored keeps local UI warnings out of future prompts
         if (part.type === "text" && !part.ignored) {
           const text = part.text === "" && hasSignedReasoning ? " " : part.text
+          if (KiloReplay.omit(text, AbortedError.isInstance(msg.info.error), hasSignedReasoning)) continue // kilocode_change - aborted turns must not replay blank text blocks
           assistantMessage.parts.push({
             type: "text",
             text,
