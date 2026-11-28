@@ -25,7 +25,7 @@ This means newly added models and providers are automatically available to your 
 
 Navigate to your organization's **Providers & Models** page to configure access controls.
 
-The page has an **Auto routing** card followed by the **Models** and **Providers** tabs. Organizations with [Advanced policies](/docs/collaborate/enterprise/advanced-policies) enabled also see an **Advanced policies** tab.
+The page has an **Auto routing** card followed by the **Models** and **Providers** tabs. Enterprise organizations also see an [**Advanced policies**](/docs/collaborate/enterprise/advanced-policies) tab.
 
 ### Auto routing Card
 
