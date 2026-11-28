@@ -4,13 +4,14 @@ import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Cause, Effect, Exit, Layer } from "effect"
 import type * as Scope from "effect/Scope"
 import os from "os"
+import fs from "node:fs/promises" // kilocode_change
 import path from "path"
 import { Config } from "@/config/config"
 import { Shell } from "@opencode-ai/core/shell"
 import { ShellTool } from "../../src/tool/shell"
 import { Filesystem } from "@/util/filesystem"
 import { provideInstance, testInstanceStoreLayer, tmpdirScoped } from "../fixture/fixture"
-import type { Permission } from "../../src/permission"
+import { evaluate, fromConfig } from "../../src/permission" // kilocode_change
 import { Agent } from "../../src/agent/agent"
 import { Truncate } from "@/tool/truncate"
 import { SessionID, MessageID } from "../../src/session/schema"
@@ -169,6 +170,33 @@ const capture = (requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" |
       if (stop) throw stop
     }),
 })
+
+// kilocode_change start
+const linked = Effect.fn("ShellToolTest.linked")(function* () {
+  const root = yield* tmpdirScoped()
+  const outside = path.join(root, "outside")
+  const project = path.join(root, "project")
+  const canary = path.join(outside, "canary.txt")
+  const kind = process.platform === "win32" ? "file" : undefined
+  yield* Effect.promise(async () => {
+    await fs.mkdir(outside)
+    await fs.mkdir(project)
+    await fs.writeFile(canary, "canary-secret")
+    await fs.writeFile(path.join(project, "local.txt"), "inside-ok")
+    await fs.symlink(path.join("..", "outside", "canary.txt"), path.join(project, "link.txt"), kind)
+    await fs.symlink(
+      process.platform === "win32" ? outside : path.join("..", "outside"),
+      path.join(project, "linkdir"),
+      process.platform === "win32" ? "junction" : undefined,
+    )
+    await fs.symlink("local.txt", path.join(project, "local-link.txt"), kind)
+  })
+  const real = yield* Effect.promise(() => fs.realpath(canary))
+  return { project, want: glob(path.join(path.dirname(real), "*")) }
+})
+
+const show = (label: string, file: string) => (label === "cmd" ? `type ${file}` : `cat ${file}`)
+// kilocode_change end
 
 const mustTruncate = (result: {
   metadata: { truncated?: boolean; exit?: number | null } & Record<string, unknown>
@@ -907,6 +935,311 @@ describe("tool.shell permissions", () => {
       )
     }),
   )
+
+  // kilocode_change start
+  each("asks for external_directory when an existing symlink points outside the project", (item) =>
+    Effect.gen(function* () {
+      const dir = yield* linked()
+      const denied = new Error("stop after permission")
+      const askRules = fromConfig({ bash: "allow", external_directory: "ask" })
+      const denyRules = fromConfig({ bash: "allow", external_directory: "deny" })
+      yield* runIn(
+        dir.project,
+        Effect.gen(function* () {
+          const pull = Effect.fn("ShellToolTest.pull")(function* (command: string) {
+            const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
+            expect(yield* fail({ command }, capture(requests, denied))).toMatchObject({ message: denied.message })
+            const found = requests.find((req) => req.permission === "external_directory")
+            expect(found?.patterns).toContain(dir.want)
+            expect(found?.always).toContain(dir.want)
+            if (!command.startsWith("type ")) expect(found?.metadata?.["access"]).toBe("read")
+            expect(found?.metadata?.["directories"]).toEqual([path.dirname(dir.want)])
+            for (const pattern of found?.patterns ?? []) {
+              expect(evaluate("external_directory", pattern, askRules).action).toBe("ask")
+              expect(evaluate("external_directory", pattern, denyRules).action).toBe("deny")
+            }
+            return found
+          })
+          const direct = yield* pull(show(item.label, "../outside/canary.txt"))
+          const link = yield* pull(show(item.label, "link.txt"))
+          const nested = yield* pull(show(item.label, "linkdir/canary.txt"))
+          expect(link?.patterns).toEqual(direct?.patterns)
+          expect(link?.always).toEqual(direct?.always)
+          expect(nested?.patterns).toEqual(direct?.patterns)
+          expect(nested?.metadata?.["directories"]).toEqual(direct?.metadata?.["directories"])
+        }),
+      )
+    }),
+  )
+
+  each("returns a symlinked outside file only after external_directory is allowed", (item) =>
+    Effect.gen(function* () {
+      const dir = yield* linked()
+      yield* runIn(
+        dir.project,
+        Effect.gen(function* () {
+          const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
+          const result = yield* run({ command: show(item.label, "link.txt") }, capture(requests))
+          const found = requests.find((req) => req.permission === "external_directory")
+          expect(found?.patterns).toContain(dir.want)
+          expect(found?.always).toContain(dir.want)
+          expect(result.metadata.exit).toBe(0)
+          expect(result.output).toContain("canary-secret")
+        }),
+      )
+    }),
+  )
+
+  each("does not ask for external_directory when a symlink stays inside the project", (item) =>
+    Effect.gen(function* () {
+      const dir = yield* linked()
+      yield* runIn(
+        dir.project,
+        Effect.gen(function* () {
+          const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
+          const result = yield* run({ command: show(item.label, "local-link.txt") }, capture(requests))
+          expect(requests.find((req) => req.permission === "external_directory")).toBeUndefined()
+          expect(result.metadata.exit).toBe(0)
+          expect(result.output).toContain("inside-ok")
+        }),
+      )
+    }),
+  )
+
+  each("asks for external_directory when parent segments cross a directory symlink", (item) =>
+    Effect.gen(function* () {
+      const dir = yield* linked()
+      yield* runIn(
+        dir.project,
+        Effect.gen(function* () {
+          const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
+          const command = show(item.label, "linkdir/../outside/canary.txt")
+          const result = yield* run({ command }, capture(requests))
+          const found = requests.find((req) => req.permission === "external_directory")
+          expect(found?.patterns).toContain(dir.want)
+          expect(found?.always).toContain(dir.want)
+          expect(found?.metadata?.["directories"]).toEqual([path.dirname(dir.want)])
+          if (item.label === "cmd" || PS.has(item.label)) return
+          expect(result.metadata.exit).toBe(0)
+          expect(result.output).toContain("canary-secret")
+        }),
+      )
+    }),
+  )
+
+  each("asks for external_directory when the working directory symlink points outside", () =>
+    Effect.gen(function* () {
+      const dir = yield* linked()
+      yield* runIn(
+        dir.project,
+        Effect.gen(function* () {
+          const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
+          const result = yield* run({ command: "echo ok", workdir: "linkdir" }, capture(requests))
+          const found = requests.find((req) => req.permission === "external_directory")
+          expect(found?.patterns).toContain(dir.want)
+          expect(found?.always).toContain(dir.want)
+          expect(found?.metadata?.["directories"]).toEqual([path.dirname(dir.want)])
+          expect(result.metadata.exit).toBe(0)
+          expect(result.output).toContain("ok")
+        }),
+      )
+    }),
+  )
+
+  const nest = (parent: string, child: string) => {
+    const fold = (value: string) => {
+      const resolved = path.resolve(value)
+      if (process.platform !== "win32") return resolved
+      return resolved.toLowerCase()
+    }
+    const left = fold(parent)
+    const right = fold(child)
+    return right === left || right.startsWith(left + path.sep)
+  }
+
+  // Default Windows %TEMP% is under the profile. These stay outside that profile.
+  const hosts = (real: string) => {
+    const temp = os.tmpdir()
+    const win = process.env.SystemRoot
+    const list = [
+      nest(real, temp) ? undefined : temp,
+      process.env.PUBLIC,
+      win == null ? undefined : path.join(win, "Temp"),
+      process.env.ProgramData ?? process.env.ALLUSERSPROFILE,
+      process.platform === "win32" ? undefined : "/var/tmp",
+      process.platform === "win32" ? undefined : "/tmp",
+    ]
+    return list.flatMap((item) => (item != null && item.length > 0 && !nest(real, item) ? [item] : []))
+  }
+
+  const claim = (real: string, dirs: string[], id: string, seen: string[]): Effect.Effect<string> =>
+    Effect.gen(function* () {
+      const head = dirs.at(0)
+      if (head == null) {
+        const detail = seen.join("; ") || "none"
+        return yield* Effect.die(new Error(`no writable directory outside the real home: ${detail}`))
+      }
+      const base = path.join(head, id)
+      const err = yield* Effect.promise(() =>
+        fs.mkdir(base).then(
+          () => undefined,
+          (error: unknown) => error,
+        ),
+      )
+      if (err == null) {
+        const live = yield* Effect.promise(() => fs.realpath(base))
+        if (!nest(real, live)) return base
+        yield* Effect.promise(() => fs.rm(base, { recursive: true, force: true }))
+        return yield* claim(real, dirs.slice(1), id, [...seen, `${base}: resolves inside the real home`])
+      }
+      const message = err instanceof Error ? err.message : "mkdir failed"
+      return yield* claim(real, dirs.slice(1), id, [...seen, `${base}: ${message}`])
+    })
+
+  const park = (real: string) =>
+    Effect.gen(function* () {
+      const hint = process.env.KILO_TEST_HOME
+      if (hint != null && !nest(real, hint)) {
+        const live = yield* Effect.promise(() => fs.realpath(hint).then((value) => value, () => hint))
+        if (!nest(real, live)) return { base: hint, fresh: false }
+      }
+      const id = `oc-home-${Math.random().toString(36).slice(2)}`
+      const base = yield* claim(real, hosts(real), id, [])
+      return { base, fresh: true }
+    })
+
+  // `~/` and `$HOME` use this directory. Bun caches `os.homedir()` and ignores later `HOME` changes,
+  // so point both the function and the env at it. `~user` stays on the passwd home.
+  // The finalizer is registered before the link tree is created so an aborted setup still removes it.
+  const trap = Effect.fn("ShellToolTest.trap")(function* () {
+    const real = os.userInfo().homedir
+    const picked = yield* park(real)
+    const base = picked.base
+    const fresh = picked.fresh
+    const root = path.join(base, `.oc-link-${Math.random().toString(36).slice(2)}`)
+    const project = path.join(root, "project")
+    const outside = path.join(root, "outside")
+    const canary = path.join(outside, "canary.txt")
+    const kind = process.platform === "win32" ? "junction" : undefined
+    const slot = os as { homedir: () => string }
+    const saved = slot.homedir
+    const prev = { home: process.env.HOME, profile: process.env.USERPROFILE }
+    process.env.HOME = base
+    process.env.USERPROFILE = base
+    slot.homedir = () => base
+    const restore = () => {
+      slot.homedir = saved
+      if (prev.home === undefined) delete process.env.HOME
+      if (prev.home !== undefined) process.env.HOME = prev.home
+      if (prev.profile === undefined) delete process.env.USERPROFILE
+      if (prev.profile !== undefined) process.env.USERPROFILE = prev.profile
+    }
+    yield* Effect.addFinalizer(() =>
+      Effect.gen(function* () {
+        yield* Effect.promise(() => fs.rm(root, { recursive: true, force: true }))
+        if (!fresh) return
+        yield* Effect.promise(() => fs.rm(base, { recursive: true, force: true }))
+      }).pipe(Effect.ensuring(Effect.sync(restore))),
+    )
+    yield* Effect.promise(async () => {
+      await fs.mkdir(path.join(project, "outside"), { recursive: true })
+      await fs.mkdir(outside, { recursive: true })
+      await fs.writeFile(canary, "canary-secret")
+      await fs.writeFile(path.join(project, "outside", "canary.txt"), "decoy-secret")
+      await fs.symlink(path.join("..", "outside"), path.join(project, "linkdir"), kind)
+    })
+    const file = yield* Effect.promise(() => fs.realpath(canary))
+    const home = path.relative(base, root)
+    return { project, root, home, want: glob(path.join(path.dirname(file), "*")) }
+  })
+
+  it.live("keeps symlink fixtures out of a read-only home", () =>
+    Effect.gen(function* () {
+      const real = os.userInfo().homedir
+      const ro = yield* tmpdirScoped()
+      yield* Effect.promise(() => fs.chmod(ro, 0o555))
+      yield* Effect.addFinalizer(() => Effect.promise(() => fs.chmod(ro, 0o755)))
+      const saved = process.env.HOME
+      process.env.HOME = ro
+      yield* Effect.addFinalizer(() =>
+        Effect.sync(() => {
+          if (saved === undefined) delete process.env.HOME
+          if (saved !== undefined) process.env.HOME = saved
+        }),
+      )
+      const seen = yield* Effect.promise(() => fs.readdir(real))
+      const dir = yield* Effect.scoped(
+        Effect.gen(function* () {
+          const made = yield* trap()
+          expect(nest(real, made.root)).toBe(false)
+          expect(nest(ro, made.root)).toBe(false)
+          expect(nest(os.homedir(), made.root)).toBe(true)
+          expect(process.env.HOME).toBe(os.homedir())
+          const stat = yield* Effect.promise(() => fs.lstat(path.join(made.project, "linkdir")))
+          expect(stat.isSymbolicLink()).toBe(true)
+          return made.root
+        }),
+      )
+      const gone = yield* Effect.promise(() => fs.stat(dir).then(() => true, () => false))
+      expect(gone).toBe(false)
+      expect(yield* Effect.promise(() => fs.readdir(ro))).toEqual([])
+      const after = yield* Effect.promise(() => fs.readdir(real))
+      expect(after.filter((name) => name.startsWith(".oc-link-") && !seen.includes(name))).toEqual([])
+    }),
+  )
+
+  each("asks for external_directory when a static prefix keeps parent segments on a symlink", (item) =>
+    Effect.gen(function* () {
+      const dir = yield* trap()
+      const user = os.userInfo().username
+      const reads = item.label !== "cmd" && !PS.has(item.label)
+      yield* runIn(
+        dir.project,
+        Effect.gen(function* () {
+          const commands = [
+            "linkdir/../outside/canary.txt",
+            "./linkdir/../outside/canary.txt",
+            "linkdir/./../outside/canary.txt",
+            "linkdir//../outside/canary.txt",
+            `${dir.root}/project/linkdir/../outside/canary.txt`,
+            `~/${dir.home}/project/linkdir/../outside/canary.txt`,
+            `~/${dir.home}/project/./linkdir/../outside/canary.txt`,
+            `~/${dir.home}/project/linkdir/./../outside/canary.txt`,
+            `~${user}/${dir.home}/project/linkdir/../outside/canary.txt`,
+            "$PWD/linkdir/../outside/canary.txt",
+            '"$PWD/linkdir/../outside/canary.txt"',
+            "${PWD}/linkdir/../outside/canary.txt",
+            `$HOME/${dir.home}/project/linkdir/../outside/canary.txt`,
+            `\${HOME}/${dir.home}/project/linkdir/../outside/canary.txt`,
+          ]
+          const bad = yield* Effect.forEach(commands, (file) =>
+            Effect.gen(function* () {
+              const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
+              const command = show(item.label, file)
+              const result = yield* run({ command }, capture(requests))
+              const found = requests.find((req) => req.permission === "external_directory")
+              const asked = found?.patterns?.includes(dir.want) === true
+              const secret = result.output.includes("canary-secret")
+              const decoy = result.output.includes("decoy-secret")
+              // `~user` is the passwd home. The fixture never writes there, so only the permission check applies.
+              const named = file.startsWith(`~${user}/`) || file.startsWith(`~${user}\\`)
+              const live = reads && !named
+              if (asked && (!live || (secret && !decoy))) return
+              return `${file} asked=${asked} secret=${secret} decoy=${decoy} exit=${String(result.metadata.exit)} patterns=${JSON.stringify(found?.patterns)}`
+            }),
+          )
+          expect(bad.filter((row): row is string => row != null)).toEqual([])
+          if (!reads) return
+          const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
+          const command = show(item.label, "'$PWD/linkdir/../outside/canary.txt'")
+          const result = yield* run({ command }, capture(requests))
+          expect(requests.find((req) => req.permission === "external_directory")).toBeUndefined()
+          expect(result.output.includes("canary-secret")).toBe(false)
+        }),
+      )
+    }),
+  )
+  // kilocode_change end
 
   each("does not ask for external_directory permission when rm inside project", () =>
     Effect.gen(function* () {
