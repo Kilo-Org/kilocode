@@ -2,9 +2,9 @@
 
 Reads the job's secret bundle from Kilo STS and sets each requested secret as a step output.
 
-**Callers.** Nine jobs read an STS bundle. Each action call requests only the keys in its `secrets:`
-input. That input limits what the action requests, not what STS serves: STS returns the whole
-bundle of the policy that matches the job. `publish-jetbrains.yml` and
+**Callers.** Seventeen jobs read an STS bundle. Each action call requests only the keys in its
+`secrets:` input. That input limits what the action requests, not what STS serves: STS returns the
+whole bundle of the policy that matches the job. `publish-jetbrains.yml` and
 `publish-jetbrains-bundled.yml` share the policy `ci-kilocode-release-jetbrains`, so the `bundle`
 job, which requests only the signing key, chain and password, can also obtain the Marketplace
 token until that policy is split per workflow.
@@ -20,6 +20,14 @@ token until that policy is split per workflow.
 | `.github/workflows/publish.yml` | `jetbrains-pin` | `ci-kilocode-release`, `release-keys` | Opens or updates the JetBrains CLI pin bump pull request after a release (app key); installs no packages, runs only `.kilo/skills/release-jetbrains/script/set-pin.ts` on Bun |
 | `.github/workflows/publish-jetbrains.yml` | `publish` | `ci-kilocode-release-jetbrains`, `release-jetbrains` | Builds, signs and publishes the JetBrains plugin to the Marketplace (Marketplace token, signing key, chain and password); runs only on `workflow_dispatch` from `main` |
 | `.github/workflows/publish-jetbrains-bundled.yml` | `bundle` | `ci-kilocode-release-jetbrains`, `release-jetbrains` | Builds and signs the bundled JetBrains plugin for the GitHub Release (signing key, chain and password); runs only on `workflow_dispatch` from `main` |
+| `.github/workflows/security-findings-notify.yml` | `list-findings` | `ci-kilocode-scan-notify`, `automation` | Mints an app token with `secret_scanning_alerts: read` on `kilocode` for the secret scanning alerts call (app key); runs only `gh` and `jq` |
+| `.github/workflows/security-findings-notify.yml` | `notify` (one leg per finding) | `ci-kilocode-scan-notify`, `automation` | Posts the finding to Slack (security alerts webhook); a leg reads the bundle only when it posts |
+| `.github/workflows/outdated-kilo-deps.yml` | `report` | `ci-kilocode-notify`, `automation` | Posts the outdated Kilo dependencies to Slack (security alerts webhook); reads the bundle only when there is something to post |
+| `.github/workflows/stale-alerts-report.yml` | `report` | `ci-kilocode-notify`, `automation` | Posts the Dependabot alerts that look stale to Slack (security alerts webhook); reads the bundle only when there is something to post |
+| `.github/workflows/stale-bot-pr-notify.yml` | `notify` | `ci-kilocode-notify`, `automation` | Posts the bot pull requests that need attention to Slack (security alerts webhook); reads the bundle only when there is something to post |
+| `.github/workflows/v2-upstream-release-notify.yml` | `notify` | `ci-kilocode-notify`, `automation` | Posts an upstream v2 release that `v2` lacks to Slack (v2 sync webhook); runs only when the post was not made yet. The `check` job runs the tooling of `v2`, looks up the cache marker and holds no credential |
+| `.github/workflows/community-sweep.yml` | `sweep` | `ci-kilocode-community`, `automation` | Mints an app token with `members: read` for the private member check (app key) and posts the queue to Slack (community triage bot token and webhook) |
+| `.github/workflows/watch-opencode-releases.yml` | `check-release` | `ci-kilocode-opencode-watch`, `automation` | Announces a new upstream release in Slack (opencode watch webhook). The sync request still reads the GitHub secrets `OPENCODE_WATCH_SYNC_URL`, `OPENCODE_WATCH_SYNC_SECRET` and `OPENCODE_WATCH_VERCEL_SECRET`, which no STS bundle holds |
 
 The Kilo Maintainer app id comes from the repository variable `KILO_MAINTAINER_APP_ID` (the app id
 is public). No workflow reads the app key from the GitHub secret `KILO_MAINTAINER_APP_SECRET` any

@@ -492,8 +492,8 @@ describe("community-maintainers.json", () => {
 
 describe("needMember", () => {
   test("fails when the token is missing or empty", () => {
-    expect(() => needMember(undefined)).toThrow("COMMUNITY_TRIAGE_MEMBER_TOKEN is not set")
-    expect(() => needMember("")).toThrow("COMMUNITY_TRIAGE_MEMBER_TOKEN is not set")
+    expect(() => needMember(undefined)).toThrow("MEMBER_TOKEN is not set")
+    expect(() => needMember("")).toThrow("MEMBER_TOKEN is not set")
   })
 
   test("accepts a token", () => {
@@ -627,7 +627,7 @@ describe("sweepIssues", () => {
   test("fails without the member token", async () => {
     delete process.env.MEMBER_TOKEN
     const calls = github()
-    await expect(sweepIssues()).rejects.toThrow("COMMUNITY_TRIAGE_MEMBER_TOKEN is not set")
+    await expect(sweepIssues()).rejects.toThrow("MEMBER_TOKEN is not set")
     expect(calls).toEqual([])
   })
 

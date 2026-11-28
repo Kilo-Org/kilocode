@@ -14,8 +14,8 @@ Workflows that automate dependency remediation and give the team Slack visibilit
 
 ## Setup
 
-- Add repo secret `SECURITY_ALERTS_SLACK_WEBHOOK` (a Slack incoming webhook URL) — required by `security-findings-notify.yml`, `stale-bot-pr-notify.yml`, `outdated-kilo-deps.yml` and `stale-alerts-report.yml`.
-- Optional repo secret `SECURITY_SCAN_TOKEN`: a token with the `secret_scanning_alerts` scope. Without it, `security-findings-notify.yml` tries the default token and skips secret scanning with a warning if that fails.
+- The Slack webhook `KILOCODE_SECURITY_ALERTS_SLACK_WEBHOOK` comes from Kilo STS, not from a repository secret: `security-findings-notify.yml` reads it from the bundle of `ci-kilocode-scan-notify`, and `stale-bot-pr-notify.yml`, `outdated-kilo-deps.yml` and `stale-alerts-report.yml` from the bundle of `ci-kilocode-notify`. Each posting job runs in the `automation` environment with `id-token: write`; see `.github/actions/kilo-credentials/README.md`.
+- `security-findings-notify.yml` reads secret scanning alerts with a Kilo Maintainer app token that has only `secret_scanning_alerts: read` on this repository, minted from the app key in the same bundle.
 - Optional repo variables to override defaults: `SECURITY_SLA_CRITICAL_DAYS` (15), `SECURITY_SLA_HIGH_DAYS` (30), `SECURITY_SLA_MEDIUM_DAYS` (90), `SECURITY_SLA_LOW_DAYS` (180), `SECURITY_MIN_SEVERITY` (`high`; set to `medium` or `low` to report more), `STALE_BOT_PR_DAYS` (3).
 
 ## How it works
@@ -48,7 +48,7 @@ They don't call each other or trigger off PR creation. Each one wakes up on its 
 |---|---|---|
 | Dependabot alerts | `security-findings-notify.yml`, `stale-alerts-report.yml` | Needs the `vulnerability-alerts: read` permission. |
 | Code scanning alerts | `security-findings-notify.yml` | Needs `security-events: read`. Alerts without a security severity are quality findings and are skipped. If the API returns an error, the run logs a warning and continues. |
-| Secret scanning alerts | `security-findings-notify.yml` | The default `GITHUB_TOKEN` cannot read these on every plan. If the API returns an error, the run logs a warning and continues. To enable this source, add the repo secret `SECURITY_SCAN_TOKEN` (a token with the `secret_scanning_alerts` scope). The workflow uses it for this one call only. |
+| Secret scanning alerts | `security-findings-notify.yml` | `GITHUB_TOKEN` cannot read these, so the workflow uses a Kilo Maintainer app token with `secret_scanning_alerts: read` for this one call. The API answers 404 while secret scanning is turned off for the repository. On any error the run logs a warning and continues. |
 | Findings of the Kilo Security Agent (the "Unreachable" and "Exploitable" labels) | None | They live in the private `Kilo-Org/cloud` stack. A repo workflow cannot read them. |
 
 The helper scripts are `script/kilocode/bot-prs.ts` (duplicate grouping), `script/kilocode/stale-alerts.ts` (stale alert check) and `script/kilocode/dependency-snapshot.ts` (`bun.lock` dependency submission). All have tests next to them. Run `bun test bot-prs.test.ts stale-alerts.test.ts dependency-snapshot.test.ts` from `script/kilocode/`.
@@ -59,7 +59,7 @@ The helper scripts are `script/kilocode/bot-prs.ts` (duplicate grouping), `scrip
 
 ## Slack posts
 
-Four of the six workflows post to Slack. All of them use the `SECURITY_ALERTS_SLACK_WEBHOOK` secret, so every post lands in the one channel that webhook was created for. A run that has nothing to report posts nothing.
+Four of the six workflows post to Slack. All of them use the security alerts webhook from Kilo STS, so every post lands in the one channel that webhook was created for. A run that has nothing to report posts nothing.
 
 | Workflow | Posts? | What a post contains | When it posts |
 |---|---|---|---|
@@ -89,4 +89,4 @@ kilocode is a fork of opencode sharing one `bun.lock` with upstream-owned `@open
 - **What it does:** asks the sync tooling on the `v2` branch (`bun script/upstream/list-versions.ts --json`) which upstream OpenCode v2 releases `v2` does not have. It lives on `main` because GitHub runs scheduled workflows only from the default branch. `watch-opencode-releases.yml` does not cover this: it follows upstream's "latest" release, which is the v1 line.
 - **When it posts:** once when a release appears that `v2` lacks, then once every 7 days (counted from the release date) while `v2` is still behind. A new release posts at once. Nothing is posted while `v2` has the newest release.
 - **What a post contains:** the newest release with a link to its notes, the newest release `v2` has, how many releases `v2` is behind, and the command for the next sync.
-- **Setup:** repo secret `V2_SYNC_SLACK_WEBHOOK` (a Slack incoming webhook URL), separate from `SECURITY_ALERTS_SLACK_WEBHOOK` so the posts can go to their own channel. Without it a run prints its finding in the job summary and posts nothing, and it posts on the first run after the secret is added.
+- **Setup:** none in the repository. The `notify` job reads the Slack webhook `KILOCODE_V2_SYNC_SLACK_WEBHOOK` from the Kilo STS bundle of `ci-kilocode-notify`, separate from the security alerts webhook so the posts can go to their own channel. The `check` job, which runs the tooling of `v2`, holds no credential.
