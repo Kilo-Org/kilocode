@@ -20,9 +20,6 @@ inputs:
 # RUNNER_TEMP and sets the path. The Kilo Maintainer app key stays a value, because
 # actions/create-github-app-token takes the PEM contents.
 outputs:
-  KILOCODE_ANACONDA_API_KEY:
-    description: "Anaconda.org API token (ci-kilocode-release)"
-    value: ${{ steps.bundle.outputs.KILOCODE_ANACONDA_API_KEY }}
   KILOCODE_AUR_KEY_FILE:
     description: "Path of the AUR SSH private key file (ci-kilocode-release)"
     value: ${{ steps.bundle.outputs.KILOCODE_AUR_KEY_FILE }}
