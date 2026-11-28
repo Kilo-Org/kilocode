@@ -2437,6 +2437,7 @@ export const layer = Layer.effect(
         model: taskModel,
         selected: task,
         input: input.variant,
+        chat: input.model ? Provider.parseModel(input.model) : yield* currentModel(input.sessionID),
       })
       // kilocode_change end
 
