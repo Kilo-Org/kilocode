@@ -87,6 +87,8 @@ export const dict = {
   "revert.banner.redo": "بازانجام",
   "revert.banner.redo.all": "بازانجام همه",
   "revert.banner.hint": "می‌توانید این تغییرات را تا زمانی که پیام جدیدی ارسال نکرده‌اید بازانجام دهید",
+  "session.compaction.queued": "فشرده‌سازی در صف است",
+  "session.compaction.queued.busy": "فشرده‌سازی در صف است. پس از پایان مرحله فعلی شروع می‌شود.",
   "revert.banner.workspace.snapshotsDisabled":
     "مکالمه بازگردانده شد. تغییرات فایل بازیابی نشدند زیرا عکس‌برداری غیرفعال است.",
   "revert.banner.workspace.unavailable":

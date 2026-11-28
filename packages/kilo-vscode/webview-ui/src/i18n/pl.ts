@@ -87,6 +87,8 @@ export const dict = {
   "revert.banner.redo": "Ponów",
   "revert.banner.redo.all": "Ponów wszystko",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "session.compaction.queued": "Kompaktowanie w kolejce",
+  "session.compaction.queued.busy": "Kompaktowanie w kolejce. Rozpocznie się po zakończeniu bieżącego kroku.",
   "revert.banner.workspace.snapshotsDisabled":
     "Rozmowa została cofnięta. Zmiany w plikach nie zostały przywrócone, ponieważ migawki są wyłączone.",
   "revert.banner.workspace.unavailable":

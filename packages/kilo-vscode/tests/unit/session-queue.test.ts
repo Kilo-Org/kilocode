@@ -3,6 +3,7 @@ import {
   activeUserMessageID,
   messageTurns,
   partitionTurns,
+  queuedCompaction,
   queuedUserMessageIDs,
   removeQueuedMessage,
   stableMessageTurns,
@@ -693,5 +694,62 @@ describe("queued deletion cleanup", () => {
     if (message) state.emit(message)
     expect(await state.promise).toBe(false)
     expect(state.listeners.size).toBe(0)
+  })
+})
+
+describe("queuedCompaction", () => {
+  it("returns the marker until a summary assistant answers it", () => {
+    const messages = [user("u1"), assistant("a1", "u1", { finish: "stop" }), compact("c1")]
+    expect(queuedCompaction(messages)?.id).toBe("c1")
+    expect(queuedCompaction([...messages, assistant("s1", "c1")])).toBeUndefined()
+  })
+
+  it("does not report markers behind a finished assistant that already answered them", () => {
+    expect(queuedCompaction([user("u1"), compact("c1"), assistant("s1", "c1", { finish: "stop" })])).toBeUndefined()
+    expect(queuedCompaction([user("u1"), assistant("a1", "u1", { finish: "stop" })])).toBeUndefined()
+  })
+
+  it("reads parts through the injected accessor", () => {
+    const messages = [user("c1")]
+    expect(queuedCompaction(messages)).toBeUndefined()
+    expect(queuedCompaction(messages, (msg) => compact(msg.id).parts)?.id).toBe("c1")
+  })
+
+  it("ignores markers beyond the revert boundary", () => {
+    const messages = [user("u1"), assistant("a1", "u1", { finish: "stop" }), compact("c1")]
+    expect(queuedCompaction(messages, undefined, { messageID: "c1" })).toBeUndefined()
+    expect(queuedCompaction(messages, undefined, { messageID: "c2" })?.id).toBe("c1")
+  })
+
+  it("does not move the pivot or answer the marker for a synthetic session error", () => {
+    const messages = [
+      user("u1"),
+      assistant("a1", "u1", { finish: "stop" }),
+      compact("c1"),
+      assistant("e1", "c1", { sessionErrorID: "evt", error: { name: "UnknownError", data: { message: "x" } } }),
+    ]
+    expect(queuedCompaction(messages)?.id).toBe("c1")
+  })
+
+  it("does not report a marker stranded before an assistant that is not its summary", () => {
+    const stranded = [user("u1"), compact("c1"), assistant("a1", "u1")]
+    expect(queuedCompaction(stranded)).toBeUndefined()
+    expect(queuedCompaction([...stranded, compact("c2")])?.id).toBe("c2")
+  })
+
+  it.each([
+    ["unfinished", {}],
+    ["finished", { finish: "stop" }],
+  ])("reports a marker written after a %s assistant", (_name, opts) => {
+    expect(queuedCompaction([user("u1"), assistant("a1", "u1", opts), compact("c1")])?.id).toBe("c1")
+  })
+
+  it("treats a failed assistant after the marker as stranding it", () => {
+    const failed = assistant("a1", "u1", {
+      error: { name: "UnknownError", data: { message: "x" } },
+      time: { created: 1, completed: 2 },
+    })
+    expect(queuedCompaction([user("u1"), compact("c0"), failed, compact("c1")])?.id).toBe("c1")
+    expect(queuedCompaction([user("u1"), compact("c0"), failed])).toBeUndefined()
   })
 })

@@ -29,6 +29,7 @@ import { WelcomeEmptyState } from "./WelcomeEmptyState"
 import { TranscriptRowView } from "./TranscriptRow"
 import { createRowHandoff } from "./transcript-row-handoff"
 import { RevertBanner } from "./RevertBanner"
+import { CompactionQueuedBanner } from "./CompactionQueuedBanner"
 import { AccountSwitcher } from "../shared/AccountSwitcher"
 import { KiloNotifications } from "./KiloNotifications"
 import { TurnOutcome } from "../shared/TurnOutcome"
@@ -972,6 +973,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
             <Show when={revert()}>
               <RevertBanner />
             </Show>
+            <CompactionQueuedBanner />
             <For each={partition().queued}>
               {(row) => (
                 <TranscriptRowView

@@ -86,6 +86,8 @@ export const dict = {
   "revert.banner.redo": "ทำซ้ำ",
   "revert.banner.redo.all": "ทำซ้ำทั้งหมด",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "session.compaction.queued": "การบีบอัดอยู่ในคิว",
+  "session.compaction.queued.busy": "การบีบอัดอยู่ในคิว จะเริ่มเมื่อขั้นตอนปัจจุบันเสร็จสิ้น",
   "revert.banner.workspace.snapshotsDisabled":
     "ย้อนกลับการสนทนาแล้ว ไม่ได้กู้คืนการเปลี่ยนแปลงไฟล์เนื่องจากปิดใช้งานสแนปชอตอยู่",
   "revert.banner.workspace.unavailable":

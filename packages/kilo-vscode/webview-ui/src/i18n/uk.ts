@@ -87,6 +87,8 @@ export const dict = {
   "revert.banner.redo": "Повторити",
   "revert.banner.redo.all": "Повторити все",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "session.compaction.queued": "Стиснення в черзі",
+  "session.compaction.queued.busy": "Стиснення в черзі. Воно почнеться після завершення поточного кроку.",
   "revert.banner.workspace.snapshotsDisabled":
     "Розмову скасовано. Зміни файлів не відновлено, оскільки знімки вимкнено.",
   "revert.banner.workspace.unavailable":

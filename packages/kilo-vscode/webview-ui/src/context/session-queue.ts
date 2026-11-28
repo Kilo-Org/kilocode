@@ -263,3 +263,22 @@ export function removeQueuedMessage(
     vscode.postMessage({ type: "deleteMessage", sessionID, messageID, requestID })
   })
 }
+
+/**
+ * The compaction marker that was written but has not started yet. Mirrors KiloSessionCompaction.pending
+ * on the server (src/kilocode/session/compaction.ts): the marker must come after every assistant, finished
+ * or not. An assistant after it is the marker's summary (started) or a reply created after the marker, which
+ * strands the marker once it finishes. Keep both definitions in lockstep. Messages past the revert
+ * boundary are ignored, and synthetic session-error assistants are not persisted server messages, so they
+ * neither strand nor answer a marker.
+ */
+export function queuedCompaction(
+  messages: Message[],
+  parts?: (msg: Message) => Message["parts"],
+  revert?: RevertBoundary,
+) {
+  const shown = messages.filter((msg) => !msg.sessionErrorID && visibleMessage(msg.id, revert))
+  const projected = (msg: Message) => visibleParts(msg.id, parts?.(msg) ?? msg.parts ?? [], revert)
+  const last = shown.findLastIndex((msg) => msg.role === "assistant")
+  return shown.slice(last + 1).findLast((msg) => isCompact(msg, projected))
+}
