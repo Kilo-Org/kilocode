@@ -36,6 +36,7 @@ jobs:
       newest: ${{ steps.status.outputs.newest }}
       key: ${{ steps.status.outputs.key }}
       payload: ${{ steps.status.outputs.payload }}
+      hit: ${{ steps.notified.outputs.cache-hit }}
     env:
       # The upstream repository, as owner/name.
       UPSTREAM: anomalyco/opencode
@@ -102,16 +103,27 @@ jobs:
           # One line of compact JSON, so the output needs no delimiter.
           echo "payload=$(jq -c . slack-payload.json)" >> "$GITHUB_OUTPUT"
 
+      # Only checks whether this post was already made; downloads nothing.
+      - if: steps.status.outputs.newest != ''
+        id: notified
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: .cache/v2-sync-notified
+          key: ${{ steps.status.outputs.key }}
+          lookup-only: true
+
   # The webhook comes from the STS bundle of ci-kilocode-notify, which needs environment automation
-  # (main only) and id-token: write. This job therefore runs only pinned actions and this
-  # repository's kilo-credentials action, never the tooling of `v2`: read
-  # .github/actions/kilo-credentials/README.md before adding a step.
+  # (the STS policy accepts only this file at refs/heads/main) and id-token: write. This job
+  # therefore runs only pinned actions and this repository's kilo-credentials action, never the
+  # tooling of `v2`: read .github/actions/kilo-credentials/README.md before adding a step.
   notify:
     needs: check
-    if: needs.check.outputs.newest != ''
+    if: needs.check.outputs.newest != '' && needs.check.outputs.hit != 'true'
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 10
-    environment: automation
+    environment:
+      name: automation
+      deployment: false
     permissions:
       contents: read
       id-token: write
@@ -122,40 +134,29 @@ jobs:
           persist-credentials: false
           sparse-checkout: .github/actions/kilo-credentials
 
-      - id: cache
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: .cache/v2-sync-notified
-          key: ${{ needs.check.outputs.key }}
-
-      - if: steps.cache.outputs.cache-hit != 'true'
-        name: Read the STS bundle
+      - name: Read the STS bundle
         id: creds
         uses: ./.github/actions/kilo-credentials
         with:
           workload: ci-kilocode-notify
           secrets: KILOCODE_V2_SYNC_SLACK_WEBHOOK
 
-      - if: steps.cache.outputs.cache-hit != 'true'
-        name: Write the Slack payload
+      - name: Write the Slack payload
         env:
           PAYLOAD: ${{ needs.check.outputs.payload }}
         run: mkdir -p .cache && printf '%s\n' "$PAYLOAD" > .cache/slack-payload.json
 
-      - if: steps.cache.outputs.cache-hit != 'true'
-        name: Notify Slack
+      - name: Notify Slack
         uses: slackapi/slack-github-action@485a9d42d3a73031f12ec201c457e2162c45d02d # v2.0.0
         with:
           webhook: ${{ steps.creds.outputs.KILOCODE_V2_SYNC_SLACK_WEBHOOK }}
           webhook-type: incoming-webhook
           payload-file-path: .cache/slack-payload.json
 
-      - if: steps.cache.outputs.cache-hit != 'true'
-        name: Mark as notified
+      - name: Mark as notified
         run: mkdir -p .cache/v2-sync-notified && date -u > .cache/v2-sync-notified/marker
 
-      - if: success() && steps.cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: .cache/v2-sync-notified
           key: ${{ needs.check.outputs.key }}

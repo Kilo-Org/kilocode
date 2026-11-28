@@ -13,9 +13,11 @@
 # `OPENCODE_WATCH_VERCEL_SECRET` (optional Vercel protection bypass for the sync URL).
 # kilocode_change start
 # The Slack webhook (`KILOCODE_OPENCODE_WATCH_SLACK_WEBHOOK`) comes from the STS bundle of
-# ci-kilocode-opencode-watch, which needs environment automation (main only) and id-token: write,
-# so the job runs only pinned actions, this repository's kilo-credentials action, gh, jq and curl:
-# read .github/actions/kilo-credentials/README.md before adding a step.
+# ci-kilocode-opencode-watch, which needs environment automation (the STS policy accepts only this
+# file at refs/heads/main) and id-token: write, so the job runs only pinned actions, this
+# repository's kilo-credentials action, gh, jq and curl: read
+# .github/actions/kilo-credentials/README.md before adding a step. It runs every 30 minutes and
+# mostly finds nothing new, so it records no deployment (deployment: false).
 # kilocode_change end
 
 on:
@@ -35,8 +37,10 @@ jobs:
     if: vars.OPENCODE_WATCH_ENABLED != 'false' && (github.event_name == 'workflow_dispatch' || github.repository == 'Kilo-Org/kilocode') # kilocode_change
     runs-on: ${{ github.repository == 'Kilo-Org/kilocode' && 'blacksmith-2vcpu-ubuntu-2404' || 'ubuntu-latest' }} # kilocode_change
     timeout-minutes: 5
-    environment: automation # kilocode_change
     # kilocode_change start
+    environment:
+      name: automation
+      deployment: false
     permissions:
       contents: read
       id-token: write
@@ -109,6 +113,16 @@ jobs:
           key: last-seen-${{ steps.fetch.outputs.tag }}
 
       # kilocode_change start
+      # The release fields go through jq into a file, never into YAML or a script.
+      - if: ${{ !cancelled() && steps.fetch.outputs.tag != '' && steps.notify-cache.outputs.cache-hit != 'true' }}
+        name: Write the Slack payload
+        env:
+          NAME: ${{ steps.fetch.outputs.name }}
+          TAG: ${{ steps.fetch.outputs.tag }}
+          URL: ${{ steps.fetch.outputs.url }}
+        run: |
+          jq -n --arg name "$NAME" --arg tag "$TAG" --arg url "$URL" '{name: $name, tag: $tag, url: $url}' > "$RUNNER_TEMP/opencode-release.json"
+
       - if: ${{ !cancelled() && steps.fetch.outputs.tag != '' && steps.notify-cache.outputs.cache-hit != 'true' }}
         name: Read the STS bundle
         id: creds
@@ -118,17 +132,14 @@ jobs:
           secrets: KILOCODE_OPENCODE_WATCH_SLACK_WEBHOOK
       # kilocode_change end
 
-      - if: ${{ !cancelled() && steps.fetch.outputs.tag != '' && steps.notify-cache.outputs.cache-hit != 'true' && steps.creds.outcome == 'success' }} # kilocode_change
+      - if: ${{ !cancelled() && steps.fetch.outputs.tag != '' && steps.notify-cache.outputs.cache-hit != 'true' }}
         id: notify
         name: Notify Slack
         uses: slackapi/slack-github-action@485a9d42d3a73031f12ec201c457e2162c45d02d # v2.0.0 # kilocode_change
         with:
           webhook: ${{ steps.creds.outputs.KILOCODE_OPENCODE_WATCH_SLACK_WEBHOOK }} # kilocode_change
           webhook-type: incoming-webhook
-          payload: |
-            name: "${{ steps.fetch.outputs.name }}"
-            tag: "${{ steps.fetch.outputs.tag }}"
-            url: "${{ steps.fetch.outputs.url }}"
+          payload-file-path: ${{ runner.temp }}/opencode-release.json # kilocode_change
 
       - if: ${{ !cancelled() && steps.notify.outcome == 'success' }}
         name: Mark release as notified

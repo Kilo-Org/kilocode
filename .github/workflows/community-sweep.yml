@@ -31,9 +31,10 @@ jobs:
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 30
     # The Kilo Maintainer app key and the Slack credentials come from the STS bundle of
-    # ci-kilocode-community, which needs environment automation (main only) and id-token: write.
-    # The job therefore installs no packages and runs only this repository's code: read
-    # .github/actions/kilo-credentials/README.md before adding a step.
+    # ci-kilocode-community, which needs environment automation (the STS policy accepts only this
+    # file at refs/heads/main) and id-token: write. The job therefore installs no packages and runs
+    # only this repository's code: read .github/actions/kilo-credentials/README.md before adding a
+    # step.
     environment: automation
     permissions:
       contents: read

@@ -24,9 +24,10 @@ permissions:
 
 jobs:
   # The Kilo Maintainer app key comes from the STS bundle of ci-kilocode-scan-notify, which needs
-  # environment automation (main only) and id-token: write. The job therefore runs only pinned
-  # actions, this repository's kilo-credentials action, gh and jq: read
-  # .github/actions/kilo-credentials/README.md before adding a step.
+  # environment automation (the STS policy accepts only this file at refs/heads/main) and
+  # id-token: write. The job therefore runs only pinned actions, this repository's
+  # kilo-credentials action, gh and jq: read .github/actions/kilo-credentials/README.md before
+  # adding a step.
   list-findings:
     if: github.repository == 'Kilo-Org/kilocode'
     runs-on: blacksmith-2vcpu-ubuntu-2404
@@ -142,15 +143,18 @@ jobs:
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
 
   # The Slack webhook comes from the STS bundle of ci-kilocode-scan-notify, which needs environment
-  # automation (main only) and id-token: write. Each leg therefore runs only pinned actions, this
-  # repository's kilo-credentials action and jq, and reads the bundle only when it posts: read
-  # .github/actions/kilo-credentials/README.md before adding a step.
+  # automation (the STS policy accepts only this file at refs/heads/main) and id-token: write. Each
+  # leg therefore runs only pinned actions, this repository's kilo-credentials action and jq, and
+  # reads the bundle only when it posts: read .github/actions/kilo-credentials/README.md before
+  # adding a step. Most legs post nothing, so no leg records a deployment (deployment: false).
   notify:
     needs: list-findings
     if: needs.list-findings.outputs.matrix != '[]'
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 5
-    environment: automation
+    environment:
+      name: automation
+      deployment: false
     permissions:
       contents: read
       id-token: write
