@@ -246,7 +246,9 @@ export const dict = {
   "agentManager.apply.error": "적용 실패",
   "agentManager.apply.conflictsTitle": "충돌",
   "agentManager.apply.unknownFile": "미해결 파일",
-  "agentManager.apply.reason.index": "로컬 파일이 예상 버전과 다릅니다",
+  "agentManager.apply.reason.index": "로컬 체크아웃에 커밋되지 않은 변경 사항이 있습니다",
+  "agentManager.apply.dirtyBaseHint":
+    "로컬 체크아웃의 아래 파일에 이 워크트리와 겹치는 커밋되지 않은 변경 사항이 있습니다. 로컬 체크아웃에서 커밋하거나 스태시한 다음 다시 적용하세요.",
   "agentManager.apply.reason.patch": "패치를 깨끗하게 적용할 수 없습니다",
   "agentManager.apply.reason.contents": "현재 로컬 파일 내용을 읽을 수 없습니다",
   "agentManager.apply.reason.unknown": "충돌이 감지되었습니다",

@@ -245,7 +245,9 @@ export const dict = {
   "agentManager.apply.error": "Bruk mislyktes",
   "agentManager.apply.conflictsTitle": "Konflikter",
   "agentManager.apply.unknownFile": "Uløst fil",
-  "agentManager.apply.reason.index": "Lokal fil skiller seg fra forventet versjon",
+  "agentManager.apply.reason.index": "Har ikke-committede endringer i den lokale utsjekkingen",
+  "agentManager.apply.dirtyBaseHint":
+    "Den lokale utsjekkingen har ikke-committede endringer i filene nedenfor som overlapper med dette worktreet. Commit eller stash dem i den lokale utsjekkingen, og bruk på nytt.",
   "agentManager.apply.reason.patch": "Patch kan ikke brukes rent",
   "agentManager.apply.reason.contents": "Kan ikke lese innholdet i gjeldende lokal fil",
   "agentManager.apply.reason.unknown": "Konflikt oppdaget",

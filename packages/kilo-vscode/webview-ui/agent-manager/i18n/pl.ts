@@ -248,7 +248,9 @@ export const dict = {
   "agentManager.apply.error": "Zastosowanie nie powiodło się",
   "agentManager.apply.conflictsTitle": "Konflikty",
   "agentManager.apply.unknownFile": "Nierozwiązany plik",
-  "agentManager.apply.reason.index": "Plik lokalny różni się od oczekiwanej wersji",
+  "agentManager.apply.reason.index": "Ma niezatwierdzone zmiany w lokalnym checkoucie",
+  "agentManager.apply.dirtyBaseHint":
+    "Lokalny checkout ma niezatwierdzone zmiany w plikach wymienionych poniżej, które nakładają się na ten worktree. Zatwierdź je lub schowaj (stash) w lokalnym checkoucie, a następnie zastosuj ponownie.",
   "agentManager.apply.reason.patch": "Łatka nie może być zastosowana czysto",
   "agentManager.apply.reason.contents": "Nie można odczytać zawartości bieżącego pliku lokalnego",
   "agentManager.apply.reason.unknown": "Wykryto konflikt",

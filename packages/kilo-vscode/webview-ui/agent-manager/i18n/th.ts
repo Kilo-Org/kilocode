@@ -241,7 +241,9 @@ export const dict = {
   "agentManager.apply.error": "การนำไปใช้ล้มเหลว",
   "agentManager.apply.conflictsTitle": "ข้อขัดแย้ง",
   "agentManager.apply.unknownFile": "ไฟล์ที่ยังไม่ได้แก้ไข",
-  "agentManager.apply.reason.index": "ไฟล์ในเครื่องแตกต่างจากเวอร์ชันที่คาดไว้",
+  "agentManager.apply.reason.index": "มีการเปลี่ยนแปลงที่ยังไม่ได้คอมมิตใน checkout ในเครื่อง",
+  "agentManager.apply.dirtyBaseHint":
+    "checkout ในเครื่องมีการเปลี่ยนแปลงที่ยังไม่ได้คอมมิตในไฟล์ด้านล่างซึ่งทับซ้อนกับ worktree นี้ ให้คอมมิตหรือ stash ใน checkout ในเครื่อง แล้วนำไปใช้อีกครั้ง",
   "agentManager.apply.reason.patch": "ไม่สามารถนำ patch ไปใช้ได้อย่างสะอาด",
   "agentManager.apply.reason.contents": "ไม่สามารถอ่านเนื้อหาของไฟล์ในเครื่องปัจจุบัน",
   "agentManager.apply.reason.unknown": "ตรวจพบข้อขัดแย้ง",

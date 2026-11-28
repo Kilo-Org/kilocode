@@ -256,7 +256,9 @@ export const dict = {
   "agentManager.apply.error": "Anwenden fehlgeschlagen",
   "agentManager.apply.conflictsTitle": "Konflikte",
   "agentManager.apply.unknownFile": "Ungelöste Datei",
-  "agentManager.apply.reason.index": "Lokale Datei weicht von der erwarteten Version ab",
+  "agentManager.apply.reason.index": "Hat nicht committete Änderungen im lokalen Checkout",
+  "agentManager.apply.dirtyBaseHint":
+    "Der lokale Checkout hat nicht committete Änderungen in den unten aufgeführten Dateien, die sich mit diesem Worktree überschneiden. Committe oder stashe sie im lokalen Checkout und wende dann erneut an.",
   "agentManager.apply.reason.patch": "Patch kann nicht sauber angewendet werden",
   "agentManager.apply.reason.contents": "Inhalt der aktuellen lokalen Datei kann nicht gelesen werden",
   "agentManager.apply.reason.unknown": "Konflikt erkannt",

@@ -255,7 +255,9 @@ export const dict = {
   "agentManager.apply.error": "Échec de l'application",
   "agentManager.apply.conflictsTitle": "Conflits",
   "agentManager.apply.unknownFile": "Fichier non résolu",
-  "agentManager.apply.reason.index": "Le fichier local diffère de la version attendue",
+  "agentManager.apply.reason.index": "A des modifications non commitées dans le checkout local",
+  "agentManager.apply.dirtyBaseHint":
+    "Le checkout local contient des modifications non commitées dans les fichiers listés ci-dessous qui chevauchent ce worktree. Commitez-les ou mettez-les de côté (stash) dans le checkout local, puis appliquez à nouveau.",
   "agentManager.apply.reason.patch": "Le patch ne peut pas être appliqué proprement",
   "agentManager.apply.reason.contents": "Impossible de lire le contenu du fichier local actuel",
   "agentManager.apply.reason.unknown": "Conflit détecté",

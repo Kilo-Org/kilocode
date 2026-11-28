@@ -243,7 +243,9 @@ export const dict = {
   "agentManager.apply.error": "فشل التطبيق",
   "agentManager.apply.conflictsTitle": "التعارضات",
   "agentManager.apply.unknownFile": "ملف غير محلول",
-  "agentManager.apply.reason.index": "الملف المحلي يختلف عن النسخة المتوقعة",
+  "agentManager.apply.reason.index": "يحتوي على تغييرات غير مودعة في النسخة المحلية",
+  "agentManager.apply.dirtyBaseHint":
+    "تحتوي النسخة المحلية على تغييرات غير مودعة في الملفات المدرجة أدناه تتداخل مع شجرة العمل هذه. أودِعها أو خزّنها مؤقتًا في النسخة المحلية، ثم طبّق مرة أخرى.",
   "agentManager.apply.reason.patch": "لا يمكن تطبيق التصحيح بشكل نظيف",
   "agentManager.apply.reason.contents": "لا يمكن قراءة محتويات الملف المحلي الحالي",
   "agentManager.apply.reason.unknown": "تم اكتشاف تعارض",

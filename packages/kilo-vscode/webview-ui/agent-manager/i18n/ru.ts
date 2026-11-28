@@ -251,7 +251,9 @@ export const dict = {
   "agentManager.apply.error": "Применение не удалось",
   "agentManager.apply.conflictsTitle": "Конфликты",
   "agentManager.apply.unknownFile": "Неразрешённый файл",
-  "agentManager.apply.reason.index": "Локальный файл отличается от ожидаемой версии",
+  "agentManager.apply.reason.index": "Есть незакоммиченные изменения в локальной копии",
+  "agentManager.apply.dirtyBaseHint":
+    "В локальной копии есть незакоммиченные изменения в файлах ниже, которые пересекаются с этим worktree. Закоммитьте или уберите их в stash в локальной копии, затем примените снова.",
   "agentManager.apply.reason.patch": "Патч не может быть применён чисто",
   "agentManager.apply.reason.contents": "Не удаётся прочитать содержимое текущего локального файла",
   "agentManager.apply.reason.unknown": "Обнаружен конфликт",
