@@ -630,6 +630,9 @@ const events = {
     schema: {
       sessionID: SessionID,
       info: SessionInfo,
+      // kilocode_change start - set only by unarchive: an absent info.time.archived may be a stale snapshot
+      unarchived: optional(Schema.Literal(true)),
+      // kilocode_change end
     },
   }),
   Deleted: define({
