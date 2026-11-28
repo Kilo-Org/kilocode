@@ -180,7 +180,4 @@ git push origin jetbrains/v7.3.13
 |---|---|
 | `KILO_MAINTAINER_APP_ID` | Repository variable (not a secret; the app id is public): GitHub App ID used to create/update release PRs and immediate release tags. |
 | `KILO_MAINTAINER_APP_SECRET` | Not read by any workflow. `prepare-jetbrains-release.yml` reads the GitHub App private key from the Kilo STS bundle `ci-kilocode-app-key`, in the `automation` environment (`main` only), and the `jetbrains-pin` job of `publish.yml` from `ci-kilocode-release`, in `release-keys`; see `.github/actions/kilo-credentials/README.md`. |
-| `JETBRAINS_MARKETPLACE_TOKEN` | Marketplace API token for publishing. |
-| `JETBRAINS_CERTIFICATE_CHAIN` | PEM certificate chain for plugin signing. |
-| `JETBRAINS_PRIVATE_KEY` | PEM private key for plugin signing. |
-| `JETBRAINS_PRIVATE_KEY_PASSWORD` | Password for the private key. |
+| `JETBRAINS_MARKETPLACE_TOKEN`, `JETBRAINS_CERTIFICATE_CHAIN`, `JETBRAINS_PRIVATE_KEY`, `JETBRAINS_PRIVATE_KEY_PASSWORD` | Not read by any workflow. The `publish` job of `publish-jetbrains.yml` reads the Marketplace token, the PEM certificate chain, the PEM private key and its password from the Kilo STS bundle `ci-kilocode-release-jetbrains`, in the `release-jetbrains` environment (`main` only, `workflow_dispatch` only); the `bundle` job of `publish-jetbrains-bundled.yml` reads the signing key, chain and password from the same bundle. The key and the chain are written to mode 0600 files that the Gradle signing task reads through `JETBRAINS_PRIVATE_KEY_FILE` and `JETBRAINS_CERTIFICATE_CHAIN_FILE`; see `.github/actions/kilo-credentials/README.md`. |

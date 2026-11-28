@@ -2,7 +2,12 @@
 
 Reads the job's secret bundle from Kilo STS and sets each requested secret as a step output.
 
-**Callers.** Fifteen jobs read an STS bundle. Each takes only the keys in its `secrets:` input.
+**Callers.** Seventeen jobs read an STS bundle. Each action call requests only the keys in its
+`secrets:` input. That input limits what the action requests, not what STS serves: STS returns the
+whole bundle of the policy that matches the job. `publish-jetbrains.yml` and
+`publish-jetbrains-bundled.yml` share the policy `ci-kilocode-release-jetbrains`, so the `bundle`
+job, which requests only the signing key, chain and password, can also obtain the Marketplace
+token until that policy is split per workflow.
 
 | Workflow | Job | Workload and environment | Use |
 |---|---|---|---|
@@ -13,6 +18,8 @@ Reads the job's secret bundle from Kilo STS and sets each requested secret as a 
 | `.github/workflows/publish.yml` | `release-push` | `ci-kilocode-release`, `release-keys` | Checks the release commit that the `release-commit` job bundled (see [Release commit check](#release-commit-check)), writes the release commit from the checked tree and pushes it to `main` with its tag (app key); installs no packages, runs only `script/kilocode/release-push.ts` on Bun |
 | `.github/workflows/publish.yml` | `package-managers` | `ci-kilocode-release`, `release-keys` | Updates the AUR package `kilo-bin` (AUR key) and the Homebrew formula in `Kilo-Org/homebrew-tap` (app key) after a stable release; installs no packages, runs only `script/kilocode/package-managers.ts` on Node |
 | `.github/workflows/publish.yml` | `jetbrains-pin` | `ci-kilocode-release`, `release-keys` | Opens or updates the JetBrains CLI pin bump pull request after a release (app key); installs no packages, runs only `.kilo/skills/release-jetbrains/script/set-pin.ts` on Bun |
+| `.github/workflows/publish-jetbrains.yml` | `publish` | `ci-kilocode-release-jetbrains`, `release-jetbrains` | Builds, signs and publishes the JetBrains plugin to the Marketplace (Marketplace token, signing key, chain and password); runs only on `workflow_dispatch` from `main` |
+| `.github/workflows/publish-jetbrains-bundled.yml` | `bundle` | `ci-kilocode-release-jetbrains`, `release-jetbrains` | Builds and signs the bundled JetBrains plugin for the GitHub Release (signing key, chain and password); runs only on `workflow_dispatch` from `main` |
 | `.github/workflows/security-findings-notify.yml` | `list-findings` | `ci-kilocode-scan-notify`, `automation` | Mints an app token with `secret_scanning_alerts: read` on `kilocode` for the secret scanning alerts call (app key); runs only `gh` and `jq` |
 | `.github/workflows/security-findings-notify.yml` | `notify` (one leg per finding) | `ci-kilocode-scan-notify`, `automation` | Posts the finding to Slack (security alerts webhook); a leg reads the bundle only when it posts |
 | `.github/workflows/outdated-kilo-deps.yml` | `report` | `ci-kilocode-notify`, `automation` | Posts the outdated Kilo dependencies to Slack (security alerts webhook); reads the bundle only when there is something to post |
@@ -197,6 +204,11 @@ jobs:
   `ci-kilocode-release` bundle, but a compromised package there could publish to those registries
   and read any STS bundle whose policy names `release`. Moving the installs out of that job is a
   separate change.
+- Known limit, unchanged by the move to STS: the `publish` job of `publish-jetbrains.yml` and the
+  `bundle` job of `publish-jetbrains-bundled.yml` still run `bun install` and the Gradle build that
+  signs the plugin, in the same job as the JetBrains keys, as they did with repository secrets.
+  Both use the credential action from the dispatched `main` commit, not from the release commit
+  they build. Moving the installs out of those jobs is a separate change.
 - Its workflow is never callable with `workflow_call`. The OIDC token of a reusable workflow carries
   that workflow's `job_workflow_ref`, so any workflow allowed to call it would receive its bundle.
 - `secrets:` lists every key the job reads.
