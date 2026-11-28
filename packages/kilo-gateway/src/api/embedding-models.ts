@@ -37,7 +37,7 @@ const model = z.object({
 
 const catalog = z.object({
   defaultModel: z.string(),
-  models: z.array(model),
+  models: z.array(z.unknown()),
   aliases: z.record(z.string(), z.string()),
 })
 
@@ -47,6 +47,7 @@ type Options = {
   signal?: AbortSignal
   attempts?: number
   onError?: (issue: KiloEmbeddingModelCatalogIssue) => void
+  onSkip?: (count: number) => void
 }
 
 const retryable = (status: number) => status === 408 || status === 425 || status === 429 || status >= 500
@@ -88,7 +89,18 @@ export async function fetchKiloEmbeddingModelCatalog(options: Options = {}): Pro
       }
       const body = await response.json().catch(() => undefined)
       const parsed = catalog.safeParse(body)
-      if (parsed.success) return parsed.data
+      if (parsed.success) {
+        const models = parsed.data.models.flatMap((item) => {
+          const entry = model.safeParse(item)
+          return entry.success ? [entry.data] : []
+        })
+        const skipped = parsed.data.models.length - models.length
+        if (skipped > 0) options.onSkip?.(skipped)
+        if (skipped > 0 && models.length === 0) {
+          options.onError?.({ code: "invalid-response", message: "Kilo returned an invalid embedding model catalog." })
+        }
+        return { ...parsed.data, models }
+      }
       issue.current = {
         code: "invalid-response",
         message: "Kilo returned an invalid embedding model catalog.",
