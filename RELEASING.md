@@ -46,7 +46,7 @@ The `publish.yml` workflow starts with `release-draft`, which decides the versio
 - `sbom-cli-windows` describes the signed zips again: new SBOM sidecars, manifest entries and checksum lines. Every other evidence file stays as `build-cli` wrote it.
 - `upload-cli` checks every archive and evidence file against the digests recorded by the job that produced it, then uploads them to the draft GitHub Release.
 - `attest-cli` attests each archive's SBOM under the digest of the uploaded bytes (the signed digest for the Windows zips).
-- `smoke-cli` (job token `contents: write`, nothing checked out or installed) downloads `kilo-linux-x64.tar.gz` from the draft by its release id, checks it against the digest the CLI evidence manifest records and hands it to the smoke test (`smoke-test.yml`, read access only) as an artifact with that digest, which the smoke test checks again. While the bench is waived (`WAIVE_BENCH` at the top of `publish.yml`), `smoke-cli` is skipped and the smoke test only records the exception.
+- `smoke-cli` (job token `contents: write`, nothing checked out or installed) downloads `kilo-linux-x64.tar.gz` from the draft by its release id, checks it against the digest the CLI evidence manifest records and hands it to the smoke test (`smoke-test.yml`, read access only) as an artifact with that digest, which the smoke test checks again.
 
 ### 3. Build VS Code Extension (`build-vscode`)
 

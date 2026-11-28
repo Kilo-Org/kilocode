@@ -27,19 +27,13 @@ on:
   workflow_call:
     inputs:
       cli_artifact:
-        description: "Artifact of the calling run that holds kilo-linux-x64.tar.gz (empty while the bench is waived)."
-        required: false
+        description: "Artifact of the calling run that holds kilo-linux-x64.tar.gz."
+        required: true
         type: string
-        default: ""
       cli_sha256:
-        description: "SHA-256 the archive must have (empty while the bench is waived)."
-        required: false
+        description: "SHA-256 the archive must have."
+        required: true
         type: string
-        default: ""
-      waive_bench:
-        description: "Skip the bench tests and record the release exception."
-        type: boolean
-        default: false
     secrets:
       KILO_API_KEY:
         description: "Kilo Gateway key."
@@ -58,16 +52,8 @@ concurrency:
 permissions: {}
 
 jobs:
-  bench-exception:
-    name: Record bench exception
-    if: inputs.waive_bench
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "The kilo-bench end-to-end tests are waived for this release by WAIVE_BENCH in publish.yml. Run the smoke test manually to verify bench access, then set WAIVE_BENCH back to \"false\"." >> "$GITHUB_STEP_SUMMARY"
-
   smoke-test:
     name: Smoke Test
-    if: ${{ !inputs.waive_bench }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 30
     # Published releases and the caller's artifacts need only read access. publish.yml passes the

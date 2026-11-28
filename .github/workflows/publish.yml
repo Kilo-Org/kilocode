@@ -40,14 +40,6 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.oidc_check && '
 permissions:
   contents: read # kilocode_change
 
-# kilocode_change start - the private kilo-bench gate runs in the pre-publish smoke test. Setting
-# WAIVE_BENCH to "true" waives it for a release: smoke-cli is then skipped and the smoke test only
-# records the exception. Job conditions and reusable-workflow inputs cannot read `env`, so
-# release-draft passes it on as its output `waive-bench`.
-env:
-  WAIVE_BENCH: "false"
-# kilocode_change end
-
 jobs:
   # kilocode_change start - the upstream `version` job is removed: release-draft decides the version
   # (the bump of the highest vx.y.z among origin's tags and every release, drafts included, or the
@@ -97,7 +89,6 @@ jobs:
       version: ${{ steps.draft.outputs.version }}
       release: ${{ steps.draft.outputs.release }}
       tag: ${{ steps.draft.outputs.tag }}
-      waive-bench: ${{ env.WAIVE_BENCH }}
   # kilocode_change end
 
   build-cli:
@@ -927,7 +918,7 @@ jobs:
   smoke-cli:
     name: Fetch CLI archive for the smoke test
     needs: [release-draft, sbom-cli-windows, upload-cli]
-    if: github.repository == 'Kilo-Org/kilocode' && needs.release-draft.outputs.release != '' && needs.release-draft.outputs.waive-bench != 'true'
+    if: github.repository == 'Kilo-Org/kilocode' && needs.release-draft.outputs.release != ''
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 10
     permissions:
@@ -984,8 +975,7 @@ jobs:
       sha256: ${{ steps.archive.outputs.sha256 }}
 
   # Run smoke tests against the CLI archive smoke-cli took from the draft GitHub release and
-  # checked, before publishing the release and package artifacts. It also runs when smoke-cli was
-  # skipped (bench waived), but not after a failure.
+  # checked, before publishing the release and package artifacts.
   smoke-test:
     name: Smoke Test (pre-publish gate)
     permissions:
@@ -995,12 +985,11 @@ jobs:
       - build-cli
       - upload-cli
       - smoke-cli
-    if: always() && !failure() && !cancelled() && github.repository == 'Kilo-Org/kilocode' && needs.release-draft.outputs.release != ''
+    if: github.repository == 'Kilo-Org/kilocode' && needs.release-draft.outputs.release != ''
     uses: ./.github/workflows/smoke-test.yml
     with:
-      waive_bench: ${{ needs.release-draft.outputs.waive-bench == 'true' }}
-      cli_artifact: ${{ needs.release-draft.outputs.waive-bench != 'true' && 'smoke-cli' || '' }}
-      cli_sha256: ${{ needs.release-draft.outputs.waive-bench != 'true' && needs.smoke-cli.outputs.sha256 || '' }}
+      cli_artifact: smoke-cli
+      cli_sha256: ${{ needs.smoke-cli.outputs.sha256 }}
     secrets:
       KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
       KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
