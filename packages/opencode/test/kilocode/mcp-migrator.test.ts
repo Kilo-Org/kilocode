@@ -694,7 +694,7 @@ describe("McpMigrator", () => {
           await fs.mkdir(path.join(dir, ".kilo"), { recursive: true })
           await Bun.write(
             path.join(dir, ".kilo", "mcp.json"),
-            JSON.stringify({ mcpServers: { "a_b": { command: "bunx" } } }),
+            JSON.stringify({ mcpServers: { a_b: { command: "bunx" } } }),
           )
         },
       })
@@ -1060,5 +1060,107 @@ describe("McpMigrator", () => {
         })
       })
     })
+  })
+})
+
+describe("McpMigrator legacy header variables", () => {
+  const remote = (headers: Record<string, string>) => ({
+    mcpServers: { api: { type: "streamable-http", url: "https://api.example.com/mcp", headers } },
+  })
+
+  // Run migrate() with the VS Code global store (trusted) and/or the project store (untrusted) populated.
+  async function run(input: { global?: unknown; project?: unknown }, env: Record<string, string | undefined> = {}) {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        if (input.project) await Bun.write(path.join(dir, ".kilo", "mcp.json"), JSON.stringify(input.project))
+      },
+    })
+    await using home = await tmpdir()
+    const homedir = spyOn(os, "homedir").mockReturnValue(home.path)
+    const appdata = process.env.APPDATA
+    process.env.APPDATA = home.path
+    const saved = Object.fromEntries(Object.keys(env).map((key) => [key, process.env[key]]))
+    for (const [key, value] of Object.entries(env)) {
+      if (value === undefined) delete process.env[key]
+      else process.env[key] = value
+    }
+    try {
+      if (input.global) {
+        const settings = path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "mcp_settings.json")
+        await fs.mkdir(path.dirname(settings), { recursive: true })
+        await Bun.write(settings, JSON.stringify(input.global))
+      }
+      return await McpMigrator.migrate({ projectDir: tmp.path })
+    } finally {
+      homedir.mockRestore()
+      if (appdata === undefined) delete process.env.APPDATA
+      else process.env.APPDATA = appdata
+      for (const [key, value] of Object.entries(saved)) {
+        if (value === undefined) delete process.env[key]
+        else process.env[key] = value
+      }
+    }
+  }
+
+  test("expands {env:} in headers of the trusted global store", async () => {
+    const result = await run(
+      { global: remote({ Authorization: "Bearer {env:LEGACY_HDR_TOKEN}", "X-Static": "plain" }) },
+      { LEGACY_HDR_TOKEN: "abc123" },
+    )
+    expect(result.mcp.api).toEqual({
+      type: "remote",
+      url: "https://api.example.com/mcp",
+      headers: { Authorization: "Bearer abc123", "X-Static": "plain" },
+    })
+    expect(result.warnings).toEqual([])
+  })
+
+  test("never expands a blocked secret variable and drops the header with a warning", async () => {
+    const result = await run(
+      { global: remote({ Authorization: "Bearer {env:KILO_SERVER_PASSWORD}", "X-Static": "plain" }) },
+      { KILO_SERVER_PASSWORD: "hunter2" },
+    )
+    expect(result.mcp.api).toEqual({
+      type: "remote",
+      url: "https://api.example.com/mcp",
+      headers: { "X-Static": "plain" },
+    })
+    expect(JSON.stringify(result)).not.toContain("hunter2")
+    expect(result.warnings.some((w) => w.includes("blocked environment reference"))).toBe(true)
+  })
+
+  test("expands an unset variable to empty like the modern path, with a warning", async () => {
+    const result = await run(
+      { global: remote({ Authorization: "Bearer {env:LEGACY_HDR_UNSET}" }) },
+      { LEGACY_HDR_UNSET: undefined },
+    )
+    expect(result.mcp.api).toMatchObject({ headers: { Authorization: "Bearer " } })
+    expect(result.warnings).toEqual([
+      "MCP server 'api' header 'Authorization' references unset environment variable 'LEGACY_HDR_UNSET'",
+    ])
+  })
+
+  test("drops a project server whose headers hold variables, like modern project config", async () => {
+    const result = await run(
+      { project: remote({ Authorization: "Bearer {env:LEGACY_HDR_TOKEN}" }) },
+      { LEGACY_HDR_TOKEN: "abc123" },
+    )
+    expect(result.mcp).toEqual({})
+    expect(JSON.stringify(result)).not.toContain("abc123")
+    expect(result.warnings).toHaveLength(1)
+    expect(result.warnings[0]).toContain(
+      'Skipped MCP "api": variable references are not allowed in project MCP headers',
+    )
+    expect(result.skipped.map((s) => s.name)).toEqual(["api"])
+  })
+
+  test("leaves headers without variables unchanged in both stores", async () => {
+    const headers = { Authorization: "Bearer token123" }
+    const global = await run({ global: remote(headers) })
+    const project = await run({ project: remote(headers) })
+    for (const result of [global, project]) {
+      expect(result.mcp.api).toEqual({ type: "remote", url: "https://api.example.com/mcp", headers })
+      expect(result.warnings).toEqual([])
+    }
   })
 })
