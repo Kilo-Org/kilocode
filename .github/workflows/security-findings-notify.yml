@@ -25,7 +25,7 @@ permissions:
 jobs:
   list-findings:
     if: github.repository == 'Kilo-Org/kilocode'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 5
     outputs:
       matrix: ${{ steps.build.outputs.matrix }}
@@ -112,7 +112,7 @@ jobs:
   notify:
     needs: list-findings
     if: needs.list-findings.outputs.matrix != '[]'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 5
     strategy:
       fail-fast: false

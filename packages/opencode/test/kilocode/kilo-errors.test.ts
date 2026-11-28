@@ -1,8 +1,20 @@
 import { describe, it, expect } from "bun:test"
 import { MessageV2 } from "../../src/session/message-v2"
-import { KILO_ERROR_CODES, isKiloError, parseKiloErrorCode } from "../../src/kilocode/kilo-errors"
+import {
+  isKiloError,
+  kiloErrorDescription,
+  kiloErrorLine,
+  kiloErrorTitle,
+  parseKiloErrorCode,
+} from "../../src/kilocode/kilo-errors"
 import { SessionRetry } from "../../src/session/retry"
 import { NamedError } from "@opencode-ai/core/util/error"
+
+// The body the Kilo Gateway answers a rejected credential with.
+const SIGNED_OUT = JSON.stringify({
+  error: { code: "INVALID_TOKEN", message: "Your authentication token is invalid. Please sign in again." },
+  error_type: "authentication_required",
+})
 
 /**
  * Helper to create a mock APIError object (as returned by .toObject())
@@ -51,6 +63,16 @@ describe("parseKiloErrorCode", () => {
     expect(parseKiloErrorCode(error)).toBe("PROMOTION_MODEL_LIMIT_REACHED")
   })
 
+  it("extracts INVALID_TOKEN from the gateway's rejected-credential response", () => {
+    const error = makeAPIError({ statusCode: 401, responseBody: SIGNED_OUT })
+    expect(parseKiloErrorCode(error)).toBe("INVALID_TOKEN")
+  })
+
+  it("ignores INVALID_TOKEN on a status other than 401", () => {
+    const error = makeAPIError({ statusCode: 400, responseBody: SIGNED_OUT })
+    expect(parseKiloErrorCode(error)).toBeUndefined()
+  })
+
   it("returns undefined for non-Kilo error codes", () => {
     const error = makeAPIError({
       statusCode: 429,
@@ -77,6 +99,24 @@ describe("parseKiloErrorCode", () => {
       statusCode: 401,
     })
     expect(parseKiloErrorCode(error)).toBeUndefined()
+  })
+})
+
+describe("signed-out copy", () => {
+  it("tells the user they were signed out and to sign in again", () => {
+    expect(kiloErrorTitle("INVALID_TOKEN")).toBe("You've been signed out of Kilo")
+    expect(kiloErrorDescription("INVALID_TOKEN")).toContain("Sign in again")
+  })
+
+  it("gives `kilo run` a one-line message that names the login command", () => {
+    const error = makeAPIError({ statusCode: 401, responseBody: SIGNED_OUT })
+    expect(kiloErrorLine(error)).toBe(
+      "You've been signed out of Kilo. Run `kilo auth login` to connect to Kilo Gateway.",
+    )
+  })
+
+  it("leaves errors without a Kilo code to the caller", () => {
+    expect(kiloErrorLine(makeAPIError({ statusCode: 500, message: "boom" }))).toBeUndefined()
   })
 })
 
@@ -128,6 +168,11 @@ describe("SessionRetry.retryable with Kilo errors", () => {
       isRetryable: true,
       responseBody: JSON.stringify({ code: "PROMOTION_MODEL_LIMIT_REACHED" }),
     })
+    expect(SessionRetry.retryable(error)).toBeUndefined()
+  })
+
+  it("returns undefined for INVALID_TOKEN (retrying a rejected credential cannot succeed)", () => {
+    const error = makeAPIError({ statusCode: 401, isRetryable: false, responseBody: SIGNED_OUT })
     expect(SessionRetry.retryable(error)).toBeUndefined()
   })
 

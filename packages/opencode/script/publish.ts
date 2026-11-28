@@ -6,9 +6,9 @@ import { fileURLToPath } from "url"
 // kilocode_change start
 import fs from "node:fs"
 import path from "node:path"
-import { NpmPublish } from "./kilocode/npm-publish"
 import * as KiloSbom from "./kilocode/sbom"
-import * as KiloRelease from "../../../script/kilocode/release"
+import * as Stage from "../../../script/kilocode/publish-stage"
+import * as Artifact from "../../../script/kilocode/sbom/artifact"
 import type { Manifest } from "../../../script/kilocode/sbom/index"
 // kilocode_change end
 
@@ -17,8 +17,14 @@ process.chdir(dir)
 
 // kilocode_change start
 const evidence: Manifest.Entry[] = []
+/**
+ * The packed npm tarballs. The publish job publishes them (kilocode/publish-npm.ts) after the
+ * release-undraft job published the GitHub release: the CLI installer and `kilo upgrade` take the
+ * version from npm and download the archives from the release.
+ */
+const pending: { name: string; version: string; path: string }[] = []
 
-/** Record SBOM evidence for one npm tarball, or an explicit failure entry. */
+/** Record SBOM evidence for one npm tarball, or an explicit failure entry that keeps its digest. */
 async function describe(file: string | undefined, name: string, version: string) {
   const described = file
     ? await KiloSbom.npmPackage({
@@ -34,7 +40,7 @@ async function describe(file: string | undefined, name: string, version: string)
   evidence.push(
     described?.entry ?? {
       artifact: file ? path.basename(file) : `${name}@${version}`,
-      sha256: "",
+      sha256: file ? await Artifact.digest(file) : "",
       distribution: "npm",
       error: `SBOM generation failed for ${name}@${version}`,
     },
@@ -81,8 +87,8 @@ async function publish(dir: string, name: string, version: string) {
   }
   // kilocode_change end
   await $`bun pm pack`.cwd(dir)
-  // kilocode_change start - describe the exact tarball before publishing it, and
-  // publish that resolved path rather than a glob.
+  // kilocode_change start - describe the exact tarball, and publish that resolved
+  // path rather than a glob once the release is public (see `pending`).
   const packed = await Array.fromAsync(new Bun.Glob("*.tgz").scan({ cwd: dir }))
   if (packed.length !== 1) {
     throw new Error(`bun pm pack must produce exactly one tarball for ${name}, found ${packed.length}`)
@@ -90,12 +96,7 @@ async function publish(dir: string, name: string, version: string) {
   const tarball = packed[0]
   await describe(path.join(dir, tarball), name, version)
 
-  await NpmPublish.retry({
-    name,
-    version,
-    run: () => $`npm publish ${tarball} --access public --tag ${Script.channel} --provenance`.cwd(dir),
-    exists: () => published(name, version),
-  })
+  pending.push({ name, version, path: path.resolve(dir, tarball) })
   // kilocode_change end
 }
 
@@ -158,8 +159,22 @@ const platforms = "linux/amd64,linux/arm64"
 const tags = [`${image}:${version}`, `${image}:${Script.channel}`]
 const tagFlags = tags.flatMap((t) => ["-t", t])
 
+// kilocode_change start - a re-run after the release was published only finishes what the first
+// run left: the images were pushed and described before the release was published. This job's
+// token may not read drafts, so a release it can read by its tag is a published one, and HTTP 404
+// means a draft; any other answer stops the job.
+async function released() {
+  if (!Script.release) return false
+  const found = await $`gh api ${`repos/${process.env.GH_REPO}/releases/tags/v${Script.version}`}`.quiet().nothrow()
+  if (found.exitCode === 0) return true
+  if (/HTTP 404/.test(found.stderr.toString())) return false
+  throw new Error(`Could not read release v${Script.version}: ${found.stderr.toString().trim()}`)
+}
+const live = await released()
+// kilocode_change end
 // registries
-if (!Script.preview) {
+if (!Script.preview && !live) {
+  // kilocode_change - images are pushed only before the release is published
   // kilocode_change start - BuildKit attestations are requested explicitly rather
   // than relying on defaults, and the pushed digests are captured so the image
   // SBOM describes an immutable manifest instead of a moving channel tag.
@@ -172,161 +187,59 @@ if (!Script.preview) {
   await $`docker buildx build --platform ${platforms} ${variantTagFlags} --target openshell --provenance=mode=max --sbom=true --metadata-file ${variantMetadata} --push .`
   evidence.push(...(await describeImages(variantMetadata)))
   // kilocode_change end
-  // Calculate SHA values
-  const arm64Sha = await $`sha256sum ./dist/kilo-linux-arm64.tar.gz | cut -d' ' -f1`.text().then((x) => x.trim())
-  const x64Sha = await $`sha256sum ./dist/kilo-linux-x64.tar.gz | cut -d' ' -f1`.text().then((x) => x.trim())
-  const macX64Sha = await $`sha256sum ./dist/kilo-darwin-x64.zip | cut -d' ' -f1`.text().then((x) => x.trim())
-  const macArm64Sha = await $`sha256sum ./dist/kilo-darwin-arm64.zip | cut -d' ' -f1`.text().then((x) => x.trim())
-
-  const [pkgver, _subver = ""] = Script.version.split(/(-.*)/, 2)
-
-  // arch
-  const binaryPkgbuild = [
-    "# Maintainer: kilo", // kilocode_change
-    "",
-    "pkgname='kilo-bin'",
-    `pkgver=${pkgver}`,
-    `_subver=${_subver}`,
-    "options=('!debug' '!strip')",
-    "pkgrel=1",
-    "pkgdesc='The AI coding agent built for the terminal.'",
-    "url='https://github.com/Kilo-Org/kilocode'",
-    "arch=('aarch64' 'x86_64')",
-    "license=('MIT' 'LGPL-2.0-or-later')", // kilocode_change
-    "provides=('kilo')",
-    "conflicts=('kilo')",
-    "depends=('ripgrep')",
-    "",
-    `source_aarch64=("\${pkgname}_\${pkgver}_aarch64.tar.gz::https://github.com/Kilo-Org/kilocode/releases/download/v\${pkgver}\${_subver}/kilo-linux-arm64.tar.gz")`,
-    `sha256sums_aarch64=('${arm64Sha}')`,
-
-    `source_x86_64=("\${pkgname}_\${pkgver}_x86_64.tar.gz::https://github.com/Kilo-Org/kilocode/releases/download/v\${pkgver}\${_subver}/kilo-linux-x64.tar.gz")`,
-    `sha256sums_x86_64=('${x64Sha}')`,
-    "",
-    "package() {",
-    '  install -Dm755 ./kilo "${pkgdir}/usr/lib/kilo/kilo"', // kilocode_change
-    '  install -Dm755 ./bwrap "${pkgdir}/usr/lib/kilo/bwrap"', // kilocode_change
-    '  install -Dm644 ./kilo-sandbox-mutation-worker.js "${pkgdir}/usr/lib/kilo/kilo-sandbox-mutation-worker.js"', // kilocode_change
-    '  install -dm755 "${pkgdir}/usr/bin" "${pkgdir}/usr/lib/kilo/tree-sitter" "${pkgdir}/usr/share/licenses/kilo"', // kilocode_change
-    '  cp -r ./tree-sitter/. "${pkgdir}/usr/lib/kilo/tree-sitter/"', // kilocode_change
-    '  cp -r ./licenses/. "${pkgdir}/usr/share/licenses/kilo/"', // kilocode_change
-    "  printf '%s\\n' '#!/bin/sh' 'export KILO_TREE_SITTER_WASM_DIR=/usr/lib/kilo/tree-sitter' 'exec /usr/lib/kilo/kilo \"$@\"' > \"${pkgdir}/usr/bin/kilo\"", // kilocode_change
-    '  chmod 755 "${pkgdir}/usr/bin/kilo"', // kilocode_change
-    "}",
-    "",
-  ].join("\n")
-
-  for (const [pkg, pkgbuild] of [["kilo-bin", binaryPkgbuild]]) {
-    for (let i = 0; i < 30; i++) {
-      try {
-        await $`rm -rf ./dist/aur-${pkg}`
-        await $`git clone ssh://aur@aur.archlinux.org/${pkg}.git ./dist/aur-${pkg}`
-        await $`cd ./dist/aur-${pkg} && git checkout master`
-        await Bun.file(`./dist/aur-${pkg}/PKGBUILD`).write(pkgbuild)
-        await $`cd ./dist/aur-${pkg} && makepkg --printsrcinfo > .SRCINFO`
-        await $`cd ./dist/aur-${pkg} && git add PKGBUILD .SRCINFO`
-        if ((await $`cd ./dist/aur-${pkg} && git diff --cached --quiet`.nothrow()).exitCode === 0) break
-        await $`cd ./dist/aur-${pkg} && git commit -m "Update to v${Script.version}"`
-        await $`cd ./dist/aur-${pkg} && git push`
-        break
-      } catch {
-        continue
-      }
-    }
-  }
-
-  // Homebrew formula
-  const homebrewFormula = [
-    "# typed: false",
-    "# frozen_string_literal: true",
-    "",
-    "# This file was generated by GoReleaser. DO NOT EDIT.",
-    "class Kilo < Formula", // kilocode_change
-    `  desc "The AI coding agent built for the terminal."`,
-    `  homepage "https://kilo.ai"`, // kilocode_change
-    `  version "${Script.version.split("-")[0]}"`,
-    "",
-    `  depends_on "ripgrep"`,
-    "",
-    "  on_macos do",
-    "    if Hardware::CPU.intel?",
-    `      url "https://github.com/Kilo-Org/kilocode/releases/download/v${Script.version}/kilo-darwin-x64.zip"`,
-    `      sha256 "${macX64Sha}"`,
-    "",
-    "      def install",
-    '        libexec.install "kilo", "kilo-sandbox-mutation-worker.js", "tree-sitter"', // kilocode_change
-    '        (bin/"kilo").write_env_script libexec/"kilo", KILO_TREE_SITTER_WASM_DIR: libexec/"tree-sitter"', // kilocode_change
-    "      end",
-    "    end",
-    "    if Hardware::CPU.arm?",
-    `      url "https://github.com/Kilo-Org/kilocode/releases/download/v${Script.version}/kilo-darwin-arm64.zip"`,
-    `      sha256 "${macArm64Sha}"`,
-    "",
-    "      def install",
-    '        libexec.install "kilo", "kilo-sandbox-mutation-worker.js", "tree-sitter"', // kilocode_change
-    '        (bin/"kilo").write_env_script libexec/"kilo", KILO_TREE_SITTER_WASM_DIR: libexec/"tree-sitter"', // kilocode_change
-    "      end",
-    "    end",
-    "  end",
-    "",
-    "  on_linux do",
-    "    if Hardware::CPU.intel? and Hardware::CPU.is_64_bit?",
-    `      url "https://github.com/Kilo-Org/kilocode/releases/download/v${Script.version}/kilo-linux-x64.tar.gz"`,
-    `      sha256 "${x64Sha}"`,
-    "      def install",
-    '        libexec.install "kilo", "bwrap", "kilo-sandbox-mutation-worker.js", "tree-sitter", "licenses"', // kilocode_change
-    '        (bin/"kilo").write_env_script libexec/"kilo", KILO_TREE_SITTER_WASM_DIR: libexec/"tree-sitter"', // kilocode_change
-    "      end",
-    "    end",
-    "    if Hardware::CPU.arm? and Hardware::CPU.is_64_bit?",
-    `      url "https://github.com/Kilo-Org/kilocode/releases/download/v${Script.version}/kilo-linux-arm64.tar.gz"`,
-    `      sha256 "${arm64Sha}"`,
-    "      def install",
-    '        libexec.install "kilo", "bwrap", "kilo-sandbox-mutation-worker.js", "tree-sitter", "licenses"', // kilocode_change
-    '        (bin/"kilo").write_env_script libexec/"kilo", KILO_TREE_SITTER_WASM_DIR: libexec/"tree-sitter"', // kilocode_change
-    "      end",
-    "    end",
-    "  end",
-    "end",
-    "",
-    "",
-  ].join("\n")
-
-  const token = process.env.GITHUB_TOKEN
-  if (!token) {
-    console.error("GITHUB_TOKEN is required to update homebrew tap")
-    process.exit(1)
-  }
-  const tap = `https://x-access-token:${token}@github.com/Kilo-Org/homebrew-tap.git` // kilocode_change
-  await $`rm -rf ./dist/homebrew-tap`
-  await $`git clone ${tap} ./dist/homebrew-tap`
-  await Bun.file("./dist/homebrew-tap/kilo.rb").write(homebrewFormula) // kilocode_change
-  await $`cd ./dist/homebrew-tap && git add kilo.rb` // kilocode_change
-  if ((await $`cd ./dist/homebrew-tap && git diff --cached --quiet`.nothrow()).exitCode !== 0) {
-    await $`cd ./dist/homebrew-tap && git commit -m "Update to v${Script.version}"`
-    await $`cd ./dist/homebrew-tap && git push`
-  }
+  // kilocode_change start - every asset reaches the draft and the draft is checked and published by
+  // the release-undraft job, after the image digests are known; the npm packages follow in the
+  // publish job. The package-managers job of publish.yml updates AUR and Homebrew after that.
 }
+await stage()
+// kilocode_change end
 
 // kilocode_change start - record which npm tarballs and container manifests this
-// release produced. Homebrew and AUR redistribute the archives described by the
-// archive manifest, so they need no separate evidence.
-if (Script.release) {
+// release produced and hand them to the next jobs (script/kilocode/publish-stage.ts):
+// release-undraft puts the evidence on the draft, checks the complete draft and
+// publishes the release, and publish puts the tarballs on npm. AUR and Homebrew
+// redistribute the archives described by the archive manifest, so they need no
+// separate evidence. On a re-run after the release was published, no evidence is
+// written: release-undraft checks the published assets, and every npm tarball must
+// be the one the published evidence names.
+async function stage() {
+  const out = process.env.KILO_PUBLISH_DIR
+  const tarballs = process.env.KILO_PUBLISH_TARBALLS
+  if (!out || !tarballs)
+    throw new Error("KILO_PUBLISH_DIR and KILO_PUBLISH_TARBALLS (the hand-over directories) are required")
   // Expected coverage is derived from what this release had to produce, not from
   // what happened to be recorded, so a missing package or image is a shortfall.
   const packages = Object.keys(binaries).length + 1
   const images = Script.preview ? 0 : 2 * (platforms.split(",").length + 1) // main image and OpenShell variant
-  const described = await KiloSbom.distribution({
-    dir: path.resolve("dist"),
-    release: { version, channel: Script.channel },
-    entries: evidence,
-    expected: packages + images,
-  })
-  // Evidence is a record of a release that already shipped, so a failure here is
-  // reported rather than rolled back onto an npm publish that cannot be undone.
-  await KiloRelease.upload({ tag: `v${Script.version}`, files: described.files }).catch((err) =>
-    console.error("sbom: could not publish the distribution evidence", err),
+  const described =
+    Script.release && !live
+      ? await KiloSbom.distribution({
+          dir: path.resolve("dist"),
+          release: { version, channel: Script.channel },
+          entries: evidence,
+          expected: packages + images,
+        })
+      : undefined
+  const missing = (described?.manifest.entries ?? []).filter((entry) => !/^[0-9a-f]{64}$/.test(entry.sha256))
+  if (missing.length) {
+    throw new Error(`No digest for ${missing.map((entry) => entry.artifact).join(", ")}. Nothing was handed over.`)
+  }
+  // The platform packages first, then the launcher that depends on them.
+  const ordered = [
+    ...pending.filter((item) => item.name !== pkg.name),
+    ...pending.filter((item) => item.name === pkg.name),
+  ]
+  const sha256 = await Stage.write(
+    { stage: out, tarballs },
+    {
+      version: Script.version,
+      tarballs: ordered,
+      files: described?.files ?? [],
+      entries: described?.manifest.entries ?? evidence,
+    },
   )
+  console.log(`handed over ${ordered.length} npm tarball(s) and ${described?.files.length ?? 0} evidence file(s)`)
+  if (process.env.GITHUB_OUTPUT) fs.appendFileSync(process.env.GITHUB_OUTPUT, `stage-sha256=${sha256}\n`)
 }
 
 /**

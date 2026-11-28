@@ -1,4 +1,6 @@
-FROM alpine AS base
+# kilocode_change start - pin the base image by digest (alpine:latest was 3.24 on 2026-11-26)
+FROM alpine:3.24@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf AS base
+# kilocode_change end
 
 # Disable the runtime transpiler cache by default inside Docker containers.
 # On ephemeral containers, the cache is not useful

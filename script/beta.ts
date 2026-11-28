@@ -2,6 +2,31 @@
 
 import { $ } from "bun"
 import fs from "fs/promises"
+// kilocode_change start - this script runs pull request code, so it never writes to
+// GitHub: it reads the PR list from a file and leaves the push and the PR comments
+// to the trusted publish job in .github/workflows/disabled/beta.yml.disabled
+import path from "path"
+import { parseArgs } from "util"
+
+const { values: args } = parseArgs({
+  args: Bun.argv.slice(2),
+  options: {
+    prs: { type: "string" },
+    out: { type: "string" },
+  },
+})
+if (!args.prs || !args.out) throw new Error("Usage: bun script/beta.ts --prs <gh pr list json> --out <dir>")
+const prsFile: string = args.prs
+const out: string = args.out
+await fs.mkdir(out, { recursive: true })
+
+interface Comment {
+  number: number
+  reason: string
+}
+
+const comments: Comment[] = []
+// kilocode_change end
 
 const model = "opencode/gpt-5.3-codex"
 
@@ -18,20 +43,12 @@ interface FailedPR {
   reason: string
 }
 
+// kilocode_change start - recorded for the publish job, which posts the comment
 async function commentOnPR(prNumber: number, reason: string) {
-  const body = `⚠️ **Blocking Beta Release**
-
-This PR cannot be merged into the beta branch due to: **${reason}**
-
-Please resolve this issue to include this PR in the next beta release.`
-
-  try {
-    await $`gh pr comment ${prNumber} --body ${body}`
-    console.log(`  Posted comment on PR #${prNumber}`)
-  } catch (err) {
-    console.log(`  Failed to post comment on PR #${prNumber}: ${err}`)
-  }
+  comments.push({ number: prNumber, reason })
+  console.log(`  Recorded comment for PR #${prNumber}`)
 }
+// kilocode_change end
 
 async function conflicts() {
   const out = await $`git diff --name-only --diff-filter=U`.text().catch(() => "")
@@ -217,11 +234,9 @@ async function smoke(prs: PR[], applied: number[]) {
 }
 
 async function main() {
-  console.log("Fetching open PRs with beta label...")
+  console.log("Reading open PRs with beta label...") // kilocode_change
 
-  const stdout =
-    await $`gh pr list --state open --draft=false --label beta --json number,title,author,labels --limit 100`.text()
-  const prs: PR[] = JSON.parse(stdout).sort((a: PR, b: PR) => a.number - b.number)
+  const prs: PR[] = JSON.parse(await Bun.file(prsFile).text()).sort((a: PR, b: PR) => a.number - b.number) // kilocode_change
 
   console.log(`Found ${prs.length} open PRs with beta label`)
 
@@ -348,13 +363,23 @@ async function main() {
     return
   }
 
-  console.log("Force pushing validated beta branch...")
-  await $`git push origin beta --force --no-verify`
+  // kilocode_change start - hand the validated branch to the publish job
+  console.log("Bundling validated beta branch...")
+  const sha = (await $`git rev-parse beta`.text()).trim()
+  const base = (await $`git rev-parse origin/main`.text()).trim()
+  const lease = (await $`git rev-parse -q --verify refs/remotes/origin/beta`.nothrow().text()).trim()
+  if (sha !== base) await $`git bundle create ${path.join(out, "beta.bundle")} beta ${`^${base}`}`
+  await Bun.write(path.join(out, "beta.json"), JSON.stringify({ sha, base, lease }))
 
-  console.log("Successfully synced beta branch")
+  console.log("Validated beta branch is ready to publish")
+  // kilocode_change end
 }
 
-main().catch((err) => {
-  console.error("Error:", err)
-  process.exit(1)
-})
+// kilocode_change start
+main()
+  .catch((err) => {
+    console.error("Error:", err)
+    process.exitCode = 1
+  })
+  .finally(() => Bun.write(path.join(out, "comments.json"), JSON.stringify(comments)))
+// kilocode_change end

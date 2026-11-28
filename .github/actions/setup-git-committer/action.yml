@@ -8,6 +8,22 @@ inputs:
   kilo-maintainer-app-secret:
     description: "Kilo Maintainer GitHub App private key"
     required: true
+  repositories:
+    description: "Comma or newline-separated repository names the token may access; empty covers every repository of the installation"
+    required: false
+    default: ""
+  permission-contents:
+    description: "Contents permission for the token (read or write); empty, with no other permission input set, inherits every app permission"
+    required: false
+    default: ""
+  permission-pull-requests:
+    description: "Pull requests permission for the token (read or write)"
+    required: false
+    default: ""
+  permission-workflows:
+    description: "Workflows permission for the token (write)"
+    required: false
+    default: ""
   # kilocode_change end
 outputs:
   token:
@@ -26,6 +42,10 @@ runs:
         # kilocode_change start
         app-id: ${{ inputs['kilo-maintainer-app-id'] }}
         private-key: ${{ inputs['kilo-maintainer-app-secret'] }}
+        repositories: ${{ inputs.repositories }}
+        permission-contents: ${{ inputs['permission-contents'] }}
+        permission-pull-requests: ${{ inputs['permission-pull-requests'] }}
+        permission-workflows: ${{ inputs['permission-workflows'] }}
         # kilocode_change end
         owner: ${{ github.repository_owner }}
 
@@ -50,7 +70,41 @@ runs:
         # kilocode_change end
       shell: bash
 
-    - name: Configure git remote
+    # kilocode_change start - serve the token from a credential helper outside the
+    # workspace, registered only for the repositories the token covers, instead of
+    # writing it into the origin URL in .git/config
+    - name: Configure git credentials
+      env:
+        TOKEN: ${{ steps.apptoken.outputs.token }}
+        OWNER: ${{ github.repository_owner }}
+        REPO: ${{ github.repository }}
+        REPOSITORIES: ${{ inputs.repositories }}
       run: |
-        git remote set-url origin https://x-access-token:${{ steps.apptoken.outputs.token }}@github.com/${{ github.repository }}
+        helper="${RUNNER_TEMP}/git-committer-credential-helper"
+        (
+          umask 077
+          cat > "$helper" <<EOF
+        #!/bin/sh
+        cat > /dev/null
+        test "\$1" = get || exit 0
+        echo username=x-access-token
+        echo password=${TOKEN}
+        EOF
+        )
+        chmod 700 "$helper"
+        # Git matches the credential URL path by whole segments, so the bare and
+        # .git forms of a repository URL need separate entries.
+        urls=()
+        for name in $(printf '%s' "$REPOSITORIES" | tr ',' ' '); do
+          urls+=("https://github.com/${OWNER}/${name}" "https://github.com/${OWNER}/${name}.git")
+        done
+        if [ "${#urls[@]}" -eq 0 ]; then
+          urls=("https://github.com/${OWNER}/")
+        fi
+        for url in "${urls[@]}"; do
+          git config --global --replace-all "credential.${url}.helper" ""
+          git config --global --add "credential.${url}.helper" "$helper"
+        done
+        git remote set-url origin "https://github.com/${REPO}"
       shell: bash
+    # kilocode_change end
