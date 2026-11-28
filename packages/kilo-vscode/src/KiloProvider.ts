@@ -15,6 +15,11 @@ import type {
 } from "@kilocode/sdk/v2/client"
 import { MaxCostNudge, type MaxCostChoice } from "@opencode-ai/core/kilocode/cost/max-cost-nudge"
 import { type KiloConnectionService, ServerStartupError } from "./services/cli-backend"
+import {
+  boundedCliFetch,
+  CLI_REQUEST_TIMEOUT_HEADER,
+  CLI_REQUEST_TIMEOUT_NONE,
+} from "./services/cli-backend/bounded-fetch" // (#16497)
 import { previewSound, testOSNotification } from "./services/attention"
 import type { EditorContext, IndexingStatus } from "./services/cli-backend/types"
 import { FileIgnoreController } from "./services/autocomplete/shims/FileIgnoreController"
@@ -4633,7 +4638,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     config: { baseUrl: string; password: string },
   ): Promise<IndexingStatus> {
     const auth = Buffer.from(`kilo:${config.password}`).toString("base64")
-    const res = await fetch(`${config.baseUrl}/indexing/consent`, {
+    // Bounded fetch so a wedged CLI surfaces an error instead of freezing the indexing IPC control forever (#16497).
+    const res = await boundedCliFetch(`${config.baseUrl}/indexing/consent`, {
       method: "PUT",
       headers: {
         Authorization: `Basic ${auth}`,
@@ -5035,18 +5041,22 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         await this.connectionService.prepareTools(dir)
       }
       const send = () =>
-        this.client!.session.command({
-          sessionID: sid,
-          directory: dir,
-          command,
-          arguments: args,
-          messageID,
-          model: !control && providerID && modelID ? `${providerID}/${modelID}` : undefined,
-          agent: control ? undefined : agent,
-          variant: control ? undefined : variant,
-          parts,
-          snapshotInitialization: this.opts.snapshotInitialization,
-        })
+        this.client!.session.command(
+          {
+            sessionID: sid,
+            directory: dir,
+            command,
+            arguments: args,
+            messageID,
+            model: !control && providerID && modelID ? `${providerID}/${modelID}` : undefined,
+            agent: control ? undefined : agent,
+            variant: control ? undefined : variant,
+            parts,
+            snapshotInitialization: this.opts.snapshotInitialization,
+          },
+          // Commands run a full agent turn (potentially minutes); opt out of the bounded fetch timeout (#16497).
+          { headers: { [CLI_REQUEST_TIMEOUT_HEADER]: CLI_REQUEST_TIMEOUT_NONE } },
+        )
       await runWithMessageConfirmation(this.confirmations, messageID, "KiloProvider: Command request", async () => {
         if (command !== "goal") return this.withRetry(send, sid, messageID)
         const result = await send()
@@ -5242,7 +5252,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const workspaceDir = this.getWorkspaceDirectory(target)
       await this.client.session.summarize(
         { sessionID: target, directory: workspaceDir, providerID, modelID },
-        { throwOnError: true },
+        // Compact runs an LLM over the full context and can take minutes; opt out of the bounded fetch timeout (#16497).
+        {
+          throwOnError: true,
+          headers: { [CLI_REQUEST_TIMEOUT_HEADER]: CLI_REQUEST_TIMEOUT_NONE },
+        },
       )
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to compact session:", error)
@@ -5548,7 +5562,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
     const dir = this.getWorkspaceDirectory(this.currentSession?.id)
     try {
-      await this.client.instance.reload({ directory: dir }, { throwOnError: true })
+      // Reloading disposes and reboots project instances (config, MCP servers) and can be slow on large workspaces.
+      await this.client.instance.reload(
+        { directory: dir },
+        {
+          throwOnError: true,
+          headers: { [CLI_REQUEST_TIMEOUT_HEADER]: CLI_REQUEST_TIMEOUT_NONE },
+        },
+      )
     } catch (err) {
       // wrapClientError exposes the HTTP status via `cause`, not `response`.
       const cause = err instanceof Error ? err.cause : undefined

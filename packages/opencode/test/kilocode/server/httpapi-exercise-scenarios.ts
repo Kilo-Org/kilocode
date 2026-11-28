@@ -124,6 +124,14 @@ function board(ctx: ScenarioContext) {
 
 export const kiloScenarios: Scenario[] = [
   ...anacondaDesktopScenarios,
+  // Coverage for the DB-backed wedge detection probe (#16497)
+  http.protected
+    .get("/global/health/deep", "global.deepHealth")
+    .global()
+    .json(200, (body) => {
+      object(body)
+      check(body.healthy === true, "server should report deep healthy")
+    }),
   http.protected.get("/background-process", "backgroundProcess.list").json(200, array),
   http.protected
     .get("/background-process/{processID}", "backgroundProcess.get")
@@ -541,7 +549,10 @@ export const kiloScenarios: Scenario[] = [
     }))
     .status(401),
   http.protected
-    .post("/kilocode/session-host/workspace/profiles/personal-default", "sessionHost.setWorkspacePersonalDefaultProfile")
+    .post(
+      "/kilocode/session-host/workspace/profiles/personal-default",
+      "sessionHost.setWorkspacePersonalDefaultProfile",
+    )
     .at((ctx) => ({
       path: "/kilocode/session-host/workspace/profiles/personal-default",
       headers: ctx.headers(),
@@ -727,7 +738,9 @@ export const kiloScenarios: Scenario[] = [
         route("/kilocode/session-host/workspace/{providerID}/{workspaceID}/pull-request-diff/file", {
           providerID: "kilo-cloud",
           workspaceID: "httpapi-missing",
-        }) + "?path=src%2Findex.ts&expectedHeadSha=" + "a".repeat(40),
+        }) +
+        "?path=src%2Findex.ts&expectedHeadSha=" +
+        "a".repeat(40),
       headers: ctx.headers(),
     }))
     .status(401),

@@ -1,5 +1,6 @@
 import * as vscode from "vscode"
 import type { KiloConnectionService } from "../cli-backend"
+import { CLI_REQUEST_TIMEOUT_HEADER, CLI_REQUEST_TIMEOUT_NONE } from "../cli-backend/bounded-fetch" // (#16497)
 
 export interface RetentionResult {
   at: number
@@ -103,7 +104,11 @@ export class RetentionService {
       const directory = this.directory()
       const response = await client.kilocode.retention.run(
         { ...(directory ? { directory } : {}), force },
-        { throwOnError: true },
+        // A pass can run VACUUM/checkpoint on a large database for well over the default request budget.
+        {
+          throwOnError: true,
+          headers: { [CLI_REQUEST_TIMEOUT_HEADER]: CLI_REQUEST_TIMEOUT_NONE },
+        },
       )
       return this.normalize(response.data)
     } finally {

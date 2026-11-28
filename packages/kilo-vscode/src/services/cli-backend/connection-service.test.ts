@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, mock, test } from "bun:test"
 import * as vscode from "vscode"
 import { KiloConnectionService } from "./connection-service"
 import type { SSEPayload } from "./sdk-sse-adapter"
@@ -378,5 +378,177 @@ describe("KiloConnectionService server exit handling", () => {
     })
     ;(service as any).handleServerExit(1, null)
     expect(stateErr?.message).toBe("CLI background process exited with code 1. Retry to reconnect.")
+  })
+})
+
+describe("KiloConnectionService health poll watchdog", () => {
+  function makeService(connectResult: () => Promise<void> = async () => {}) {
+    const service = new KiloConnectionService({} as any)
+    const restart = mock(async () => ({ port: 9999, password: "p", process: {} }))
+    ;(service as any).serverManager.restart = restart
+    // Keep recovery away from the real SSE/SDK connect path; tests assert the restart decision itself.
+    const connect = mock(connectResult)
+    ;(service as any).connect = connect
+    return { service, restart, connect }
+  }
+
+  function stubFetch(handler: (url: string) => Response) {
+    const fetchMock = mock((input: RequestInfo | URL) =>
+      Promise.resolve(handler(typeof input === "string" ? input : input.toString())),
+    )
+    const original = globalThis.fetch
+    globalThis.fetch = fetchMock as typeof fetch
+    return {
+      fetchMock,
+      restore: () => {
+        globalThis.fetch = original
+      },
+    }
+  }
+
+  const failingShallow = () => new Response(null, { status: 500 })
+  const healthy = (url: string) =>
+    new Response(JSON.stringify({ healthy: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    })
+  const routeByProbe = (url: string) =>
+    url.includes("/global/health/deep") ? new Response(null, { status: 503 }) : healthy(url)
+
+  test("keeps counting shallow failures across SSE error states and restarts on the third", async () => {
+    const { service, restart } = makeService()
+    const http = stubFetch(failingShallow)
+    try {
+      const generation = (service as any).healthGeneration
+      let schedules = 0
+      const scheduleNext = () => {
+        schedules++
+      }
+      for (let round = 1; round <= 3; round++) {
+        await (service as any).runHealthPoll(generation, "http://x", "pw", scheduleNext)
+        // The SSE adapter surfaces reconnect failures as an error state; the watchdog must not stop.
+        ;(service as any).setState("error", new Error("sse reconnect failed"))
+      }
+      expect(restart).toHaveBeenCalledTimes(1)
+      // Rounds 1 and 2 reschedule; round 3 enters recovery which bumps the generation, so it must not.
+      expect(schedules).toBe(2)
+      expect(http.fetchMock).toHaveBeenCalledTimes(3)
+    } finally {
+      http.restore()
+    }
+  })
+
+  test("a stale generation never reschedules after the poll is stopped", async () => {
+    const { service, restart } = makeService()
+    const http = stubFetch(failingShallow)
+    try {
+      const staleGeneration = (service as any).healthGeneration
+      ;(service as any).stopHealthPoll()
+      let schedules = 0
+      await (service as any).runHealthPoll(staleGeneration, "http://x", "pw", () => schedules++)
+      expect(schedules).toBe(0)
+      expect(restart).not.toHaveBeenCalled()
+      expect(http.fetchMock).not.toHaveBeenCalled()
+    } finally {
+      http.restore()
+    }
+  })
+
+  test("a disposed service does not run or reschedule poll rounds", async () => {
+    const { service, restart } = makeService()
+    const http = stubFetch(failingShallow)
+    try {
+      const generation = (service as any).healthGeneration
+      service.dispose()
+      let schedules = 0
+      await (service as any).runHealthPoll(generation, "http://x", "pw", () => schedules++)
+      expect(schedules).toBe(0)
+      expect(restart).not.toHaveBeenCalled()
+    } finally {
+      http.restore()
+    }
+  })
+
+  test("two consecutive deep failures trigger exactly one restart while shallow stays healthy", async () => {
+    const { service, restart } = makeService()
+    const http = stubFetch(routeByProbe)
+    try {
+      const generation = (service as any).healthGeneration
+      let schedules = 0
+      const scheduleNext = () => {
+        schedules++
+      }
+      await (service as any).runHealthPoll(generation, "http://x", "pw", scheduleNext)
+      expect(restart).not.toHaveBeenCalled()
+      expect(schedules).toBe(1)
+      await (service as any).runHealthPoll(generation, "http://x", "pw", scheduleNext)
+      expect(restart).toHaveBeenCalledTimes(1)
+      // Recovery invalidated the generation, so the second round must not leave a live schedule.
+      expect(schedules).toBe(1)
+    } finally {
+      http.restore()
+    }
+  })
+
+  test("healthy rounds clear the failure streaks and never restart", async () => {
+    const { service, restart } = makeService()
+    const http = stubFetch(healthy)
+    try {
+      const generation = (service as any).healthGeneration
+      let schedules = 0
+      for (let round = 0; round < 4; round++) {
+        await (service as any).runHealthPoll(generation, "http://x", "pw", () => schedules++)
+      }
+      expect(restart).not.toHaveBeenCalled()
+      expect(schedules).toBe(4)
+      expect((service as any).shallowFailures).toBe(0)
+      expect((service as any).deepHealthFailures).toBe(0)
+    } finally {
+      http.restore()
+    }
+  })
+
+  test("one successful deep probe resets the deep failure streak", async () => {
+    const { service, restart } = makeService()
+    let deepFail = true
+    const http = stubFetch((url) => {
+      if (!url.includes("/global/health/deep")) return healthy(url)
+      if (deepFail) return new Response(null, { status: 503 })
+      return healthy(url)
+    })
+    try {
+      const generation = (service as any).healthGeneration
+      const noopSchedule = () => {}
+      await (service as any).runHealthPoll(generation, "http://x", "pw", noopSchedule) // deep count 1
+      expect((service as any).deepHealthFailures).toBe(1)
+      deepFail = false
+      await (service as any).runHealthPoll(generation, "http://x", "pw", noopSchedule) // reset
+      expect((service as any).deepHealthFailures).toBe(0)
+      deepFail = true
+      await (service as any).runHealthPoll(generation, "http://x", "pw", noopSchedule) // count 1 again
+      expect(restart).not.toHaveBeenCalled()
+      expect((service as any).deepHealthFailures).toBe(1)
+    } finally {
+      http.restore()
+    }
+  })
+
+  test("failed recovery surfaces an error state and leaves no pending poll timer", async () => {
+    const { service } = makeService(() => Promise.reject(new Error("restart connect failed")))
+    const http = stubFetch(failingShallow)
+    try {
+      let stateErr: Error | undefined
+      service.onStateChange((state, err) => {
+        if (state === "error") stateErr = err
+      })
+      const generation = (service as any).healthGeneration
+      for (let round = 0; round < 3; round++) {
+        await (service as any).runHealthPoll(generation, "http://x", "pw", () => {})
+      }
+      expect(stateErr?.message).toBe("restart connect failed")
+      expect((service as any).healthPollTimer).toBeNull()
+    } finally {
+      http.restore()
+    }
   })
 })

@@ -16,6 +16,12 @@ const GlobalHealth = Schema.Struct({
   version: Schema.String,
 })
 
+// kilocode_change start - DB-backed liveness probe for wedge detection (#16497)
+const GlobalDeepHealth = Schema.Struct({
+  healthy: Schema.Literal(true),
+})
+// kilocode_change end
+
 const SyncEventSchemas = EventManifest.Latest.values()
   .flatMap((definition) => {
     if (!definition.durable) return []
@@ -74,6 +80,7 @@ const GlobalUpgradeResult = Schema.Union([
 
 export const GlobalPaths = {
   health: "/global/health",
+  deepHealth: "/global/health/deep", // kilocode_change - DB-backed liveness probe (#16497)
   event: "/global/event",
   config: "/global/config",
   dispose: "/global/dispose",
@@ -92,6 +99,21 @@ export const GlobalApi = HttpApi.make("global").add(
           description: "Get health information about the Kilo server.", // kilocode_change
         }),
       ),
+      // kilocode_change start - DB-backed liveness probe so hosts can distinguish a live process
+      // with a wedged SQLite database from a healthy one. The shallow health endpoint never touches DB.
+      // Internal endpoint: the VS Code host consumes it via raw fetch; it is intentionally excluded
+      // from SDK regeneration because the current generator renames the existing Health class.
+      HttpApiEndpoint.get("deepHealth", GlobalPaths.deepHealth, {
+        success: described(GlobalDeepHealth, "Deep health information"),
+      }).annotateMerge(
+        OpenApi.annotations({
+          identifier: "global.health.deep",
+          summary: "Get deep health",
+          description:
+            "Checks database responsiveness in addition to process liveness. Internal host watchdog endpoint, consumed via raw fetch and not part of the generated SDK contract.",
+        }),
+      ),
+      // kilocode_change end
       HttpApiEndpoint.get("event", GlobalPaths.event, {
         success: GlobalEventSchema,
       }).annotateMerge(

@@ -13,6 +13,7 @@ import * as Client from "effect/unstable/sql/SqlClient"
 import type { Connection } from "effect/unstable/sql/SqlConnection"
 import { classifySqliteError, SqlError } from "effect/unstable/sql/SqlError"
 import * as Statement from "effect/unstable/sql/Statement"
+import { PermitGuard } from "../kilocode/database/permit-guard" // kilocode_change
 import { Sqlite } from "./sqlite"
 
 const ATTR_DB_SYSTEM_NAME = "db.system.name"
@@ -119,15 +120,30 @@ const make = (options: Config) =>
     })
 
     const semaphore = yield* Semaphore.make(1)
-    const acquirer = semaphore.withPermits(1)(Effect.succeed(connection))
+    // kilocode_change start - bound permit acquisition so one non-returning SQLite writer cannot
+    // park every other database-backed request forever (#16497). The wait stays interruptible and
+    // on timeout fails with the same LockTimeout SqlError reason as a native busy error, which the
+    // existing isBusy retry / HTTP 503 "database busy" channels already understand. The release
+    // finalizer is only registered after a successful take, so a timed-out waiter holds no permit.
+    const acquirer = Effect.uninterruptibleMask((restore) => {
+      const fiber = Fiber.getCurrent()!
+      const scope = Context.getUnsafe(fiber.context, Scope.Scope)
+      return Effect.gen(function* () {
+        yield* restore(PermitGuard.takeWithTimeout(semaphore, 1, "statement"))
+        yield* Scope.addFinalizer(scope, semaphore.release(1))
+        return connection
+      })
+    })
     const transactionAcquirer = Effect.uninterruptibleMask((restore) => {
       const fiber = Fiber.getCurrent()!
       const scope = Context.getUnsafe(fiber.context, Scope.Scope)
-      return Effect.as(
-        Effect.tap(restore(semaphore.take(1)), () => Scope.addFinalizer(scope, semaphore.release(1))),
-        connection,
-      )
+      return Effect.gen(function* () {
+        yield* restore(PermitGuard.takeWithTimeout(semaphore, 1, "transaction"))
+        yield* Scope.addFinalizer(scope, semaphore.release(1))
+        return connection
+      })
     })
+    // kilocode_change end
 
     const client = Object.assign(
       (yield* Client.make({

@@ -6,6 +6,15 @@ import type { ServerConfig } from "./types"
 import { createDuplicateEventFilter, resolveEventSessionId as resolveEventSessionIdPure } from "./connection-utils"
 import { SandboxPreference } from "../sandbox-preference"
 import { ExplicitAbortState } from "./explicit-abort"
+import { createBoundedCliFetch } from "./bounded-fetch" // bounded CLI request timeout (#16497)
+import {
+  DEEP_HEALTH_FAILURE_THRESHOLD,
+  SHALLOW_FAILURE_THRESHOLD,
+  nextDeepHealthFailureCount,
+  nextShallowFailureCount,
+  shouldRestartForUnresponsiveness,
+  shouldRestartForWedge,
+} from "./wedge-recovery" // wedged database auto-recovery (#16497)
 import type { PermissionResponseResult } from "../../kilo-provider/handlers/permission-handler"
 
 export type ConnectionState = "connecting" | "connected" | "disconnected" | "error"
@@ -68,6 +77,9 @@ function sameSet(a: Set<string>, b: Set<string>): boolean {
 // Poll /global/health every 10 seconds.
 // This provides a second detection channel for server death independent of the SSE heartbeat.
 const HEALTH_POLL_INTERVAL_MS = 10_000
+// Probe budgets for wedged/unresponsive CLI detection (#16497)
+const SHALLOW_HEALTH_TIMEOUT_MS = 3_000
+const DEEP_HEALTH_TIMEOUT_MS = 5_000
 const PERMISSION_RESPONSE_TTL_MS = 60_000
 const PERMISSION_RESPONSE_LIMIT = 256
 
@@ -96,7 +108,15 @@ export class KiloConnectionService {
   private state: ConnectionState = "disconnected"
   private error: Error | null = null
   private connectPromise: Promise<void> | null = null
-  private healthPollTimer: ReturnType<typeof setInterval> | null = null
+  private healthPollTimer: ReturnType<typeof setTimeout> | null = null
+  // Wedged/unresponsive CLI detection and single-flight recovery (#16497).
+  // The poll loop is self-scheduled (one round schedules the next), so rounds can never overlap.
+  private healthGeneration = 0
+  private shallowFailures = 0
+  private deepHealthFailures = 0
+  private wedgeRecoveryPromise: Promise<void> | null = null
+  private restarting = false
+  private disposed = false
 
   private readonly eventListeners: Set<SSEEventListener> = new Set()
   private readonly filteredListeners = new Set<{ filter: SSEEventFilter; listener: SSEEventListener }>()
@@ -826,6 +846,8 @@ export class KiloConnectionService {
    * Clean up everything: kill server, close SSE, clear listeners.
    */
   dispose(): void {
+    this.disposed = true // block wedge recovery after deactivation (#16497)
+    this.deepHealthFailures = 0
     this.stopHealthPoll()
     this.sseClient?.dispose()
     this.serverManager.dispose()
@@ -886,48 +908,174 @@ export class KiloConnectionService {
   }
 
   /**
-   * Start polling GET /global/health every 10 seconds.
-   * Provides a second detection channel for server death independent of the SSE heartbeat.
-   * If the health check fails while we believe we are connected, the SSE client is
-   * disconnected so its reconnect loop kicks in immediately.
+   * Start the health poll loop. Each round schedules the next only after it finishes, so rounds
+   * can never overlap even when the event loop was stalled. A generation token invalidates any
+   * in-flight or scheduled round as soon as the loop is stopped, restarted, or replaced.
+   *
+   * The loop intentionally keeps running across SSE-driven UI state changes (connecting/error):
+   * only the generation token and the disposed flag gate it, so a process that is still alive but
+   * failing HTTP keeps accumulating failures until the restart thresholds fire (#16497).
+   *
+   * Two restart triggers are distinguished (#16497):
+   * - repeated shallow failures: the CLI process is not answering HTTP at all (a fully blocked
+   *   event loop, e.g. a non-returning native SQLite call). SSE reconnect cannot recover that.
+   * - shallow healthy but repeated deep failures: the process is alive with a wedged SQLite
+   *   driver. Reconnecting cannot recover that either. Both restart the process single-flight.
    */
   private startHealthPoll(baseUrl: string, password: string): void {
     this.stopHealthPoll()
-
-    this.healthPollTimer = setInterval(async () => {
-      if (this.state !== "connected") {
-        return
-      }
-      const healthy = await this.checkHealth(baseUrl, password)
-      if (!healthy && this.state === "connected") {
-        console.warn("[Kilo New] ConnectionService: ❤️‍🩹 Health check failed — forcing SSE reconnect")
-        this.sseClient?.reconnect()
-      }
-    }, HEALTH_POLL_INTERVAL_MS)
-
-    // Don't keep the extension host alive just for the health poll
-    this.healthPollTimer.unref?.()
+    const generation = this.healthGeneration
+    this.shallowFailures = 0
+    this.deepHealthFailures = 0
+    const scheduleNext = () => {
+      this.healthPollTimer = setTimeout(() => {
+        void this.runHealthPoll(generation, baseUrl, password, scheduleNext)
+      }, HEALTH_POLL_INTERVAL_MS)
+      this.healthPollTimer.unref?.()
+    }
+    scheduleNext()
   }
 
   private stopHealthPoll(): void {
+    // Bumping the generation invalidates rounds already waiting on a probe or scheduled to run.
+    this.healthGeneration += 1
     if (this.healthPollTimer) {
-      clearInterval(this.healthPollTimer)
+      clearTimeout(this.healthPollTimer)
       this.healthPollTimer = null
     }
   }
 
-  private async checkHealth(baseUrl: string, password: string): Promise<boolean> {
+  private isHealthRoundCurrent(generation: number): boolean {
+    // Deliberately independent of the UI-facing `state`. SSE reconnect/onError transitions it through
+    // "connecting"/"error" while the CLI process is still alive; tying the watchdog to that transient
+    // state would stop the poll after the first shallow failure, so the restart threshold could never
+    // be reached (#16497). The generation token already binds a round to its connection: every
+    // stopHealthPoll() (reset/reconnect/restart/dispose) bumps it and invalidates in-flight and
+    // scheduled rounds from the previous connection, while `disposed` blocks recovery after deactivation.
+    return !this.disposed && generation === this.healthGeneration
+  }
+
+  private async runHealthPoll(
+    generation: number,
+    baseUrl: string,
+    password: string,
+    scheduleNext: () => void,
+  ): Promise<void> {
     try {
-      const controller = new AbortController()
-      const timer = setTimeout(() => controller.abort(), 3000)
+      if (!this.isHealthRoundCurrent(generation)) return
+      const shallowHealthy = await this.checkHealth(baseUrl, password)
+      if (!this.isHealthRoundCurrent(generation)) return
+
+      if (!shallowHealthy) {
+        // A process-level outage is unrelated to the DB wedge streak; keep the counters independent.
+        this.deepHealthFailures = 0
+        this.shallowFailures = nextShallowFailureCount(this.shallowFailures, false)
+        this.sseClient?.reconnect()
+        if (shouldRestartForUnresponsiveness(this.shallowFailures)) {
+          this.shallowFailures = 0
+          console.warn(
+            `[Kilo New] ConnectionService: 🛑 CLI unresponsive for ${SHALLOW_FAILURE_THRESHOLD} health rounds — restarting process`,
+          )
+          await this.recoverFromWedge(generation)
+        }
+        return
+      }
+
+      this.shallowFailures = 0
+      const deepHealthy = await this.checkDeepHealth(baseUrl, password)
+      if (!this.isHealthRoundCurrent(generation)) return
+      this.deepHealthFailures = nextDeepHealthFailureCount(this.deepHealthFailures, true, deepHealthy)
+      if (!deepHealthy && shouldRestartForWedge(this.deepHealthFailures)) {
+        this.deepHealthFailures = 0
+        console.warn(
+          `[Kilo New] ConnectionService: 🪦 Database wedge detected (${DEEP_HEALTH_FAILURE_THRESHOLD} deep failures) — restarting process`,
+        )
+        await this.recoverFromWedge(generation)
+      }
+    } catch (error) {
+      console.warn("[Kilo New] ConnectionService: health poll round failed", error)
+    } finally {
+      // A restart or dispose bumps the generation; only the live loop may reschedule itself.
+      if (this.isHealthRoundCurrent(generation)) scheduleNext()
+    }
+  }
+
+  private async checkHealth(baseUrl: string, password: string): Promise<boolean> {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), SHALLOW_HEALTH_TIMEOUT_MS)
+    timer.unref?.()
+    try {
       const res = await fetch(`${baseUrl}/global/health`, {
         headers: { Authorization: `Basic ${Buffer.from(`kilo:${password}`).toString("base64")}` },
         signal: controller.signal,
       })
-      clearTimeout(timer)
       return res.ok
     } catch {
       return false
+    } finally {
+      clearTimeout(timer)
+    }
+  }
+
+  /**
+   * DB-backed liveness probe (#16497). Unlike the shallow health endpoint, this runs `SELECT 1`
+   * through the single-permit SQLite driver, so it fails (abort/503) precisely when
+   * database-backed IPC is wedged.
+   */
+  private async checkDeepHealth(baseUrl: string, password: string): Promise<boolean> {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), DEEP_HEALTH_TIMEOUT_MS)
+    timer.unref?.()
+    try {
+      const res = await fetch(`${baseUrl}/global/health/deep`, {
+        headers: { Authorization: `Basic ${Buffer.from(`kilo:${password}`).toString("base64")}` },
+        signal: controller.signal,
+      })
+      return res.ok
+    } catch {
+      return false
+    } finally {
+      clearTimeout(timer)
+    }
+  }
+
+  /** Single-flight wrapper so overlapping poll failures trigger at most one restart. */
+  private recoverFromWedge(generation: number): Promise<void> {
+    if (this.wedgeRecoveryPromise) return this.wedgeRecoveryPromise
+    this.wedgeRecoveryPromise = this.doRecoverFromWedge(generation).finally(() => {
+      this.wedgeRecoveryPromise = null
+    })
+    return this.wedgeRecoveryPromise
+  }
+
+  private async doRecoverFromWedge(generation: number): Promise<void> {
+    if (this.disposed || generation !== this.healthGeneration) return
+    const workspaceDir = this.rootDirectory ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+    if (!workspaceDir) {
+      console.warn("[Kilo New] ConnectionService: cannot restart wedged CLI without a workspace directory")
+      this.setState("error", new Error("Database is unresponsive. Reload the VS Code window to recover."))
+      return
+    }
+    console.warn("[Kilo New] ConnectionService: 🔁 Restarting CLI process to recover wedged backend")
+    this.restarting = true
+    this.stopHealthPoll()
+    this.stopCheckin()
+    this.resetConnection()
+    // Stay in "connecting" so consumers await the shared connect() promise instead of spinning up
+    // their own reconnect against the process that is being replaced.
+    this.setState("connecting")
+    try {
+      await this.serverManager.restart()
+      if (this.disposed) return
+      await this.connect(workspaceDir)
+      if (this.disposed) return
+      console.warn("[Kilo New] ConnectionService: ✅ CLI restarted and reconnected after backend wedge")
+    } catch (error) {
+      if (this.disposed) return
+      console.error("[Kilo New] ConnectionService: ❌ CLI restart after backend wedge failed", error)
+      this.setState("error", error instanceof Error ? error : new Error(String(error)))
+    } finally {
+      this.restarting = false
     }
   }
 
@@ -953,6 +1101,12 @@ export class KiloConnectionService {
     const reason = signal ? `signal ${signal}` : `code ${code ?? "unknown"}`
     console.warn(`[Kilo New] ConnectionService: CLI background process exited with ${reason}`)
     this.resetConnection()
+    // A planned wedge recovery restart expects the exit; do not surface an error state that would
+    // flash while the replacement connection comes up (#16497).
+    if (this.restarting) {
+      console.warn("[Kilo New] ConnectionService: CLI exited during a planned restart")
+      return
+    }
     this.setState("error", new Error(`CLI background process exited with ${reason}. Retry to reconnect.`))
   }
 
@@ -970,13 +1124,16 @@ export class KiloConnectionService {
 
     this.config = config
 
-    // Create SDK client with Basic Auth header
+    // Create SDK client with Basic Auth header. The bounded fetch turns a wedged CLI into a
+    // finite request failure instead of a forever-pending IPC handler (#16497); long-running
+    // endpoints opt out via the x-kilo-cli-timeout header.
     const authHeader = `Basic ${Buffer.from(`kilo:${server.password}`).toString("base64")}`
     const client = createKiloClient({
       baseUrl: config.baseUrl,
       headers: {
         Authorization: authHeader,
       },
+      fetch: createBoundedCliFetch(),
     })
     const sse = new SdkSSEAdapter(client)
     const duplicateEvent = createDuplicateEventFilter()

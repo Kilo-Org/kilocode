@@ -1,6 +1,7 @@
 import type { KiloClient, McpStatus } from "@kilocode/sdk/v2/client"
 import * as vscode from "vscode"
 import type { SSEPayload } from "../cli-backend/sdk-sse-adapter"
+import { CLI_REQUEST_TIMEOUT_HEADER, CLI_REQUEST_TIMEOUT_NONE } from "../cli-backend/bounded-fetch" // (#16497)
 import { needsAuthNames } from "./status"
 
 /**
@@ -234,7 +235,11 @@ export class McpAuthService {
   private async authenticate(dir: string, name: string): Promise<McpAuthResult> {
     return this.attempt(`mcp authenticate for ${name}`, { status: "failed" }, async (): Promise<McpAuthResult> => {
       const client = await this.connection.getClientAsync(dir)
-      const { data, error, response } = await client.mcp.auth.authenticate({ name, directory: dir, external: true })
+      const { data, error, response } = await client.mcp.auth.authenticate(
+        { name, directory: dir, external: true },
+        // Human-in-the-loop browser OAuth can take minutes; it must not hit the bounded fetch timeout (#16497).
+        { headers: { [CLI_REQUEST_TIMEOUT_HEADER]: CLI_REQUEST_TIMEOUT_NONE } },
+      )
       if (response?.ok && data) {
         const status: McpAuthStatus = data.status
         return { status, error: "error" in data ? data.error : undefined }

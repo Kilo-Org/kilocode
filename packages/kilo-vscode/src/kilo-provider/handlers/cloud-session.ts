@@ -7,6 +7,7 @@
 
 import type { KiloClient, Session, TextPartInput, FilePartInput } from "@kilocode/sdk/v2/client"
 import type { CloudSessionData, EditorContext } from "../../services/cli-backend/types"
+import { CLI_REQUEST_TIMEOUT_HEADER, CLI_REQUEST_TIMEOUT_NONE } from "../../services/cli-backend/bounded-fetch" // (#16497)
 import { getErrorMessage, sessionToWebview, mapCloudSessionMessageToWebviewMessage } from "../../kilo-provider-utils"
 import type { MessageFile } from "../message-files"
 import { type ReviewMessageData } from "../../shared/review-comments"
@@ -214,7 +215,11 @@ export async function handleImportAndSend(
             variant,
             parts,
           },
-          { throwOnError: true },
+          // Commands run a full agent turn (potentially minutes); opt out of the bounded fetch timeout (#16497).
+          {
+            throwOnError: true,
+            headers: { [CLI_REQUEST_TIMEOUT_HEADER]: CLI_REQUEST_TIMEOUT_NONE },
+          },
         )
         if (command === "goal" && !commandArgs?.trim()) {
           const message = result.data.parts
