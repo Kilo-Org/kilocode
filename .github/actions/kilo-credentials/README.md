@@ -2,7 +2,7 @@
 
 Reads the job's secret bundle from Kilo STS and sets each requested secret as a step output.
 
-**Callers.** Seven jobs read an STS bundle. Each takes only the keys in its `secrets:` input.
+**Callers.** Nine jobs read an STS bundle. Each takes only the keys in its `secrets:` input.
 
 | Workflow | Job | Workload and environment | Use |
 |---|---|---|---|
@@ -13,6 +13,8 @@ Reads the job's secret bundle from Kilo STS and sets each requested secret as a 
 | `.github/workflows/publish.yml` | `release-push` | `ci-kilocode-release`, `release-keys` | Checks the release commit that the `release-commit` job bundled (see [Release commit check](#release-commit-check)), writes the release commit from the checked tree and pushes it to `main` with its tag (app key); installs no packages, runs only `script/kilocode/release-push.ts` on Bun |
 | `.github/workflows/publish.yml` | `package-managers` | `ci-kilocode-release`, `release-keys` | Updates the AUR package `kilo-bin` (AUR key) and the Homebrew formula in `Kilo-Org/homebrew-tap` (app key) after a stable release; installs no packages, runs only `script/kilocode/package-managers.ts` on Node |
 | `.github/workflows/publish.yml` | `jetbrains-pin` | `ci-kilocode-release`, `release-keys` | Opens or updates the JetBrains CLI pin bump pull request after a release (app key); installs no packages, runs only `.kilo/skills/release-jetbrains/script/set-pin.ts` on Bun |
+| `.github/workflows/publish-jetbrains.yml` | `publish` | `ci-kilocode-release-jetbrains`, `release-jetbrains` | Builds, signs and publishes the JetBrains plugin to the Marketplace (Marketplace token, signing key, chain and password); runs only on `workflow_dispatch` from `main` |
+| `.github/workflows/publish-jetbrains-bundled.yml` | `bundle` | `ci-kilocode-release-jetbrains`, `release-jetbrains` | Builds and signs the bundled JetBrains plugin for the GitHub Release (signing key, chain and password); runs only on `workflow_dispatch` from `main` |
 
 The Kilo Maintainer app id comes from the repository variable `KILO_MAINTAINER_APP_ID` (the app id
 is public). No workflow reads the app key from the GitHub secret `KILO_MAINTAINER_APP_SECRET` any
@@ -189,6 +191,11 @@ jobs:
   `ci-kilocode-release` bundle, but a compromised package there could publish to those registries
   and read any STS bundle whose policy names `release`. Moving the installs out of that job is a
   separate change.
+- Known limit, unchanged by the move to STS: the `publish` job of `publish-jetbrains.yml` and the
+  `bundle` job of `publish-jetbrains-bundled.yml` still run `bun install` and the Gradle build that
+  signs the plugin, in the same job as the JetBrains keys, as they did with repository secrets.
+  Both use the credential action from the dispatched `main` commit, not from the release commit
+  they build. Moving the installs out of those jobs is a separate change.
 - Its workflow is never callable with `workflow_call`. The OIDC token of a reusable workflow carries
   that workflow's `job_workflow_ref`, so any workflow allowed to call it would receive its bundle.
 - `secrets:` lists every key the job reads.
