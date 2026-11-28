@@ -31,6 +31,7 @@ Major AI companies offering powerful models via API:
 - **[Mistral](/docs/ai-providers/mistral)** - Mistral Large, Codestral
 - **[Nebius Token Factory](/docs/ai-providers/nebius)** - Model inference on Nebius infrastructure
 - **[Poolside](/docs/ai-providers/poolside)** - Laguna models
+- **[AbliteratedLLM](/docs/ai-providers/abliteratedllm)** - Abliterated and stock open-weight models through an OpenAI-compatible API
 
 ### Local & Self-Hosted
 
