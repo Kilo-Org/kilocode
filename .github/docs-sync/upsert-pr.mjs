@@ -84,14 +84,14 @@ function changeRow(e) {
 }
 
 function skippedRow(e) {
-  const reason = clean(e.reason).replaceAll("|", "\\|").replaceAll("\n", " ")
+  const reason = clean(e.reason).replaceAll("|", "\\|").replace(/[\r\n]+/g, " ")
   return `| [${shortRef(e.url)}](${clean(e.url)}) | ${reason} |`
 }
 
 function pendingRow(e) {
   const reason = clean(e.reason ?? e.cause ?? "")
     .replaceAll("|", "\\|")
-    .replaceAll("\n", " ")
+    .replace(/[\r\n]+/g, " ")
   return `| [${shortRef(e.url)}](${clean(e.url)}) | ${reason} |`
 }
 
@@ -769,7 +769,8 @@ async function main() {
   // dated fallback branch; a normal run pushes the durability ref (see
   // durableBranch in handoff.mjs). The lease is the tip the agent job built on
   // (empty: the branch did not exist), so a change pushed to that branch while
-  // the run was going is refused instead of overwritten.
+  // the run was going is refused instead of overwritten. It guards honest races
+  // only: the agent job chooses the value, so it is no security check.
   const changedFiles = git(["diff", "--name-only", `origin/main...${integrationSha}`, "--", DOCS_PATH])
     .split("\n")
     .filter(Boolean)

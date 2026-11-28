@@ -24,6 +24,8 @@
  * `durable_base` is the push lease for upsert-pr.mjs: the tip of the target
  * branch the agent job built on (empty: it did not exist). It decides nothing
  * but whether a branch that moved during the run is overwritten (it is not).
+ * It guards honest races only: the agent job chooses the value, so it is no
+ * security check.
  *
  * Env (pack): HANDOFF_DIR, WORTHY_COUNT, SINCE, NOW, SINCE_OVERRIDE,
  *   LEARNED_THROUGH, MARKER_PATCH, BRANCH, VERIFIED.

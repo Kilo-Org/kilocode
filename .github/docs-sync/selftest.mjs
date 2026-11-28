@@ -1152,6 +1152,20 @@ function case4_routing() {
       uncovered: [],
     })
     assert.ok(!multiline.changesRows[0].includes("\n"), "a change row must stay on one line")
+    // A lone carriage return also splits a markdown table row.
+    const lineBreaks = /[\r\n]/
+    const lonelyCr = routeRows({
+      summary: [
+        { pr: 11, url: "https://github.com/Kilo-Org/cloud/pull/11", action: "added\r| forged | row |" },
+        { pr: 12, url: "https://github.com/Kilo-Org/cloud/pull/12", action: "skipped", reason: "no docs\r| forged | row |" },
+      ],
+      triage: [],
+      uncovered: [{ url: "https://github.com/Kilo-Org/cloud/pull/13", reason: "pending\r| forged | row |" }],
+    })
+    for (const row of [...lonelyCr.changesRows, ...lonelyCr.skippedRows, ...lonelyCr.pendingRows]) {
+      assert.ok(!lineBreaks.test(row), `a lone \\r must not split a row; got ${JSON.stringify(row)}`)
+    }
+    assert.equal(lonelyCr.changesRows.length + lonelyCr.skippedRows.length + lonelyCr.pendingRows.length, 3)
     const forgedBody = renderBody({
       date: "2026-07-27",
       since: "s",
