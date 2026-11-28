@@ -4,7 +4,7 @@ import { $ } from "bun"
 import { readFile, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import semver from "semver"
+import { parse } from "../../../../script/kilocode/jetbrains-version"
 import { parseArgs } from "util"
 import { latest, missing } from "./pin-common"
 
@@ -45,7 +45,7 @@ Examples:
 
 if (values.latest && values.version) throw new Error("Pass either --latest or --version, not both")
 const version = values.latest ? await latest(repo) : values.version?.replace(/^v/, "")
-if (!version || !semver.valid(version)) {
+if (!version || !parse(version)) {
   throw new Error("Pass a valid CLI semver with --version or use --latest")
 }
 
@@ -189,7 +189,7 @@ async function tag(branch: string, version: string, pre: boolean) {
   await $`gh label create ${label} --repo ${repo} --color 1D76DB --description ${"JetBrains pinned CLI version bump"}`
     .quiet()
     .nothrow()
-  if (pre || semver.prerelease(version)) {
+  if (pre || parse(version)?.rc !== undefined) {
     labels.push(preview)
     await $`gh label create ${preview} --repo ${repo} --color FBCA04 --description ${"Pre-release version"}`
       .quiet()

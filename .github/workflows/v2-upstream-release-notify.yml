@@ -11,8 +11,9 @@ name: v2 upstream release notify
 # logic of its own. `watch-opencode-releases.yml` cannot do this: it follows
 # upstream's "latest" release, which is the v1 line.
 #
-# Setup: repo secret `V2_SYNC_SLACK_WEBHOOK` (a Slack incoming webhook URL).
-# Without it the run reports what it found in the job summary and posts nothing.
+# The Slack webhook (`KILOCODE_V2_SYNC_SLACK_WEBHOOK`) comes from the STS bundle
+# of ci-kilocode-notify, read only by the `notify` job. The `check` job runs the
+# tooling of `v2` and holds no credential.
 
 on:
   schedule:
@@ -31,6 +32,11 @@ jobs:
     if: github.repository == 'Kilo-Org/kilocode'
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 10
+    outputs:
+      newest: ${{ steps.status.outputs.newest }}
+      key: ${{ steps.status.outputs.key }}
+      payload: ${{ steps.status.outputs.payload }}
+      hit: ${{ steps.notified.outputs.cache-hit }}
     env:
       # The upstream repository, as owner/name.
       UPSTREAM: anomalyco/opencode
@@ -94,40 +100,61 @@ jobs:
             | {text: "\($lead) Next sync: `bun script/upstream/merge.ts --version \(.next.tag)`"}
           ' status.json > slack-payload.json
           jq -r '.text' slack-payload.json >> "$GITHUB_STEP_SUMMARY"
+          # One line of compact JSON, so the output needs no delimiter.
+          echo "payload=$(jq -c . slack-payload.json)" >> "$GITHUB_OUTPUT"
 
+      # Only checks whether this post was already made; downloads nothing.
       - if: steps.status.outputs.newest != ''
-        id: cache
-        uses: actions/cache/restore@v4
+        id: notified
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: .cache/v2-sync-notified
           key: ${{ steps.status.outputs.key }}
+          lookup-only: true
 
-      # The secret is read in a step of its own, so the tooling above never sees it.
-      - if: steps.status.outputs.newest != '' && steps.cache.outputs.cache-hit != 'true'
-        id: webhook
-        env:
-          WEBHOOK: ${{ secrets.V2_SYNC_SLACK_WEBHOOK }}
-        run: |
-          if [ -n "$WEBHOOK" ]; then
-            echo "set=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "::warning::V2_SYNC_SLACK_WEBHOOK is not set, so nothing was posted"
-          fi
-
-      - if: steps.webhook.outputs.set == 'true'
-        name: Notify Slack
-        uses: slackapi/slack-github-action@v2.0.0
+  # The webhook comes from the STS bundle of ci-kilocode-notify, which needs environment automation
+  # (the STS policy accepts only this file at refs/heads/main) and id-token: write. This job
+  # therefore runs only pinned actions and this repository's kilo-credentials action, never the
+  # tooling of `v2`: read .github/actions/kilo-credentials/README.md before adding a step.
+  notify:
+    needs: check
+    if: needs.check.outputs.newest != '' && needs.check.outputs.hit != 'true'
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 10
+    environment: automation
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout the kilo-credentials action
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          webhook: ${{ secrets.V2_SYNC_SLACK_WEBHOOK }}
+          persist-credentials: false
+          sparse-checkout: .github/actions/kilo-credentials
+
+      - name: Read the STS bundle
+        id: creds
+        uses: ./.github/actions/kilo-credentials
+        with:
+          workload: ci-kilocode-notify
+          secrets: KILOCODE_V2_SYNC_SLACK_WEBHOOK
+
+      - name: Write the Slack payload
+        env:
+          PAYLOAD: ${{ needs.check.outputs.payload }}
+        run: mkdir -p .cache && printf '%s\n' "$PAYLOAD" > .cache/slack-payload.json
+
+      - name: Notify Slack
+        uses: slackapi/slack-github-action@485a9d42d3a73031f12ec201c457e2162c45d02d # v2.0.0
+        with:
+          webhook: ${{ steps.creds.outputs.KILOCODE_V2_SYNC_SLACK_WEBHOOK }}
           webhook-type: incoming-webhook
           payload-file-path: .cache/slack-payload.json
 
-      - if: steps.webhook.outputs.set == 'true'
-        name: Mark as notified
+      - name: Mark as notified
         run: mkdir -p .cache/v2-sync-notified && date -u > .cache/v2-sync-notified/marker
 
-      - if: success() && steps.webhook.outputs.set == 'true'
-        uses: actions/cache/save@v4
+      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: .cache/v2-sync-notified
-          key: ${{ steps.status.outputs.key }}
+          key: ${{ needs.check.outputs.key }}

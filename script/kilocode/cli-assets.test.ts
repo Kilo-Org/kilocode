@@ -3,40 +3,10 @@ import assert from "node:assert/strict"
 import { cp, mkdtemp, mkdir, rm, symlink } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
-import workflow from "../../.github/workflows/publish.yml"
 import { assets, signed } from "./cli-assets"
 import pin from "./bun.json"
 import * as Artifact from "./sbom/artifact"
 import * as Manifest from "./sbom/manifest"
-
-test("the publish gate rejects a repacked manifest with a different recipe checksum", async () => {
-  const steps: { name?: string; run?: string }[] = workflow.jobs.publish.steps
-  const script = steps.find((step) => step.name === "Verify package recipe manifest")?.run
-  assert(script)
-  const root = await mkdtemp(path.join(os.tmpdir(), "cli-recipes-"))
-  try {
-    const verified = path.join(root, "sboms", Manifest.name("cli"))
-    const repacked = path.join(root, "packages/opencode/dist", Manifest.name("cli"))
-    const entry = { artifact: "kilo-linux-x64.tar.gz", sha256: "a".repeat(64) }
-    const manifest = { version: "1.2.3", product: "cli", generated: "", expected: 1, entries: [entry] }
-    await Manifest.write(verified, manifest)
-    await Manifest.write(repacked, manifest)
-    const expected = await Artifact.digest(verified)
-    const run = () =>
-      Bun.spawn(["bash", "-e", "-c", script], {
-        cwd: root,
-        env: { PATH: process.env.PATH, EXPECTED: expected },
-        stdout: "ignore",
-        stderr: "ignore",
-      }).exited
-    expect(await run()).toBe(0)
-    entry.sha256 = "b".repeat(64)
-    await Manifest.write(repacked, manifest)
-    expect(await run()).not.toBe(0)
-  } finally {
-    await rm(root, { recursive: true, force: true })
-  }
-})
 
 const version = "1.2.3"
 

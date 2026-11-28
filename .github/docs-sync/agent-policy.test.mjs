@@ -373,10 +373,8 @@ check("no non-agent step carries a gateway credential", () => {
   }
 })
 
-check("the docs build secret stays out of the agent step", () => {
-  const block = step("Fix verify failures")
-  assert.ok(!block.includes("POSTHOG_API_KEY"), "the agent step must not hold the docs build secret")
-  assert.ok(step("Re-verify docs after the fix pass").includes("POSTHOG_API_KEY"), "the rebuild step keeps it")
+check("no docs-sync step reads a PostHog secret", () => {
+  assert.doesNotMatch(workflow, /secrets\.POSTHOG/, "the docs check builds are never published and need no analytics key")
 })
 
 // 5. No git credential is left in the worktree, and the steps that push carry
