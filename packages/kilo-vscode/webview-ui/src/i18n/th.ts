@@ -810,6 +810,8 @@ export const dict = {
 
   "dialog.model.noProviders": "ไม่มีผู้ให้บริการ",
   "dialog.model.unavailable": "ไม่สามารถใช้โมเดล Kilo ได้",
+  "dialog.model.selectedUnavailable":
+    "ไม่สามารถใช้ {{model}} ({{provider}}) ได้ โปรดเชื่อมต่อผู้ให้บริการอีกครั้งหรือเลือกโมเดลอื่น",
   "dialog.model.loadFailed": "ไม่สามารถโหลดผู้ให้บริการสำหรับโปรเจกต์นี้ได้",
 
   "prompt.placeholder.connecting": "กำลังเชื่อมต่อกับเซิร์ฟเวอร์...",

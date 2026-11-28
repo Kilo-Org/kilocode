@@ -82,13 +82,13 @@ class ModelPicker : PickerButton() {
     fun setItems(values: List<Item>, default: String? = null) {
         items = values
         val key = default ?: selected?.key
-        selected = key?.let { target -> values.firstOrNull { it.key == target || it.id == target } }
+        selected = values.findModel(key)
             ?: if (allowEmpty) null else values.firstOrNull()
         refresh()
     }
 
     fun select(key: String) {
-        selected = items.firstOrNull { it.key == key || it.id == key }
+        selected = items.findModel(key)
         refresh()
     }
 

@@ -28,6 +28,22 @@ class ModelPopupTest : BasePlatformTestCase() {
         assertEquals("kilo/gpt-5", popup.activeForTest())
     }
 
+    fun `test checkmark prefers an OpenAI key over a Kilo model id`() {
+        val popup = ModelPopup(
+            anchor = JButton(),
+            items = {
+                listOf(
+                    ModelPicker.Item("openai/gpt-6.1-terra", "GPT 6.1 Terra", "kilo", "Kilo"),
+                    ModelPicker.Item("gpt-6.1-terra", "GPT 6.1 Terra", "openai", "OpenAI"),
+                )
+            },
+            selected = { "openai/gpt-6.1-terra" },
+            onSelect = {},
+        )
+
+        assertEquals("openai/gpt-6.1-terra", popup.activeForTest())
+    }
+
     fun `test unknown model resolves to no selection`() {
         val popup = popup("openai/o5")
 

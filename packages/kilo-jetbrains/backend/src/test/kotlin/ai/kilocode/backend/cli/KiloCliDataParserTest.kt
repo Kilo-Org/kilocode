@@ -210,6 +210,24 @@ class KiloCliDataParserTest {
             assertNull(result.info.summary)
         }
 
+        @Test
+        fun `parseChatEvent - nested user model is history only`() {
+            val data = globalEvent("""
+                "type": "message.updated",
+                "properties": {
+                    "sessionID": "ses_1",
+                    "info": {
+                        "id": "msg_1", "sessionID": "ses_1", "role": "user", "time": { "created": 1.0 },
+                        "model": { "providerID": "openai", "modelID": "gpt-5" }
+                    }
+                }
+            """)
+
+            val event = assertIs<ChatEventDto.MessageUpdated>(KiloCliDataParser.parseChatEvent("message.updated", data))
+            assertNull(event.info.providerID)
+            assertNull(event.info.modelID)
+        }
+
         // ---- parseChatEvent — specific event types ----
 
         @Test
@@ -1787,6 +1805,48 @@ class KiloCliDataParserTest {
             assertEquals("assistant", result[1].info.role)
             assertNull(result[1].info.summary)
             assertEquals("Hi there", result[1].parts[0].text)
+        }
+
+        @Test
+        fun `parseMessages - preserves nested user and flat assistant model pairs`() {
+            val raw = """[
+                {
+                    "info": {
+                        "id": "m1", "sessionID": "s1", "role": "user", "time": { "created": 1.0 },
+                        "agent": "code", "model": { "providerID": "openai", "modelID": "gpt-5", "variant": "high" }
+                    },
+                    "parts": []
+                },
+                {
+                    "info": {
+                        "id": "m2", "sessionID": "s1", "role": "assistant", "time": { "created": 2.0 },
+                        "agent": "code", "providerID": "kilo", "modelID": "openai/gpt-5"
+                    },
+                    "parts": []
+                }
+            ]"""
+
+            val (user, assistant) = KiloCliDataParser.parseMessages(raw).map { it.info }
+
+            assertEquals("openai", user.providerID)
+            assertEquals("gpt-5", user.modelID)
+            assertEquals("kilo", assistant.providerID)
+            assertEquals("openai/gpt-5", assistant.modelID)
+        }
+
+        @Test
+        fun `parseMessages - falls back to the flat user model when the nested pair is incomplete`() {
+            val raw = """[{
+                "info": {
+                    "id": "m1", "sessionID": "s1", "role": "user", "time": { "created": 1.0 },
+                    "providerID": "openai", "modelID": "gpt-5", "model": { "providerID": "kilo" }
+                },
+                "parts": []
+            }]"""
+
+            val info = KiloCliDataParser.parseMessages(raw).single().info
+            assertEquals("openai", info.providerID)
+            assertEquals("gpt-5", info.modelID)
         }
 
         @Test

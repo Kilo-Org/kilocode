@@ -824,6 +824,8 @@ export const dict = {
 
   "dialog.model.noProviders": "Nenhum provedor",
   "dialog.model.unavailable": "Modelos Kilo indisponíveis",
+  "dialog.model.selectedUnavailable":
+    "{{model}} ({{provider}}) não está disponível. Reconecte o provedor ou escolha outro modelo.",
   "dialog.model.loadFailed": "Não foi possível carregar os provedores deste projeto.",
 
   "prompt.placeholder.connecting": "Conectando ao servidor...",

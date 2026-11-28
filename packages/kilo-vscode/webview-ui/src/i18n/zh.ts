@@ -790,6 +790,7 @@ export const dict = {
 
   "dialog.model.noProviders": "无供应商",
   "dialog.model.unavailable": "Kilo 模型不可用",
+  "dialog.model.selectedUnavailable": "{{model}}（{{provider}}）不可用。请重新连接供应商或选择其他模型。",
   "dialog.model.loadFailed": "无法加载此项目的供应商。",
 
   "prompt.placeholder.connecting": "正在连接服务器...",

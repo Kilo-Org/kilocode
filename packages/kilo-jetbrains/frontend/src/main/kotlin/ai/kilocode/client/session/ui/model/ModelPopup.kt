@@ -100,10 +100,7 @@ internal class ModelPopup(
 
     private fun current(): ModelPicker.Item? = item(selected())
 
-    private fun item(value: String?): ModelPicker.Item? {
-        if (value == null) return null
-        return items().firstOrNull { it.key == value || it.id == value }
-    }
+    private fun item(value: String?): ModelPicker.Item? = items().findModel(value)
 
     private fun keys(): Set<String> = favorites().mapTo(mutableSetOf()) { "${it.providerID}/${it.modelID}" }
 }

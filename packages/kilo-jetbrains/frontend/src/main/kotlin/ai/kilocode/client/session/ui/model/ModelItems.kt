@@ -4,6 +4,12 @@ import ai.kilocode.rpc.dto.ProvidersDto
 
 private const val KILO_PROVIDER = "kilo"
 
+internal fun List<ModelPicker.Item>.findModel(key: String?): ModelPicker.Item? {
+    if (key == null) return null
+    // A bare Gateway ID can be identical to another provider's qualified key.
+    return firstOrNull { it.key == key } ?: firstOrNull { it.id == key }
+}
+
 /**
  * Builds the model picker item list from workspace [providers], filtered to the Kilo provider and
  * any connected providers. Small models are dropped unless [includeSmall] is set. Shared by the

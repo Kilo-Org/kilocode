@@ -10,6 +10,7 @@ import ai.kilocode.client.plugin.KiloDocs
 import ai.kilocode.client.session.ui.model.ModelPicker
 import ai.kilocode.client.session.ui.model.ModelPopup
 import ai.kilocode.client.session.ui.model.ModelText
+import ai.kilocode.client.session.ui.model.findModel
 import ai.kilocode.client.session.ui.model.modelItems
 import ai.kilocode.client.settings.base.DirectoryReadyConfigurable
 import ai.kilocode.client.settings.base.SettingsDraftPage
@@ -374,7 +375,7 @@ internal class AgentsSettingsUi(
 
     private fun modelLabel(model: String?): String {
         if (model == null) return KiloBundle.message("settings.agentBehavior.agents.model.default")
-        val item = models.firstOrNull { it.key == model || it.id == model } ?: return model
+        val item = models.findModel(model) ?: return model
         return ModelText.buttonLabel(item)
     }
 

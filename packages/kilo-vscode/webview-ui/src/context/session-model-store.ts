@@ -1,3 +1,4 @@
+import { KILO_PROVIDER_ID } from "../../../src/shared/provider-model"
 import type { ModelSelection, Provider } from "../types/messages"
 import { resolveModelSelection } from "./model-selection"
 
@@ -81,7 +82,10 @@ export function getSelected(
   sessionID: string | undefined,
   agentName: string,
 ): ModelSelection | null {
-  return resolveModel(env, agentName, getPick(store, sessionID, agentName), store.recentModels)
+  const pick = getPick(store, sessionID, agentName)
+  // Keep an external pick visible so submission can reject it instead of switching providers.
+  if (pick && pick.providerID !== KILO_PROVIDER_ID) return pick
+  return resolveModel(env, agentName, pick, store.recentModels)
 }
 
 /** Returns the effective model for an agent outside any pick scope. */

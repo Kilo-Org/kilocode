@@ -783,6 +783,8 @@ export const dict = {
 
   "dialog.model.noProviders": "Ingen leverandører",
   "dialog.model.unavailable": "Kilo-modeller er utilgjengelige",
+  "dialog.model.selectedUnavailable":
+    "{{model}} ({{provider}}) er utilgjengelig. Koble til leverandøren på nytt, eller velg en annen modell.",
   "dialog.model.loadFailed": "Kunne ikke laste inn leverandører for dette prosjektet.",
 
   "prompt.placeholder.connecting": "Kobler til server...",

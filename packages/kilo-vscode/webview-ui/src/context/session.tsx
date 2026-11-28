@@ -81,7 +81,7 @@ import {
   type MessagePageState,
 } from "./session-utils"
 import { Identifier } from "../utils/id"
-import { resolveModelSelection } from "./model-selection"
+import { resolveModelSelection, unavailableModelToast } from "./model-selection"
 import { COMPOSER, getAgentModel, getSelected } from "./session-model-store"
 import { isModelValid } from "./provider-utils"
 import { createSessionRecovery } from "./session-recovery"
@@ -2223,16 +2223,11 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function available(selection: ModelSelection | null): selection is ModelSelection {
-    const resolved = resolveModelSelection({ ...environment(), session: selection })
+    const env = environment()
+    const resolved = resolveModelSelection({ ...env, session: selection })
     if (selection && resolved?.providerID === selection.providerID && resolved.modelID === selection.modelID)
       return true
-    // Say why the picker is empty when an organization's Kilo catalog failed to load.
-    const unavailable = provider.kiloUnavailable()
-    showToast({
-      variant: "error",
-      title: unavailable ? language.t("dialog.model.unavailable") : language.t("dialog.model.select.title"),
-      description: unavailable ? language.t("session.activity.retry") : undefined,
-    })
+    showToast(unavailableModelToast(selection, env.providers, provider.kiloUnavailable(), language.t))
     return false
   }
 

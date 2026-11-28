@@ -123,8 +123,8 @@ class HistoryLoadingTest : SessionControllerTestBase() {
         assertEquals("code", c.model.agent)
     }
 
-    fun `test loaded history derives model from latest user message`() {
-        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/gpt-5"))
+    fun `test reopened OpenAI chat sends the next prompt to OpenAI instead of the Gateway default`() {
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/openai/gpt-5"))
         projectRpc.state.value = workspaceReady(
             agents = agents(),
             default = "plan",
@@ -132,21 +132,21 @@ class HistoryLoadingTest : SessionControllerTestBase() {
                 ProviderDto(
                     id = "kilo",
                     name = "Kilo",
-                    models = mapOf("gpt-5" to ModelDto(id = "gpt-5", name = "GPT-5")),
+                    models = mapOf("openai/gpt-5" to ModelDto(id = "openai/gpt-5", name = "GPT-5")),
                 ),
                 ProviderDto(
-                    id = "anthropic",
-                    name = "Anthropic",
-                    models = mapOf("claude" to ModelDto(id = "claude", name = "Claude")),
+                    id = "openai",
+                    name = "OpenAI",
+                    models = mapOf("gpt-5" to ModelDto(id = "gpt-5", name = "GPT-5")),
                 ),
             ),
-            connected = listOf("kilo", "anthropic"),
-            defaults = mapOf("plan" to "kilo/gpt-5", "code" to "kilo/gpt-5"),
+            connected = listOf("kilo", "openai"),
+            defaults = mapOf("plan" to "kilo/openai/gpt-5", "code" to "kilo/openai/gpt-5"),
         )
         rpc.history.add(MessageWithPartsDto(msg("msg1", "ses_test", "user").copy(
             agent = "code",
-            providerID = "anthropic",
-            modelID = "claude",
+            providerID = "openai",
+            modelID = "gpt-5",
             time = MessageTimeDto(1.0),
         ), emptyList()))
 
@@ -154,8 +154,15 @@ class HistoryLoadingTest : SessionControllerTestBase() {
         flush()
 
         assertEquals("code", c.model.agent)
-        assertEquals("anthropic/claude", c.model.model)
+        assertEquals("openai/gpt-5", c.model.model)
         assertFalse(c.model.modelOverride)
+
+        edt { c.prompt("continue") }
+        flush()
+
+        val prompt = rpc.prompts.single().third
+        assertEquals("openai", prompt.providerID)
+        assertEquals("gpt-5", prompt.modelID)
     }
 
     fun `test empty loaded history keeps workspace default agent`() {
