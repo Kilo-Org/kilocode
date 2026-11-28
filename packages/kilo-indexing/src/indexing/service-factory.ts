@@ -15,6 +15,7 @@ import { OpenRouterEmbedder } from "./embedders/openrouter"
 import { VoyageEmbedder } from "./embedders/voyage"
 import { QdrantVectorStore } from "./vector-store/qdrant-client"
 import { LanceDBVectorStore } from "./vector-store/lancedb-vector-store"
+import { loadGlide } from "./vector-store/valkey-loader"
 import { CodeParser, DirectoryScanner, FileWatcher } from "./processors"
 import type { AvailableEmbedders, ICodeParser, IEmbedder, IFileWatcher, IVectorStore } from "./interfaces"
 import type { CodeIndexConfigManager } from "./config-manager"
@@ -30,6 +31,14 @@ import { Log } from "../util/log"
 import type { IgnoreMatcher } from "./shared/load-ignore"
 
 const log = Log.create({ service: "indexing-factory" })
+
+function loadValkey(): typeof import("./vector-store/valkey-vector-store") {
+  // The native GLIDE binding loads lazily via loadGlide(); probe it here so an unsupported
+  // platform (e.g. Windows, which GLIDE never publishes a binding for) fails with a clear
+  // message at store creation instead of a raw native error on the first connect/search.
+  loadGlide()
+  return require("./vector-store/valkey-vector-store")
+}
 
 // RATIONALE: The OpenAI SDK applies the per-attempt timeout and retries internally.
 const policy = {
@@ -212,6 +221,20 @@ export class CodeIndexServiceFactory {
         dbDir,
       })
       return new LanceDBVectorStore(workspacePath, profile.dimension, dbDir, profile)
+    }
+
+    if (config.vectorStoreProvider === "valkey") {
+      if (!config.valkeyUrl) throw new Error("Valkey URL is required.")
+      log.info("creating vector store", {
+        provider: config.embedderProvider,
+        vectorStore: "valkey",
+        model: profile.modelId,
+        vectorSize: profile.dimension,
+      })
+      // Lazy import: @valkey/valkey-glide ships native binaries only for Darwin/Linux and throws on
+      // import elsewhere. Importing eagerly would break indexing on Windows even when Valkey is not selected.
+      const { ValkeyVectorStore } = loadValkey()
+      return new ValkeyVectorStore(workspacePath, config.valkeyUrl, profile.dimension, config.valkeyPassword, profile)
     }
 
     if (!config.qdrantUrl) throw new Error("Qdrant URL is required.")
