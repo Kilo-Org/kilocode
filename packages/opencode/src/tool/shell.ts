@@ -23,6 +23,7 @@ import { normalizeUrls } from "@/kilocode/util/url" // kilocode_change
 import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { heredocs } from "@/kilocode/tool/shell-heredoc" // kilocode_change
 import { unparsed } from "@/kilocode/tool/shell-unparsed" // kilocode_change
+import { recover } from "@/kilocode/tool/shell" // kilocode_change
 import { pattern } from "@/kilocode/tool/shell-pattern" // kilocode_change
 import { ChildProcess } from "effect/unstable/process"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
@@ -384,13 +385,15 @@ export const ShellPermission = Effect.gen(function* () {
     const kind = ShellID.toKind(Shell.name(shell))
 
     const nodes = commands(root)
+    const recovered = recover(root, nodes) // kilocode_change - join tails split off by the grammar (#15938)
+    const kept = recovered.kept // kilocode_change
     if (root.descendantsOfType("file_redirect").length > 0) scan.access = "unknown"
-    if (nodes.some((node) => !READ.has((ps ? parts(node)[0]?.text.toLowerCase() : parts(node)[0]?.text) ?? ""))) {
+    if (kept.some((node) => !READ.has((ps ? parts(node)[0]?.text.toLowerCase() : parts(node)[0]?.text) ?? ""))) {
       scan.access = "unknown"
     }
 
     for (const node of nodes) {
-      const command = parts(node)
+      const command = [...parts(node), ...recovered.tail(node).flatMap(parts)] // kilocode_change - scan the joined tail as arguments
       const tokens = command.map((item) => item.text)
       const cmd = ps || kind === "cmd" ? tokens[0]?.toLowerCase() : tokens[0]
 
@@ -406,14 +409,17 @@ export const ShellPermission = Effect.gen(function* () {
         }
       }
 
-      if (tokens.length && (!cmd || !CWD.has(cmd))) {
+      if (tokens.length && (!cmd || !CWD.has(cmd)) && !recovered.covered(node)) {
+        // kilocode_change - the joined pattern covers it
         scan.patterns.add(pattern(node, kind, source(node))) // kilocode_change - mask inert operators (quoted, /dev/null) for read-only rules
         scan.always.add(BashArity.prefix(tokens).join(" ") + " *")
-      }
+      } else if (tokens.length && recovered.head(node)) scan.always.add(BashArity.prefix(tokens).join(" ") + " *") // kilocode_change - the recovered head keeps its always prefix
     }
 
+    for (const tokens of recovered.bare) scan.always.add(BashArity.prefix(tokens).join(" ") + " *") // kilocode_change - bare recovered heads keep their always prefix
+
     // kilocode_change start - fail closed on commands the grammar failed to parse (#12326)
-    const lost = unparsed(root, nodes.length)
+    const lost = unparsed(root, kept.length)
     if (lost.length > 0) scan.access = "unknown"
     for (const pattern of lost) {
       scan.patterns.add(pattern)
