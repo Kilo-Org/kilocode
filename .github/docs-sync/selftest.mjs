@@ -3298,7 +3298,9 @@ const server = http.createServer((req, res) => {
       return json(res, {
         number: 1,
         body,
-        head: { ref: "docs/auto-sync/cli" },
+        state: "open",
+        head: { ref: "docs/auto-sync/cli", repo: { full_name: "acme/repo" } },
+        labels: [{ name: "auto-docs" }],
         user: { login: "github-actions[bot]" },
       })
     }
@@ -3349,6 +3351,8 @@ server.listen(0, "127.0.0.1", () => fs.writeFileSync(process.env.PORT_FILE, Stri
       const outputs = fs.readFileSync(path.join(dir, "gh-output-t"), "utf8")
       const marker = outputs.match(/^marker_patch=(.*)$/m)?.[1] ?? ""
       assert.ok(marker.includes(tip), `learn.mjs must hand over a marker with the new tip; got ${outputs}`)
+      const markerPrs = outputs.match(/^marker_prs=(.*)$/m)?.[1] ?? ""
+      assert.equal(markerPrs, "1", "learn.mjs must hand over the PR numbers it read")
 
       const publish = runNodeScript(UPSERT_SCRIPT, {
         cwd,
@@ -3360,6 +3364,7 @@ server.listen(0, "127.0.0.1", () => fs.writeFileSync(process.env.PORT_FILE, Stri
           SINCE: "2026-08-01T00:00:00.000Z",
           HAS_EDITS: "false",
           MARKER_PATCH: marker,
+          MARKER_PRS: markerPrs,
           GITHUB_OUTPUT: path.join(dir, "gh-output-t-publish"),
           GITHUB_STEP_SUMMARY: path.join(dir, "gh-summary-t-publish"),
         },
@@ -3552,7 +3557,15 @@ const server = http.createServer((req, res) => {
     if (req.method === "GET" && pullMatch) {
       const n = Number(pullMatch[1])
       const pr = (config.openPrs || []).find((p) => p.number === n) || {}
-      return send(res, 200, { number: n, head: { ref: pr.head || "" }, body: pr.body || "", html_url: "https://example.test/pull/" + n })
+      const repoName = (config.forkPrs || []).includes(n) ? "fork/repo" : "acme/repo"
+      return send(res, 200, {
+        number: n,
+        state: "open",
+        head: { ref: pr.head || "", repo: { full_name: repoName } },
+        labels: [{ name: "auto-docs" }],
+        body: pr.body || "",
+        html_url: "https://example.test/pull/" + n,
+      })
     }
     if (req.method === "GET" && /\\/pulls\\/\\d+\\/comments$/.test(path)) return send(res, 200, [])
     if (req.method === "GET" && path.endsWith("/commits")) {
@@ -3674,6 +3687,12 @@ function runUpsert(repoDir, root, port, extraEnv = {}) {
   } catch {
     durableBase = ""
   }
+  let baseMain = ""
+  try {
+    baseMain = gitIn(repoDir, ["rev-parse", "--verify", "-q", "refs/remotes/origin/main"])
+  } catch {
+    baseMain = ""
+  }
   return runNodeScript(UPSERT_SCRIPT, {
     cwd: repoDir,
     env: {
@@ -3685,6 +3704,8 @@ function runUpsert(repoDir, root, port, extraEnv = {}) {
       VERIFIED: "true",
       BRANCH: "docs/auto-sync",
       DURABLE_BASE: dirty ? durableBase : "",
+      BASE_MAIN: dirty ? baseMain : "",
+      LEGACY_BASE: "",
       HAS_EDITS: dirty ? "true" : "false",
       INTEGRATION_SHA: dirty ? gitIn(repoDir, ["rev-parse", "HEAD"]) : "",
       GITHUB_OUTPUT: path.join(root, "gh-output"),
@@ -4159,6 +4180,11 @@ function case18_legacyRefDeletedWithoutPr() {
       },
     })
     assert.equal(result.status, 0, `prepare-branch must exit 0: ${result.output}`)
+    assert.match(
+      fs.readFileSync(outputFile, "utf8"),
+      new RegExp(`^legacy_sha=${legacySha}$`, "m"),
+      "prepare-branch must report the legacy tip it saw, for the publish lease",
+    )
 
     const remote = gitIn(repoDir, ["ls-remote", "--heads", "origin", "docs/auto-sync"])
     assert.ok(remote.endsWith("refs/heads/docs/auto-sync"), `prepare-branch must make no remote write; got:\n${remote}`)
@@ -4170,13 +4196,30 @@ function case18_legacyRefDeletedWithoutPr() {
     stub.child.kill()
   }
 
-  // The publish job's checkout recreates the remote-tracking ref for the
-  // legacy branch; upsert must delete both before it pushes a surface branch.
-  gitIn(repoDir, ["update-ref", "refs/remotes/origin/docs/auto-sync", legacySha])
+  // The legacy branch moves between the jobs: the leased delete must refuse,
+  // and the run's surface push fails with a warning instead of a lost branch.
+  const movedSha = gitIn(repoDir, ["commit-tree", `${legacySha}^{tree}`, "-p", legacySha, "-m", "moved during the run"])
+  gitIn(repoDir, ["push", "-q", "origin", `${movedSha}:refs/heads/docs/auto-sync`])
   write(SURFACE_PAGE_FILES.cli, "# new\n")
+  const movedStub = startSurfaceStub({ openPrs: [] })
+  try {
+    const result = runUpsert(repoDir, root, movedStub.port, { LEGACY_BASE: legacySha })
+    assert.equal(result.status, 0, `upsert must exit 0: ${result.output}`)
+    assert.match(result.output, /could not delete the legacy branch/, "the refused delete must warn")
+    const remote = gitIn(repoDir, ["ls-remote", "--heads", "origin", "docs/auto-sync"])
+    assert.ok(remote.startsWith(movedSha), `the moved legacy branch must be kept; got:\n${remote}`)
+  } finally {
+    movedStub.child.kill()
+  }
+
+  // With the lease at the tip the agent job saw, upsert deletes the branch and
+  // the remote-tracking ref (recreated by the publish checkout) before it
+  // pushes a surface branch.
+  gitIn(repoDir, ["update-ref", "refs/remotes/origin/docs/auto-sync", movedSha])
+  write(SURFACE_PAGE_FILES.cli, "# new, second run\n")
   const publishStub = startSurfaceStub({ openPrs: [] })
   try {
-    const result = runUpsert(repoDir, root, publishStub.port)
+    const result = runUpsert(repoDir, root, publishStub.port, { LEGACY_BASE: movedSha })
     assert.equal(result.status, 0, `upsert must exit 0: ${result.output}`)
 
     const remote = gitIn(repoDir, ["ls-remote", "--heads", "origin", "docs/auto-sync"])
@@ -4653,16 +4696,17 @@ function runLearnLive(repoDir, root, port) {
 
 /**
  * The publish half of the marker route: assert learn.mjs made no GitHub write,
- * then run upsert-pr.mjs with the marker it handed over and no docs commit.
+ * then run upsert-pr.mjs with the marker and PR numbers it handed over and no
+ * docs commit. Returns the run and the requests the publish run made.
  */
 function runPublishMarker(repoDir, root, port, logFile) {
-  assert.ok(
-    !readStubLog(logFile).some((e) => e.method !== "GET"),
-    "learn.mjs must make no GitHub write: its token is read-only",
-  )
-  const marker = fs.readFileSync(path.join(root, "gh-output"), "utf8").match(/^marker_patch=(.*)$/m)?.[1] ?? ""
+  const learnLog = readStubLog(logFile)
+  assert.ok(!learnLog.some((e) => e.method !== "GET"), "learn.mjs must make no GitHub write: its token is read-only")
+  const outputs = fs.readFileSync(path.join(root, "gh-output"), "utf8")
+  const marker = outputs.match(/^marker_patch=(.*)$/m)?.[1] ?? ""
+  const markerPrs = outputs.match(/^marker_prs=(.*)$/m)?.[1] ?? ""
   assert.ok(marker.startsWith("<!-- docs-sync: learned-through"), "learn.mjs must hand over the marker")
-  return runNodeScript(UPSERT_SCRIPT, {
+  const result = runNodeScript(UPSERT_SCRIPT, {
     cwd: repoDir,
     env: {
       GITHUB_REPOSITORY: "acme/repo",
@@ -4672,10 +4716,12 @@ function runPublishMarker(repoDir, root, port, logFile) {
       SINCE: "2026-08-01T00:00:00.000Z",
       HAS_EDITS: "false",
       MARKER_PATCH: marker,
+      MARKER_PRS: markerPrs,
       GITHUB_OUTPUT: path.join(root, "gh-output-publish"),
       GITHUB_STEP_SUMMARY: path.join(root, "gh-summary-publish"),
     },
   })
+  return { ...result, markerPrs, requests: readStubLog(logFile).slice(learnLog.length) }
 }
 
 // ---------------------------------------------------------------------------
@@ -4683,19 +4729,37 @@ function runPublishMarker(repoDir, root, port, logFile) {
 // ---------------------------------------------------------------------------
 function case26_learnIgnoresLegacyPr() {
   console.log("case 26 — learn.mjs ignores a legacy dated auto-sync PR")
-  const { root, repoDir } = setupLearnLiveRepo(["docs/auto-sync/cli", "docs/auto-sync-2026-09-11"])
+  const { root, repoDir } = setupLearnLiveRepo([
+    "docs/auto-sync/cli",
+    "docs/auto-sync/vscode",
+    "docs/auto-sync-2026-09-11",
+  ])
 
+  // #99 has a surface head but comes from a fork: learn may read it, publish
+  // must not write to it.
   const stub = startSurfaceStub({
     openPrs: [
       { number: 14043, head: "docs/auto-sync-2026-09-11", body: "" },
       { number: 77, head: "docs/auto-sync/cli", body: "" },
+      { number: 99, head: "docs/auto-sync/vscode", body: "" },
     ],
+    forkPrs: [99],
   })
   try {
     const result = runLearnLive(repoDir, root, stub.port)
     assert.equal(result.status, 0, `learn.mjs must exit 0: ${result.output}`)
     const publish = runPublishMarker(repoDir, root, stub.port, stub.logFile)
     assert.equal(publish.status, 0, `upsert must exit 0: ${publish.output}`)
+    assert.equal(publish.markerPrs, "77,99", "learn hands over exactly the surface PRs it read")
+    assert.ok(
+      !publish.requests.some((e) => e.url.startsWith("/search/issues")),
+      "publish must not search again: it re-reads only the handed-over PRs",
+    )
+    assert.ok(!publish.requests.some((e) => e.url.includes("/pulls/14043")), "publish must not read the dated PR")
+    assert.ok(
+      !publish.requests.some((e) => e.method === "PATCH" && e.url.includes("/pulls/99")),
+      "publish must not write to a PR whose head is in another repository",
+    )
 
     const log = readStubLog(stub.logFile)
     assert.ok(
@@ -4774,6 +4838,51 @@ function case28_movedDurableBranchRefused() {
 }
 
 // ---------------------------------------------------------------------------
+// Case 29 — surface branches build on the handed-over main, not a newer one
+// ---------------------------------------------------------------------------
+// handoff.mjs check fetches main as it is now, which may be newer than the main
+// the integration tree was built on. A surface branch built on that newer main
+// with the integration's whole files would silently revert main's later edits
+// to those files; built on base_main, the PR shows a conflict instead.
+function case29_surfaceBaseIsHandedOverMain() {
+  console.log("case 29 — surface branches build on the handed-over main, not a newer one")
+  const stub = startSurfaceStub({ openPrs: [] })
+  try {
+    const { root, repoDir } = setupSurfaceRepo()
+    for (const name of ["vscode", "gateway", "other"]) fs.rmSync(path.join(repoDir, SURFACE_PAGE_FILES[name]))
+    const baseMain = gitIn(repoDir, ["rev-parse", "refs/remotes/origin/main"])
+
+    // Main moves on between the jobs and edits the same page the agent wrote.
+    const other = path.join(root, "other")
+    gitIn(root, ["clone", "-q", "-b", "main", path.join(root, "origin.git"), "other"])
+    gitIn(other, ["config", "user.name", "docs-sync-selftest"])
+    gitIn(other, ["config", "user.email", "docs-sync-selftest@example.com"])
+    gitIn(other, ["config", "commit.gpgsign", "false"])
+    const page = path.join(other, SURFACE_PAGE_FILES.cli)
+    fs.mkdirSync(path.dirname(page), { recursive: true })
+    fs.writeFileSync(page, "# written on main after the agent job started\n")
+    gitIn(other, ["add", "-A"])
+    gitIn(other, ["commit", "-q", "-m", "main moves on"])
+    gitIn(other, ["push", "-q", "origin", "HEAD:refs/heads/main"])
+    gitIn(repoDir, ["fetch", "-q", "origin", "main"]) // what handoff.mjs check does
+    const newerMain = gitIn(repoDir, ["rev-parse", "refs/remotes/origin/main"])
+    assert.notEqual(newerMain, baseMain)
+
+    const result = runUpsert(repoDir, root, stub.port, { BASE_MAIN: baseMain })
+    assert.equal(result.status, 0, `upsert must exit 0: ${result.output}`)
+    const cli = gitIn(repoDir, ["ls-remote", "--heads", "origin", "docs/auto-sync/cli"]).split("\t")[0]
+    assert.ok(cli, "the cli surface branch must be pushed")
+    assert.equal(gitIn(repoDir, ["rev-parse", `${cli}^`]), baseMain, "the surface branch must start from base_main")
+    assert.throws(
+      () => gitIn(repoDir, ["merge-base", "--is-ancestor", newerMain, cli]),
+      "the surface branch must not be built on the newer main",
+    )
+  } finally {
+    stub.child.kill()
+  }
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 function main() {
@@ -4814,6 +4923,7 @@ function main() {
     case26_learnIgnoresLegacyPr,
     case27_patchFailureIsolated,
     case28_movedDurableBranchRefused,
+    case29_surfaceBaseIsHandedOverMain,
   ]
   let failed = 0
   for (const fn of cases) {

@@ -771,7 +771,7 @@ async function extract() {
     )
 
     const marker = renderLearnedThrough({ commit: learnedCommit, comment: maxCommentAt })
-    handOffMarker({ marker, fixture, patchFile, appendOutput })
+    handOffMarker({ marker, targets, fixture, patchFile, appendOutput })
     return
   }
 
@@ -886,7 +886,7 @@ async function extract() {
     appendOutput("count", String(existing.length))
 
     const marker = renderLearnedThrough({ commit: learnedCommit, comment: maxCommentAt })
-    handOffMarker({ marker, fixture, patchFile, appendOutput })
+    handOffMarker({ marker, targets, fixture, patchFile, appendOutput })
 
     const rejected = validated.rejected.length
     appendSummary(
@@ -923,10 +923,11 @@ function readFileOrEmpty(file) {
 }
 
 /**
- * Hand the marker of a run that learned nothing new to the publish job, which
- * PATCHes it into every open surface PR. This job's token is read-only.
+ * Hand the marker of a run that learned nothing new to the publish job, with
+ * the numbers of the surface PRs it was computed from; the publish job re-reads
+ * those PRs and PATCHes the marker in. This job's token is read-only.
  */
-function handOffMarker({ marker, fixture, patchFile, appendOutput }) {
+function handOffMarker({ marker, targets, fixture, patchFile, appendOutput }) {
   const suppressed = process.env.DRY_RUN === "true" || process.env.LEARNINGS_NO_PATCH === "1"
 
   if (suppressed) {
@@ -937,7 +938,13 @@ function handOffMarker({ marker, fixture, patchFile, appendOutput }) {
     return
   }
 
+  const numbers = [...new Set(targets.map((t) => String(t.prNumber)).filter((n) => /^\d{1,10}$/.test(n)))]
+  if (numbers.length === 0) {
+    warn("no surface PR number to hand over with the learned-through marker")
+    return
+  }
   appendOutput("marker_patch", marker)
+  appendOutput("marker_prs", numbers.join(","))
   if (fixture) {
     fs.writeFileSync(patchFile, marker)
     log(`wrote marker to ${patchFile}`)

@@ -16,19 +16,24 @@
  *     refs/heads/docs-sync-handoff, and is fetched with object checks. Its
  *     prerequisite (base_main) must lie on main between the commit this run
  *     started from (GITHUB_SHA) and origin/main now, so it is a main commit
- *     pushed during this run at the oldest;
+ *     pushed during this run at the oldest. `check` fetches main first:
+ *     actions/checkout resets origin/main to the run's commit, while the agent
+ *     job may have built on a newer main;
  *   - each commit the bundle adds changes packages/kilo-docs/ alone, and so does
  *     the whole tip against main, with no symlink, no submodule, no mode change
  *     and no new executable file.
  * It never checks the bundle out into the workspace and runs no file from it.
- * `durable_base` is the push lease for upsert-pr.mjs: the tip of the target
- * branch the agent job built on (empty: it did not exist). It decides nothing
- * but whether a branch that moved during the run is overwritten (it is not).
- * It guards honest races only: the agent job chooses the value, so it is no
- * security check.
+ * `durable_base` and `legacy_base` are push leases for upsert-pr.mjs: the tip
+ * of the target branch, and of a lingering legacy `docs/auto-sync` branch, as
+ * the agent job saw them (empty: absent). They decide nothing but whether a
+ * branch that moved during the run is overwritten or deleted (it is not). They
+ * guard honest races only: the agent job chooses the values, so they are no
+ * security check. `marker_prs` lists the pull requests learn.mjs read for the
+ * marker; upsert-pr.mjs re-reads each and patches only this repository's own
+ * auto-docs surface PRs among them.
  *
  * Env (pack): HANDOFF_DIR, WORTHY_COUNT, SINCE, NOW, SINCE_OVERRIDE,
- *   LEARNED_THROUGH, MARKER_PATCH, BRANCH, VERIFIED.
+ *   LEARNED_THROUGH, MARKER_PATCH, MARKER_PRS, BRANCH, LEGACY_BASE, VERIFIED.
  * Env (check): HANDOFF_DIR, GITHUB_SHA (the commit this run started from).
  */
 
@@ -82,11 +87,13 @@ const SCALARS = {
   since_override: (v) => v === "true" || v === "false",
   learned_through: (v) => v === "" || LEARNED_THROUGH.test(v),
   marker_patch: (v) => v === "" || LEARNED_THROUGH.test(v),
+  marker_prs: (v) => /^(\d{1,10}(,\d{1,10})*)?$/.test(v),
   branch: (v) => v === "" || /^docs\/auto-sync(-\d{4}-\d{2}-\d{2})?$/.test(v),
   verified: (v) => v === "" || v === "true" || v === "false",
   has_edits: (v) => v === "true" || v === "false",
   base_main: (v) => v === "" || SHA.test(v),
   durable_base: (v) => v === "" || SHA.test(v),
+  legacy_base: (v) => v === "" || SHA.test(v),
 }
 
 function gitRunner(cwd) {
@@ -147,11 +154,13 @@ export function pack({ cwd = process.cwd(), env = process.env } = {}) {
     since_override: env.SINCE_OVERRIDE ?? "",
     learned_through: env.LEARNED_THROUGH ?? "",
     marker_patch: env.MARKER_PATCH ?? "",
+    marker_prs: env.MARKER_PATCH ? (env.MARKER_PRS ?? "") : "",
     branch: dirty ? (env.BRANCH ?? "") : "",
     verified: env.VERIFIED ?? "",
     has_edits: dirty ? "true" : "false",
     base_main: baseMain,
     durable_base: durableBase,
+    legacy_base: dirty ? (env.LEGACY_BASE ?? "") : "",
   }
   fs.writeFileSync(path.join(dir, MANIFEST), JSON.stringify(manifest, null, 2))
 
@@ -211,9 +220,12 @@ export function validateManifest(manifest) {
       if (manifest[key] === "") throw new Error(`${MANIFEST} ${key} is required when has_edits is true`)
     }
   } else {
-    for (const key of ["branch", "base_main", "durable_base"]) {
+    for (const key of ["branch", "base_main", "durable_base", "legacy_base"]) {
       if (manifest[key] !== "") throw new Error(`${MANIFEST} ${key} must be empty when has_edits is false`)
     }
+  }
+  if ((manifest.marker_patch === "") !== (manifest.marker_prs === "")) {
+    throw new Error(`${MANIFEST} marker_patch and marker_prs must both be set or both be empty`)
   }
   return manifest
 }
@@ -273,6 +285,10 @@ export function checkBundle({ bundle, baseMain, runSha, git }) {
   }
   if (header.toString("latin1") !== "# v2 git bundle\n") throw new Error(`${BUNDLE} is not a v2 git bundle`)
 
+  // actions/checkout resets origin/main to the run's commit when main moved;
+  // the agent job may have built on a newer main, so read main as it is now.
+  // The repository is public, so this needs no credential.
+  git(["fetch", "--quiet", "--no-tags", "origin", "+refs/heads/main:refs/remotes/origin/main"])
   try {
     git(["merge-base", "--is-ancestor", baseMain, "refs/remotes/origin/main"])
   } catch {
@@ -397,11 +413,14 @@ export function check({ cwd = process.cwd(), env = process.env } = {}) {
     since_override: manifest.since_override,
     learned_through: manifest.learned_through,
     marker_patch: manifest.marker_patch,
+    marker_prs: manifest.marker_prs,
     branch: manifest.branch,
     verified: manifest.verified,
     has_edits: manifest.has_edits,
     integration_sha: integrationSha,
+    base_main: manifest.base_main,
     durable_base: manifest.durable_base,
+    legacy_base: manifest.legacy_base,
   }
 }
 

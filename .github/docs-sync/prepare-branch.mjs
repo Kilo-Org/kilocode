@@ -171,9 +171,19 @@ async function main() {
   // A ref may not be a path prefix of another ref, so a lingering legacy
   // `docs/auto-sync` branch blocks every `docs/auto-sync/<surface>` ref. This
   // job's token is read-only: the publish job deletes the branch on origin
-  // (upsert-pr.mjs). Drop the stale local remote-tracking ref here, otherwise a
+  // (upsert-pr.mjs), leased at the tip read here (output legacy_sha; empty when
+  // there is none). Drop the stale local remote-tracking ref here, otherwise a
   // fetch of a `docs/auto-sync/<surface>` branch later in this job fails on the
   // directory/file ref conflict. Deleting a ref that is not present is a no-op.
+  let legacySha = ""
+  try {
+    const line = git(["ls-remote", "--heads", "origin", DEFAULT_BRANCH])
+      .split("\n")
+      .find((l) => l.endsWith(`\trefs/heads/${DEFAULT_BRANCH}`))
+    legacySha = line ? line.split("\t")[0] : ""
+  } catch (err) {
+    console.warn(`::warning::docs-sync: could not check for the legacy branch ${DEFAULT_BRANCH}: ${err.message}`)
+  }
   try {
     git(["update-ref", "-d", `refs/remotes/origin/${DEFAULT_BRANCH}`])
   } catch (err) {
@@ -181,6 +191,7 @@ async function main() {
   }
 
   appendOutput("branch", branch)
+  appendOutput("legacy_sha", legacySha)
   appendOutput("mode", mode)
   console.log(`branch ${branch} ready (mode=${mode}, surfacePrs=${surfacePrs.length})`)
 }

@@ -532,9 +532,12 @@ check("the publish steps read the agent job's values only through the check", ()
   for (const key of [
     "HAS_EDITS",
     "INTEGRATION_SHA",
+    "BASE_MAIN",
     "DURABLE_BASE",
+    "LEGACY_BASE",
     "LEARNED_THROUGH",
     "MARKER_PATCH",
+    "MARKER_PRS",
     "PROCESSED_THROUGH",
     "BRANCH",
   ]) {

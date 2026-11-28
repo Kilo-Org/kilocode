@@ -496,21 +496,24 @@ function partitionByPresence(git, sha, files) {
 /**
  * Build the surface branch in a throwaway worktree and push it. On update the
  * base is the open PR's remote branch (so human commits survive), merged with
- * origin/main; otherwise it is a fresh branch from origin/main.
+ * `baseMain`; otherwise it is a fresh branch from `baseMain`. `baseMain` is the
+ * main commit the integration tree was built on, not main as it is now: whole
+ * files are copied from the integration tree, so a newer base would silently
+ * revert main's later edits to those files.
  */
-function buildSurfaceBranch({ name, files, branch, integrationSha, update, date }) {
+function buildSurfaceBranch({ name, files, branch, integrationSha, baseMain, update, date }) {
   try {
     git(["fetch", "origin", `+refs/heads/${branch}:refs/remotes/origin/${branch}`])
   } catch {
     // Branch may not exist yet; --force-with-lease will create it.
   }
-  const base = update ? `origin/${branch}` : "origin/main"
+  const base = update ? `origin/${branch}` : baseMain
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "docs-sync-wt-"))
   try {
     git(["worktree", "add", "--detach", tmp, base])
     if (update) {
       // Preserve human commits on the open PR branch.
-      git(["merge", "origin/main", "--no-edit"], tmp)
+      git(["merge", baseMain, "--no-edit"], tmp)
     }
     // Remove deletions before restoring the rest, so a file→directory change
     // cannot block the checkout of a path under the removed file.
@@ -566,6 +569,7 @@ async function upsertSurface({
   rows,
   openPr,
   integrationSha,
+  baseMain,
 }) {
   const branch = surfaceBranch(name)
   const reviewed = await computeSurfaceReviewers(name, { api, repo, now, map })
@@ -584,7 +588,7 @@ async function upsertSurface({
   const draft = draftReasons.length > 0
 
   const update = Boolean(openPr)
-  buildSurfaceBranch({ name, files, branch, integrationSha, update, date })
+  buildSurfaceBranch({ name, files, branch, integrationSha, baseMain, update, date })
 
   // Append-only: carry rows already on the surface PR body forward.
   let oldChanges = []
@@ -654,61 +658,58 @@ async function upsertSurface({
 }
 
 /**
- * Write the learned-through marker into every open surface PR. learn.mjs hands
- * it over when it found nothing new to learn (no candidate correction, or a
- * validated delta that adds and removes nothing); the agent job's token is
- * read-only, so this job writes it. Each body is read just before its PATCH, so
- * an edit made while the agent job ran survives; GitHub has no conditional
- * update for a pull request body, so a short read-to-PATCH race remains. One
- * PR's failure warns and does not skip the rest: a stale marker only re-reads a
- * range already learned from.
+ * Write the learned-through marker into the surface PRs learn.mjs read for it
+ * (`numbers`). learn.mjs hands it over when it found nothing new to learn (no
+ * candidate correction, or a validated delta that adds and removes nothing);
+ * the agent job's token is read-only, so this job writes it. Each PR is re-read
+ * just before its PATCH, so an edit made while the agent job ran survives;
+ * GitHub has no conditional update for a pull request body, so a short
+ * read-to-PATCH race remains. Only this repository's own open auto-docs PRs on
+ * a `docs/auto-sync/<surface>` head are patched. One PR's failure warns and
+ * does not skip the rest: a stale marker only re-reads a range already learned
+ * from.
  */
-async function patchLearnedMarkers({ api, searchIssues, repo, marker }) {
-  let prs = []
-  try {
-    prs = await searchIssues(`repo:${repo} is:pr is:open label:auto-docs sort:created-desc`, { maxPages: 2 })
-  } catch (err) {
-    console.warn(`::warning::docs-sync: could not list auto-docs PRs for the learned-through marker: ${err.message}`)
-    return
-  }
-  for (const item of prs) {
+async function patchLearnedMarkers({ api, repo, marker, numbers }) {
+  for (const number of numbers) {
     try {
-      const detail = await api(`/repos/${repo}/pulls/${item.number}`)
-      // Only a `docs/auto-sync/<surface>` head is one of this job's own PRs.
-      if (!isSurfaceBranch(detail?.head?.ref)) continue
-      await api(`/repos/${repo}/pulls/${item.number}`, {
+      const detail = await api(`/repos/${repo}/pulls/${number}`)
+      const own =
+        detail?.state === "open" &&
+        detail?.head?.repo?.full_name === repo &&
+        isSurfaceBranch(detail?.head?.ref) &&
+        (detail?.labels ?? []).some((l) => l?.name === "auto-docs")
+      if (!own) {
+        console.log(`PR #${number} is not an open auto-docs surface PR of ${repo}; marker not written`)
+        continue
+      }
+      await api(`/repos/${repo}/pulls/${number}`, {
         method: "PATCH",
         body: { body: patchLearnedThrough(detail.body ?? "", marker) },
       })
-      console.log(`PATCHed learned-through marker on PR #${item.number}`)
+      console.log(`PATCHed learned-through marker on PR #${number}`)
     } catch (err) {
-      console.warn(`::warning::docs-sync: could not PATCH the learned-through marker on PR #${item.number}: ${err.message}`)
+      console.warn(`::warning::docs-sync: could not PATCH the learned-through marker on PR #${number}: ${err.message}`)
     }
   }
 }
 
 /**
- * Delete a lingering legacy `docs/auto-sync` branch on origin, whether or not
- * an open legacy PR names it (a closed PR or a partial cleanup still blocks
- * every surface push), and drop its remote-tracking ref, which actions/checkout
- * creates for every origin branch and which would block fetching a surface
- * branch. Its content already lives in the integration base and the surface
- * branches.
+ * Delete a lingering legacy `docs/auto-sync` branch on origin (a closed PR or a
+ * partial cleanup still blocks every surface push), leased at the tip the agent
+ * job saw (`lease`; empty: it saw none, so nothing is deleted), and drop its
+ * remote-tracking ref, which actions/checkout creates for every origin branch
+ * and which would block fetching a surface branch. Its content already lives in
+ * the integration base and the surface branches. The lease guards honest races
+ * only: a branch recreated or moved during the run is kept, and that run's
+ * surface pushes fail with a warning.
  */
-function deleteLegacyBranch() {
-  try {
-    const stale = git(["ls-remote", "--heads", "origin", LEGACY_BRANCH])
-      .split("\n")
-      .some((line) => line.endsWith(`refs/heads/${LEGACY_BRANCH}`))
-    if (stale) {
-      try {
-        git(["push", "origin", "--delete", LEGACY_BRANCH])
-      } catch (err) {
-        console.warn(`::warning::docs-sync: could not delete the legacy branch ${LEGACY_BRANCH}: ${err.message}`)
-      }
+function deleteLegacyBranch(lease) {
+  if (lease) {
+    try {
+      git(["push", `--force-with-lease=refs/heads/${LEGACY_BRANCH}:${lease}`, "origin", `:refs/heads/${LEGACY_BRANCH}`])
+    } catch (err) {
+      console.warn(`::warning::docs-sync: could not delete the legacy branch ${LEGACY_BRANCH}: ${err.message}`)
     }
-  } catch (err) {
-    console.warn(`::warning::docs-sync: could not check for the legacy branch ${LEGACY_BRANCH}: ${err.message}`)
   }
   try {
     git(["update-ref", "-d", `refs/remotes/origin/${LEGACY_BRANCH}`])
@@ -738,7 +739,13 @@ async function main() {
   const digest = readJson("docs-sync-out/digest-full.json", [])
 
   const marker = process.env.MARKER_PATCH ?? ""
-  if (marker) await patchLearnedMarkers({ api, searchIssues, repo: repo(), marker })
+  if (marker) {
+    const list = process.env.MARKER_PRS ?? ""
+    if (!/^\d{1,10}(,\d{1,10})*$/.test(list)) {
+      throw new Error(`MARKER_PRS must list the pull request numbers learn read; got ${JSON.stringify(list)}`)
+    }
+    await patchLearnedMarkers({ api, repo: repo(), marker, numbers: list.split(",") })
+  }
 
   // Order matters: compute uncovered BEFORE the no-diff early return so
   // noDiffReport can name every held-back PR.
@@ -758,6 +765,14 @@ async function main() {
   if (!/^[0-9a-f]{40}$/.test(integrationSha)) {
     throw new Error(`INTEGRATION_SHA must be a commit id when HAS_EDITS is true; got ${JSON.stringify(integrationSha)}`)
   }
+  const baseMain = process.env.BASE_MAIN ?? ""
+  if (!/^[0-9a-f]{40}$/.test(baseMain)) {
+    throw new Error(`BASE_MAIN must be a commit id when HAS_EDITS is true; got ${JSON.stringify(baseMain)}`)
+  }
+  const legacyLease = process.env.LEGACY_BASE ?? ""
+  if (!/^([0-9a-f]{40})?$/.test(legacyLease)) {
+    throw new Error(`LEGACY_BASE must be a commit id or empty; got ${JSON.stringify(legacyLease)}`)
+  }
 
   // Watermark: now when fully covered; else earliest uncovered merged_at − 1ms.
   // Pass SINCE as fallback so missing digest-full cannot strand uncovered PRs.
@@ -771,7 +786,7 @@ async function main() {
   // (empty: the branch did not exist), so a change pushed to that branch while
   // the run was going is refused instead of overwritten. It guards honest races
   // only: the agent job chooses the value, so it is no security check.
-  const changedFiles = git(["diff", "--name-only", `origin/main...${integrationSha}`, "--", DOCS_PATH])
+  const changedFiles = git(["diff", "--name-only", `${baseMain}...${integrationSha}`, "--", DOCS_PATH])
     .split("\n")
     .filter(Boolean)
   const durable = durableBranch(BRANCH)
@@ -797,7 +812,7 @@ async function main() {
   console.log(`docs-sync surface map (${changedFiles.length} changed files):`)
   for (const file of changedFiles) console.log(`  ${surfaceForDoc(file, map)} <- ${file}`)
 
-  deleteLegacyBranch()
+  deleteLegacyBranch(legacyLease)
 
   let open = new Map()
   try {
@@ -825,6 +840,7 @@ async function main() {
         rows,
         openPr: open.get(name) ?? null,
         integrationSha,
+        baseMain,
       })
       results.push(result)
       console.log(`surface ${name}: ${result.created ? "created" : "updated"} ${result.url} reviewers=${result.reviewers.join(",") || "none"}`)

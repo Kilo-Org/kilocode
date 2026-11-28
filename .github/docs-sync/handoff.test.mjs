@@ -99,16 +99,26 @@ function packEnv(s, extra = {}) {
     SINCE_OVERRIDE: "false",
     LEARNED_THROUGH: "",
     MARKER_PATCH: "",
+    MARKER_PRS: "4,5",
     BRANCH: "docs/auto-sync",
+    LEGACY_BASE: "",
     VERIFIED: "true",
     ...extra,
   }
 }
 
-/** A fresh publish clone (taken after every origin change), then check. */
-function runCheck(s) {
+/**
+ * A fresh publish clone (taken after every origin change), then check.
+ * `checkout: true` also does what actions/checkout does when main moved after
+ * the run started: it resets origin/main to the run's commit and checks it out.
+ */
+function runCheck(s, { checkout = false } = {}) {
   const publish = path.join(s.root, `publish-${fs.readdirSync(s.root).length}`)
   clone(s.origin, publish)
+  if (checkout) {
+    git(publish, ["update-ref", "refs/remotes/origin/main", s.runSha])
+    git(publish, ["checkout", "-q", "--detach", s.runSha])
+  }
   return { publish, outputs: check({ cwd: publish, env: { HANDOFF_DIR: s.handoff, GITHUB_SHA: s.runSha } }) }
 }
 
@@ -156,6 +166,9 @@ test("a docs-only handoff passes and stages the data files", () => {
   assert.equal(outputs.learned_through, MARKER)
   assert.equal(outputs.branch, "docs/auto-sync")
   assert.equal(outputs.durable_base, "", "no integration branch existed, so the lease says it must not exist")
+  assert.equal(outputs.base_main, s.runSha)
+  assert.equal(outputs.legacy_base, "")
+  assert.equal(outputs.marker_prs, "", "no marker, no PR list")
   assert.equal(outputs.now, NOW)
   assert.equal(fs.readFileSync(path.join(publish, "docs-sync-out/worthy.json"), "utf8"), '[{"url":"https://github.com/Kilo-Org/kilocode/pull/1"}]')
   assert.equal(fs.readFileSync(path.join(publish, ".docs-sync-summary.json"), "utf8"), "[]")
@@ -170,6 +183,7 @@ test("a marker-only handoff passes without a bundle", () => {
   assert.ok(!fs.existsSync(path.join(s.handoff, "docs.bundle")))
   const { outputs } = runCheck(s)
   assert.equal(outputs.marker_patch, MARKER)
+  assert.equal(outputs.marker_prs, "4,5")
   assert.equal(outputs.integration_sha, "")
 })
 
@@ -190,6 +204,37 @@ test("pack records the integration tip it built on as the push lease", () => {
   write(t.agent, "packages/kilo-docs/pages/a.md", "# a, updated\n")
   pack({ cwd: t.agent, env: packEnv(t, { BRANCH: "docs/auto-sync-2026-09-01" }) })
   assert.equal(runCheck(t).outputs.durable_base, "", "the dated branch did not exist")
+})
+
+test("an honest handoff passes when main moves between the jobs", () => {
+  const s = scenario()
+  // Main moves on after the run started; learn.mjs fetches it and
+  // prepare-branch merges it, so the agent job builds on the newer main.
+  write(s.seed, "README.md", "readme, pushed during the run\n")
+  const newer = commitAll(s.seed, "main moves on")
+  git(s.seed, ["push", "-q", "origin", "main"])
+  git(s.agent, ["fetch", "-q", "origin", "main"])
+  git(s.agent, ["merge", "-q", "--no-edit", "origin/main"])
+  write(s.agent, "packages/kilo-docs/pages/a.md", "# a, updated\n")
+  pack({ cwd: s.agent, env: packEnv(s) })
+
+  const { publish, outputs } = runCheck(s, { checkout: true })
+  assert.equal(outputs.has_edits, "true")
+  assert.equal(outputs.base_main, newer, "the agent job's newer main is the base")
+  assert.equal(git(publish, ["rev-parse", "refs/remotes/origin/main"]), newer, "check reads main as it is now")
+  assert.equal(git(publish, ["rev-parse", "HEAD"]), s.runSha, "the workspace stays at the run's commit")
+})
+
+test("pack records the legacy branch tip only with a docs commit", () => {
+  const legacy = "b".repeat(40)
+  const s = scenario()
+  write(s.agent, "packages/kilo-docs/pages/a.md", "# a, updated\n")
+  pack({ cwd: s.agent, env: packEnv(s, { LEGACY_BASE: legacy }) })
+  assert.equal(runCheck(s).outputs.legacy_base, legacy)
+
+  const t = scenario()
+  pack({ cwd: t.agent, env: packEnv(t, { WORTHY_COUNT: "0", MARKER_PATCH: MARKER, LEGACY_BASE: legacy }) })
+  assert.equal(runCheck(t).outputs.legacy_base, "")
 })
 
 test("no docs pass and no marker leaves nothing to publish", () => {
@@ -260,6 +305,9 @@ test("a malformed scalar is refused", () => {
     [(m) => (m.since = "yesterday"), /since has an invalid value/],
     [(m) => (m.durable_base = "origin/docs/auto-sync-integration"), /durable_base has an invalid value/],
     [(m) => (m.base_main = "HEAD"), /base_main has an invalid value/],
+    [(m) => (m.legacy_base = "docs/auto-sync"), /legacy_base has an invalid value/],
+    [(m) => (m.marker_prs = "1;2"), /marker_prs has an invalid value/],
+    [(m) => (m.marker_prs = "77"), /marker_patch and marker_prs must both be set or both be empty/],
     [(m) => (m.extra = "x"), /keys must be exactly/],
     [(m) => (m.verified = true), /verified has an invalid value/],
   ]
@@ -289,6 +337,16 @@ test("has_edits must match the presence of the bundle", () => {
     m.base_main = ""
   })
   expectRejected(s, /has_edits is false but the handoff has a docs.bundle/)
+  editManifest(s, (m) => {
+    m.legacy_base = "c".repeat(40)
+  })
+  expectRejected(s, /legacy_base must be empty when has_edits is false/)
+})
+
+test("a marker without its PR list is refused", () => {
+  const s = scenario()
+  pack({ cwd: s.agent, env: packEnv(s, { WORTHY_COUNT: "0", MARKER_PATCH: MARKER, MARKER_PRS: "" }) })
+  expectRejected(s, /marker_patch and marker_prs must both be set or both be empty/)
 })
 
 test("a base older than the commit the run started from is refused", () => {
