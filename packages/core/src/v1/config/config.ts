@@ -229,8 +229,15 @@ export const Info = Schema.Struct({
       Schema.Struct({
         // primary
         plan: Schema.optional(ConfigAgentV1.Info),
-        build: Schema.optional(ConfigAgentV1.Info),
         // kilocode_change start
+        // Keep build before code: API decoding preserves declared order, and the
+        // legacy build alias must not override an explicitly configured code agent.
+        build: Schema.optional(ConfigAgentV1.Info).annotate({
+          description: "Deprecated alias for 'code', retained for compatibility.",
+        }),
+        code: Schema.optional(ConfigAgentV1.Info).annotate({
+          description: "Primary coding agent. Prefer this key over the legacy 'build' alias.",
+        }),
         debug: Schema.optional(ConfigAgentV1.Info),
         orchestrator: Schema.optional(ConfigAgentV1.Info),
         ask: Schema.optional(ConfigAgentV1.Info),
