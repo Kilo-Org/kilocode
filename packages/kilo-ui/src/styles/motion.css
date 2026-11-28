@@ -1,0 +1,47 @@
+/* Motion control
+   A running session keeps a few animations alive: the status shimmer, the
+   tool icon breathe, the agent avatar pulse, the spinner. Every one of them
+   ticks on the main thread, so a chat that nobody is looking at keeps a
+   renderer busy at the display refresh rate and turns a laptop into a heater.
+
+   Clients write data-animations on the root element and the stylesheet
+   reacts:
+
+     "full"    the default, no rule matches
+     "reduced" looping animations play once and hold their end state
+     "paused"  whatever is running stops where it is and resumes later
+     "off"     nothing animates and nothing transitions
+
+   The attribute is a contract between the client and the stylesheet, so the
+   extension, the desktop app, and the web app can all drive it the same way
+   instead of each surface growing its own switch. The values are also safe
+   for components that clean up in an animationend or transitionend handler:
+   a shortened animation still ends and still fires its event, so nothing is
+   left half revealed, and a paused animation resumes and fires its event
+   once the motion is allowed again.
+
+   The attribute is the only place the budget lives. The stylesheet reads it,
+   the script-driven motion reads it, and the client writes it, so the CSS and
+   the Web Animations API calls always agree on how much motion is allowed. */
+
+html[data-animations="reduced"] *,
+html[data-animations="reduced"] *::before,
+html[data-animations="reduced"] *::after {
+  animation-iteration-count: 1 !important;
+}
+
+html[data-animations="paused"] *,
+html[data-animations="paused"] *::before,
+html[data-animations="paused"] *::after {
+  animation-play-state: paused !important;
+}
+
+html[data-animations="off"] *,
+html[data-animations="off"] *::before,
+html[data-animations="off"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-delay: 0ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  transition-delay: 0ms !important;
+}

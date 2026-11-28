@@ -737,10 +737,10 @@
   opacity: 1;
 }
 
-body.vscode-reduce-motion .prompt-selectors,
-body.vscode-reduce-motion .prompt-selectors *,
-body.vscode-reduce-motion .prompt-selectors *::before,
-body.vscode-reduce-motion .prompt-action {
+body:is(.vscode-reduce-motion, .kilo-reduce-motion) .prompt-selectors,
+body:is(.vscode-reduce-motion, .kilo-reduce-motion) .prompt-selectors *,
+body:is(.vscode-reduce-motion, .kilo-reduce-motion) .prompt-selectors *::before,
+body:is(.vscode-reduce-motion, .kilo-reduce-motion) .prompt-action {
   animation: none !important;
   transition: none !important;
 }
@@ -1075,7 +1075,7 @@ body.vscode-reduce-motion .prompt-action {
   border-top-color: var(--vscode-menu-separatorBackground, var(--vscode-editorWidget-border));
 }
 
-body.vscode-reduce-motion .prompt-issues-menu {
+body:is(.vscode-reduce-motion, .kilo-reduce-motion) .prompt-issues-menu {
   animation: none;
   transition: none;
 }

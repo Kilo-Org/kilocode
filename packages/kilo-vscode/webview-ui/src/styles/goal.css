@@ -115,7 +115,7 @@
   margin: 4px 0;
 }
 
-body.vscode-reduce-motion .session-goal-menu {
+body:is(.vscode-reduce-motion, .kilo-reduce-motion) .session-goal-menu {
   animation: none;
   transition: none;
 }

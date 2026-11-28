@@ -35,6 +35,7 @@ import { useLanguage } from "../../../context/language"
 import { useSession } from "../../../context/session"
 import { useRunBoundary } from "../run-boundary"
 import { TODO_TITLE_MAX, todoFinished, todoStats, todoVisible, type TodoStats } from "./todo-dock"
+import { reduceMotionEnabled } from "../../../animations"
 
 /** How long the finished state celebrates before it settles. */
 const CELEBRATE = 2600
@@ -47,7 +48,7 @@ const EASE = "cubic-bezier(0.22, 1, 0.36, 1)"
 function motion() {
   if (typeof window === "undefined") return false
   if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return false
-  return !document.body.classList.contains("vscode-reduce-motion")
+  return !reduceMotionEnabled()
 }
 
 /** Shared todo state for every chip in the dock. */

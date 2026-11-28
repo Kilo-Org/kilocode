@@ -20,7 +20,7 @@ import type { EditorContext, IndexingStatus } from "./services/cli-backend/types
 import { FileIgnoreController } from "./services/autocomplete/shims/FileIgnoreController"
 import { ChatTextAreaAutocomplete } from "./services/autocomplete/chat-autocomplete/ChatTextAreaAutocomplete"
 import { notebookUri } from "./services/autocomplete/continuedev/core/autocomplete/notebook"
-import { buildWebviewHtml, getWebviewFontSize, isCursorHost } from "./utils"
+import { buildWebviewHtml, getWebviewAnimations, getWebviewFontSize, isCursorHost } from "./utils"
 import { saveImage } from "./kilo-provider/save-image"
 import { handleEditorAction } from "./kilo-provider/editor-actions"
 import { exportTranscript } from "./kilo-provider/export-transcript"
@@ -70,6 +70,7 @@ import { handleFileSearch, type SearchRoot } from "./kilo-provider/file-search"
 import { handleSessionSearch } from "./kilo-provider/session-search"
 import { handleFilePicker } from "./kilo-provider/file-picker"
 import { watchFontSizeConfig } from "./kilo-provider/font-size"
+import { watchAnimations } from "./kilo-provider/animations"
 import { getTerminalContents } from "./services/terminal/context"
 import { disposeGitChangesTarget } from "./kilo-provider/git-changes-target"
 import { interceptMessage } from "./kilo-provider/git-changes-request"
@@ -923,6 +924,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         extensionVersion: this.extensionVersion,
         vscodeLanguage: vscode.env.language,
         languageOverride: langConfig.get<string>("language"),
+        animations: getWebviewAnimations(),
+        focused: vscode.window.state.focused,
         workspaceDirectory: this.getProjectDirectory(this.currentSession?.id),
       })
     }
@@ -1832,6 +1835,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
     })
     this.webviewMessageDisposable = watchFontSizeConfig((msg) => this.postMessage(msg), this.webviewMessageDisposable)
+    this.webviewMessageDisposable = watchAnimations((msg) => this.postMessage(msg), this.webviewMessageDisposable)
     this.webviewMessageDisposable = watchWorkStyleConfig((msg) => this.postMessage(msg), this.webviewMessageDisposable)
   }
 
@@ -2249,6 +2253,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           vscodeLanguage: vscode.env.language,
           languageOverride: langConfig.get<string>("language"),
           fontSize: getWebviewFontSize(),
+          animations: getWebviewAnimations(),
+          focused: vscode.window.state.focused,
           workspaceDirectory: this.getProjectDirectory(this.currentSession?.id),
         })
       }
