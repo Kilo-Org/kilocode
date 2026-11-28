@@ -297,9 +297,12 @@ export const layer: Layer.Layer<Service, never, Requirements> =
             const allow = all.filter((item) => !ignored.has(item))
             if (!allow.length) return
 
+            const candidates = untracked.filter((item) => !ignored.has(item)) // kilocode_change - the size cap only applies to untracked files
             const large = new Set(
               (yield* Effect.all(
-                allow.map((item) =>
+                // kilocode_change start
+                candidates.map((item) =>
+                  // kilocode_change end
                   fs
                     .stat(path.join(state.worktree, item))
                     .pipe(Effect.catch(() => Effect.void))
