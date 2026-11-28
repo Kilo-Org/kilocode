@@ -22,6 +22,7 @@ import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { KiloCompactionPayloadRecovery } from "@/kilocode/session/compaction-payload-recovery"
 import { KiloCompactionChunks } from "@/kilocode/session/compaction-chunks"
+import { KiloSessionCompaction } from "@/kilocode/session/compaction"
 import { SessionExport } from "@/kilocode/session-export"
 import { KiloSession } from "@/kilocode/session"
 // kilocode_change end
@@ -570,6 +571,8 @@ const layer = Layer.effect(
         return "stop"
       }
 
+      fallback = yield* KiloCompactionChunks.refuse({ result: fallback, message: processor.message, session }) // kilocode_change - a content-filtered response fails without replacing the session
+
       // kilocode_change start - an empty worker response fails retryably and never replaces the session
       if (fallback === "continue") {
         const produced = yield* MessageV2.parts(msg.id).pipe(Effect.provideService(Database.Service, database))
@@ -624,6 +627,12 @@ const layer = Layer.effect(
             updatePart: session.updatePart,
             replay,
           }).pipe(Effect.provideService(Database.Service, database)) // kilocode_change
+          if (!replay)
+            return yield* KiloSessionCompaction.stop({
+              events,
+              sessionID: input.sessionID,
+              error: processor.message.error,
+            })
           // kilocode_change end
           const original = replay.info
           const replayMsg = yield* session.updateMessage({
@@ -732,7 +741,7 @@ const layer = Layer.effect(
             text: error.data.message,
           })
         }
-        if (incomplete) {
+        if (incomplete || KiloCompactionChunks.blocked(error)) {
           yield* Effect.logError("compaction failed", { "session.id": input.sessionID, error })
           yield* events.publish(Session.Event.Error, { sessionID: input.sessionID, error })
         }
